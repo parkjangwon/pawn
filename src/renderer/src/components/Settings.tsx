@@ -335,6 +335,51 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
               </button>
             )}
           </section>
+
+          {/* Data */}
+          <section className="settings-section">
+            <h3>Data</h3>
+            <div className="setting-row">
+              <span className="setting-label">Export settings</span>
+              <button className="add-btn" style={{ width: 'auto', padding: '4px 12px' }} onClick={() => {
+                const data = {
+                  providers: useProviderStore.getState().providers,
+                  models: useProviderStore.getState().models,
+                  routingMode: useProviderStore.getState().routingMode,
+                  defaultSendMode: useProviderStore.getState().defaultSendMode
+                }
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
+                const url = URL.createObjectURL(blob)
+                const a = document.createElement('a')
+                a.href = url
+                a.download = 'hjcode-settings.json'
+                a.click()
+                URL.revokeObjectURL(url)
+              }}>Export</button>
+            </div>
+            <div className="setting-row">
+              <span className="setting-label">Import settings</span>
+              <button className="add-btn" style={{ width: 'auto', padding: '4px 12px' }} onClick={() => {
+                const input = document.createElement('input')
+                input.type = 'file'
+                input.accept = '.json'
+                input.onchange = async (e) => {
+                  const file = (e.target as HTMLInputElement).files?.[0]
+                  if (!file) return
+                  const text = await file.text()
+                  try {
+                    const data = JSON.parse(text)
+                    const store = useProviderStore.getState()
+                    if (data.providers) data.providers.forEach((p: typeof providers[0]) => store.addProvider(p))
+                    if (data.models) data.models.forEach((m: typeof models[0]) => store.addModel(m))
+                    if (data.routingMode) store.setRoutingMode(data.routingMode)
+                    if (data.defaultSendMode) store.setDefaultSendMode(data.defaultSendMode)
+                  } catch { /* invalid file */ }
+                }
+                input.click()
+              }}>Import</button>
+            </div>
+          </section>
         </div>
       </div>
     </div>

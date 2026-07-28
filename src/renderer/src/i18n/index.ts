@@ -5,6 +5,8 @@ import ko from './locales/ko.json'
 import ja from './locales/ja.json'
 import zh from './locales/zh.json'
 
+const savedLang = localStorage.getItem('hjcode-lang')
+
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
@@ -12,9 +14,13 @@ i18n.use(initReactI18next).init({
     ja: { translation: ja },
     zh: { translation: zh }
   },
-  lng: navigator.language.split('-')[0] || 'en',
+  lng: savedLang || navigator.language.split('-')[0] || 'en',
   fallbackLng: 'en',
   interpolation: { escapeValue: false }
+})
+
+i18n.on('languageChanged', (lng) => {
+  localStorage.setItem('hjcode-lang', lng)
 })
 
 export default i18n
