@@ -107,23 +107,6 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
         <span className="mobile-title">hjcode Desktop</span>
       </div>
 
-      {/* Path bar */}
-      {activeSession && (
-        <div className="path-bar">
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-          </svg>
-          <span className="path-text" onClick={handleChangePath} title="Click to change path">
-            {effectivePath || 'No workspace (click to set)'}
-          </span>
-          {activeSession?.path && (
-            <button className="path-clear-btn" onClick={handleClearPath} title="Reset to project path">
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </button>
-          )}
-        </div>
-      )}
-
       {!activeSession || messages.length === 0 ? (
         <div className="chat-welcome">
           <h1>{t('chat.welcome')}</h1>
@@ -171,6 +154,24 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
       )}
 
       <div className="chat-input-wrapper">
+        {activeSession && (
+          <div className="input-path-row">
+            <button className="path-chip" onClick={handleChangePath} title={effectivePath || 'Set working directory'}>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+              </svg>
+              <span>{effectivePath ? effectivePath.split('/').filter(Boolean).pop() : 'Set path'}</span>
+              {effectivePath && (
+                <span
+                  className="path-chip-clear"
+                  onClick={(e) => { e.stopPropagation(); if (confirm('Clear working directory?')) handleClearPath() }}
+                >
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                </span>
+              )}
+            </button>
+          </div>
+        )}
         <div className="chat-input-box">
           <textarea
             ref={textareaRef}

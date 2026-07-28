@@ -36,55 +36,55 @@
   color: var(--text-primary);
 }
 
-/* Path bar */
-.path-bar {
-  display: flex;
+/* Path bar - removed, now using path chip in input area */
+
+/* Path chip in input area */
+.input-path-row {
+  max-width: 760px;
+  margin: 0 auto var(--space-xs);
+  width: 100%;
+}
+
+.path-chip {
+  display: inline-flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-xs) var(--space-lg);
-  border-bottom: 1px solid var(--border-color);
-  font-size: var(--font-sm);
+  gap: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background: var(--bg-secondary);
   color: var(--text-muted);
-  flex-shrink: 0;
-}
-
-.path-bar svg {
-  flex-shrink: 0;
-  color: var(--text-muted);
-}
-
-.path-text {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  font-size: 11px;
   cursor: pointer;
-  padding: 2px 4px;
-  border-radius: 3px;
-  transition: background 0.15s;
+  transition: all 0.15s;
+  position: relative;
 }
 
-.path-text:hover {
-  background: var(--bg-hover);
+.path-chip:hover {
+  border-color: var(--accent);
   color: var(--text-secondary);
+  background: var(--bg-primary);
 }
 
-.path-clear-btn {
-  display: flex;
+.path-chip svg {
+  flex-shrink: 0;
+}
+
+.path-chip-clear {
+  display: none;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
-  border: none;
-  border-radius: 3px;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  margin-left: 2px;
 }
 
-.path-clear-btn:hover {
+.path-chip:hover .path-chip-clear {
+  display: flex;
+}
+
+.path-chip-clear:hover {
   background: var(--bg-hover);
   color: var(--danger);
 }

@@ -108,22 +108,27 @@ async function agentLoop(
   const project = useAppStore.getState().projects.find((p) => p.id === projectId)
   const projectPath = project?.path
 
+  // Effective working directory: session path > project path
+  const session = useAppStore.getState().projects
+    .find((p) => p.id === projectId)
+    ?.sessions.find((s) => s.id === sessionId)
+  const cwd = session?.path || projectPath || ''
+
   // Load project context (skills, CLAUDE.md, etc.)
   let systemPrompt = SYSTEM_PROMPT
+  if (cwd) {
+    systemPrompt += `\n\n--- Working Directory ---\nYour current working directory is: ${cwd}\nWhen performing file operations, use this directory as the base path. Read, write, and search files relative to this directory unless the user specifies otherwise.`
+  }
   if (projectPath) {
     try {
       const ctx = await loadProjectContext(projectPath)
-      systemPrompt = buildSystemPrompt(SYSTEM_PROMPT, ctx)
+      systemPrompt = buildSystemPrompt(systemPrompt, ctx)
     } catch {
       // Skills loading failed, use base prompt
     }
   }
 
   // Build conversation history
-  const session = useAppStore.getState().projects
-    .find((p) => p.id === projectId)
-    ?.sessions.find((s) => s.id === sessionId)
-
   const conversationMessages = (session?.messages || []).map((m) => ({
     role: m.role,
     content: m.content
