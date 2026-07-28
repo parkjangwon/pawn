@@ -3,6 +3,16 @@ if (typeof window !== 'undefined' && !window.api) {
   (window as unknown as Record<string, unknown>).api = {
     platform: 'browser',
     selectFolder: async (): Promise<string | null> => {
+      // Use native folder picker if available (Chrome/Edge)
+      if ('showDirectoryPicker' in window) {
+        try {
+          const dirHandle = await (window as unknown as { showDirectoryPicker: () => Promise<{ name: string }> }).showDirectoryPicker()
+          return dirHandle.name || null
+        } catch {
+          return null // user cancelled
+        }
+      }
+      // Fallback: text input
       const path = prompt('Enter project folder path:')
       return path?.trim() || null
     },
