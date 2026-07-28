@@ -164,6 +164,6 @@ export const useAppStore = create<AppState>()(
           )
         }))
     }),
-    { name: 'hjcode-app-state' }
+    { name: 'pawn-app-state' }
   )
 )

@@ -352,7 +352,7 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = 'hjcode-settings.json'
+                a.download = 'pawn-settings.json'
                 a.click()
                 URL.revokeObjectURL(url)
               }}>Export</button>

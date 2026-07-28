@@ -61,6 +61,6 @@ export const useProviderStore = create<ProviderState>()(
       setActiveModel: (id) => set({ activeModelId: id }),
       setDefaultSendMode: (mode) => set({ defaultSendMode: mode })
     }),
-    { name: 'hjcode-provider-state' }
+    { name: 'pawn-provider-state' }
   )
 )

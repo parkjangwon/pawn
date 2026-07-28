@@ -1,6 +1,6 @@
 {
-  "appId": "com.parkjangwon.hjcode",
-  "productName": "hjcode Desktop",
+  "appId": "com.parkjangwon.pawn",
+  "productName": "Pawn",
   "directories": {
     "output": "release"
   },
@@ -11,7 +11,7 @@
     "target": [
       { "target": "dmg", "arch": ["universal"] }
     ],
-    "artifactName": "hjcode-${version}-${arch}.${ext}",
+    "artifactName": "pawn-${version}-${arch}.${ext}",
     "category": "public.app-category.developer-tools",
     "hardenedRuntime": true,
     "gatekeeperAssess": false
@@ -20,14 +20,14 @@
     "target": [
       { "target": "nsis", "arch": ["x64", "arm64"] }
     ],
-    "artifactName": "hjcode-${version}-${arch}-setup.${ext}"
+    "artifactName": "pawn-${version}-${arch}-setup.${ext}"
   },
   "linux": {
     "target": [
       { "target": "AppImage", "arch": ["x64", "arm64"] },
       { "target": "deb", "arch": ["x64", "arm64"] }
     ],
-    "artifactName": "hjcode-${version}-${arch}.${ext}",
+    "artifactName": "pawn-${version}-${arch}.${ext}",
     "category": "Development"
   },
   "nsis": {

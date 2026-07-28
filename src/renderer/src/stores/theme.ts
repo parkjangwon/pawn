@@ -16,6 +16,6 @@ export const useThemeStore = create<ThemeState>()(
       toggle: () => set((s) => ({ theme: s.theme === 'dark' ? 'light' : 'dark' })),
       set: (theme) => set({ theme })
     }),
-    { name: 'hjcode-theme' }
+    { name: 'pawn-theme' }
   )
 )

@@ -1,5 +1,5 @@
 {
-  "name": "hjcode",
+  "name": "pawn",
   "version": "0.1.0",
   "description": "AI Desktop Coding Agent — Code, Browse, Automate. BYOK, no harness, fully extensible.",
   "main": "./out/main/index.js",

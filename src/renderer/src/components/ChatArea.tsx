@@ -104,7 +104,7 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
             <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
-        <span className="mobile-title">hjcode Desktop</span>
+        <span className="mobile-title">Pawn</span>
       </div>
 
       {!activeSession || messages.length === 0 ? (

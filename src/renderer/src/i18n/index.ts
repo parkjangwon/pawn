@@ -5,7 +5,7 @@ import ko from './locales/ko.json'
 import ja from './locales/ja.json'
 import zh from './locales/zh.json'
 
-const savedLang = localStorage.getItem('hjcode-lang')
+const savedLang = localStorage.getItem('pawn-lang')
 
 i18n.use(initReactI18next).init({
   resources: {
@@ -20,7 +20,7 @@ i18n.use(initReactI18next).init({
 })
 
 i18n.on('languageChanged', (lng) => {
-  localStorage.setItem('hjcode-lang', lng)
+  localStorage.setItem('pawn-lang', lng)
 })
 
 export default i18n

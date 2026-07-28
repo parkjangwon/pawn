@@ -1,4 +1,4 @@
-# hjcode Desktop
+# Pawn
 
 AI Coding Agent GUI — Code, Browse, Automate.
 

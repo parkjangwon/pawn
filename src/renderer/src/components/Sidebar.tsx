@@ -89,7 +89,7 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <span className="sidebar-title">hjcode Desktop</span>
+        <span className="sidebar-title">Pawn</span>
       </div>
 
       <button className="new-session-btn" onClick={handleAddProject}>

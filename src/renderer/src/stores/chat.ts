@@ -18,7 +18,7 @@ interface ChatState {
 
 let abortController: AbortController | null = null
 
-const SYSTEM_PROMPT = `You are hjcode, an AI coding assistant running inside a desktop application. You help users with coding, file management, browser automation, computer control, and general tasks.
+const SYSTEM_PROMPT = `You are pawn, an AI coding assistant running inside a desktop application. You help users with coding, file management, browser automation, computer control, and general tasks.
 
 You have access to tools for:
 - Reading, writing, and editing files
@@ -241,7 +241,7 @@ async function agentLoop(
   }
 
   // Notify completion
-  window.api.notification.send('hjcode', 'Task complete')
+  window.api.notification.send('pawn', 'Task complete')
 
   set(() => ({ isStreaming: false }))
   abortController = null
