@@ -3,3 +3,6 @@ out/
 dist/
 *.local
 .DS_Store
+.env
+.env.*
+!.env.example
