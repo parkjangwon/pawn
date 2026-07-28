@@ -2,7 +2,8 @@ import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
-  platform: process.platform
+  platform: process.platform,
+  selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder')
 }
 
 if (process.contextIsolated) {

@@ -60,6 +60,41 @@
   background: var(--bg-hover);
 }
 
+.new-session-btn.secondary {
+  border-style: dashed;
+  margin-bottom: 8px;
+}
+
+.project-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.project-tab {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.project-tab:hover {
+  background: var(--bg-hover);
+}
+
+.project-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .session-list {
   flex: 1;
   overflow-y: auto;
