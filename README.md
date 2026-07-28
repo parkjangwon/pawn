@@ -94,7 +94,27 @@ npm run build
 
 # Type check
 npm run typecheck
+
+# Full check (typecheck + build)
+npm run check
 ```
+
+## Packaging
+
+```bash
+# Build distributable for current platform
+npm run dist
+
+# Platform-specific
+npm run dist:mac    # macOS (.dmg)
+npm run dist:win    # Windows (.exe NSIS installer)
+npm run dist:linux  # Linux (.AppImage, .deb)
+
+# Quick pack (no installer, just directory)
+npm run pack
+```
+
+Output goes to `release/` directory.
 
 ## Project Structure
 
