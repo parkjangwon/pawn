@@ -58,6 +58,45 @@
   text-align: center;
 }
 
+.welcome-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+  margin-top: var(--space-xl);
+  max-width: 480px;
+  width: 100%;
+}
+
+.welcome-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: var(--font-md);
+  cursor: pointer;
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.welcome-btn:hover {
+  border-color: var(--accent);
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.welcome-btn svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.welcome-btn:hover svg {
+  color: var(--accent);
+}
+
 .chat-messages {
   flex: 1;
   overflow-y: auto;

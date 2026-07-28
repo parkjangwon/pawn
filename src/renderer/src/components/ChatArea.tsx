@@ -66,6 +66,24 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
         <div className="chat-welcome">
           <h1>{t('chat.welcome')}</h1>
           <p>{t('chat.welcomeSub')}</p>
+          <div className="welcome-actions">
+            <button className="welcome-btn" onClick={() => setInput('Read and summarize the project structure')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+              Explore project
+            </button>
+            <button className="welcome-btn" onClick={() => setInput('Run the test suite and fix any failures')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+              Fix tests
+            </button>
+            <button className="welcome-btn" onClick={() => setInput('Take a screenshot and describe what you see')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></svg>
+              Computer use
+            </button>
+            <button className="welcome-btn" onClick={() => setInput('Open https://github.com and search for trending repositories')}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+              Browse web
+            </button>
+          </div>
         </div>
       ) : (
         <div className="chat-messages">
