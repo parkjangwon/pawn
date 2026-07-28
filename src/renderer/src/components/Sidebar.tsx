@@ -1,6 +1,5 @@
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
-import { useThemeStore } from '../stores/theme'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -18,7 +17,6 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
     addSession,
     setActiveSession
   } = useAppStore()
-  const { theme, toggle } = useThemeStore()
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
 
@@ -32,14 +30,16 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
-        <span className="sidebar-title">{t('app.name')}</span>
-        <button className="icon-btn" onClick={toggle} title={t('settings.theme')}>
-          {theme === 'dark' ? '☀️' : '🌙'}
-        </button>
+        <span className="sidebar-title">hjcode Desktop</span>
       </div>
 
       <button className="new-session-btn" onClick={handleAddProject}>
-        📁 {t('sidebar.addProject')}
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+          <line x1="12" y1="11" x2="12" y2="17" />
+          <line x1="9" y1="14" x2="15" y2="14" />
+        </svg>
+        {t('sidebar.addProject')}
       </button>
 
       {projects.length > 0 && (
@@ -73,7 +73,9 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
             className={`session-item ${session.id === activeSessionId ? 'active' : ''}`}
             onClick={() => setActiveSession(session.id)}
           >
-            <span className="session-icon">💬</span>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
             <span className="session-title">{session.title}</span>
           </div>
         ))}
@@ -87,7 +89,11 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
 
       <div className="sidebar-footer">
         <button className="footer-btn" onClick={onOpenSettings}>
-          ⚙️ {t('sidebar.settings')}
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+          </svg>
+          {t('sidebar.settings')}
         </button>
       </div>
     </aside>

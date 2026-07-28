@@ -3,6 +3,7 @@ import { useThemeStore } from './stores/theme'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
 import Settings from './components/Settings'
+import PermissionDialog from './components/PermissionDialog'
 
 export default function App(): React.JSX.Element {
   const theme = useThemeStore((s) => s.theme)
@@ -13,6 +14,7 @@ export default function App(): React.JSX.Element {
       <Sidebar onOpenSettings={() => setShowSettings(true)} />
       <ChatArea />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      <PermissionDialog />
     </div>
   )
 }

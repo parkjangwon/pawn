@@ -12,12 +12,14 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
     providers,
     models,
     routingMode,
+    defaultSendMode,
     addProvider,
     removeProvider,
     updateProvider,
     addModel,
     removeModel,
-    setRoutingMode
+    setRoutingMode,
+    setDefaultSendMode
   } = useProviderStore()
 
   const [showAddProvider, setShowAddProvider] = useState(false)
@@ -56,34 +58,65 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
       <div className="settings-panel" onClick={(e) => e.stopPropagation()}>
         <div className="settings-header">
           <h2>{t('settings.title')}</h2>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <button className="close-btn" onClick={onClose}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
         </div>
 
         <div className="settings-body">
-          {/* Theme */}
+          {/* Appearance */}
           <section className="settings-section">
-            <h3>{t('settings.theme')}</h3>
-            <div className="theme-toggle">
-              <button className={theme === 'light' ? 'active' : ''} onClick={() => set('light')}>
-                ☀️ {t('theme.light')}
-              </button>
-              <button className={theme === 'dark' ? 'active' : ''} onClick={() => set('dark')}>
-                🌙 {t('theme.dark')}
-              </button>
+            <h3>{t('settings.appearance')}</h3>
+            <div className="setting-row">
+              <span className="setting-label">{t('settings.theme')}</span>
+              <div className="theme-toggle">
+                <button className={theme === 'light' ? 'active' : ''} onClick={() => set('light')}>
+                  Light
+                </button>
+                <button className={theme === 'dark' ? 'active' : ''} onClick={() => set('dark')}>
+                  Dark
+                </button>
+              </div>
+            </div>
+            <div className="setting-row">
+              <span className="setting-label">{t('settings.language')}</span>
+              <select
+                value={i18n.language}
+                onChange={(e) => i18n.changeLanguage(e.target.value)}
+              >
+                {languages.map((l) => (
+                  <option key={l.code} value={l.code}>{l.label}</option>
+                ))}
+              </select>
             </div>
           </section>
 
-          {/* Language */}
+          {/* Chat */}
           <section className="settings-section">
-            <h3>{t('settings.language')}</h3>
-            <select
-              value={i18n.language}
-              onChange={(e) => i18n.changeLanguage(e.target.value)}
-            >
-              {languages.map((l) => (
-                <option key={l.code} value={l.code}>{l.label}</option>
-              ))}
-            </select>
+            <h3>{t('settings.chat')}</h3>
+            <div className="setting-row">
+              <span className="setting-label">{t('settings.defaultSendMode')}</span>
+              <select
+                value={defaultSendMode}
+                onChange={(e) => setDefaultSendMode(e.target.value as 'queue' | 'steer')}
+              >
+                <option value="queue">Queue</option>
+                <option value="steer">Steer</option>
+              </select>
+            </div>
+            <div className="setting-row">
+              <span className="setting-label">{t('settings.routing')}</span>
+              <div className="theme-toggle">
+                <button className={routingMode === 'auto' ? 'active' : ''} onClick={() => setRoutingMode('auto')}>
+                  Auto
+                </button>
+                <button className={routingMode === 'manual' ? 'active' : ''} onClick={() => setRoutingMode('manual')}>
+                  Manual
+                </button>
+              </div>
+            </div>
           </section>
 
           {/* Providers */}
@@ -95,18 +128,23 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
                   <div className="provider-info">
                     <span className="provider-name">{p.name}</span>
                     <span className="provider-meta">
-                      {p.apiFormat} · {p.authMethod} · {p.baseUrl}
+                      {p.apiFormat} / {p.authMethod} / {p.baseUrl}
                     </span>
                   </div>
                   <div className="provider-actions">
-                    <label className="toggle">
+                    <label className="toggle-switch">
                       <input
                         type="checkbox"
                         checked={p.enabled}
                         onChange={(e) => updateProvider(p.id, { enabled: e.target.checked })}
                       />
+                      <span className="toggle-slider" />
                     </label>
-                    <button className="remove-btn" onClick={() => removeProvider(p.id)}>🗑</button>
+                    <button className="remove-btn" onClick={() => removeProvider(p.id)}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      </svg>
+                    </button>
                   </div>
                 </div>
               ))}
@@ -153,39 +191,28 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
               </div>
             ) : (
               <button className="add-btn" onClick={() => setShowAddProvider(true)}>
-                + {t('settings.providers')}
+                + Add Provider
               </button>
             )}
           </section>
 
-          {/* Routing */}
+          {/* Models */}
           <section className="settings-section">
             <h3>{t('settings.models')}</h3>
-            <div className="routing-toggle">
-              <label>
-                <input
-                  type="radio"
-                  checked={routingMode === 'auto'}
-                  onChange={() => setRoutingMode('auto')}
-                />
-                Auto
-              </label>
-              <label>
-                <input
-                  type="radio"
-                  checked={routingMode === 'manual'}
-                  onChange={() => setRoutingMode('manual')}
-                />
-                Manual
-              </label>
-            </div>
             <div className="model-list">
               {models.map((m) => (
                 <div key={m.id} className="model-item">
                   <span>{m.label} <em>({m.tier})</em></span>
-                  <button className="remove-btn" onClick={() => removeModel(m.id)}>🗑</button>
+                  <button className="remove-btn" onClick={() => removeModel(m.id)}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                    </svg>
+                  </button>
                 </div>
               ))}
+              {models.length === 0 && (
+                <div className="empty-hint">No models configured</div>
+              )}
             </div>
           </section>
         </div>

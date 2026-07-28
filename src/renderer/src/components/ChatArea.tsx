@@ -1,25 +1,33 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { useProviderStore } from '../stores/provider'
+import { useChatStore } from '../stores/chat'
 import './ChatArea.css'
 
 export default function ChatArea(): React.JSX.Element {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
-  const { projects, activeProjectId, activeSessionId, addMessage } = useAppStore()
+  const [sendMode, setSendMode] = useState<'queue' | 'steer'>('queue')
+  const { projects, activeProjectId, activeSessionId } = useAppStore()
+  const { sendMessage, isStreaming } = useChatStore()
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
 
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto'
+      textareaRef.current.style.height = Math.min(textareaRef.current.scrollHeight, 200) + 'px'
+    }
+  }, [input])
+
   const handleSend = (): void => {
     if (!input.trim() || !activeProjectId || !activeSessionId) return
-    addMessage(activeProjectId, activeSessionId, {
-      id: `${Date.now()}`,
-      role: 'user',
-      content: input.trim(),
-      createdAt: Date.now()
-    })
+    sendMessage(activeProjectId, activeSessionId, input.trim(), sendMode)
     setInput('')
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
@@ -29,8 +37,22 @@ export default function ChatArea(): React.JSX.Element {
     }
   }
 
+  const messages = activeSession?.messages || []
+
   return (
     <main className="chat-area">
+      <div className="mobile-header">
+        <button className="mobile-menu-btn" onClick={() => {
+          document.querySelector('.sidebar')?.classList.toggle('open')
+          document.querySelector('.sidebar-overlay')?.classList.toggle('hidden')
+        }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
+        <span className="mobile-title">hjcode Desktop</span>
+      </div>
+
       {!activeSession ? (
         <div className="chat-welcome">
           <h1>{t('chat.welcome')}</h1>
@@ -38,26 +60,50 @@ export default function ChatArea(): React.JSX.Element {
         </div>
       ) : (
         <div className="chat-messages">
-          {activeSession.messages.map((msg) => (
+          {messages.map((msg) => (
             <div key={msg.id} className={`message ${msg.role}`}>
+              <div className="message-role">{msg.role === 'user' ? 'You' : 'Assistant'}</div>
               <div className="message-content">{msg.content}</div>
             </div>
           ))}
+          {isStreaming && messages[messages.length - 1]?.role === 'user' && (
+            <div className="message assistant">
+              <div className="message-role">Assistant</div>
+              <div className="message-content streaming">
+                <span className="cursor-blink">|</span>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
       <div className="chat-input-wrapper">
         <div className="chat-input-box">
           <textarea
+            ref={textareaRef}
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={t('chat.placeholder')}
             rows={1}
           />
-          <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>
-            ↑
-          </button>
+          <div className="input-actions">
+            <select
+              className="mode-select"
+              value={sendMode}
+              onChange={(e) => setSendMode(e.target.value as 'queue' | 'steer')}
+              title="Send mode"
+            >
+              <option value="queue">Queue</option>
+              <option value="steer">Steer</option>
+            </select>
+            <button className="send-btn" onClick={handleSend} disabled={!input.trim() || isStreaming}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <line x1="12" y1="19" x2="12" y2="5" />
+                <polyline points="5 12 12 5 19 12" />
+              </svg>
+            </button>
+          </div>
         </div>
       </div>
     </main>

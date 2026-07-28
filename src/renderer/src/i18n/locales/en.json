@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "hjcode"
+    "name": "hjcode Desktop"
   },
   "sidebar": {
     "newSession": "New Session",
@@ -21,10 +21,14 @@
   },
   "settings": {
     "title": "Settings",
+    "appearance": "Appearance",
     "providers": "Providers",
     "models": "Models",
     "language": "Language",
     "theme": "Theme",
+    "chat": "Chat",
+    "defaultSendMode": "Default Send Mode",
+    "routing": "Model Routing",
     "scheduling": "Scheduling"
   }
 }

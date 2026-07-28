@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "hjcode"
+    "name": "hjcode Desktop"
   },
   "sidebar": {
     "newSession": "新会话",
@@ -21,10 +21,14 @@
   },
   "settings": {
     "title": "设置",
+    "appearance": "外观",
     "providers": "提供商",
     "models": "模型",
     "language": "语言",
     "theme": "主题",
+    "chat": "聊天",
+    "defaultSendMode": "默认发送模式",
+    "routing": "模型路由",
     "scheduling": "计划任务"
   }
 }

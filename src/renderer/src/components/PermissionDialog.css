@@ -1,0 +1,84 @@
+.permission-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+}
+
+.permission-dialog {
+  width: 420px;
+  max-width: 90vw;
+  background: var(--bg-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-xl);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+}
+
+.permission-dialog h3 {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+}
+
+.permission-type {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: var(--space-sm);
+}
+
+.permission-desc {
+  font-size: var(--font-lg);
+  color: var(--text-primary);
+  margin-bottom: var(--space-md);
+  line-height: 1.5;
+}
+
+.permission-details {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--space-md);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  overflow-x: auto;
+  margin-bottom: var(--space-lg);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.permission-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+}
+
+.permission-actions button {
+  padding: var(--space-sm) var(--space-lg);
+  border-radius: var(--radius-md);
+  font-size: var(--font-md);
+  font-weight: 500;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+
+.permission-actions button:hover {
+  opacity: 0.85;
+}
+
+.deny-btn {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.allow-btn {
+  background: var(--accent);
+  color: #fff;
+}

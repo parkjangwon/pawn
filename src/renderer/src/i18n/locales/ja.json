@@ -1,6 +1,6 @@
 {
   "app": {
-    "name": "hjcode"
+    "name": "hjcode Desktop"
   },
   "sidebar": {
     "newSession": "新しいセッション",
@@ -21,10 +21,14 @@
   },
   "settings": {
     "title": "設定",
+    "appearance": "外観",
     "providers": "プロバイダー",
     "models": "モデル",
     "language": "言語",
     "theme": "テーマ",
+    "chat": "チャット",
+    "defaultSendMode": "デフォルト送信モード",
+    "routing": "モデルルーティング",
     "scheduling": "スケジューリング"
   }
 }

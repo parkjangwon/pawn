@@ -6,12 +6,14 @@
   flex-direction: column;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
-  padding: 12px;
+  padding: var(--space-md);
+  gap: var(--space-sm);
   -webkit-app-region: drag;
 }
 
 .sidebar button,
-.sidebar .session-item {
+.sidebar .session-item,
+.sidebar .project-tabs {
   -webkit-app-region: no-drag;
 }
 
@@ -19,80 +21,96 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 4px;
-  margin-bottom: 12px;
+  padding: var(--space-sm) var(--space-xs);
   height: var(--titlebar-height);
+  flex-shrink: 0;
 }
 
 .sidebar-title {
-  font-size: 15px;
+  font-size: var(--font-xl);
   font-weight: 700;
   color: var(--text-primary);
+  letter-spacing: -0.3px;
 }
 
 .icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   background: none;
   border: none;
+  border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: 16px;
-  padding: 4px 8px;
-  border-radius: 6px;
+  color: var(--text-secondary);
 }
 
 .icon-btn:hover {
   background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .new-session-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   width: 100%;
-  padding: 10px 12px;
+  padding: var(--space-sm) var(--space-md);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-md);
   cursor: pointer;
   text-align: left;
-  margin-bottom: 12px;
+  transition: background 0.15s;
 }
 
 .new-session-btn:hover {
   background: var(--bg-hover);
 }
 
+.new-session-btn svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
 .new-session-btn.secondary {
   border-style: dashed;
-  margin-bottom: 8px;
+  background: none;
 }
 
 .project-tabs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  margin-bottom: 8px;
+  gap: var(--space-xs);
 }
 
 .project-tab {
-  padding: 4px 10px;
+  padding: var(--space-xs) var(--space-sm);
   border: 1px solid var(--border-color);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: var(--bg-primary);
   color: var(--text-secondary);
-  font-size: 12px;
+  font-size: var(--font-sm);
   cursor: pointer;
-  max-width: 120px;
+  max-width: 110px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  transition: all 0.15s;
 }
 
 .project-tab:hover {
   background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .project-tab.active {
   border-color: var(--accent);
   color: var(--accent);
+  background: var(--accent-subtle);
 }
 
 .session-list {
@@ -106,12 +124,13 @@
 .session-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
+  gap: var(--space-sm);
+  padding: var(--space-sm) var(--space-sm);
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 13px;
+  font-size: var(--font-md);
   color: var(--text-secondary);
+  transition: background 0.15s;
 }
 
 .session-item:hover {
@@ -123,8 +142,13 @@
   color: var(--text-primary);
 }
 
-.session-icon {
-  font-size: 14px;
+.session-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.session-item.active svg {
+  color: var(--text-primary);
 }
 
 .session-title {
@@ -134,30 +158,38 @@
 }
 
 .empty-hint {
-  padding: 16px 10px;
-  font-size: 12px;
+  padding: var(--space-lg) var(--space-sm);
+  font-size: var(--font-sm);
   color: var(--text-muted);
   text-align: center;
 }
 
 .sidebar-footer {
-  margin-top: 12px;
-  padding-top: 12px;
+  flex-shrink: 0;
+  padding-top: var(--space-md);
   border-top: 1px solid var(--border-color);
 }
 
 .footer-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
   width: 100%;
-  padding: 8px 10px;
+  padding: var(--space-sm) var(--space-sm);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   background: none;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-md);
   cursor: pointer;
-  text-align: left;
+  transition: background 0.15s;
 }
 
 .footer-btn:hover {
   background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.footer-btn svg {
+  flex-shrink: 0;
 }
