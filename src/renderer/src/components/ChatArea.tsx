@@ -28,6 +28,22 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, isStreaming])
 
+  const handleExport = (): void => {
+    if (!activeSession || messages.length === 0) return
+    let md = `# ${activeSession.title}\n\n`
+    for (const msg of messages) {
+      if (msg.role === 'system') continue
+      md += `## ${msg.role === 'user' ? 'You' : 'Assistant'}\n\n${msg.content}\n\n`
+    }
+    const blob = new Blob([md], { type: 'text/markdown' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${activeSession.title.replace(/[^a-zA-Z0-9가-힣]/g, '_')}.md`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto'
@@ -122,6 +138,15 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
             rows={1}
           />
           <div className="input-actions">
+            {messages.length > 0 && (
+              <button className="export-btn" onClick={handleExport} title="Export conversation">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                  <polyline points="7 10 12 15 17 10" />
+                  <line x1="12" y1="15" x2="12" y2="3" />
+                </svg>
+              </button>
+            )}
             <select
               className="mode-select"
               value={sendMode}
