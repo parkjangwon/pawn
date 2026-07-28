@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import FileBrowser from './FileBrowser'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
   const [renamingSession, setRenamingSession] = useState<string | null>(null)
   const [renamingProject, setRenamingProject] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [showFileBrowser, setShowFileBrowser] = useState(false)
 
   const toggleProject = (id: string): void => {
     setExpandedProjects((prev) => {
@@ -38,18 +40,14 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
     setActiveProject(id)
   }
 
-  const handleAddProject = async (): Promise<void> => {
-    const folder = await window.api.selectFolder()
-    if (folder) {
-      const name = folder.split('/').pop() || folder.split('\\').pop() || folder
-      addProject(name, folder)
-    } else {
-      // Allow creating project without folder (general workspace)
-      const name = prompt('Project name (optional folder can be set later):')
-      if (name?.trim()) {
-        addProject(name.trim(), '')
-      }
-    }
+  const handleAddProject = (): void => {
+    setShowFileBrowser(true)
+  }
+
+  const handleProjectFolderSelected = (path: string): void => {
+    const name = path.split('/').pop() || path.split('\\').pop() || path
+    addProject(name, path)
+    setShowFileBrowser(false)
   }
 
   const handleDeleteProject = (e: React.MouseEvent, id: string): void => {
@@ -220,6 +218,13 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
           {t('sidebar.settings')}
         </button>
       </div>
+      {showFileBrowser && (
+        <FileBrowser
+          initialPath="/"
+          onSelect={handleProjectFolderSelected}
+          onClose={() => setShowFileBrowser(false)}
+        />
+      )}
     </aside>
   )
 }

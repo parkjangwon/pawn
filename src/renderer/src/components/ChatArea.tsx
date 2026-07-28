@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import MarkdownRenderer from './MarkdownRenderer'
+import FileBrowser from './FileBrowser'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -17,6 +18,7 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   const { sendMessage, isStreaming, stopStreaming } = useChatStore()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [showFileBrowser, setShowFileBrowser] = useState(false)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
@@ -47,10 +49,14 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
 
   const handleChangePath = async (): Promise<void> => {
     if (!activeProjectId || !activeSessionId) return
-    const folder = await window.api.selectFolder()
-    if (folder) {
-      updateSessionPath(activeProjectId, activeSessionId, folder)
+    setShowFileBrowser(true)
+  }
+
+  const handlePathSelected = (path: string): void => {
+    if (activeProjectId && activeSessionId) {
+      updateSessionPath(activeProjectId, activeSessionId, path)
     }
+    setShowFileBrowser(false)
   }
 
   const handleClearPath = (): void => {
@@ -211,6 +217,13 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
           </div>
         </div>
       </div>
+      {showFileBrowser && (
+        <FileBrowser
+          initialPath={effectivePath || activeProject?.path || '/'}
+          onSelect={handlePathSelected}
+          onClose={() => setShowFileBrowser(false)}
+        />
+      )}
     </main>
   )
 }

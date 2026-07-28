@@ -2,6 +2,7 @@ import { resolve } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
+import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 
 // Dev-only proxy to bypass CORS when testing in browser (not Electron)
 function apiProxyPlugin(): Plugin {
@@ -46,6 +47,67 @@ function apiProxyPlugin(): Plugin {
             }
           } catch (err) {
             res.statusCode = 502
+            res.end(JSON.stringify({ error: String(err) }))
+          }
+        })
+      })
+
+      // File system API for browser mode
+      server.middlewares.use('/api/fs', async (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        let body = ''
+        req.on('data', (chunk: Buffer) => { body += chunk })
+        req.on('end', () => {
+          try {
+            const url = new URL(req.url || '', 'http://localhost')
+            const action = url.pathname.replace(/^\//, '')
+            const { path, content } = JSON.parse(body || '{}')
+
+            switch (action) {
+              case 'listDir': {
+                const entries = readdirSync(path, { withFileTypes: true })
+                res.end(JSON.stringify(entries.map((e) => ({
+                  name: e.name,
+                  isDirectory: e.isDirectory(),
+                  path: resolve(path, e.name)
+                }))))
+                break
+              }
+              case 'readFile': {
+                const data = readFileSync(path, 'utf-8')
+                res.end(JSON.stringify(data))
+                break
+              }
+              case 'writeFile': {
+                writeFileSync(path, content, 'utf-8')
+                res.end(JSON.stringify({ ok: true }))
+                break
+              }
+              case 'stat': {
+                const s = statSync(path)
+                res.end(JSON.stringify({ size: s.size, isFile: s.isFile(), isDirectory: s.isDirectory(), mtime: s.mtimeMs }))
+                break
+              }
+              case 'exists': {
+                res.end(JSON.stringify(existsSync(path)))
+                break
+              }
+              case 'mkdir': {
+                mkdirSync(path, { recursive: true })
+                res.end(JSON.stringify({ ok: true }))
+                break
+              }
+              case 'delete': {
+                unlinkSync(path)
+                res.end(JSON.stringify({ ok: true }))
+                break
+              }
+              default:
+                res.statusCode = 404
+                res.end(JSON.stringify({ error: 'Unknown action' }))
+            }
+          } catch (err) {
+            res.statusCode = 500
             res.end(JSON.stringify({ error: String(err) }))
           }
         })
