@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "hjcode"
+  },
+  "sidebar": {
+    "newSession": "New Session",
+    "addProject": "Add Project",
+    "sessions": "Sessions",
+    "settings": "Settings",
+    "noProjects": "No projects yet"
+  },
+  "chat": {
+    "placeholder": "Send a message...",
+    "welcome": "What can I help you with?",
+    "welcomeSub": "Code, browse, automate — all in one place.",
+    "send": "Send"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark"
+  },
+  "settings": {
+    "title": "Settings",
+    "providers": "Providers",
+    "models": "Models",
+    "language": "Language",
+    "theme": "Theme",
+    "scheduling": "Scheduling"
+  }
+}

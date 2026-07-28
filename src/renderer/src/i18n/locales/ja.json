@@ -1,0 +1,30 @@
+{
+  "app": {
+    "name": "hjcode"
+  },
+  "sidebar": {
+    "newSession": "新しいセッション",
+    "addProject": "プロジェクトを追加",
+    "sessions": "セッション",
+    "settings": "設定",
+    "noProjects": "プロジェクトがありません"
+  },
+  "chat": {
+    "placeholder": "メッセージを入力...",
+    "welcome": "お手伝いできることはありますか？",
+    "welcomeSub": "コーディング、ブラウジング、自動化 — すべてここで。",
+    "send": "送信"
+  },
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク"
+  },
+  "settings": {
+    "title": "設定",
+    "providers": "プロバイダー",
+    "models": "モデル",
+    "language": "言語",
+    "theme": "テーマ",
+    "scheduling": "スケジューリング"
+  }
+}

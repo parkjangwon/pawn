@@ -1,0 +1,102 @@
+import { create } from 'zustand'
+
+export interface Session {
+  id: string
+  title: string
+  createdAt: number
+  messages: Message[]
+}
+
+export interface Message {
+  id: string
+  role: 'user' | 'assistant' | 'system'
+  content: string
+  createdAt: number
+}
+
+export interface Project {
+  id: string
+  name: string
+  path: string
+  sessions: Session[]
+}
+
+interface AppState {
+  projects: Project[]
+  activeProjectId: string | null
+  activeSessionId: string | null
+  addProject: (name: string, path: string) => void
+  removeProject: (id: string) => void
+  setActiveProject: (id: string) => void
+  addSession: (projectId: string, title?: string) => void
+  removeSession: (projectId: string, sessionId: string) => void
+  setActiveSession: (id: string) => void
+  addMessage: (projectId: string, sessionId: string, message: Message) => void
+}
+
+let counter = 0
+const uid = (): string => `${Date.now()}-${++counter}`
+
+export const useAppStore = create<AppState>((set) => ({
+  projects: [],
+  activeProjectId: null,
+  activeSessionId: null,
+
+  addProject: (name, path) =>
+    set((s) => {
+      const project: Project = { id: uid(), name, path, sessions: [] }
+      return { projects: [...s.projects, project], activeProjectId: project.id }
+    }),
+
+  removeProject: (id) =>
+    set((s) => ({
+      projects: s.projects.filter((p) => p.id !== id),
+      activeProjectId: s.activeProjectId === id ? null : s.activeProjectId
+    })),
+
+  setActiveProject: (id) => set({ activeProjectId: id }),
+
+  addSession: (projectId, title) =>
+    set((s) => {
+      const session: Session = {
+        id: uid(),
+        title: title || 'New Session',
+        createdAt: Date.now(),
+        messages: []
+      }
+      return {
+        projects: s.projects.map((p) =>
+          p.id === projectId ? { ...p, sessions: [...p.sessions, session] } : p
+        ),
+        activeSessionId: session.id
+      }
+    }),
+
+  removeSession: (projectId, sessionId) =>
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, sessions: p.sessions.filter((ss) => ss.id !== sessionId) }
+          : p
+      ),
+      activeSessionId: s.activeSessionId === sessionId ? null : s.activeSessionId
+    })),
+
+  setActiveSession: (id) => set({ activeSessionId: id }),
+
+  addMessage: (projectId, sessionId, message) =>
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              sessions: p.sessions.map((ss) =>
+                ss.id === sessionId
+                  ? { ...ss, messages: [...ss.messages, message] }
+                  : ss
+              )
+            }
+          : p
+      )
+    }))
+}))
