@@ -1,5 +1,6 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import './browser-polyfill'
 import App from './App'
 import './i18n'
 import './styles/global.css'

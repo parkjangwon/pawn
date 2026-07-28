@@ -1,8 +1,13 @@
 import { create } from 'zustand'
 import { useAppStore } from './app'
 import { useProviderStore } from './provider'
+import { executeTool, toolsToOpenAI, toolsToClaude, type ToolCall } from '../agent/tools'
+import { loadProjectContext, buildSystemPrompt } from '../agent/skills'
+import { selectModelForTask, estimateComplexity } from '../agent/routing'
 
 export type SendMode = 'queue' | 'steer'
+
+const MAX_TOOL_ROUNDS = 25
 
 interface ChatState {
   isStreaming: boolean
@@ -13,8 +18,18 @@ interface ChatState {
 
 let abortController: AbortController | null = null
 
-// Stable system prompt for cache hits - never changes within a session
-const SYSTEM_PROMPT = `You are hjcode, an AI coding assistant running inside a desktop application. You help users with coding, file management, browser automation, and general tasks. You have access to tools for file system operations, shell commands, computer control, and browser automation. Be concise, accurate, and helpful.`
+const SYSTEM_PROMPT = `You are hjcode, an AI coding assistant running inside a desktop application. You help users with coding, file management, browser automation, computer control, and general tasks.
+
+You have access to tools for:
+- Reading, writing, and editing files
+- Listing directories
+- Executing shell commands
+- Taking screenshots and controlling the computer
+- Opening URLs in the browser
+
+When the user asks you to do something, use the appropriate tools to accomplish it. You can call multiple tools in sequence. After each tool result, decide whether to call another tool or respond to the user.
+
+Be concise in your text responses. Show your work through tool calls. When editing code, read the file first to understand the current state before making changes.`
 
 export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
@@ -46,7 +61,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     })
 
     set({ isStreaming: true })
-    streamResponse(projectId, sessionId, set, get)
+    agentLoop(projectId, sessionId, set, get)
   },
 
   stopStreaming: () => {
@@ -55,7 +70,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   }
 }))
 
-async function streamResponse(
+async function agentLoop(
   projectId: string,
   sessionId: string,
   set: (fn: (s: ChatState) => Partial<ChatState>) => void,
@@ -68,7 +83,7 @@ async function streamResponse(
     useAppStore.getState().addMessage(projectId, sessionId, {
       id: `${Date.now()}-err`,
       role: 'assistant',
-      content: 'No providers configured. Add a provider in Settings.',
+      content: 'No providers configured. Go to Settings > Providers to add one.',
       createdAt: Date.now()
     })
     set(() => ({ isStreaming: false }))
@@ -77,139 +92,320 @@ async function streamResponse(
   }
 
   const provider = enabledProviders[0]
-  const model = models.find((m) => m.providerId === provider.id && m.enabled)
-  const modelId = model?.modelId || 'gpt-4o'
 
   abortController = new AbortController()
 
-  const assistantMsgId = `${Date.now()}-assistant`
-  useAppStore.getState().addMessage(projectId, sessionId, {
-    id: assistantMsgId,
-    role: 'assistant',
-    content: '',
-    createdAt: Date.now()
-  })
+  // Get project path for tool execution context
+  const project = useAppStore.getState().projects.find((p) => p.id === projectId)
+  const projectPath = project?.path
 
-  try {
-    const session = useAppStore.getState().projects
-      .find((p) => p.id === projectId)
-      ?.sessions.find((s) => s.id === sessionId)
+  // Load project context (skills, CLAUDE.md, etc.)
+  let systemPrompt = SYSTEM_PROMPT
+  if (projectPath) {
+    try {
+      const ctx = await loadProjectContext(projectPath)
+      systemPrompt = buildSystemPrompt(SYSTEM_PROMPT, ctx)
+    } catch {
+      // Skills loading failed, use base prompt
+    }
+  }
 
-    const historyMessages = (session?.messages || [])
-      .filter((m) => m.id !== assistantMsgId)
-      .map((m) => ({ role: m.role, content: m.content }))
+  // Build conversation history
+  const session = useAppStore.getState().projects
+    .find((p) => p.id === projectId)
+    ?.sessions.find((s) => s.id === sessionId)
 
-    let url: string
-    let body: Record<string, unknown>
-    let headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const conversationMessages = (session?.messages || []).map((m) => ({
+    role: m.role,
+    content: m.content
+  }))
 
-    if (provider.apiFormat === 'claude') {
-      url = `${provider.baseUrl}/messages`
-      headers['x-api-key'] = provider.apiKey || ''
-      headers['anthropic-version'] = '2023-06-01'
+  // Auto mode: select model based on task complexity
+  const lastUserMsg = conversationMessages.filter((m) => m.role === 'user').pop()
+  const complexity = estimateComplexity(lastUserMsg?.content || '')
+  const selectedModel = selectModelForTask(complexity)
+  const modelId = selectedModel?.modelId || models.find((m) => m.providerId === provider.id && m.enabled)?.modelId || 'gpt-4o'
 
-      // Claude cache control: mark system prompt for caching
-      body = {
-        model: modelId,
-        max_tokens: 8192,
-        stream: true,
-        system: [
-          {
-            type: 'text',
-            text: SYSTEM_PROMPT,
-            cache_control: { type: 'ephemeral' }
-          }
-        ],
-        messages: historyMessages
-      }
-    } else {
-      // OpenAI format - stable system prompt first for prefix cache
-      url = `${provider.baseUrl}/chat/completions`
-      headers['Authorization'] = `Bearer ${provider.apiKey || ''}`
+  // Agent loop: keep calling LLM until it stops using tools
+  let round = 0
+  // We maintain a working message list that includes tool calls and results
+  const workingMessages: Array<Record<string, unknown>> = conversationMessages.map((m) => ({
+    role: m.role,
+    content: m.content
+  }))
 
-      body = {
-        model: modelId,
-        stream: true,
-        messages: [
-          { role: 'system', content: SYSTEM_PROMPT },
-          ...historyMessages
-        ]
-      }
+  while (round < MAX_TOOL_ROUNDS) {
+    if (abortController.signal.aborted) break
+    round++
+
+    // Create assistant message placeholder for streaming
+    const assistantMsgId = `${Date.now()}-assistant-${round}`
+    useAppStore.getState().addMessage(projectId, sessionId, {
+      id: assistantMsgId,
+      role: 'assistant',
+      content: '',
+      createdAt: Date.now()
+    })
+
+    // Call LLM
+    const { text, toolCalls } = await callLLM(
+      provider, modelId, workingMessages, assistantMsgId, projectId, sessionId, systemPrompt
+    )
+
+    if (abortController.signal.aborted) break
+
+    // If no tool calls, we're done
+    if (toolCalls.length === 0) {
+      break
     }
 
-    const response = await fetch(url, {
+    // Add assistant message with tool calls to working history
+    if (provider.apiFormat === 'claude') {
+      const contentBlocks: Array<Record<string, unknown>> = []
+      if (text) contentBlocks.push({ type: 'text', text })
+      for (const tc of toolCalls) {
+        contentBlocks.push({
+          type: 'tool_use',
+          id: tc.id,
+          name: tc.name,
+          input: tc.arguments
+        })
+      }
+      workingMessages.push({ role: 'assistant', content: contentBlocks })
+    } else {
+      workingMessages.push({
+        role: 'assistant',
+        content: text || null,
+        tool_calls: toolCalls.map((tc) => ({
+          id: tc.id,
+          type: 'function',
+          function: { name: tc.name, arguments: JSON.stringify(tc.arguments) }
+        }))
+      })
+    }
+
+    // Execute tools and collect results
+    for (const tc of toolCalls) {
+      if (abortController.signal.aborted) break
+
+      // Show tool execution in UI
+      const toolMsgId = `${Date.now()}-tool-${tc.id}`
+      useAppStore.getState().addMessage(projectId, sessionId, {
+        id: toolMsgId,
+        role: 'system',
+        content: `[Tool: ${tc.name}] ${JSON.stringify(tc.arguments).slice(0, 200)}`,
+        createdAt: Date.now()
+      })
+
+      const result = await executeTool(tc, projectPath)
+
+      // Update tool message with result
+      useAppStore.getState().updateMessageContent(
+        projectId, sessionId, toolMsgId,
+        `[Tool: ${tc.name}] ${result.isError ? 'ERROR' : 'OK'}\n${result.content.slice(0, 500)}`
+      )
+
+      // Add tool result to working history
+      if (provider.apiFormat === 'claude') {
+        workingMessages.push({
+          role: 'user',
+          content: [{
+            type: 'tool_result',
+            tool_use_id: tc.id,
+            content: result.content,
+            is_error: result.isError || false
+          }]
+        })
+      } else {
+        workingMessages.push({
+          role: 'tool',
+          tool_call_id: tc.id,
+          content: result.content
+        })
+      }
+    }
+  }
+
+  // Notify completion
+  window.api.notification.send('hjcode', 'Task complete')
+
+  set(() => ({ isStreaming: false }))
+  abortController = null
+  processQueue(set, get)
+}
+
+async function callLLM(
+  provider: { apiFormat: string; baseUrl: string; apiKey?: string },
+  modelId: string,
+  messages: Array<Record<string, unknown>>,
+  assistantMsgId: string,
+  projectId: string,
+  sessionId: string,
+  systemPrompt: string
+): Promise<{ text: string; toolCalls: ToolCall[] }> {
+  const isBrowser = window.api?.platform === 'browser'
+  let url: string
+  let body: Record<string, unknown>
+  let headers: Record<string, string> = { 'Content-Type': 'application/json' }
+
+  if (provider.apiFormat === 'claude') {
+    url = `${provider.baseUrl}/messages`
+    headers['x-api-key'] = provider.apiKey || ''
+    headers['anthropic-version'] = '2023-06-01'
+    body = {
+      model: modelId,
+      max_tokens: 8192,
+      stream: true,
+      system: [{ type: 'text', text: systemPrompt, cache_control: { type: 'ephemeral' } }],
+      tools: toolsToClaude(),
+      messages
+    }
+  } else {
+    url = `${provider.baseUrl}/chat/completions`
+    headers['Authorization'] = `Bearer ${provider.apiKey || ''}`
+    body = {
+      model: modelId,
+      stream: true,
+      tools: toolsToOpenAI(),
+      messages: [{ role: 'system', content: systemPrompt }, ...messages]
+    }
+  }
+
+  let response: Response
+  if (isBrowser) {
+    response = await fetch('/api/proxy', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, headers, body: JSON.stringify(body) }),
+      signal: abortController!.signal
+    })
+  } else {
+    response = await fetch(url, {
       method: 'POST',
       headers,
       body: JSON.stringify(body),
-      signal: abortController.signal
+      signal: abortController!.signal
     })
+  }
 
-    if (!response.ok) {
-      const errText = await response.text()
-      throw new Error(`API ${response.status}: ${errText.slice(0, 200)}`)
-    }
+  if (!response.ok) {
+    const errText = await response.text()
+    throw new Error(`API ${response.status}: ${errText.slice(0, 300)}`)
+  }
 
-    const reader = response.body?.getReader()
-    if (!reader) throw new Error('No response body')
+  // Stream and parse response
+  const reader = response.body?.getReader()
+  if (!reader) throw new Error('No response body')
 
-    const decoder = new TextDecoder()
-    let buffer = ''
-    let fullContent = ''
+  const decoder = new TextDecoder()
+  let buffer = ''
+  let fullText = ''
+  const toolCalls: ToolCall[] = []
+  // For accumulating tool call arguments during streaming
+  const toolCallBuffers: Map<number, { id: string; name: string; args: string }> = new Map()
 
-    while (true) {
-      const { done, value } = await reader.read()
-      if (done) break
+  while (true) {
+    const { done, value } = await reader.read()
+    if (done) break
 
-      buffer += decoder.decode(value, { stream: true })
-      const lines = buffer.split('\n')
-      buffer = lines.pop() || ''
+    buffer += decoder.decode(value, { stream: true })
+    const lines = buffer.split('\n')
+    buffer = lines.pop() || ''
 
-      for (const line of lines) {
-        if (!line.startsWith('data: ')) continue
-        const data = line.slice(6).trim()
-        if (data === '[DONE]') continue
+    for (const line of lines) {
+      if (!line.startsWith('data: ')) continue
+      const data = line.slice(6).trim()
+      if (data === '[DONE]') continue
 
-        try {
-          const parsed = JSON.parse(data)
-          let delta = ''
+      try {
+        const parsed = JSON.parse(data)
 
-          if (provider.apiFormat === 'claude') {
-            if (parsed.type === 'content_block_delta') {
-              delta = parsed.delta?.text || ''
+        if (provider.apiFormat === 'claude') {
+          // Claude streaming events
+          if (parsed.type === 'content_block_start' && parsed.content_block?.type === 'tool_use') {
+            const idx = parsed.index
+            toolCallBuffers.set(idx, {
+              id: parsed.content_block.id,
+              name: parsed.content_block.name,
+              args: ''
+            })
+          } else if (parsed.type === 'content_block_delta') {
+            if (parsed.delta?.type === 'text_delta') {
+              fullText += parsed.delta.text
+              useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, fullText)
+            } else if (parsed.delta?.type === 'input_json_delta') {
+              const idx = parsed.index
+              const buf = toolCallBuffers.get(idx)
+              if (buf) buf.args += parsed.delta.partial_json
             }
-          } else {
-            delta = parsed.choices?.[0]?.delta?.content || ''
+          } else if (parsed.type === 'content_block_stop') {
+            const idx = parsed.index
+            const buf = toolCallBuffers.get(idx)
+            if (buf) {
+              try {
+                toolCalls.push({ id: buf.id, name: buf.name, arguments: JSON.parse(buf.args || '{}') })
+              } catch {
+                toolCalls.push({ id: buf.id, name: buf.name, arguments: {} })
+              }
+              toolCallBuffers.delete(idx)
+            }
+          }
+        } else {
+          // OpenAI streaming
+          const choice = parsed.choices?.[0]
+          if (!choice) continue
+
+          if (choice.delta?.content) {
+            fullText += choice.delta.content
+            useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, fullText)
           }
 
-          if (delta) {
-            fullContent += delta
-            useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, fullContent)
+          if (choice.delta?.tool_calls) {
+            for (const tc of choice.delta.tool_calls) {
+              const idx = tc.index
+              if (!toolCallBuffers.has(idx)) {
+                toolCallBuffers.set(idx, {
+                  id: tc.id || `call_${idx}`,
+                  name: tc.function?.name || '',
+                  args: ''
+                })
+              }
+              const buf = toolCallBuffers.get(idx)!
+              if (tc.function?.name) buf.name = tc.function.name
+              if (tc.id) buf.id = tc.id
+              if (tc.function?.arguments) buf.args += tc.function.arguments
+            }
           }
-        } catch {
-          // skip malformed SSE chunks
+
+          if (choice.finish_reason === 'tool_calls') {
+            for (const [, buf] of toolCallBuffers) {
+              try {
+                toolCalls.push({ id: buf.id, name: buf.name, arguments: JSON.parse(buf.args || '{}') })
+              } catch {
+                toolCalls.push({ id: buf.id, name: buf.name, arguments: {} })
+              }
+            }
+            toolCallBuffers.clear()
+          }
         }
+      } catch {
+        // skip malformed chunks
       }
     }
-
-    // Notify on completion
-    if (fullContent.length > 0) {
-      window.api.notification.send('hjcode', 'Response complete')
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error && err.name === 'AbortError') {
-      // user stopped streaming
-    } else {
-      const errMsg = err instanceof Error ? err.message : 'Unknown error'
-      useAppStore.getState().updateMessageContent(
-        projectId, sessionId, assistantMsgId,
-        `[Error] ${errMsg}`
-      )
-    }
-  } finally {
-    set(() => ({ isStreaming: false }))
-    abortController = null
-    processQueue(set, get)
   }
+
+  // Finalize any remaining tool call buffers (OpenAI without finish_reason)
+  if (toolCallBuffers.size > 0 && toolCalls.length === 0) {
+    for (const [, buf] of toolCallBuffers) {
+      try {
+        toolCalls.push({ id: buf.id, name: buf.name, arguments: JSON.parse(buf.args || '{}') })
+      } catch {
+        toolCalls.push({ id: buf.id, name: buf.name, arguments: {} })
+      }
+    }
+  }
+
+  return { text: fullText, toolCalls }
 }
 
 function processQueue(

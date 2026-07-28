@@ -1,4 +1,4 @@
-import { app, BrowserWindow, shell, ipcMain, dialog, Notification, desktopCapturer, systemPreferences } from 'electron'
+import { app, BrowserWindow, shell, ipcMain, dialog, Notification, desktopCapturer, systemPreferences, session } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
@@ -247,6 +247,18 @@ function registerIpc(): void {
 app.commandLine.appendSwitch('no-sandbox')
 
 app.whenReady().then(() => {
+  // CSP for security
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; frame-src 'none';"
+        ]
+      }
+    })
+  })
+
   registerIpc()
   createWindow()
 

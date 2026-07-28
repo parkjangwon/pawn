@@ -1,11 +1,15 @@
 import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
-import { useProviderStore } from '../stores/provider'
 import { useChatStore } from '../stores/chat'
+import MarkdownRenderer from './MarkdownRenderer'
 import './ChatArea.css'
 
-export default function ChatArea(): React.JSX.Element {
+interface ChatAreaProps {
+  onToggleSidebar: () => void
+}
+
+export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.Element {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>('queue')
@@ -15,6 +19,14 @@ export default function ChatArea(): React.JSX.Element {
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+
+  const messages = activeSession?.messages || []
+
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [messages.length, isStreaming])
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -37,17 +49,14 @@ export default function ChatArea(): React.JSX.Element {
     }
   }
 
-  const messages = activeSession?.messages || []
-
   return (
     <main className="chat-area">
       <div className="mobile-header">
-        <button className="mobile-menu-btn" onClick={() => {
-          document.querySelector('.sidebar')?.classList.toggle('open')
-          document.querySelector('.sidebar-overlay')?.classList.toggle('hidden')
-        }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
+        <button className="mobile-menu-btn" onClick={onToggleSidebar}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
         <span className="mobile-title">hjcode Desktop</span>
@@ -63,10 +72,16 @@ export default function ChatArea(): React.JSX.Element {
           {messages.map((msg) => (
             <div key={msg.id} className={`message ${msg.role}`}>
               <div className="message-role">{msg.role === 'user' ? 'You' : 'Assistant'}</div>
-              <div className="message-content">{msg.content}</div>
+              <div className="message-content">
+                {msg.role === 'assistant' ? (
+                  <MarkdownRenderer content={msg.content} />
+                ) : (
+                  msg.content
+                )}
+              </div>
             </div>
           ))}
-          {isStreaming && messages[messages.length - 1]?.role === 'user' && (
+          {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
             <div className="message assistant">
               <div className="message-role">Assistant</div>
               <div className="message-content streaming">
@@ -74,6 +89,7 @@ export default function ChatArea(): React.JSX.Element {
               </div>
             </div>
           )}
+          <div ref={messagesEndRef} />
         </div>
       )}
 
@@ -98,7 +114,7 @@ export default function ChatArea(): React.JSX.Element {
               <option value="steer">Steer</option>
             </select>
             <button className="send-btn" onClick={handleSend} disabled={!input.trim() || isStreaming}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="12" y1="19" x2="12" y2="5" />
                 <polyline points="5 12 12 5 19 12" />
               </svg>
