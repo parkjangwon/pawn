@@ -1,0 +1,61 @@
+.status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px var(--space-lg);
+  height: 28px;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.status-left,
+.status-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-dot.connected {
+  background: #22c55e;
+}
+
+.status-dot.streaming {
+  background: var(--accent);
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+.status-dot.disconnected {
+  background: var(--text-muted);
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.status-text {
+  color: var(--text-muted);
+}
+
+.status-model {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.status-mode {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 11px;
+}

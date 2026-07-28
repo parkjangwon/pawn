@@ -39,6 +39,14 @@ body {
   position: relative;
 }
 
+.main-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+}
+
 /* Light theme */
 .app.light {
   --bg-primary: #ffffff;

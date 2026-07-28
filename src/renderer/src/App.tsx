@@ -5,6 +5,7 @@ import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
 import Settings from './components/Settings'
 import PermissionDialog from './components/PermissionDialog'
+import StatusBar from './components/StatusBar'
 
 export default function App(): React.JSX.Element {
   const theme = useThemeStore((s) => s.theme)
@@ -52,7 +53,10 @@ export default function App(): React.JSX.Element {
       <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : ''}`}>
         <Sidebar onOpenSettings={() => setShowSettings(true)} />
       </div>
-      <ChatArea onToggleSidebar={toggleSidebar} />
+      <div className="main-column">
+        <ChatArea onToggleSidebar={toggleSidebar} />
+        <StatusBar />
+      </div>
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       <PermissionDialog />
     </div>
