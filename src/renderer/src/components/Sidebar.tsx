@@ -40,11 +40,16 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
 
   const handleAddProject = async (): Promise<void> => {
     const folder = await window.api.selectFolder()
-    if (!folder) return
-    const name = folder.split('/').pop() || folder.split('\\').pop() || folder
-    addProject(name, folder)
-    // Auto-expand the new project
-    setExpandedProjects((prev) => new Set([...prev, projects[projects.length - 1]?.id || ''].filter(Boolean).concat([`new`])))
+    if (folder) {
+      const name = folder.split('/').pop() || folder.split('\\').pop() || folder
+      addProject(name, folder)
+    } else {
+      // Allow creating project without folder (general workspace)
+      const name = prompt('Project name (optional folder can be set later):')
+      if (name?.trim()) {
+        addProject(name.trim(), '')
+      }
+    }
   }
 
   const handleDeleteProject = (e: React.MouseEvent, id: string): void => {

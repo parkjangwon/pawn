@@ -6,6 +6,7 @@ export interface Session {
   title: string
   createdAt: number
   messages: Message[]
+  path?: string
 }
 
 export interface Message {
@@ -35,6 +36,7 @@ interface AppState {
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
+  updateSessionPath: (projectId: string, sessionId: string, path: string) => void
   updateProjectName: (projectId: string, name: string) => void
 }
 
@@ -135,6 +137,20 @@ export const useAppStore = create<AppState>()(
                   ...p,
                   sessions: p.sessions.map((ss) =>
                     ss.id === sessionId ? { ...ss, title } : ss
+                  )
+                }
+              : p
+          )
+        })),
+
+      updateSessionPath: (projectId, sessionId, path) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  sessions: p.sessions.map((ss) =>
+                    ss.id === sessionId ? { ...ss, path: path || undefined } : ss
                   )
                 }
               : p
