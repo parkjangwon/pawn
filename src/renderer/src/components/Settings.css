@@ -226,6 +226,27 @@
   color: var(--danger);
 }
 
+.test-btn {
+  padding: 2px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.test-btn:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.test-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .add-provider-form {
   display: flex;
   flex-direction: column;

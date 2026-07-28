@@ -23,12 +23,21 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
   } = useProviderStore()
 
   const [showAddProvider, setShowAddProvider] = useState(false)
+  const [showAddModel, setShowAddModel] = useState(false)
+  const [testingId, setTestingId] = useState<string | null>(null)
+  const [testResult, setTestResult] = useState<Record<string, string>>({})
   const [form, setForm] = useState({
     name: '',
     apiFormat: 'openai' as ApiFormat,
     authMethod: 'api-key' as AuthMethod,
     baseUrl: '',
     apiKey: ''
+  })
+  const [modelForm, setModelForm] = useState({
+    providerId: '',
+    modelId: '',
+    label: '',
+    tier: 'mid' as 'low' | 'mid' | 'high'
   })
 
   const handleAddProvider = (): void => {
@@ -44,6 +53,69 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
     })
     setForm({ name: '', apiFormat: 'openai', authMethod: 'api-key', baseUrl: '', apiKey: '' })
     setShowAddProvider(false)
+  }
+
+  const handleAddModel = (): void => {
+    if (!modelForm.providerId || !modelForm.modelId.trim()) return
+    addModel({
+      id: '',
+      providerId: modelForm.providerId,
+      modelId: modelForm.modelId.trim(),
+      label: modelForm.label.trim() || modelForm.modelId.trim(),
+      tier: modelForm.tier,
+      enabled: true
+    })
+    setModelForm({ providerId: '', modelId: '', label: '', tier: 'mid' })
+    setShowAddModel(false)
+  }
+
+  const handleTestProvider = async (providerId: string): Promise<void> => {
+    const p = providers.find((pr) => pr.id === providerId)
+    if (!p) return
+    setTestingId(providerId)
+    setTestResult((r) => ({ ...r, [providerId]: '' }))
+
+    try {
+      const url = p.apiFormat === 'claude'
+        ? `${p.baseUrl}/messages`
+        : `${p.baseUrl}/chat/completions`
+
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (p.apiFormat === 'claude') {
+        headers['x-api-key'] = p.apiKey || ''
+        headers['anthropic-version'] = '2023-06-01'
+      } else {
+        headers['Authorization'] = `Bearer ${p.apiKey || ''}`
+      }
+
+      const body = p.apiFormat === 'claude'
+        ? { model: 'claude-3-haiku-20240307', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] }
+        : { model: 'gpt-4o-mini', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] }
+
+      const isBrowser = window.api?.platform === 'browser'
+      let response: Response
+
+      if (isBrowser) {
+        response = await fetch('/api/proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, headers, body: JSON.stringify(body) })
+        })
+      } else {
+        response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+      }
+
+      if (response.ok) {
+        setTestResult((r) => ({ ...r, [providerId]: 'OK' }))
+      } else {
+        const text = await response.text()
+        setTestResult((r) => ({ ...r, [providerId]: `FAIL: ${response.status} ${text.slice(0, 100)}` }))
+      }
+    } catch (err) {
+      setTestResult((r) => ({ ...r, [providerId]: `ERROR: ${err}` }))
+    } finally {
+      setTestingId(null)
+    }
   }
 
   const languages = [
@@ -132,6 +204,14 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
                     </span>
                   </div>
                   <div className="provider-actions">
+                    <button
+                      className="test-btn"
+                      onClick={() => handleTestProvider(p.id)}
+                      disabled={testingId === p.id}
+                      title="Test connection"
+                    >
+                      {testingId === p.id ? '...' : testResult[p.id] === 'OK' ? 'OK' : testResult[p.id] ? '!' : 'Test'}
+                    </button>
                     <label className="toggle-switch">
                       <input
                         type="checkbox"
@@ -214,6 +294,46 @@ export default function Settings({ onClose }: { onClose: () => void }): React.JS
                 <div className="empty-hint">No models configured</div>
               )}
             </div>
+
+            {showAddModel ? (
+              <div className="add-provider-form">
+                <select
+                  value={modelForm.providerId}
+                  onChange={(e) => setModelForm({ ...modelForm, providerId: e.target.value })}
+                >
+                  <option value="">Select provider...</option>
+                  {providers.map((p) => (
+                    <option key={p.id} value={p.id}>{p.name}</option>
+                  ))}
+                </select>
+                <input
+                  placeholder="Model ID (e.g. gpt-4o, claude-sonnet-4-20250514)"
+                  value={modelForm.modelId}
+                  onChange={(e) => setModelForm({ ...modelForm, modelId: e.target.value })}
+                />
+                <input
+                  placeholder="Display label (optional)"
+                  value={modelForm.label}
+                  onChange={(e) => setModelForm({ ...modelForm, label: e.target.value })}
+                />
+                <select
+                  value={modelForm.tier}
+                  onChange={(e) => setModelForm({ ...modelForm, tier: e.target.value as 'low' | 'mid' | 'high' })}
+                >
+                  <option value="low">Low (fast, cheap)</option>
+                  <option value="mid">Mid (balanced)</option>
+                  <option value="high">High (powerful)</option>
+                </select>
+                <div className="form-actions">
+                  <button className="primary-btn" onClick={handleAddModel}>Add Model</button>
+                  <button onClick={() => setShowAddModel(false)}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <button className="add-btn" onClick={() => setShowAddModel(true)}>
+                + Add Model
+              </button>
+            )}
           </section>
         </div>
       </div>
