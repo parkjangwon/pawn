@@ -1,4 +1,4 @@
-import { resolve } from 'path'
+import { resolve, join } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
@@ -66,10 +66,11 @@ function apiProxyPlugin(): Plugin {
             switch (action) {
               case 'listDir': {
                 const entries = readdirSync(path, { withFileTypes: true })
+                const basePath = path.endsWith('/') ? path : path + '/'
                 res.end(JSON.stringify(entries.map((e) => ({
                   name: e.name,
                   isDirectory: e.isDirectory(),
-                  path: resolve(path, e.name)
+                  path: basePath + e.name
                 }))))
                 break
               }
