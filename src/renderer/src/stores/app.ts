@@ -34,6 +34,7 @@ interface AppState {
   setActiveSession: (id: string) => void
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
+  updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
 }
 
 let counter = 0
@@ -119,6 +120,20 @@ export const useAppStore = create<AppState>()(
                           )
                         }
                       : ss
+                  )
+                }
+              : p
+          )
+        })),
+
+      updateSessionTitle: (projectId, sessionId, title) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  sessions: p.sessions.map((ss) =>
+                    ss.id === sessionId ? { ...ss, title } : ss
                   )
                 }
               : p

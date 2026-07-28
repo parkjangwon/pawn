@@ -192,6 +192,47 @@
   cursor: default;
 }
 
+.stop-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: var(--danger);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+}
+
+.stop-btn:hover {
+  opacity: 0.85;
+}
+
+/* Tool/system messages */
+.message.system {
+  padding: var(--space-xs) var(--space-xl);
+}
+
+.message.system .message-role {
+  display: none;
+}
+
+.message.system .message-content {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  padding: var(--space-xs) var(--space-sm);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  white-space: pre-wrap;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
 @media (max-width: 768px) {
   .message {
     padding: var(--space-sm) var(--space-md);

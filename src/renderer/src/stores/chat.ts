@@ -60,6 +60,15 @@ export const useChatStore = create<ChatState>((set, get) => ({
       createdAt: Date.now()
     })
 
+    // Auto-title: set session title from first user message
+    const session = useAppStore.getState().projects
+      .find((p) => p.id === projectId)
+      ?.sessions.find((s) => s.id === sessionId)
+    if (session && session.messages.length <= 1 && session.title === 'New Session') {
+      const title = content.slice(0, 40) + (content.length > 40 ? '...' : '')
+      useAppStore.getState().updateSessionTitle(projectId, sessionId, title)
+    }
+
     set({ isStreaming: true })
     agentLoop(projectId, sessionId, set, get)
   },

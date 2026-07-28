@@ -14,7 +14,7 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   const [input, setInput] = useState('')
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>('queue')
   const { projects, activeProjectId, activeSessionId } = useAppStore()
-  const { sendMessage, isStreaming } = useChatStore()
+  const { sendMessage, isStreaming, stopStreaming } = useChatStore()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
@@ -109,16 +109,25 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
               value={sendMode}
               onChange={(e) => setSendMode(e.target.value as 'queue' | 'steer')}
               title="Send mode"
+              disabled={isStreaming}
             >
               <option value="queue">Queue</option>
               <option value="steer">Steer</option>
             </select>
-            <button className="send-btn" onClick={handleSend} disabled={!input.trim() || isStreaming}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="12" y1="19" x2="12" y2="5" />
-                <polyline points="5 12 12 5 19 12" />
-              </svg>
-            </button>
+            {isStreaming ? (
+              <button className="stop-btn" onClick={stopStreaming} title="Stop">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="4" y="4" width="16" height="16" rx="2" />
+                </svg>
+              </button>
+            ) : (
+              <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="12" y1="19" x2="12" y2="5" />
+                  <polyline points="5 12 12 5 19 12" />
+                </svg>
+              </button>
+            )}
           </div>
         </div>
       </div>
