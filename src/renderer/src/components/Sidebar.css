@@ -12,8 +12,9 @@
 }
 
 .sidebar button,
-.sidebar .session-item,
-.sidebar .project-tabs {
+.sidebar .tree-project-header,
+.sidebar .tree-session,
+.sidebar .project-tree {
   -webkit-app-region: no-drag;
 }
 
@@ -31,24 +32,6 @@
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.3px;
-}
-
-.icon-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 32px;
-  height: 32px;
-  background: none;
-  border: none;
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-
-.icon-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
 }
 
 .new-session-btn {
@@ -76,94 +59,8 @@
   color: var(--text-muted);
 }
 
-.new-session-btn.secondary {
-  border-style: dashed;
-  background: none;
-}
-
-.project-tabs {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-xs);
-}
-
-.project-tab {
-  padding: var(--space-xs) var(--space-sm);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  color: var(--text-secondary);
-  font-size: var(--font-sm);
-  cursor: pointer;
-  max-width: 110px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  transition: all 0.15s;
-}
-
-.project-tab:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}
-
-.project-tab.active {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-subtle);
-}
-
-.project-tab-wrapper {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  position: relative;
-}
-
-.project-tab-wrapper .project-tab {
-  flex: 1;
-  min-width: 0;
-}
-
-.tab-delete-btn,
-.session-delete-btn {
-  display: none;
-  align-items: center;
-  justify-content: center;
-  width: 16px;
-  height: 16px;
-  border: none;
-  border-radius: 3px;
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  padding: 0;
-}
-
-.project-tab-wrapper:hover .tab-delete-btn,
-.session-item:hover .session-delete-btn {
-  display: flex;
-}
-
-.tab-delete-btn:hover,
-.session-delete-btn:hover {
-  background: var(--bg-hover);
-  color: var(--danger);
-}
-
-.rename-input {
-  width: 100%;
-  padding: 2px 6px;
-  border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: var(--font-sm);
-  outline: none;
-}
-
-.session-list {
+/* Project Tree */
+.project-tree {
   flex: 1;
   overflow-y: auto;
   display: flex;
@@ -171,42 +68,167 @@
   gap: 2px;
 }
 
-.session-item {
+.tree-project {
+  display: flex;
+  flex-direction: column;
+}
+
+.tree-project-header {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: var(--space-xs);
   padding: var(--space-sm) var(--space-sm);
   border-radius: var(--radius-md);
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-secondary);
   transition: background 0.15s;
+  position: relative;
 }
 
-.session-item:hover {
+.tree-project-header:hover {
   background: var(--bg-hover);
 }
 
-.session-item.active {
+.tree-project-header.active {
+  color: var(--text-primary);
+}
+
+.tree-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  color: var(--text-muted);
+}
+
+.tree-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.tree-folder-icon {
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.tree-project-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.tree-project-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.tree-project-header:hover .tree-project-actions {
+  display: flex;
+}
+
+.tree-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 4px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.tree-action-btn:hover {
   background: var(--bg-active);
   color: var(--text-primary);
 }
 
-.session-item svg {
+.tree-action-btn.delete:hover {
+  color: var(--danger);
+}
+
+/* Sessions (children) */
+.tree-sessions {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding-left: 20px;
+  margin-left: 8px;
+  border-left: 1px solid var(--border-color);
+}
+
+.tree-session {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 6px var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-md);
+  color: var(--text-muted);
+  transition: all 0.15s;
+  position: relative;
+}
+
+.tree-session:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.tree-session.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.tree-session svg {
   flex-shrink: 0;
   color: var(--text-muted);
 }
 
-.session-item.active svg {
+.tree-session.active svg {
   color: var(--text-primary);
 }
 
-.session-title {
+.tree-session-title {
+  flex: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
+.tree-session .session-del {
+  display: none;
+}
+
+.tree-session:hover .session-del {
+  display: flex;
+}
+
+.tree-empty {
+  padding: var(--space-xs) var(--space-sm);
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* Rename input */
+.rename-input {
+  flex: 1;
+  padding: 2px 6px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  outline: none;
+  min-width: 0;
+}
+
+/* Empty state */
 .empty-hint {
   padding: var(--space-lg) var(--space-sm);
   font-size: var(--font-sm);
@@ -214,6 +236,7 @@
   text-align: center;
 }
 
+/* Footer */
 .sidebar-footer {
   flex-shrink: 0;
   padding-top: var(--space-md);

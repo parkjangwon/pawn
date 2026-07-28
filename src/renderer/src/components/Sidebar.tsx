@@ -23,17 +23,28 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
     updateProjectName
   } = useAppStore()
 
+  const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
   const [renamingSession, setRenamingSession] = useState<string | null>(null)
   const [renamingProject, setRenamingProject] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
 
-  const activeProject = projects.find((p) => p.id === activeProjectId)
+  const toggleProject = (id: string): void => {
+    setExpandedProjects((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+    setActiveProject(id)
+  }
 
   const handleAddProject = async (): Promise<void> => {
     const folder = await window.api.selectFolder()
     if (!folder) return
     const name = folder.split('/').pop() || folder.split('\\').pop() || folder
     addProject(name, folder)
+    // Auto-expand the new project
+    setExpandedProjects((prev) => new Set([...prev, projects[projects.length - 1]?.id || ''].filter(Boolean).concat([`new`])))
   }
 
   const handleDeleteProject = (e: React.MouseEvent, id: string): void => {
@@ -87,86 +98,109 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
         {t('sidebar.addProject')}
       </button>
 
-      {projects.length > 0 && (
-        <div className="project-tabs">
-          {projects.map((p) => (
-            <div key={p.id} className={`project-tab-wrapper ${p.id === activeProjectId ? 'active' : ''}`}>
-              {renamingProject === p.id ? (
-                <input
-                  className="rename-input"
-                  value={renameValue}
-                  onChange={(e) => setRenameValue(e.target.value)}
-                  onBlur={() => commitRenameProject(p.id)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') commitRenameProject(p.id); if (e.key === 'Escape') setRenamingProject(null) }}
-                  autoFocus
-                />
-              ) : (
-                <button
-                  className="project-tab"
-                  onClick={() => setActiveProject(p.id)}
-                  onDoubleClick={(e) => startRenameProject(e, p.id, p.name)}
-                  title={p.path}
-                >
-                  {p.name}
-                </button>
-              )}
-              <button className="tab-delete-btn" onClick={(e) => handleDeleteProject(e, p.id)} title="Delete project">
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-              </button>
-            </div>
-          ))}
-        </div>
-      )}
+      <div className="project-tree">
+        {projects.map((project) => {
+          const isExpanded = expandedProjects.has(project.id) || project.id === activeProjectId
+          const isActive = project.id === activeProjectId
 
-      {activeProject && (
-        <button
-          className="new-session-btn secondary"
-          onClick={() => addSession(activeProject.id)}
-        >
-          + {t('sidebar.newSession')}
-        </button>
-      )}
-
-      <div className="session-list">
-        {activeProject?.sessions.map((session) => (
-          <div
-            key={session.id}
-            className={`session-item ${session.id === activeSessionId ? 'active' : ''}`}
-            onClick={() => setActiveSession(session.id)}
-          >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-            </svg>
-            {renamingSession === session.id ? (
-              <input
-                className="rename-input"
-                value={renameValue}
-                onChange={(e) => setRenameValue(e.target.value)}
-                onBlur={() => commitRenameSession(activeProject.id, session.id)}
-                onKeyDown={(e) => { if (e.key === 'Enter') commitRenameSession(activeProject.id, session.id); if (e.key === 'Escape') setRenamingSession(null) }}
-                autoFocus
-                onClick={(e) => e.stopPropagation()}
-              />
-            ) : (
-              <span
-                className="session-title"
-                onDoubleClick={(e) => startRenameSession(e, session.id, session.title)}
+          return (
+            <div key={project.id} className="tree-project">
+              <div
+                className={`tree-project-header ${isActive ? 'active' : ''}`}
+                onClick={() => toggleProject(project.id)}
               >
-                {session.title}
-              </span>
-            )}
-            <button
-              className="session-delete-btn"
-              onClick={(e) => handleDeleteSession(e, activeProject.id, session.id)}
-              title="Delete session"
-            >
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-            </button>
-          </div>
-        ))}
-        {activeProject && activeProject.sessions.length === 0 && (
-          <div className="empty-hint">{t('sidebar.sessions')}</div>
-        )}
+                <svg
+                  width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                  className={`tree-chevron ${isExpanded ? 'expanded' : ''}`}
+                >
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="tree-folder-icon">
+                  <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+                </svg>
+                {renamingProject === project.id ? (
+                  <input
+                    className="rename-input"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={() => commitRenameProject(project.id)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') commitRenameProject(project.id); if (e.key === 'Escape') setRenamingProject(null) }}
+                    autoFocus
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                ) : (
+                  <span
+                    className="tree-project-name"
+                    onDoubleClick={(e) => startRenameProject(e, project.id, project.name)}
+                  >
+                    {project.name}
+                  </span>
+                )}
+                <div className="tree-project-actions">
+                  <button
+                    className="tree-action-btn"
+                    onClick={(e) => { e.stopPropagation(); addSession(project.id); if (!isExpanded) toggleProject(project.id) }}
+                    title="New session"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                  </button>
+                  <button
+                    className="tree-action-btn delete"
+                    onClick={(e) => handleDeleteProject(e, project.id)}
+                    title="Delete project"
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                  </button>
+                </div>
+              </div>
+
+              {isExpanded && (
+                <div className="tree-sessions">
+                  {project.sessions.map((session) => (
+                    <div
+                      key={session.id}
+                      className={`tree-session ${session.id === activeSessionId ? 'active' : ''}`}
+                      onClick={() => { setActiveSession(session.id); setActiveProject(project.id) }}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                      </svg>
+                      {renamingSession === session.id ? (
+                        <input
+                          className="rename-input"
+                          value={renameValue}
+                          onChange={(e) => setRenameValue(e.target.value)}
+                          onBlur={() => commitRenameSession(project.id, session.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') commitRenameSession(project.id, session.id); if (e.key === 'Escape') setRenamingSession(null) }}
+                          autoFocus
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      ) : (
+                        <span
+                          className="tree-session-title"
+                          onDoubleClick={(e) => startRenameSession(e, session.id, session.title)}
+                        >
+                          {session.title}
+                        </span>
+                      )}
+                      <button
+                        className="tree-action-btn delete session-del"
+                        onClick={(e) => handleDeleteSession(e, project.id, session.id)}
+                        title="Delete session"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      </button>
+                    </div>
+                  ))}
+                  {project.sessions.length === 0 && (
+                    <div className="tree-empty">No sessions</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )
+        })}
+
         {projects.length === 0 && (
           <div className="empty-hint">{t('sidebar.noProjects')}</div>
         )}
