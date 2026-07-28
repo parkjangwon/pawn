@@ -1,19 +1,39 @@
 {
   "name": "hjcode",
   "version": "0.1.0",
-  "description": "AI Desktop Agent - Code, Browse, Automate",
+  "description": "AI Desktop Coding Agent — Code, Browse, Automate. BYOK, no harness, fully extensible.",
   "main": "./out/main/index.js",
   "author": "parkjangwon",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parkjangwon/hjcode.git"
+  },
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "desktop",
+    "electron",
+    "byok",
+    "computer-use",
+    "browser-use",
+    "automation"
+  ],
   "scripts": {
     "dev": "electron-vite dev",
     "dev:web": "vite --config vite.config.ts",
     "build": "electron-vite build",
     "preview": "electron-vite preview",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "dist:mac": "electron-builder --mac",
+    "dist:win": "electron-builder --win",
+    "dist:linux": "electron-builder --linux",
     "typecheck:node": "tsc --noEmit -p tsconfig.node.json",
     "typecheck:web": "tsc --noEmit -p tsconfig.web.json",
-    "typecheck": "npm run typecheck:node && npm run typecheck:web"
+    "typecheck": "npm run typecheck:node && npm run typecheck:web",
+    "check": "npm run typecheck && npm run build"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
@@ -31,6 +51,7 @@
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
     "electron": "^43.2.0",
+    "electron-builder": "^25.1.8",
     "electron-vite": "^5.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

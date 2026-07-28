@@ -1,0 +1,37 @@
+{
+  "appId": "com.parkjangwon.hjcode",
+  "productName": "hjcode Desktop",
+  "directories": {
+    "output": "release"
+  },
+  "files": [
+    "out/**/*"
+  ],
+  "mac": {
+    "target": [
+      { "target": "dmg", "arch": ["universal"] }
+    ],
+    "artifactName": "hjcode-${version}-${arch}.${ext}",
+    "category": "public.app-category.developer-tools",
+    "hardenedRuntime": true,
+    "gatekeeperAssess": false
+  },
+  "win": {
+    "target": [
+      { "target": "nsis", "arch": ["x64", "arm64"] }
+    ],
+    "artifactName": "hjcode-${version}-${arch}-setup.${ext}"
+  },
+  "linux": {
+    "target": [
+      { "target": "AppImage", "arch": ["x64", "arm64"] },
+      { "target": "deb", "arch": ["x64", "arm64"] }
+    ],
+    "artifactName": "hjcode-${version}-${arch}.${ext}",
+    "category": "Development"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true
+  }
+}
