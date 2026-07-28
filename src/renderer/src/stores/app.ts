@@ -35,6 +35,7 @@ interface AppState {
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
+  updateProjectName: (projectId: string, name: string) => void
 }
 
 let counter = 0
@@ -137,6 +138,13 @@ export const useAppStore = create<AppState>()(
                   )
                 }
               : p
+          )
+        })),
+
+      updateProjectName: (projectId, name) =>
+        set((s) => ({
+          projects: s.projects.map((p) =>
+            p.id === projectId ? { ...p, name } : p
           )
         }))
     }),

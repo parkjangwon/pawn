@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import './Sidebar.css'
@@ -13,10 +14,18 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
     activeProjectId,
     activeSessionId,
     addProject,
+    removeProject,
     setActiveProject,
     addSession,
-    setActiveSession
+    removeSession,
+    setActiveSession,
+    updateSessionTitle,
+    updateProjectName
   } = useAppStore()
+
+  const [renamingSession, setRenamingSession] = useState<string | null>(null)
+  const [renamingProject, setRenamingProject] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
 
@@ -25,6 +34,42 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
     if (!folder) return
     const name = folder.split('/').pop() || folder.split('\\').pop() || folder
     addProject(name, folder)
+  }
+
+  const handleDeleteProject = (e: React.MouseEvent, id: string): void => {
+    e.stopPropagation()
+    removeProject(id)
+  }
+
+  const handleDeleteSession = (e: React.MouseEvent, projectId: string, sessionId: string): void => {
+    e.stopPropagation()
+    removeSession(projectId, sessionId)
+  }
+
+  const startRenameSession = (e: React.MouseEvent, sessionId: string, currentTitle: string): void => {
+    e.stopPropagation()
+    setRenamingSession(sessionId)
+    setRenameValue(currentTitle)
+  }
+
+  const commitRenameSession = (projectId: string, sessionId: string): void => {
+    if (renameValue.trim()) {
+      updateSessionTitle(projectId, sessionId, renameValue.trim())
+    }
+    setRenamingSession(null)
+  }
+
+  const startRenameProject = (e: React.MouseEvent, projectId: string, currentName: string): void => {
+    e.stopPropagation()
+    setRenamingProject(projectId)
+    setRenameValue(currentName)
+  }
+
+  const commitRenameProject = (projectId: string): void => {
+    if (renameValue.trim()) {
+      updateProjectName(projectId, renameValue.trim())
+    }
+    setRenamingProject(null)
   }
 
   return (
@@ -45,14 +90,30 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
       {projects.length > 0 && (
         <div className="project-tabs">
           {projects.map((p) => (
-            <button
-              key={p.id}
-              className={`project-tab ${p.id === activeProjectId ? 'active' : ''}`}
-              onClick={() => setActiveProject(p.id)}
-              title={p.path}
-            >
-              {p.name}
-            </button>
+            <div key={p.id} className={`project-tab-wrapper ${p.id === activeProjectId ? 'active' : ''}`}>
+              {renamingProject === p.id ? (
+                <input
+                  className="rename-input"
+                  value={renameValue}
+                  onChange={(e) => setRenameValue(e.target.value)}
+                  onBlur={() => commitRenameProject(p.id)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') commitRenameProject(p.id); if (e.key === 'Escape') setRenamingProject(null) }}
+                  autoFocus
+                />
+              ) : (
+                <button
+                  className="project-tab"
+                  onClick={() => setActiveProject(p.id)}
+                  onDoubleClick={(e) => startRenameProject(e, p.id, p.name)}
+                  title={p.path}
+                >
+                  {p.name}
+                </button>
+              )}
+              <button className="tab-delete-btn" onClick={(e) => handleDeleteProject(e, p.id)} title="Delete project">
+                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
+            </div>
           ))}
         </div>
       )}
@@ -76,7 +137,31 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
             </svg>
-            <span className="session-title">{session.title}</span>
+            {renamingSession === session.id ? (
+              <input
+                className="rename-input"
+                value={renameValue}
+                onChange={(e) => setRenameValue(e.target.value)}
+                onBlur={() => commitRenameSession(activeProject.id, session.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter') commitRenameSession(activeProject.id, session.id); if (e.key === 'Escape') setRenamingSession(null) }}
+                autoFocus
+                onClick={(e) => e.stopPropagation()}
+              />
+            ) : (
+              <span
+                className="session-title"
+                onDoubleClick={(e) => startRenameSession(e, session.id, session.title)}
+              >
+                {session.title}
+              </span>
+            )}
+            <button
+              className="session-delete-btn"
+              onClick={(e) => handleDeleteSession(e, activeProject.id, session.id)}
+              title="Delete session"
+            >
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
           </div>
         ))}
         {activeProject && activeProject.sessions.length === 0 && (

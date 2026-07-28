@@ -78,7 +78,7 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
         <span className="mobile-title">hjcode Desktop</span>
       </div>
 
-      {!activeSession ? (
+      {!activeSession || messages.length === 0 ? (
         <div className="chat-welcome">
           <h1>{t('chat.welcome')}</h1>
           <p>{t('chat.welcomeSub')}</p>

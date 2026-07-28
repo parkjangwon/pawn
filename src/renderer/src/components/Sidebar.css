@@ -113,6 +113,56 @@
   background: var(--accent-subtle);
 }
 
+.project-tab-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  position: relative;
+}
+
+.project-tab-wrapper .project-tab {
+  flex: 1;
+  min-width: 0;
+}
+
+.tab-delete-btn,
+.session-delete-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.project-tab-wrapper:hover .tab-delete-btn,
+.session-item:hover .session-delete-btn {
+  display: flex;
+}
+
+.tab-delete-btn:hover,
+.session-delete-btn:hover {
+  background: var(--bg-hover);
+  color: var(--danger);
+}
+
+.rename-input {
+  width: 100%;
+  padding: 2px 6px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  outline: none;
+}
+
 .session-list {
   flex: 1;
   overflow-y: auto;
