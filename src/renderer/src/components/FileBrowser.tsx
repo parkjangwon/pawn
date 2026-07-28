@@ -19,13 +19,12 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
 
-  const loadDir = useCallback(async (path: string) => {
+  const loadDir = useCallback(async (path: string, fallback = true) => {
     setLoading(true)
     setError('')
     try {
       const result = await window.api.fs.listDir(path)
       if (Array.isArray(result)) {
-        // Sort: directories first, then alphabetical
         const sorted = result.sort((a, b) => {
           if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
           return a.name.localeCompare(b.name)
@@ -33,11 +32,24 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
         setEntries(sorted)
         setCurrentPath(path)
       } else {
+        // Directory doesn't exist - try parent
+        if (fallback && path !== '/') {
+          const parent = path.replace(/\/[^/]+\/?$/, '') || '/'
+          loadDir(parent, false)
+          return
+        }
         setError((result as { error: string }).error || 'Cannot read directory')
+        setCurrentPath(path)
         setEntries([])
       }
     } catch (err) {
+      if (fallback && path !== '/') {
+        const parent = path.replace(/\/[^/]+\/?$/, '') || '/'
+        loadDir(parent, false)
+        return
+      }
       setError(String(err))
+      setCurrentPath(path)
       setEntries([])
     } finally {
       setLoading(false)
@@ -89,7 +101,7 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
         <div className="fb-list">
           {loading && <div className="fb-loading">Loading...</div>}
           {error && <div className="fb-error">{error}</div>}
-          {!loading && !error && (
+          {!loading && (
             <>
               {currentPath !== '/' && (
                 <div className="fb-entry parent" onClick={navigateUp}>
@@ -97,7 +109,7 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
                   <span>..</span>
                 </div>
               )}
-              {entries.filter((e) => e.isDirectory).map((entry) => (
+              {!error && entries.filter((e) => e.isDirectory).map((entry) => (
                 <div key={entry.path} className="fb-entry folder" onClick={() => navigateTo(entry.path)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
@@ -105,7 +117,7 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
                   <span>{entry.name}</span>
                 </div>
               ))}
-              {entries.filter((e) => !e.isDirectory).map((entry) => (
+              {!error && entries.filter((e) => !e.isDirectory).map((entry) => (
                 <div key={entry.path} className="fb-entry file">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
