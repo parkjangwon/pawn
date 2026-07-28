@@ -1,3 +1,4 @@
+import React from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
@@ -36,15 +37,15 @@ export default function MarkdownRenderer({ content }: Props): React.JSX.Element 
 }
 
 function extractLang(children: React.ReactNode): string {
-  if (React.isValidElement(children) && children.props?.className) {
-    const match = String(children.props.className).match(/language-(\w+)/)
+  if (React.isValidElement<{ className?: string }>(children) && children.props?.className) {
+    const match = children.props.className.match(/language-(\w+)/)
     return match?.[1] || ''
   }
   return ''
 }
 
 function copyCode(children: React.ReactNode): void {
-  if (React.isValidElement(children) && children.props?.children) {
+  if (React.isValidElement<{ children?: React.ReactNode }>(children) && children.props?.children) {
     const text = String(children.props.children).replace(/\n$/, '')
     navigator.clipboard.writeText(text)
   }

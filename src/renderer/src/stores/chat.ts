@@ -387,7 +387,7 @@ async function callLLM(
           }
 
           if (choice.finish_reason === 'tool_calls') {
-            for (const [, buf] of toolCallBuffers) {
+            for (const [, buf] of Array.from(toolCallBuffers.entries())) {
               try {
                 toolCalls.push({ id: buf.id, name: buf.name, arguments: JSON.parse(buf.args || '{}') })
               } catch {
@@ -405,7 +405,7 @@ async function callLLM(
 
   // Finalize any remaining tool call buffers (OpenAI without finish_reason)
   if (toolCallBuffers.size > 0 && toolCalls.length === 0) {
-    for (const [, buf] of toolCallBuffers) {
+    for (const [, buf] of Array.from(toolCallBuffers.entries())) {
       try {
         toolCalls.push({ id: buf.id, name: buf.name, arguments: JSON.parse(buf.args || '{}') })
       } catch {
