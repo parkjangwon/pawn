@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { uid } from '../utils/uid'
 
 export interface Session {
   id: string
@@ -27,6 +28,7 @@ interface AppState {
   activeProjectId: string | null
   activeSessionId: string | null
   initialized: boolean
+  loadedSessions: Set<string>
   init: () => Promise<void>
   addProject: (name: string, paths: string[]) => void
   removeProject: (id: string) => void
@@ -36,32 +38,38 @@ interface AppState {
   addSession: (projectId: string, title?: string) => void
   removeSession: (projectId: string, sessionId: string) => void
   setActiveSession: (id: string) => void
+  loadMessages: (projectId: string, sessionId: string) => Promise<void>
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
   clearMessages: (projectId: string, sessionId: string) => void
 }
 
-let counter = 0
-const uid = (): string => `${Date.now()}-${++counter}`
-
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
   activeProjectId: null,
   activeSessionId: null,
   initialized: false,
+  loadedSessions: new Set<string>(),
 
   init: async () => {
     if (get().initialized) return
     try {
       const state = await window.api.db.loadAll()
-      // Parse paths from JSON string stored in DB
+      // Parse paths from JSON string stored in DB; sessions load messages lazily
       const projects = (state.projects || []).map((p: Record<string, unknown>) => {
         let paths: string[] = []
-        const rawPath = p.path as string || p.paths as string || ''
+        const rawPath = (p.path as string) || (p.paths as string) || ''
         try { paths = JSON.parse(rawPath) } catch { paths = rawPath ? [rawPath] : [] }
-        return { ...p, paths, path: undefined } as unknown as Project
-      })
+        const sessions = ((p.sessions as Array<Record<string, unknown>>) || []).map((s) => ({
+          id: s.id as string,
+          title: (s.title as string) || 'New Session',
+          path: (s.path as string) || '',
+          createdAt: (s.createdAt as number) || Date.now(),
+          messages: []
+        })) as Session[]
+        return { id: p.id as string, name: p.name as string, paths, sessions }
+      }) as Project[]
       set({ projects, initialized: true })
     } catch {
       set({ initialized: true })
@@ -101,27 +109,65 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addSession: (projectId, title) => {
     const id = uid()
-    const session: Session = { id, title: title || "New Session", path: "", createdAt: Date.now(), messages: [] }
+    const session: Session = { id, title: title || 'New Session', path: '', createdAt: Date.now(), messages: [] }
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId ? { ...p, sessions: [...p.sessions, session] } : p
       ),
-      activeSessionId: id
+      activeSessionId: id,
+      // New sessions start as already "loaded" since they have no messages in DB yet
+      loadedSessions: new Set([...s.loadedSessions, id])
     }))
     window.api.db.addSession(id, projectId, session.title, '')
   },
 
   removeSession: (projectId, sessionId) => {
-    set((s) => ({
-      projects: s.projects.map((p) =>
-        p.id === projectId ? { ...p, sessions: p.sessions.filter((ss) => ss.id !== sessionId) } : p
-      ),
-      activeSessionId: s.activeSessionId === sessionId ? null : s.activeSessionId
-    }))
+    set((s) => {
+      const next = new Set(s.loadedSessions)
+      next.delete(sessionId)
+      return {
+        projects: s.projects.map((p) =>
+          p.id === projectId ? { ...p, sessions: p.sessions.filter((ss) => ss.id !== sessionId) } : p
+        ),
+        activeSessionId: s.activeSessionId === sessionId ? null : s.activeSessionId,
+        loadedSessions: next
+      }
+    })
     window.api.db.removeSession(sessionId)
   },
 
-  setActiveSession: (id) => set({ activeSessionId: id }),
+  setActiveSession: (id) => {
+    set({ activeSessionId: id })
+    // Trigger lazy message load for the activated session
+    const state = get()
+    const project = state.projects.find((p) => p.sessions.some((s) => s.id === id))
+    if (project && !state.loadedSessions.has(id)) {
+      state.loadMessages(project.id, id)
+    }
+  },
+
+  loadMessages: async (projectId, sessionId) => {
+    if (get().loadedSessions.has(sessionId)) return
+    try {
+      const messages = await window.api.db.getMessages(sessionId)
+      set((s) => ({
+        loadedSessions: new Set([...s.loadedSessions, sessionId]),
+        projects: s.projects.map((p) =>
+          p.id === projectId
+            ? {
+                ...p,
+                sessions: p.sessions.map((ss) =>
+                  ss.id === sessionId ? { ...ss, messages: messages as Message[] } : ss
+                )
+              }
+            : p
+        )
+      }))
+    } catch {
+      // Mark as loaded even on error to avoid infinite retries
+      set((s) => ({ loadedSessions: new Set([...s.loadedSessions, sessionId]) }))
+    }
+  },
 
   addMessage: (projectId, sessionId, message) => {
     set((s) => ({

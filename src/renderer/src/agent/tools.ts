@@ -18,7 +18,8 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   shell_exec: 'risky',
   computer_screenshot: 'risky',
   computer_click: 'risky',
-  computer_type: 'risky'
+  computer_type: 'risky',
+  computer_keypress: 'risky'
 }
 
 // Permission mode
@@ -211,6 +212,20 @@ async function checkPermission(
   return approved
 }
 
+// Convert a glob pattern to a RegExp and test against a filename
+function matchesGlob(name: string, pattern: string): boolean {
+  // Escape all special regex chars except * and ?
+  const regexStr = pattern
+    .replace(/[.+^${}()|[\]\\]/g, '\\$&')
+    .replace(/\*/g, '.*')
+    .replace(/\?/g, '.')
+  try {
+    return new RegExp(`^${regexStr}$`, 'i').test(name)
+  } catch {
+    return name.toLowerCase().includes(pattern.toLowerCase())
+  }
+}
+
 // Execute a tool call and return the result
 export async function executeTool(call: ToolCall, projectPath?: string): Promise<ToolResult> {
   const api = window.api
@@ -258,8 +273,16 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         if (typeof fileContent === 'object' && 'error' in fileContent) {
           return { toolCallId: call.id, content: fileContent.error, isError: true }
         }
-        if (!(fileContent as string).includes(oldStr)) {
+        const occurrences = (fileContent as string).split(oldStr).length - 1
+        if (occurrences === 0) {
           return { toolCallId: call.id, content: 'old_string not found in file', isError: true }
+        }
+        if (occurrences > 1) {
+          return {
+            toolCallId: call.id,
+            content: `old_string appears ${occurrences} times in file. Provide more surrounding context to make it unique.`,
+            isError: true
+          }
         }
         const updated = (fileContent as string).replace(oldStr, newStr)
         const writeResult = await api.fs.writeFile(path, updated)
@@ -352,27 +375,49 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         const pattern = call.arguments.pattern as string
         const rootPath = (call.arguments.rootPath as string) || projectPath || ''
         if (!rootPath) return { toolCallId: call.id, content: 'No project path set', isError: true }
-        // Use shell find command for pattern matching
-        const searchCmd = pattern.includes('*') 
-          ? `find "${rootPath}" -type f -name "${pattern}" 2>/dev/null | head -50`
-          : `find "${rootPath}" -type f -name "*${pattern}*" 2>/dev/null | head -50`
-        const result = await window.api.shell.exec(searchCmd)
-        const files = result.stdout.trim().split('\n').filter(Boolean)
+        const walkResult = await window.api.fs.walk(rootPath)
+        if (!Array.isArray(walkResult)) {
+          return { toolCallId: call.id, content: (walkResult as { error: string }).error, isError: true }
+        }
+        const files = walkResult.filter((f) => !f.isDirectory && matchesGlob(f.name, pattern))
         if (files.length === 0) return { toolCallId: call.id, content: 'No files found matching: ' + pattern }
-        return { toolCallId: call.id, content: `Found ${files.length} files:\n${files.join('\n')}` }
+        return { toolCallId: call.id, content: `Found ${files.length} files:\n${files.slice(0, 50).map((f) => f.path).join('\n')}` }
       }
 
       case 'grep_search': {
         const query = call.arguments.query as string
-        const gPattern = (call.arguments.pattern as string) || '*'
+        const filePattern = (call.arguments.pattern as string) || ''
         const grepRoot = (call.arguments.rootPath as string) || projectPath || ''
         if (!grepRoot) return { toolCallId: call.id, content: 'No project path set', isError: true }
-        // Use grep for text search
-        const grepCmd = `grep -rn --include="${gPattern}" "${query}" "${grepRoot}" 2>/dev/null | head -50`
-        const gResult = await window.api.shell.exec(grepCmd)
-        const gFiles = gResult.stdout.trim().split('\n').filter(Boolean)
-        if (gFiles.length === 0) return { toolCallId: call.id, content: 'No matches found for: ' + query }
-        return { toolCallId: call.id, content: gFiles.join('\n').slice(0, 2000) }
+        const walkResult2 = await window.api.fs.walk(grepRoot)
+        if (!Array.isArray(walkResult2)) {
+          return { toolCallId: call.id, content: (walkResult2 as { error: string }).error, isError: true }
+        }
+        const candidates = filePattern
+          ? walkResult2.filter((f) => !f.isDirectory && matchesGlob(f.name, filePattern))
+          : walkResult2.filter((f) => !f.isDirectory)
+        let regex: RegExp
+        try {
+          regex = new RegExp(query, 'g')
+        } catch {
+          return { toolCallId: call.id, content: 'Invalid regex pattern: ' + query, isError: true }
+        }
+        const matches: string[] = []
+        for (const file of candidates.slice(0, 200)) {
+          if (matches.length >= 50) break
+          const content = await window.api.fs.readFile(file.path)
+          if (typeof content !== 'string') continue
+          const lines = content.split('\n')
+          for (let i = 0; i < lines.length; i++) {
+            regex.lastIndex = 0
+            if (regex.test(lines[i])) {
+              matches.push(`${file.path}:${i + 1}: ${lines[i].trim()}`)
+              if (matches.length >= 50) break
+            }
+          }
+        }
+        if (matches.length === 0) return { toolCallId: call.id, content: 'No matches found for: ' + query }
+        return { toolCallId: call.id, content: matches.join('\n').slice(0, 3000) }
       }
 
       default:

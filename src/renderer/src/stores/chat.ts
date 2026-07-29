@@ -128,8 +128,13 @@ async function agentLoop(
     }
   }
 
-  // Build conversation history
-  const conversationMessages = (session?.messages || []).map((m) => ({
+  // Build conversation history (ensure messages are loaded first)
+  await useAppStore.getState().loadMessages(projectId, sessionId)
+  // Re-read session after load so messages are available
+  const loadedSession = useAppStore.getState().projects
+    .find((p) => p.id === projectId)
+    ?.sessions.find((s) => s.id === sessionId)
+  const conversationMessages = (loadedSession?.messages || []).map((m) => ({
     role: m.role,
     content: m.content
   }))

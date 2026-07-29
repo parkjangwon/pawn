@@ -56,7 +56,7 @@ declare global {
         save: (config: unknown) => Promise<{ ok?: boolean }>
       }
       db: {
-        loadAll: () => Promise<{ projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number; messages: Array<{ id: string; role: string; content: string; createdAt: number }> }> }> }>
+        loadAll: () => Promise<{ projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number }> }> }>
         addProject: (id: string, name: string, path: string) => Promise<{ ok?: boolean }>
         updateProjectName: (id: string, name: string) => Promise<{ ok?: boolean }>
         updateProjectPaths: (id: string, paths: string) => Promise<{ ok?: boolean }>
@@ -68,7 +68,15 @@ declare global {
         addMessage: (id: string, sessionId: string, role: string, content: string) => Promise<{ ok?: boolean }>
         updateMessageContent: (id: string, content: string) => Promise<{ ok?: boolean }>
         clearMessages: (sessionId: string) => Promise<{ ok?: boolean }>
+        getMessages: (sessionId: string) => Promise<Array<{ id: string; role: string; content: string; createdAt: number }>>
       }
+    }
+    /** Internal browser panel interface exposed by BrowserView.tsx for agent tool access */
+    __pawnBrowser?: {
+      navigate: (url: string) => void
+      evaluate: (code: string) => Promise<unknown>
+      getUrl: () => string | undefined
+      getLogs: () => string[]
     }
   }
 }

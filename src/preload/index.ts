@@ -89,7 +89,8 @@ const api = {
     removeSession: (id: string) => ipcRenderer.invoke('db:removeSession', id),
     addMessage: (id: string, sessionId: string, role: string, content: string) => ipcRenderer.invoke('db:addMessage', id, sessionId, role, content),
     updateMessageContent: (id: string, content: string) => ipcRenderer.invoke('db:updateMessageContent', id, content),
-    clearMessages: (sessionId: string) => ipcRenderer.invoke('db:clearMessages', sessionId)
+    clearMessages: (sessionId: string) => ipcRenderer.invoke('db:clearMessages', sessionId),
+    getMessages: (sessionId: string) => ipcRenderer.invoke('db:getMessages', sessionId)
   }
 }
 
