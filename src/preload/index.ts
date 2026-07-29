@@ -15,7 +15,8 @@ const api = {
     stat: (path: string) => ipcRenderer.invoke('fs:stat', path),
     mkdir: (path: string) => ipcRenderer.invoke('fs:mkdir', path),
     delete: (path: string) => ipcRenderer.invoke('fs:delete', path),
-    exists: (path: string) => ipcRenderer.invoke('fs:exists', path)
+    exists: (path: string) => ipcRenderer.invoke('fs:exists', path),
+    walk: (path: string) => ipcRenderer.invoke('fs:walk', path)
   },
 
   // Shell
@@ -33,7 +34,18 @@ const api = {
 
   // Browser
   browser: {
-    open: (url: string) => ipcRenderer.invoke('browser:open', url)
+    open: (url: string) => ipcRenderer.invoke('browser:open', url),
+    create: () => ipcRenderer.invoke('browser:create'),
+    destroy: () => ipcRenderer.invoke('browser:destroy'),
+    navigate: (url: string) => ipcRenderer.invoke('browser:navigate', url),
+    eval: (code: string) => ipcRenderer.invoke('browser:eval', code),
+    screenshot: () => ipcRenderer.invoke('browser:screenshot'),
+    devtools: () => ipcRenderer.invoke('browser:devtools'),
+    setBounds: (x: number, y: number, w: number, h: number) => ipcRenderer.invoke('browser:bounds', x, y, w, h),
+    reload: () => ipcRenderer.invoke('browser:reload'),
+    goBack: () => ipcRenderer.invoke('browser:goBack'),
+    goForward: () => ipcRenderer.invoke('browser:goForward'),
+    getURL: () => ipcRenderer.invoke('browser:getURL')
   },
 
   // Notifications
@@ -76,7 +88,8 @@ const api = {
     updateSessionPath: (id: string, path: string) => ipcRenderer.invoke('db:updateSessionPath', id, path),
     removeSession: (id: string) => ipcRenderer.invoke('db:removeSession', id),
     addMessage: (id: string, sessionId: string, role: string, content: string) => ipcRenderer.invoke('db:addMessage', id, sessionId, role, content),
-    updateMessageContent: (id: string, content: string) => ipcRenderer.invoke('db:updateMessageContent', id, content)
+    updateMessageContent: (id: string, content: string) => ipcRenderer.invoke('db:updateMessageContent', id, content),
+    clearMessages: (sessionId: string) => ipcRenderer.invoke('db:clearMessages', sessionId)
   }
 }
 

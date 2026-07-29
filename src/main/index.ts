@@ -1,4 +1,5 @@
 import { app, BrowserWindow, shell, ipcMain, dialog, Notification, desktopCapturer, systemPreferences, session } from 'electron'
+import { BrowserView } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
@@ -19,7 +20,7 @@ function createWindow(): void {
     minHeight: 600,
     show: false,
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
-    trafficLightPosition: { x: 16, y: 16 },
+    trafficLightPosition: { x: 16, y: 18 },
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       sandbox: false
@@ -78,6 +79,34 @@ function registerIpc(): void {
         isDirectory: e.isDirectory(),
         path: join(dirPath, e.name)
       }))
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('fs:walk', async (_, rootPath: string) => {
+    const IGNORE = new Set(['node_modules', '.git', 'dist', 'out', 'release', '.next', 'coverage', '.turbo', '.cache'])
+    const results: Array<{ name: string; path: string; isDirectory: boolean }> = []
+    const MAX = 3000
+    const walk = (dir: string, depth: number): void => {
+      if (depth > 6 || results.length >= MAX) return
+      let entries
+      try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
+      for (const e of entries) {
+        if (results.length >= MAX) return
+        if (e.name.startsWith('.')) continue
+        if (IGNORE.has(e.name)) continue
+        const full = join(dir, e.name)
+        if (e.isDirectory()) {
+          walk(full, depth + 1)
+        } else {
+          results.push({ name: e.name, path: full, isDirectory: false })
+        }
+      }
+    }
+    try {
+      walk(rootPath, 0)
+      return results
     } catch (err) {
       return { error: String(err) }
     }
@@ -261,6 +290,146 @@ function registerIpc(): void {
   ipcMain.handle('db:removeSession', async (_, id) => { db.removeSession(id); return { ok: true } })
   ipcMain.handle('db:addMessage', async (_, id, sessionId, role, content) => { db.addMessage(id, sessionId, role, content); return { ok: true } })
   ipcMain.handle('db:updateMessageContent', async (_, id, content) => { db.updateMessageContent(id, content); return { ok: true } })
+  ipcMain.handle('db:clearMessages', async (_, sessionId) => { db.clearMessages(sessionId); return { ok: true } })
+
+  // --- Browser (Embedded) ---
+  let browserView: BrowserView | null = null
+  let browserViewVisible = false
+
+  ipcMain.handle('browser:create', async () => {
+    if (browserView) return { ok: true }
+    try {
+      browserView = new BrowserView({
+        webPreferences: {
+          nodeIntegration: false,
+          contextIsolation: true,
+          sandbox: true
+        }
+      })
+      if (mainWindow) {
+        mainWindow.addBrowserView(browserView)
+        // Default bounds matching right panel area (will be updated by renderer)
+        const bounds = mainWindow.getBounds()
+        browserView.setBounds({
+          x: bounds.width - 320, y: 60,
+          width: 320, height: bounds.height - 60
+        })
+        browserView.setAutoResize({ width: true, height: true })
+        browserViewVisible = true
+      }
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:destroy', async () => {
+    try {
+      if (browserView && mainWindow) {
+        mainWindow.removeBrowserView(browserView)
+        ;(browserView.webContents as any).destroy?.()
+        browserView = null
+        browserViewVisible = false
+      }
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:navigate', async (_, url: string) => {
+    if (!browserView) return { error: 'Browser not created' }
+    try {
+      await browserView.webContents.loadURL(url)
+      return { ok: true }
+    } catch (err) {
+      // If navigation fails, try with https
+      if (!url.startsWith('https://') && !url.startsWith('http://')) {
+        try {
+          await browserView.webContents.loadURL('https://' + url)
+          return { ok: true }
+        } catch (e) {
+          return { error: String(e) }
+        }
+      }
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:eval', async (_, code: string) => {
+    if (!browserView) return { error: 'Browser not created' }
+    try {
+      const result = await browserView.webContents.executeJavaScript(code)
+      return { result: JSON.stringify(result) }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:screenshot', async () => {
+    if (!browserView) return { error: 'Browser not created' }
+    try {
+      const image = await browserView.webContents.capturePage()
+      return { dataUrl: image.toDataURL() }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:devtools', async () => {
+    if (!browserView) return { error: 'Browser not created' }
+    try {
+      browserView.webContents.openDevTools({ mode: 'detach' })
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:bounds', async (_, x: number, y: number, width: number, height: number) => {
+    if (!browserView) return { error: 'Browser not created' }
+    try {
+      browserView.setBounds({ x, y, width, height })
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:reload', async () => {
+    if (!browserView) return { error: 'Browser not created' }
+    try {
+      browserView.webContents.reload()
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:goBack', async () => {
+    if (!browserView) return { error: 'Browser not created' }
+    try {
+      if (browserView.webContents.canGoBack()) browserView.webContents.goBack()
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:goForward', async () => {
+    if (!browserView) return { error: 'Browser not created' }
+    try {
+      if (browserView.webContents.canGoForward()) browserView.webContents.goForward()
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  ipcMain.handle('browser:getURL', async () => {
+    if (!browserView) return { error: 'Browser not created' }
+    return { url: browserView.webContents.getURL() }
+  })
 }
 
 app.commandLine.appendSwitch('no-sandbox')
@@ -268,11 +437,23 @@ app.commandLine.appendSwitch('no-sandbox')
 app.whenReady().then(() => {
   // CSP for security
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // In dev mode, allow Vite dev server (localhost:5173)
+    if (is.dev) {
+      callback({
+        responseHeaders: {
+          ...details.responseHeaders,
+          'Content-Security-Policy': [
+            "default-src 'self' 'unsafe-inline' http://localhost:* http://127.0.0.1:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; img-src 'self' data: blob: http://localhost:*; font-src 'self' http://localhost:*; connect-src 'self' https: http://localhost:* ws://localhost:*;"
+          ]
+        }
+      })
+      return
+    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:; frame-src 'none';"
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:;"
         ]
       }
     })

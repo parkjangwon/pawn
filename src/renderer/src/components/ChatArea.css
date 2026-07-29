@@ -8,6 +8,59 @@
   overflow: hidden;
 }
 
+/* ChatGPT-style top header */
+.chat-header {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  padding-top: max(env(safe-area-inset-top, 0px));
+  height: 48px;
+  min-height: 48px;
+  flex-shrink: 0;
+}
+
+.close-sidebar-btn {
+  display: none;
+}
+
+.app.sidebar-collapsed .chat-header {
+  padding-left: 72px;
+}
+
+.app.sidebar-collapsed .close-sidebar-btn {
+  display: flex;
+}
+
+.chat-header-spacer {
+  flex: 1;
+}
+
+/* Align right panel toggle to the right edge */
+.right-panel-toggle {
+  /* positioned by flex spacer above */
+}
+
+.sidebar-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  flex-shrink: 0;
+}
+
+.sidebar-toggle-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 .mobile-header {
   display: none;
   align-items: center;
@@ -194,6 +247,7 @@
 .chat-input-container {
   max-width: 760px;
   margin: 0 auto;
+  position: relative;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   background: var(--bg-primary);

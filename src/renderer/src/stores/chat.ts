@@ -106,7 +106,7 @@ async function agentLoop(
 
   // Get project path for tool execution context
   const project = useAppStore.getState().projects.find((p) => p.id === projectId)
-  const projectPath = project?.path
+  const projectPath = project?.paths?.[0]
 
   // Effective working directory: session path > project path
   const session = useAppStore.getState().projects

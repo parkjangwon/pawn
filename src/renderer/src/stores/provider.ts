@@ -7,6 +7,7 @@ interface ProviderState {
   routingMode: RoutingMode
   activeModelId: string | null
   defaultSendMode: 'queue' | 'steer'
+  permissionMode: 'ask' | 'auto' | 'yolo'
   initialized: boolean
   init: () => Promise<void>
 
@@ -19,6 +20,7 @@ interface ProviderState {
   setRoutingMode: (mode: RoutingMode) => void
   setActiveModel: (id: string | null) => void
   setDefaultSendMode: (mode: 'queue' | 'steer') => void
+  setPermissionMode: (mode: 'ask' | 'auto' | 'yolo') => void
 }
 
 let counter = 0
@@ -30,7 +32,8 @@ function saveToBackend(state: ProviderState): void {
     models: state.models,
     settings: {
       routingMode: state.routingMode,
-      defaultSendMode: state.defaultSendMode
+      defaultSendMode: state.defaultSendMode,
+      permissionMode: state.permissionMode
     }
   })
 }
@@ -41,17 +44,19 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   routingMode: 'auto',
   activeModelId: null,
   defaultSendMode: 'queue',
+  permissionMode: 'ask',
   initialized: false,
 
   init: async () => {
     if (get().initialized) return
     try {
-      const config = await window.api.config.load()
+      const rawConfig = await window.api.config.load() as Record<string, unknown>
       set({
-        providers: config.providers || [],
-        models: config.models || [],
-        routingMode: (config.settings?.routingMode as RoutingMode) || 'auto',
-        defaultSendMode: (config.settings?.defaultSendMode as 'queue' | 'steer') || 'queue',
+        providers: (rawConfig as any).providers || [],
+        models: (rawConfig as any).models || [],
+        routingMode: ((rawConfig as any).settings?.routingMode as RoutingMode) || 'auto',
+        defaultSendMode: ((rawConfig as any).settings?.defaultSendMode as 'queue' | 'steer') || 'queue',
+        permissionMode: ((rawConfig as any).settings?.permissionMode as 'ask' | 'auto' | 'yolo') || 'ask',
         initialized: true
       })
     } catch {
@@ -93,5 +98,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   setDefaultSendMode: (mode) => {
     set((s) => { const next = { ...s, defaultSendMode: mode }; saveToBackend(next); return { defaultSendMode: mode } })
+  },
+
+  setPermissionMode: (mode) => {
+    set((s) => { const next = { ...s, permissionMode: mode }; saveToBackend(next); return { permissionMode: mode } })
   }
 }))

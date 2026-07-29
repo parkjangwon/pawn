@@ -13,6 +13,7 @@ declare global {
         mkdir: (path: string) => Promise<{ ok?: boolean; error?: string }>
         delete: (path: string) => Promise<{ ok?: boolean; error?: string }>
         exists: (path: string) => Promise<boolean>
+        walk: (path: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }>
       }
       shell: {
         exec: (command: string, cwd?: string) => Promise<{ stdout: string; stderr: string; exitCode: number }>
@@ -25,6 +26,17 @@ declare global {
       }
       browser: {
         open: (url: string) => Promise<{ ok?: boolean }>
+        create: () => Promise<{ ok?: boolean; error?: string }>
+        destroy: () => Promise<{ ok?: boolean; error?: string }>
+        navigate: (url: string) => Promise<{ ok?: boolean; error?: string }>
+        eval: (code: string) => Promise<{ result?: string; error?: string }>
+        screenshot: () => Promise<{ dataUrl?: string; error?: string }>
+        devtools: () => Promise<{ ok?: boolean; error?: string }>
+        setBounds: (x: number, y: number, w: number, h: number) => Promise<{ ok?: boolean; error?: string }>
+        reload: () => Promise<{ ok?: boolean; error?: string }>
+        goBack: () => Promise<{ ok?: boolean; error?: string }>
+        goForward: () => Promise<{ ok?: boolean; error?: string }>
+        getURL: () => Promise<{ url?: string; error?: string }>
       }
       notification: {
         send: (title: string, body: string) => Promise<{ ok?: boolean }>
@@ -55,6 +67,7 @@ declare global {
         removeSession: (id: string) => Promise<{ ok?: boolean }>
         addMessage: (id: string, sessionId: string, role: string, content: string) => Promise<{ ok?: boolean }>
         updateMessageContent: (id: string, content: string) => Promise<{ ok?: boolean }>
+        clearMessages: (sessionId: string) => Promise<{ ok?: boolean }>
       }
     }
   }

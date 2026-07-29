@@ -4,28 +4,54 @@
   "directories": {
     "output": "release"
   },
+  "icon": "build/icon.png",
   "files": [
     "out/**/*"
   ],
   "mac": {
     "target": [
-      { "target": "dmg", "arch": ["universal"] }
+      {
+        "target": "dmg",
+        "arch": [
+          "universal"
+        ]
+      }
     ],
     "artifactName": "pawn-${version}-${arch}.${ext}",
     "category": "public.app-category.developer-tools",
     "hardenedRuntime": true,
-    "gatekeeperAssess": false
+    "gatekeeperAssess": false,
+    "entitlements": "build/entitlements.mac.plist",
+    "entitlementsInherit": "build/entitlements.mac.plist"
   },
   "win": {
     "target": [
-      { "target": "nsis", "arch": ["x64", "arm64"] }
+      {
+        "target": "nsis",
+        "arch": [
+          "x64",
+          "arm64"
+        ]
+      }
     ],
     "artifactName": "pawn-${version}-${arch}-setup.${ext}"
   },
   "linux": {
     "target": [
-      { "target": "AppImage", "arch": ["x64", "arm64"] },
-      { "target": "deb", "arch": ["x64", "arm64"] }
+      {
+        "target": "AppImage",
+        "arch": [
+          "x64",
+          "arm64"
+        ]
+      },
+      {
+        "target": "deb",
+        "arch": [
+          "x64",
+          "arm64"
+        ]
+      }
     ],
     "artifactName": "pawn-${version}-${arch}.${ext}",
     "category": "Development"

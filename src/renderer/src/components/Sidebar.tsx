@@ -2,17 +2,19 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import ProjectEditDialog from './ProjectEditDialog'
+import FileTree from './FileTree'
 import ConfirmDialog from './ConfirmDialog'
 import './Sidebar.css'
 
 interface SidebarProps {
   onOpenSettings: () => void
+  onToggle: () => void
   open?: boolean
 }
 
 const GENERAL_PROJECT_ID = '__general__'
 
-export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.JSX.Element {
+export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps): React.JSX.Element {
   const { t } = useTranslation()
   const {
     projects,
@@ -41,7 +43,7 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
   const ensureGeneral = (): string => {
     const existing = projects.find((p) => p.id === GENERAL_PROJECT_ID)
     if (existing) return GENERAL_PROJECT_ID
-    addProject('General', '')
+    addProject('General', [])
     // The addProject sets activeProjectId, but we need to return the ID
     // Since addProject generates the ID internally, we use a known ID
     // Actually let's just use the GENERAL_PROJECT_ID directly
@@ -144,15 +146,23 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
-      <div className="sidebar-header">
-        <span className="sidebar-title">Pawn</span>
+      {/* Traffic light safe area + logo */}
+      <div className="traffic-light-spacer" />
+      <div className="sidebar-top-row">
+        <button className="sidebar-fold-btn" onClick={onToggle} aria-label="Toggle sidebar">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <line x1="9" y1="3" x2="9" y2="21" />
+          </svg>
+        </button>
+        <span className="sidebar-logo">Pawn</span>
       </div>
 
       {/* Primary action: New Session */}
       <div className="sidebar-actions">
-        <button className="sidebar-action-btn primary" onClick={handleNewSession}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-          <span>New Session</span>
+        <button className="sidebar-action-btn" onClick={handleNewSession}>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+          <span>{t('sidebar.newChat')}</span>
         </button>
       </div>
 
@@ -173,8 +183,8 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
         {/* 2. Projects */}
         <div className="sidebar-section">
           <div className="section-header">
-            <span className="section-label">Projects</span>
-            <button className="section-add-btn" onClick={handleAddProject} title="Add project">
+            <span className="section-label">{t('sidebar.projects')}</span>
+            <button className="section-add-btn" onClick={handleAddProject} title={t('sidebar.addProject')}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </button>
           </div>
@@ -191,10 +201,10 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
                     <span className="tree-project-name" onDoubleClick={(e) => startRenameProject(e, project.id, project.name)}>{project.name}</span>
                   )}
                   <div className="tree-project-actions">
-                    <button className="tree-action-btn" onClick={(e) => { e.stopPropagation(); addSession(project.id); if (!isExpanded) toggleProject(project.id) }} title="New session">
+                    <button className="tree-action-btn" onClick={(e) => { e.stopPropagation(); addSession(project.id); if (!isExpanded) toggleProject(project.id) }} title={t('sidebar.newSession')}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
                     </button>
-                    <button className="tree-action-btn delete" onClick={(e) => handleDeleteProject(e, project.id)} title="Delete">
+                    <button className="tree-action-btn delete" onClick={(e) => handleDeleteProject(e, project.id)} title={t('common.delete')}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     </button>
                   </div>
@@ -210,7 +220,7 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
                           <span className="tree-session-title" onDoubleClick={(e) => startRenameSession(e, session.id, session.title)}>{session.title}</span>
                         )}
                         <div className="tree-session-actions">
-                          <button className="tree-action-btn pin" onClick={(e) => togglePin(e, session.id)} title={pinnedSessions.has(session.id) ? 'Unpin' : 'Pin'}>
+                          <button className="tree-action-btn pin" onClick={(e) => togglePin(e, session.id)} title={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill={pinnedSessions.has(session.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
                           </button>
                           <button className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, project.id, session.id)} title="Delete">
@@ -219,14 +229,22 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
                         </div>
                       </div>
                     ))}
-                    {project.sessions.length === 0 && <div className="tree-empty">No sessions</div>}
+                    {project.sessions.length === 0 && <div className="tree-empty">{t('sidebar.noSessions')}</div>}
                   </div>
                 )}
               </div>
             )
           })}
-          {userProjects.length === 0 && <div className="empty-hint">No projects yet</div>}
+          {userProjects.length === 0 && <div className="empty-hint">{t('sidebar.noProjects')}</div>}
         </div>
+
+        {/* File Tree */}
+        {activeProjectId && (() => {
+          const proj = projects.find((p) => p.id === activeProjectId)
+          const projPath = proj?.paths?.[0]
+          if (!projPath) return null
+          return <FileTree rootPath={projPath} />
+        })()}
 
         {/* 3. Recent */}
         {recentSessions.length > 0 && (
@@ -257,9 +275,9 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
       )}
       {confirmDelete && (
         <ConfirmDialog
-          title={`${confirmDelete.name} 삭제`}
-          message={confirmDelete.type === 'project' ? '이 프로젝트와 모든 세션이 영구 삭제됩니다.' : '이 세션과 모든 대화 기록이 영구 삭제됩니다.'}
-          confirmLabel="삭제"
+          title={`${confirmDelete.name} ${t('common.delete')}`}
+          message={confirmDelete.type === 'project' ? t('sidebar.deleteProjectConfirm') : t('sidebar.deleteSessionConfirm')}
+          confirmLabel={t('confirmDialog.confirm')}
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmDelete(null)}
         />

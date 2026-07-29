@@ -1,31 +1,698 @@
 .right-panel {
-  width: 220px;
-  min-width: 220px;
-  height: 100%;
-  border-left: 1px solid var(--border-color);
-  background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
-  padding: var(--space-md);
-  gap: var(--space-md);
+  height: 100%;
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Resize handle */
+.rp-resizer {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 5px;
+  cursor: col-resize;
+  z-index: 10;
+  background: transparent;
+  transition: background 0.15s, width 0.15s;
+}
+
+/* Thin visible line in the middle of the resizer */
+.rp-resizer::after {
+  content: '';
+  position: absolute;
+  left: 2px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: var(--border-color);
+  transition: background 0.15s;
+}
+
+.rp-resizer:hover {
+  background: transparent;
+}
+
+.rp-resizer:hover::after {
+  background: var(--accent);
+  width: 2px;
+  left: 1.5px;
+}
+
+/* Active state during drag */
+.rp-resizer:active {
+  background: var(--accent);
+  opacity: 0.08;
+}
+
+.rp-resizer:active::after {
+  background: var(--accent);
+  width: 2px;
+  left: 1.5px;
+}
+
+/* Tab bar */
+.rp-tabs {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 6px 0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  min-height: 36px;
+}
+
+.rp-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 24px 5px 8px;
+  border: none;
+  border-radius: 6px 6px 0 0;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 12px;
+  transition: all 0.12s ease;
+  white-space: nowrap;
+  position: relative;
+}
+
+.rp-tab:hover {
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+}
+
+.rp-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-bottom-color: var(--bg-primary);
+  margin-bottom: -1px;
+}
+
+.rp-tab-label {
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.rp-tabs-spacer {
+  flex: 1;
+}
+
+.rp-tab-close-btn {
+  display: flex;
+  position: absolute;
+  right: 2px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 16px;
+  height: 16px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  opacity: 0;
+  transition: opacity 0.1s;
+  background: var(--bg-hover);
+}
+
+.rp-tab:hover .rp-tab-close-btn {
+  display: flex;
+  opacity: 1;
+}
+
+.rp-tab-close-btn:hover {
+  background: var(--bg-active);
+}
+
+/* + add button */
+.rp-tab-add {
+  margin-left: 2px;
+  padding-right: 8px;
+}
+
+/* Tool picker dropdown */
+.rp-picker-dropdown {
+  position: absolute;
+  top: 38px;
+  left: 8px;
+  right: 8px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+  padding: 4px;
+  max-height: 240px;
   overflow-y: auto;
 }
 
-.rp-header {
+.rp-picker-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.rp-picker-item:hover {
+  background: var(--bg-hover);
+}
+
+.rp-picker-empty {
+  padding: 12px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Tool picker screen (when no tabs open) */
+.rp-tool-picker {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 12px;
+  flex: 1;
+}
+
+.rp-picker-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.rp-tool-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.12s ease;
+}
+
+.rp-tool-item:hover {
+  border-color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.rp-tool-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  flex-shrink: 0;
+}
+
+.rp-tool-item:hover .rp-tool-icon {
+  color: var(--accent);
+}
+
+.rp-tool-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.rp-tool-label {
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.rp-tool-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.rp-tool-item > svg:last-child {
+  color: var(--text-muted);
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.rp-tool-item:hover > svg:last-child {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* Content area */
+.rp-content {
+  flex: 1;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Empty state */
+.rp-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+/* ========== Terminal View ========== */
+.rp-terminal {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rp-terminal-cwd {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 10px;
+  color: var(--text-muted);
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-terminal-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  background: #1a1a1a;
+  margin: 0;
+  border-radius: 0;
+  position: relative;
+}
+
+/* xterm overrides: ensure full height */
+.rp-terminal-body .xterm {
+  height: 100% !important;
+  padding: 4px;
+}
+
+.rp-terminal-body .xterm-viewport {
+  scrollbar-width: thin;
+  scrollbar-color: #444 transparent;
+}
+
+.rp-terminal-body .xterm-viewport::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rp-terminal-body .xterm-viewport::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rp-terminal-body .xterm-viewport::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 3px;
+}
+
+/* Fix xterm textarea positioning */
+.rp-terminal-body .xterm-helper-textarea {
+  position: absolute !important;
+  top: 0 !important;
+  left: -9999em !important;
+  opacity: 0 !important;
+  width: 0 !important;
+  height: 0 !important;
+  overflow: hidden !important;
+}
+
+/* ========== Files View ========== */
+.rp-files {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rp-files-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
 }
 
-.rp-title {
-  font-size: var(--font-sm);
+.rp-files-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0;
+}
+
+.rp-files-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* ========== Git View ========== */
+.rp-git {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rp-git-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.rp-git-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.rp-git-branch {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.rp-git-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.rp-git-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px;
+  font-size: 11px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.rp-git-file:hover {
+  background: var(--bg-hover);
+}
+
+.rp-git-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+}
+
+.rp-git-file-status {
+  font-size: 10px;
   font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
 }
 
-.rp-close {
+.rp-git-status-M {
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.rp-git-status-A {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.rp-git-status-D {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.rp-git-status-QUESTION {
+  color: #3b82f6;
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.rp-git-summary {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  gap: 12px;
+}
+
+.rp-git-summary-added { color: #22c55e; }
+.rp-git-summary-deleted { color: #ef4444; }
+.rp-git-summary-modified { color: #f59e0b; }
+
+/* ========== Browser View ========== */
+.rp-browser {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* Navigation toolbar */
+.rp-browser-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 3px 4px;
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+}
+
+.rp-browser-nav {
+  display: flex;
+  align-items: center;
+  gap: 1px;
+}
+
+.rp-browser-navbtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rp-browser-navbtn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.rp-browser-navbtn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.rp-browser-scheme {
+  font-size: 10px;
+  flex-shrink: 0;
+  margin-right: 2px;
+}
+
+.rp-browser-urlbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.rp-browser-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: var(--bg-input);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 11px;
+  color: var(--text-primary);
+  font-family: inherit;
+  min-width: 40px;
+}
+
+.rp-browser-input::placeholder {
+  color: var(--text-muted);
+}
+
+.rp-browser-go {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.rp-browser-go:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.rp-browser-modes {
+  display: flex;
+  gap: 1px;
+  margin-left: 4px;
+}
+
+.rp-browser-modebtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rp-browser-modebtn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.rp-browser-modebtn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+.rp-browser-modebtn.active:hover {
+  background: var(--accent-hover);
+}
+
+/* Browser viewport */
+.rp-browser-viewport {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  position: relative;
+  background: #fff;
+}
+
+.rp-browser-viewport.mobile {
+  max-width: 375px;
+  margin: 8px auto;
+  border: 1px solid var(--border-color);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+}
+
+.rp-browser-frame {
+  flex: 1;
+  width: 100%;
+  border: none;
+  background: #fff;
+}
+
+.rp-browser-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  z-index: 5;
+}
+
+.rp-browser-spinner {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  animation: browser-progress 2s ease-in-out infinite;
+}
+
+@keyframes browser-progress {
+  0% { width: 0; margin-left: 0; }
+  50% { width: 60%; margin-left: 20%; }
+  100% { width: 0; margin-left: 100%; }
+}
+
+.rp-browser-content {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 12px;
+  flex-direction: column;
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+/* Dev tools panel */
+.rp-browser-devtools {
+  height: 140px;
+  min-height: 80px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  background: #1a1a1a;
+}
+
+.rp-browser-devtools-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 4px 8px;
+  background: #222;
+  border-bottom: 1px solid #333;
+  font-size: 11px;
+  font-weight: 600;
+  color: #999;
+  flex-shrink: 0;
+}
+
+.rp-browser-devtools-header button {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -33,71 +700,224 @@
   height: 20px;
   border: none;
   border-radius: 3px;
-  background: none;
-  color: var(--text-muted);
+  background: transparent;
+  color: #999;
   cursor: pointer;
 }
 
-.rp-close:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.rp-browser-devtools-header button:hover {
+  background: #333;
+  color: #fff;
 }
 
-.rp-section {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.rp-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: var(--font-sm);
-}
-
-.rp-row svg {
-  flex-shrink: 0;
-  color: var(--text-muted);
-}
-
-.rp-label {
-  color: var(--text-muted);
-}
-
-.rp-value {
-  margin-left: auto;
-  color: var(--text-primary);
-  font-weight: 500;
-  font-size: var(--font-sm);
-}
-
-.rp-value.branch {
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  font-size: 11px;
-  color: var(--accent);
-}
-
-.rp-value.changes .added {
-  color: #22c55e;
-}
-
-.rp-value.changes .deleted {
-  color: var(--danger);
-}
-
-.rp-path {
+.rp-browser-devtools-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 2px;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
   font-size: 10px;
-  color: var(--text-muted);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  padding-left: 18px;
 }
 
+.rp-browser-devtools-empty {
+  padding: 12px;
+  text-align: center;
+  color: #555;
+  font-size: 11px;
+}
+
+.rp-browser-log {
+  display: flex;
+  gap: 6px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  color: #ccc;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.rp-browser-log-info { }
+
+.rp-browser-log-warn {
+  background: rgba(255, 193, 7, 0.05);
+  color: #ffc107;
+}
+
+.rp-browser-log-error {
+  background: rgba(239, 68, 68, 0.05);
+  color: #ef4444;
+}
+
+.rp-browser-log-num {
+  flex-shrink: 0;
+  color: #555;
+  width: 24px;
+  text-align: right;
+}
+
+.rp-browser-log-text {
+  display: flex;
+}
+
+/* Hide on small screens */
 @media (max-width: 1024px) {
   .right-panel {
     display: none;
   }
+}
+
+/* Remove duplicate styles below */
+.rp-browser-input,
+.rp-browser-go,
+.rp-browser-urlbar,
+.rp-browser-content,
+.rp-browser-frame {
+  /* already defined */
+}
+
+/* Old duplicate cleanup */
+.rp-browser-input { }
+.rp-browser-go { }
+.rp-browser-urlbar { }
+.rp-browser-content { }
+.rp-browser-frame { }
+  flex: 1;
+  width: 100%;
+  border: none;
+}
+
+/* ========== Diff List View ========== */
+.rp-diff {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.rp-diff-header {
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.rp-diff-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 6px;
+}
+
+.rp-diff-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border: 1px solid var(--border-color);
+  margin-bottom: 4px;
+}
+
+.rp-diff-item:hover {
+  background: var(--bg-hover);
+}
+
+.rp-diff-item-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.rp-diff-item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.rp-diff-item-name {
+  font-size: 12px;
+  color: var(--text-primary);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rp-diff-item-desc {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.rp-diff-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+/* Hide on small screens */
+@media (max-width: 1024px) {
+  .right-panel {
+    display: none;
+  }
+}
+
+/* Browser error overlay */
+.rp-browser-error-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 10;
+  backdrop-filter: blur(4px);
+}
+
+.rp-browser-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 24px;
+  background: var(--bg-primary);
+  border-radius: 12px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  max-width: 300px;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.rp-browser-error svg {
+  color: var(--danger);
+}
+
+.rp-browser-error-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  white-space: pre-line;
+}
+
+.rp-browser-error-btn {
+  padding: 6px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: white;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.rp-browser-error-btn:hover {
+  background: var(--accent-hover);
+}
+
+.rp-browser-error-btn.secondary {
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.rp-browser-error-btn.secondary:hover {
+  background: var(--bg-hover);
 }

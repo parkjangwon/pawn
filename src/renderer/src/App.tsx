@@ -6,13 +6,16 @@ import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
 import Settings from './components/Settings'
 import PermissionDialog from './components/PermissionDialog'
-import StatusBar from './components/StatusBar'
+import CommandPalette from './components/CommandPalette'
 import RightPanel from './components/RightPanel'
 
 export default function App(): React.JSX.Element {
   const theme = useThemeStore((s) => s.theme)
   const [showSettings, setShowSettings] = useState(false)
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [showCommandPalette, setShowCommandPalette] = useState(false)
+  const [sidebarOpen, setSidebarOpen] = useState(() => {
+    try { return localStorage.getItem('pawn-sidebar-open') !== 'false' } catch { return true }
+  })
 
   // Initialize data from backend on mount
   useEffect(() => {
@@ -22,7 +25,13 @@ export default function App(): React.JSX.Element {
   }, [])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
-  const toggleSidebar = useCallback(() => setSidebarOpen((v) => !v), [])
+  const toggleSidebar = useCallback(() => {
+    setSidebarOpen((v) => {
+      const next = !v
+      try { localStorage.setItem('pawn-sidebar-open', String(next)) } catch {}
+      return next
+    })
+  }, [])
 
   const { projects, activeProjectId, addSession } = useAppStore()
 
@@ -30,6 +39,13 @@ export default function App(): React.JSX.Element {
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       const mod = e.metaKey || e.ctrlKey
+
+      // Cmd/Ctrl + K = Command Palette
+      if (mod && e.key === 'k') {
+        e.preventDefault()
+        setShowCommandPalette(true)
+        return
+      }
 
       // Cmd/Ctrl + , = Settings
       if (mod && e.key === ',') {
@@ -45,6 +61,7 @@ export default function App(): React.JSX.Element {
 
       // Escape = close modals
       if (e.key === 'Escape') {
+        if (showCommandPalette) setShowCommandPalette(false)
         if (showSettings) setShowSettings(false)
         if (sidebarOpen) setSidebarOpen(false)
       }
@@ -52,20 +69,25 @@ export default function App(): React.JSX.Element {
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [showSettings, sidebarOpen, activeProjectId, addSession])
+  }, [showSettings, showCommandPalette, sidebarOpen, activeProjectId, addSession])
 
   return (
-    <div className={`app ${theme}`}>
+    <div className={`app ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={closeSidebar} />
       )}
-      <Sidebar onOpenSettings={() => setShowSettings(true)} open={sidebarOpen} />
+      <Sidebar onOpenSettings={() => setShowSettings(true)} onToggle={toggleSidebar} open={sidebarOpen} />
       <div className="main-column">
-        <ChatArea onToggleSidebar={toggleSidebar} />
-        <StatusBar />
+        <ChatArea onToggleSidebar={toggleSidebar} onOpenSettings={() => setShowSettings(true)} />
       </div>
       <RightPanel />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      {showCommandPalette && (
+        <CommandPalette
+          onClose={() => setShowCommandPalette(false)}
+          onOpenSettings={() => setShowSettings(true)}
+        />
+      )}
       <PermissionDialog />
     </div>
   )

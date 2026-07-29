@@ -22,9 +22,9 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
   init: async () => {
     try {
-      const config = await window.api.config.load()
-      if (config.settings?.theme) {
-        set({ theme: config.settings.theme as Theme })
+      const rawConfig = await window.api.config.load() as Record<string, unknown>
+      if ((rawConfig as any).settings?.theme) {
+        set({ theme: (rawConfig as any).settings.theme as Theme })
       }
     } catch { /* use default */ }
   }

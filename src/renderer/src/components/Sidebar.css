@@ -5,13 +5,13 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-sidebar);
-  border-right: 1px solid var(--border-color);
   -webkit-app-region: drag;
   position: fixed;
   top: 0;
   left: 0;
   z-index: 10;
   overflow: hidden;
+  transition: transform 0.2s var(--ease-spring);
 }
 
 .sidebar button,
@@ -23,24 +23,18 @@
   -webkit-app-region: no-drag;
 }
 
-.sidebar-header {
-  display: flex;
-  align-items: center;
-  padding: var(--space-sm) var(--space-md);
-  padding-top: calc(var(--space-sm) + env(safe-area-inset-top, 0px));
-  height: calc(var(--titlebar-height) + env(safe-area-inset-top, 0px));
-  min-height: calc(var(--titlebar-height) + env(safe-area-inset-top, 0px));
+.traffic-light-spacer {
+  height: 48px;
+  min-height: 48px;
   flex-shrink: 0;
-  background: var(--bg-sidebar);
-  border-bottom: 1px solid transparent;
+  -webkit-app-region: drag;
 }
 
-.sidebar-title {
-  font-size: var(--font-xl);
+.sidebar-logo {
+  font-size: 16px;
   font-weight: 700;
   color: var(--text-primary);
-  letter-spacing: -0.3px;
-  line-height: 1;
+  letter-spacing: -0.4px;
 }
 
 /* Quick actions */
@@ -58,7 +52,7 @@
   min-height: 36px;
   padding: 8px var(--space-md);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
+  border-radius: 6px;
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: var(--font-md);
@@ -71,22 +65,8 @@
   background: var(--bg-hover);
 }
 
-.sidebar-action-btn.primary {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-.sidebar-action-btn.primary:hover {
-  background: var(--accent-hover);
-}
-
 .sidebar-action-btn svg {
   flex-shrink: 0;
-}
-
-.sidebar-action-btn.primary svg {
-  color: #fff;
 }
 
 /* Scrollable content */
@@ -151,12 +131,12 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: 5px var(--space-sm);
-  border-radius: var(--radius-sm);
+  padding: 6px var(--space-sm);
+  border-radius: 8px;
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-secondary);
-  transition: background 0.1s;
+  transition: all 0.12s ease;
 }
 
 .sidebar-item:hover {
@@ -193,12 +173,12 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px var(--space-xs);
-  border-radius: var(--radius-sm);
+  padding: 6px var(--space-sm);
+  border-radius: 8px;
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-secondary);
-  transition: background 0.1s;
+  transition: all 0.12s ease;
 }
 
 .tree-project-header:hover {
@@ -285,12 +265,12 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 4px var(--space-xs);
-  border-radius: var(--radius-sm);
+  padding: 5px var(--space-sm);
+  border-radius: 6px;
   cursor: pointer;
   font-size: var(--font-sm);
   color: var(--text-muted);
-  transition: all 0.1s;
+  transition: all 0.12s ease;
 }
 
 .tree-session:hover {
@@ -357,7 +337,7 @@
 .sidebar-footer {
   flex-shrink: 0;
   padding: var(--space-sm);
-  border-top: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
 }
 
 .footer-btn {
@@ -365,14 +345,14 @@
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  padding: 6px var(--space-sm);
+  padding: 8px var(--space-sm);
   border: none;
-  border-radius: var(--radius-sm);
+  border-radius: 8px;
   background: none;
   color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: all 0.12s ease;
 }
 
 .footer-btn:hover {
@@ -382,4 +362,32 @@
 
 .footer-btn svg {
   flex-shrink: 0;
+}
+
+.sidebar-top-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px var(--space-md);
+  flex-shrink: 0;
+}
+
+.sidebar-fold-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-fold-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }

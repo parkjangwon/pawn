@@ -2,33 +2,286 @@
   "app": {
     "name": "Pawn"
   },
+  "common": {
+    "save": "保存",
+    "cancel": "キャンセル",
+    "delete": "削除",
+    "close": "閉じる",
+    "loading": "読み込み中...",
+    "empty": "まだ何もありません",
+    "ok": "OK",
+    "error": "エラー",
+    "noResults": "検索結果が見つかりません"
+  },
   "sidebar": {
     "newSession": "新しいセッション",
     "addProject": "プロジェクトを追加",
-    "sessions": "セッション",
     "settings": "設定",
-    "noProjects": "プロジェクトがありません"
+    "search": "セッションを検索...",
+    "pinned": "ピン留め",
+    "projects": "プロジェクト",
+    "recent": "最近",
+    "noProjects": "プロジェクトがありません",
+    "noSessions": "セッションがありません",
+    "deleteProject": "プロジェクトを削除",
+    "deleteSession": "セッションを削除",
+    "deleteProjectConfirm": "このプロジェクトを削除してもよろしいですか？この操作は元に戻せません。",
+    "deleteSessionConfirm": "このセッションを削除してもよろしいですか？この操作は元に戻せません。",
+    "projectName": "プロジェクト名",
+    "sessionTitle": "セッションタイトル",
+    "newProject": "新規プロジェクト",
+    "editProject": "プロジェクトを編集",
+    "addFolder": "フォルダを追加",
+    "deleteProjectBtn": "プロジェクトを削除",
+    "workWithoutProject": "プロジェクトなしで作業",
+    "pin": "ピン留め",
+    "unpin": "ピン留め解除",
+    "rename": "名前を変更",
+    "newChat": "新規チャット"
   },
   "chat": {
     "placeholder": "メッセージを入力...",
     "welcome": "お手伝いできることはありますか？",
     "welcomeSub": "コーディング、ブラウジング、自動化 — すべてここで。",
-    "send": "送信"
+    "send": "送信",
+    "stop": "停止",
+    "export": "エクスポート",
+    "you": "あなた",
+    "assistant": "アシスタント",
+    "thinking": "考え中...",
+    "noProvider": "プロバイダーが設定されていません",
+    "taskComplete": "タスク完了",
+    "modelSelected": "モデルが選択されました",
+    "suggestions": {
+      "summarize": "プロジェクト構造を読んで要約",
+      "searchWeb": "AIエージェントの最新ニュースを検索",
+      "draftEmail": "プロフェッショナルなメール返信を作成",
+      "setupAutomation": "日次自動化タスクを設定",
+      "screenshot": "スクリーンショットを撮って説明",
+      "writeReport": "レポート要約の作成を支援"
+    },
+    "welcomeProject": "{{name}}で何を作りましょうか？",
+    "slash": {
+      "title": "コマンド",
+      "noResults": "一致するコマンドがありません",
+      "new": "新しいチャット",
+      "newDesc": "新しいセッションを開始",
+      "clear": "チャットをクリア",
+      "clearDesc": "このセッションのメッセージを削除",
+      "model": "モデル",
+      "modelDesc": "使用するモデルを選択",
+      "theme": "テーマ",
+      "themeDesc": "ライト / ダークを切り替え",
+      "settings": "設定",
+      "settingsDesc": "環境設定を開く",
+      "export": "エクスポート",
+      "exportDesc": "チャットをMarkdownで保存"
+    },
+    "mention": {
+      "title": "ファイルとフォルダ",
+      "noResults": "一致するファイルがありません"
+    }
+  },
+  "contextBar": {
+    "switchProject": "プロジェクトを切り替え",
+    "noProject": "プロジェクトが選択されていません",
+    "workWithoutProject": "プロジェクトなしで作業"
+  },
+  "modelPicker": {
+    "noModels": "利用可能なモデルがありません"
+  },
+  "permission": {
+    "title": "権限リクエスト",
+    "ask": "確認する",
+    "auto": "自動承認",
+    "yolo": "YOLO",
+    "askDesc": "各アクションの前に承認を求める",
+    "autoDesc": "定型アクションを自動承認する",
+    "yoloDesc": "確認なしで全てのアクションを承認する",
+    "deny": "拒否",
+    "allow": "許可",
+    "types": {
+      "computer_use": "コンピューター操作",
+      "file_write": "ファイル書き込み",
+      "shell_exec": "シェル実行",
+      "browser": "ブラウザ"
+    }
+  },
+  "statusBar": {
+    "working": "処理中...",
+    "ready": "準備完了",
+    "noProvider": "プロバイダーなし",
+    "auto": "自動",
+    "manual": "手動"
+  },
+  "settings": {
+    "title": "設定",
+    "backToApp": "アプリに戻る",
+    "appearance": "外観",
+    "providers": "プロバイダー",
+    "models": "モデル",
+    "agent": "エージェント",
+    "plugins": "プラグイン",
+    "data": "データ",
+    "groups": {
+      "general": "一般",
+      "coding": "コーディング",
+      "integration": "統合"
+    },
+    "appearanceSection": {
+      "title": "外観",
+      "desc": "Pawnの見た目と雰囲気をカスタマイズ",
+      "theme": "テーマ",
+      "themeDesc": "ライト、ダーク、システムテーマから選択",
+      "language": "言語",
+      "languageDesc": "希望のインターフェース言語を選択"
+    },
+    "providerSection": {
+      "title": "プロバイダー",
+      "desc": "AIプロバイダー接続を管理",
+      "empty": "プロバイダーが設定されていません",
+      "add": "プロバイダーを追加",
+      "name": "名前",
+      "apiFormat": "API形式",
+      "authMethod": "認証方法",
+      "baseUrl": "ベースURL",
+      "apiKey": "APIキー",
+      "test": "接続テスト",
+      "testing": "テスト中...",
+      "openai": "OpenAI",
+      "claude": "Claude",
+      "apiKeyMethod": "APIキー",
+      "oauth": "OAuth",
+      "namePlaceholder": "マイプロバイダー",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "apiKeyPlaceholder": "sk-..."
+    },
+    "modelSection": {
+      "title": "モデル",
+      "desc": "利用可能なモデルを管理",
+      "empty": "モデルが設定されていません",
+      "add": "モデルを追加",
+      "selectProvider": "プロバイダーを選択",
+      "modelId": "モデルID",
+      "modelIdPlaceholder": "gpt-4o",
+      "displayName": "表示名",
+      "displayNamePlaceholder": "GPT-4o",
+      "tier": "ティア",
+      "tierLow": "低",
+      "tierMid": "中",
+      "tierHigh": "高"
+    },
+    "agentSection": {
+      "title": "エージェント",
+      "desc": "エージェントの動作とルーティングを設定",
+      "routing": "モデルルーティング",
+      "routingDesc": "タスクを最適なモデルに自動ルーティング",
+      "sendMode": "送信モード",
+      "sendModeDesc": "エージェントへのメッセージ送信方法を選択",
+      "queue": "キュー",
+      "steer": "直接送信",
+      "permissionMode": "権限モード",
+      "permissionModeDesc": "エージェントの権限リクエスト方法を制御"
+    },
+    "pluginSection": {
+      "title": "プラグイン",
+      "desc": "プラグインと統合を管理",
+      "claudeSkills": "Claudeスキル",
+      "claudeSkillsDesc": "Claudeスキルディレクトリのパス",
+      "claudeMd": "CLAUDE.md",
+      "claudeMdDesc": "プロジェクトレベルのCLAUDE.mdファイルのパス",
+      "agentDir": "エージェントディレクトリ",
+      "agentDirDesc": "エージェント固有の設定ディレクトリ",
+      "auto": "自動検出"
+    },
+    "dataSection": {
+      "title": "データ",
+      "desc": "データと設定を管理",
+      "export": "データをエクスポート",
+      "exportDesc": "すべての設定をファイルにエクスポート",
+      "import": "データをインポート",
+      "importDesc": "以前エクスポートしたファイルから設定をインポート",
+      "configFile": "設定ファイル",
+      "configFileDesc": "生の設定ファイルを表示・編集",
+      "database": "データベース",
+      "databaseDesc": "ローカルデータベースを管理"
+    }
+  },
+  "projectEdit": {
+    "edit": "プロジェクトを編集",
+    "create": "プロジェクトを作成",
+    "namePlaceholder": "プロジェクト名",
+    "sourceFolders": "ソースフォルダ",
+    "addFolder": "フォルダを追加",
+    "delete": "削除"
+  },
+  "confirmDialog": {
+    "confirm": "確認",
+    "cancel": "キャンセル"
+  },
+  "fileBrowser": {
+    "title": "フォルダを選択",
+    "select": "選択",
+    "cancel": "キャンセル",
+    "empty": "このフォルダは空です",
+    "parent": "親ディレクトリ"
+  },
+  "rightPanel": {
+    "title": "詳細",
+    "changes": "変更",
+    "local": "ローカル",
+    "branch": "ブランチ",
+    "project": "プロジェクト"
+  },
+  "commandPalette": {
+    "placeholder": "コマンドを入力...",
+    "noResults": "一致するコマンドがありません",
+    "navigate": "移動",
+    "select": "選択",
+    "close": "閉じる",
+    "groups": {
+      "actions": "アクション",
+      "sessions": "セッション",
+      "projects": "プロジェクト"
+    },
+    "commands": {
+      "newSession": "新しいセッション",
+      "newSessionDesc": "新しいチャットセッションを開始",
+      "toggleTheme": "テーマ切替",
+      "toggleThemeDesc": "ライトモードとダークモードを切り替え",
+      "stopStreaming": "ストリーミング停止",
+      "stopStreamingDesc": "現在の応答ストリームを停止",
+      "openSettings": "設定を開く",
+      "openSettingsDesc": "アプリケーション設定を開く"
+    }
+  },
+  "fileTree": {
+    "loading": "ファイルを読み込み中...",
+    "empty": "表示するファイルがありません"
+  },
+  "toolMessage": {
+    "showFullOutput": "完全な出力を表示",
+    "showLess": "折りたたむ",
+    "read": "ファイルを読む",
+    "write": "ファイルを書く",
+    "edit": "ファイルを編集",
+    "list": "ディレクトリ一覧",
+    "shell": "コマンド実行",
+    "screenshot": "スクリーンショット",
+    "click": "要素をクリック",
+    "type": "テキスト入力",
+    "browser": "ページを閲覧",
+    "search": "検索"
+  },
+  "diffView": {
+    "showAllLines": "すべての行を表示"
+  },
+  "agent": {
+    "taskComplete": "タスクが正常に完了しました",
+    "permissionDenied": "権限が拒否されました"
   },
   "theme": {
     "light": "ライト",
     "dark": "ダーク"
-  },
-  "settings": {
-    "title": "設定",
-    "appearance": "外観",
-    "providers": "プロバイダー",
-    "models": "モデル",
-    "language": "言語",
-    "theme": "テーマ",
-    "chat": "チャット",
-    "defaultSendMode": "デフォルト送信モード",
-    "routing": "モデルルーティング",
-    "scheduling": "スケジューリング"
   }
 }

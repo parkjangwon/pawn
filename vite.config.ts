@@ -1,12 +1,147 @@
-import { resolve } from 'path'
+import { resolve, join } from 'path'
+import { readFileSync, readdirSync, statSync, existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
 import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
+import { WebSocketServer } from 'ws'
 
 // Dev-only proxy to bypass CORS when testing in browser (not Electron)
 function apiProxyPlugin(): Plugin {
   return {
     name: 'api-proxy',
     configureServer(server) {
+      // Terminal WebSocket for PTY
+      const wss = new WebSocketServer({ noServer: true })
+      server.httpServer?.on('upgrade', (request, socket, head) => {
+        if (request.url === '/api/terminal') {
+          wss.handleUpgrade(request, socket, head, (ws) => {
+            try {
+              const nodePty = require(require('path').join(process.cwd(), 'node_modules', 'node-pty'))
+              const shell = process.env.SHELL || 'zsh'
+              const term = nodePty.spawn(shell, [], {
+                name: 'xterm-256color', cols: 80, rows: 24,
+                cwd: process.cwd(),
+                env: { ...process.env, TERM: 'xterm-256color' }
+              })
+              ws.on('message', (data) => {
+                try { const m = JSON.parse(data.toString()); if (m.type === 'input') term.write(m.data); else if (m.type === 'resize') term.resize(m.cols, m.rows) } catch {}
+              })
+              term.onData((d) => { try { ws.send(JSON.stringify({ type: 'data', data: d })) } catch {} })
+              term.onExit(() => { try { ws.close() } catch {} })
+              ws.on('close', () => { try { term.kill() } catch {} })
+            } catch (e) {
+              try { ws.send(JSON.stringify({ type: 'data', data: '\r\nFailed to start shell: ' + String(e) + '\r\n' })) } catch {}
+            }
+          })
+        }
+      })
+
+      
+      // Filesystem API for browser (dev:web) mode — backs FileTree, skills, and @ mentions
+      server.middlewares.use('/api/fs', (req, res) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.end('Method not allowed'); return }
+        const action = (req.url || '').replace(/^\//, '').split('?')[0]
+        let body = ''
+        req.on('data', (chunk) => { body += chunk })
+        req.on('end', () => {
+          let data: Record<string, unknown> = {}
+          try { data = body ? JSON.parse(body) : {} } catch { /* empty body */ }
+          const send = (obj: unknown): void => {
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(obj))
+          }
+          try {
+            const p = data.path as string
+            switch (action) {
+              case 'readFile':
+                send(readFileSync(p, 'utf8'))
+                break
+              case 'writeFile':
+                writeFileSync(p, data.content as string, 'utf8')
+                send({ ok: true })
+                break
+              case 'listDir': {
+                const entries = readdirSync(p, { withFileTypes: true })
+                send(entries.map((e) => ({ name: e.name, isDirectory: e.isDirectory(), path: join(p, e.name) })))
+                break
+              }
+              case 'stat': {
+                const s = statSync(p)
+                send({ size: s.size, isFile: s.isFile(), isDirectory: s.isDirectory(), mtime: s.mtimeMs })
+                break
+              }
+              case 'mkdir':
+                mkdirSync(p, { recursive: true })
+                send({ ok: true })
+                break
+              case 'delete':
+                unlinkSync(p)
+                send({ ok: true })
+                break
+              case 'exists':
+                send(existsSync(p))
+                break
+              case 'walk': {
+                const IGNORE = new Set(['node_modules', '.git', 'dist', 'out', 'release', '.next', 'coverage', '.turbo', '.cache'])
+                const results: Array<{ name: string; path: string; isDirectory: boolean }> = []
+                const MAX = 3000
+                const walk = (dir: string, depth: number): void => {
+                  if (depth > 6 || results.length >= MAX) return
+                  let entries
+                  try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
+                  for (const e of entries) {
+                    if (results.length >= MAX) return
+                    if (e.name.startsWith('.')) continue
+                    if (IGNORE.has(e.name)) continue
+                    const full = join(dir, e.name)
+                    if (e.isDirectory()) walk(full, depth + 1)
+                    else results.push({ name: e.name, path: full, isDirectory: false })
+                  }
+                }
+                walk(p, 0)
+                send(results)
+                break
+              }
+              default:
+                res.statusCode = 404
+                res.end(JSON.stringify({ error: 'Unknown action' }))
+            }
+          } catch (err) {
+            send({ error: String(err) })
+          }
+        })
+      })
+
+      // Browser proxy: strip X-Frame-Options to allow iframe embedding
+      server.middlewares.use('/api/browser/proxy', async (req, res) => {
+        const raw = new URL(req.url || '', 'http://x').searchParams.get('url')
+        if (!raw) { res.statusCode = 400; res.end('Missing url'); return }
+        try {
+          const resp = await fetch(raw, {
+            headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
+            redirect: 'follow'
+          })
+          if (!resp.ok) { res.statusCode = resp.status; res.end('Fetch failed: ' + resp.status); return }
+          const ct = resp.headers.get('content-type') || 'text/html'
+          res.setHeader('Content-Type', ct)
+          // Strip iframe-blocking headers
+          for (const [k, v] of resp.headers.entries()) {
+            const lower = k.toLowerCase()
+            if (lower !== 'x-frame-options' && lower !== 'content-security-policy' && lower !== 'referrer-policy')
+              res.setHeader(k, v)
+          }
+          res.setHeader('Content-Security-Policy', 'frame-ancestors *')
+          if (resp.body) {
+            const reader = resp.body.getReader()
+            const pump = async () => { while (true) { const { done, value } = await reader.read(); if (done) { res.end(); return } res.write(Buffer.from(value)) } }
+            await pump()
+          } else {
+            const text = await resp.text(); res.end(text)
+          }
+        } catch (err) {
+          res.statusCode = 502; res.end('Proxy error: ' + String(err))
+        }
+      })
+
       server.middlewares.use('/api/proxy', async (req, res) => {
         if (req.method !== 'POST') {
           res.statusCode = 405

@@ -1,0 +1,95 @@
+.file-tree {
+  font-size: 12px;
+  user-select: none;
+}
+
+.ft-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-weight: 500;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  border-top: 1px solid var(--border-color);
+}
+
+.ft-header:hover {
+  background: var(--bg-hover);
+}
+
+.ft-root-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ft-body {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.ft-entry {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 2px 8px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ft-entry:hover {
+  background: var(--bg-hover);
+}
+
+.ft-dir {
+  color: var(--text-primary);
+}
+
+.ft-file {
+  color: var(--text-secondary);
+}
+
+.ft-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s ease;
+  color: var(--text-muted);
+}
+
+.ft-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.ft-spacer {
+  width: 8px;
+  flex-shrink: 0;
+}
+
+.ft-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.ft-dir .ft-icon {
+  color: #3b82f6;
+}
+
+.ft-name {
+  margin-left: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ft-loading,
+.ft-empty {
+  padding: 8px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 11px;
+}

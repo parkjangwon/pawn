@@ -2,33 +2,286 @@
   "app": {
     "name": "Pawn"
   },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "close": "Close",
+    "loading": "Loading...",
+    "empty": "Nothing here yet",
+    "ok": "OK",
+    "error": "Error",
+    "noResults": "No results found"
+  },
   "sidebar": {
     "newSession": "New Session",
     "addProject": "Add Project",
-    "sessions": "Sessions",
     "settings": "Settings",
-    "noProjects": "No projects yet"
+    "search": "Search sessions...",
+    "pinned": "Pinned",
+    "projects": "Projects",
+    "recent": "Recent",
+    "noProjects": "No projects yet",
+    "noSessions": "No sessions yet",
+    "deleteProject": "Delete Project",
+    "deleteSession": "Delete Session",
+    "deleteProjectConfirm": "Are you sure you want to delete this project? This action cannot be undone.",
+    "deleteSessionConfirm": "Delete this session? This action cannot be undone.",
+    "projectName": "Project Name",
+    "sessionTitle": "Session Title",
+    "newProject": "New Project",
+    "editProject": "Edit Project",
+    "addFolder": "Add Folder",
+    "deleteProjectBtn": "Delete Project",
+    "workWithoutProject": "Work Without a Project",
+    "pin": "Pin",
+    "unpin": "Unpin",
+    "rename": "Rename",
+    "newChat": "New chat"
   },
   "chat": {
     "placeholder": "Send a message...",
     "welcome": "What can I help you with?",
     "welcomeSub": "Code, browse, automate — all in one place.",
-    "send": "Send"
+    "send": "Send",
+    "stop": "Stop",
+    "export": "Export",
+    "you": "You",
+    "assistant": "Assistant",
+    "thinking": "Thinking...",
+    "noProvider": "No provider configured",
+    "taskComplete": "Task complete",
+    "modelSelected": "Model selected",
+    "suggestions": {
+      "summarize": "Read and summarize the project structure",
+      "searchWeb": "Search the web for latest news on AI agents",
+      "draftEmail": "Draft a professional email reply",
+      "setupAutomation": "Set up a daily automation task",
+      "screenshot": "Take a screenshot and describe what you see",
+      "writeReport": "Help me write a report summary"
+    },
+    "welcomeProject": "What should we build in {{name}}?",
+    "slash": {
+      "title": "Commands",
+      "noResults": "No matching commands",
+      "new": "New chat",
+      "newDesc": "Start a new session",
+      "clear": "Clear chat",
+      "clearDesc": "Remove messages in this session",
+      "model": "Model",
+      "modelDesc": "Choose the active model",
+      "theme": "Theme",
+      "themeDesc": "Toggle light / dark",
+      "settings": "Settings",
+      "settingsDesc": "Open preferences",
+      "export": "Export",
+      "exportDesc": "Save the chat as Markdown"
+    },
+    "mention": {
+      "title": "Files & folders",
+      "noResults": "No matching files"
+    }
+  },
+  "contextBar": {
+    "switchProject": "Switch Project",
+    "noProject": "No project selected",
+    "workWithoutProject": "Work without a project"
+  },
+  "modelPicker": {
+    "noModels": "No models available"
+  },
+  "permission": {
+    "title": "Permission Request",
+    "ask": "Ask",
+    "auto": "Auto-approve",
+    "yolo": "YOLO",
+    "askDesc": "Prompt for approval before each action",
+    "autoDesc": "Automatically approve routine actions",
+    "yoloDesc": "Approve all actions without confirmation",
+    "deny": "Deny",
+    "allow": "Allow",
+    "types": {
+      "computer_use": "Computer Use",
+      "file_write": "File Write",
+      "shell_exec": "Shell Execution",
+      "browser": "Browser"
+    }
+  },
+  "statusBar": {
+    "working": "Working...",
+    "ready": "Ready",
+    "noProvider": "No provider",
+    "auto": "Auto",
+    "manual": "Manual"
+  },
+  "settings": {
+    "title": "Settings",
+    "backToApp": "Back to App",
+    "appearance": "Appearance",
+    "providers": "Providers",
+    "models": "Models",
+    "agent": "Agent",
+    "plugins": "Plugins",
+    "data": "Data",
+    "groups": {
+      "general": "General",
+      "coding": "Coding",
+      "integration": "Integration"
+    },
+    "appearanceSection": {
+      "title": "Appearance",
+      "desc": "Customize how Pawn looks and feels",
+      "theme": "Theme",
+      "themeDesc": "Choose between light, dark, or system theme",
+      "language": "Language",
+      "languageDesc": "Select your preferred interface language"
+    },
+    "providerSection": {
+      "title": "Providers",
+      "desc": "Manage AI provider connections",
+      "empty": "No providers configured",
+      "add": "Add Provider",
+      "name": "Name",
+      "apiFormat": "API Format",
+      "authMethod": "Auth Method",
+      "baseUrl": "Base URL",
+      "apiKey": "API Key",
+      "test": "Test Connection",
+      "testing": "Testing...",
+      "openai": "OpenAI",
+      "claude": "Claude",
+      "apiKeyMethod": "API Key",
+      "oauth": "OAuth",
+      "namePlaceholder": "My Provider",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "apiKeyPlaceholder": "sk-..."
+    },
+    "modelSection": {
+      "title": "Models",
+      "desc": "Manage available models",
+      "empty": "No models configured",
+      "add": "Add Model",
+      "selectProvider": "Select Provider",
+      "modelId": "Model ID",
+      "modelIdPlaceholder": "gpt-4o",
+      "displayName": "Display Name",
+      "displayNamePlaceholder": "GPT-4o",
+      "tier": "Tier",
+      "tierLow": "Low",
+      "tierMid": "Mid",
+      "tierHigh": "High"
+    },
+    "agentSection": {
+      "title": "Agent",
+      "desc": "Configure agent behavior and routing",
+      "routing": "Model Routing",
+      "routingDesc": "Automatically route tasks to the best available model",
+      "sendMode": "Send Mode",
+      "sendModeDesc": "Choose how messages are sent to the agent",
+      "queue": "Queue",
+      "steer": "Steer",
+      "permissionMode": "Permission Mode",
+      "permissionModeDesc": "Control how the agent asks for permissions"
+    },
+    "pluginSection": {
+      "title": "Plugins",
+      "desc": "Manage plugins and integrations",
+      "claudeSkills": "Claude Skills",
+      "claudeSkillsDesc": "Path to Claude skills directory",
+      "claudeMd": "CLAUDE.md",
+      "claudeMdDesc": "Path to project-level CLAUDE.md file",
+      "agentDir": "Agent Directory",
+      "agentDirDesc": "Directory for agent-specific configuration",
+      "auto": "Auto-detect"
+    },
+    "dataSection": {
+      "title": "Data",
+      "desc": "Manage your data and configuration",
+      "export": "Export Data",
+      "exportDesc": "Export all settings and configuration to a file",
+      "import": "Import Data",
+      "importDesc": "Import settings from a previously exported file",
+      "configFile": "Config File",
+      "configFileDesc": "View and edit the raw configuration file",
+      "database": "Database",
+      "databaseDesc": "Manage the local database"
+    }
+  },
+  "projectEdit": {
+    "edit": "Edit Project",
+    "create": "Create Project",
+    "namePlaceholder": "Project name",
+    "sourceFolders": "Source Folders",
+    "addFolder": "Add Folder",
+    "delete": "Remove"
+  },
+  "confirmDialog": {
+    "confirm": "Confirm",
+    "cancel": "Cancel"
+  },
+  "fileBrowser": {
+    "title": "Select Folder",
+    "select": "Select",
+    "cancel": "Cancel",
+    "empty": "This folder is empty",
+    "parent": "Parent Directory"
+  },
+  "rightPanel": {
+    "title": "Details",
+    "changes": "Changes",
+    "local": "Local",
+    "branch": "Branch",
+    "project": "Project"
+  },
+  "commandPalette": {
+    "placeholder": "Type a command...",
+    "noResults": "No matching commands",
+    "navigate": "Navigate",
+    "select": "Select",
+    "close": "Close",
+    "groups": {
+      "actions": "Actions",
+      "sessions": "Sessions",
+      "projects": "Projects"
+    },
+    "commands": {
+      "newSession": "New Session",
+      "newSessionDesc": "Start a new chat session",
+      "toggleTheme": "Toggle Theme",
+      "toggleThemeDesc": "Switch between light and dark mode",
+      "stopStreaming": "Stop Streaming",
+      "stopStreamingDesc": "Stop the current response stream",
+      "openSettings": "Open Settings",
+      "openSettingsDesc": "Open the application settings"
+    }
+  },
+  "fileTree": {
+    "loading": "Loading files...",
+    "empty": "No files to display"
+  },
+  "toolMessage": {
+    "showFullOutput": "Show full output",
+    "showLess": "Show less",
+    "read": "Read file",
+    "write": "Write file",
+    "edit": "Edit file",
+    "list": "List directory",
+    "shell": "Run command",
+    "screenshot": "Take screenshot",
+    "click": "Click element",
+    "type": "Type text",
+    "browser": "Browse page",
+    "search": "Search"
+  },
+  "diffView": {
+    "showAllLines": "Show all lines"
+  },
+  "agent": {
+    "taskComplete": "Task completed successfully",
+    "permissionDenied": "Permission denied"
   },
   "theme": {
     "light": "Light",
     "dark": "Dark"
-  },
-  "settings": {
-    "title": "Settings",
-    "appearance": "Appearance",
-    "providers": "Providers",
-    "models": "Models",
-    "language": "Language",
-    "theme": "Theme",
-    "chat": "Chat",
-    "defaultSendMode": "Default Send Mode",
-    "routing": "Model Routing",
-    "scheduling": "Scheduling"
   }
 }

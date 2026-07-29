@@ -3,6 +3,7 @@ import { create } from 'zustand'
 export interface Session {
   id: string
   title: string
+  path: string
   createdAt: number
   messages: Message[]
 }
@@ -38,6 +39,7 @@ interface AppState {
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
+  clearMessages: (projectId: string, sessionId: string) => void
 }
 
 let counter = 0
@@ -99,7 +101,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   addSession: (projectId, title) => {
     const id = uid()
-    const session: Session = { id, title: title || 'New Session', createdAt: Date.now(), messages: [] }
+    const session: Session = { id, title: title || "New Session", path: "", createdAt: Date.now(), messages: [] }
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId ? { ...p, sessions: [...p.sessions, session] } : p
@@ -150,5 +152,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       )
     }))
     window.api.db.updateSessionTitle(sessionId, title)
+  },
+
+  clearMessages: (projectId, sessionId) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, messages: [] } : ss) }
+          : p
+      )
+    }))
+    window.api.db.clearMessages(sessionId)
   }
 }))

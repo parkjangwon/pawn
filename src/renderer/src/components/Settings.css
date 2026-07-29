@@ -15,23 +15,26 @@
   background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
-  padding: var(--space-md);
+  padding: 0 var(--space-md) var(--space-md) var(--space-md);
+  padding-top: 50px;
   overflow-y: auto;
+  -webkit-app-region: no-drag;
 }
 
 .settings-back {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
-  padding: var(--space-sm) var(--space-sm);
+  padding: 8px 0;
+  margin: 0 0 var(--space-md) 8px;
   border: none;
   border-radius: var(--radius-sm);
   background: none;
   color: var(--text-muted);
   font-size: var(--font-md);
   cursor: pointer;
-  margin-bottom: var(--space-lg);
   transition: color 0.15s;
+  width: fit-content;
 }
 
 .settings-back:hover {

@@ -2,33 +2,286 @@
   "app": {
     "name": "Pawn"
   },
+  "common": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "close": "关闭",
+    "loading": "加载中...",
+    "empty": "暂无内容",
+    "ok": "确定",
+    "error": "错误",
+    "noResults": "未找到结果"
+  },
   "sidebar": {
     "newSession": "新会话",
     "addProject": "添加项目",
-    "sessions": "会话",
     "settings": "设置",
-    "noProjects": "暂无项目"
+    "search": "搜索会话...",
+    "pinned": "已置顶",
+    "projects": "项目",
+    "recent": "最近",
+    "noProjects": "暂无项目",
+    "noSessions": "暂无会话",
+    "deleteProject": "删除项目",
+    "deleteSession": "删除会话",
+    "deleteProjectConfirm": "确定要删除此项目吗？此操作无法撤销。",
+    "deleteSessionConfirm": "确定要删除此会话吗？此操作无法撤销。",
+    "projectName": "项目名称",
+    "sessionTitle": "会话标题",
+    "newProject": "新建项目",
+    "editProject": "编辑项目",
+    "addFolder": "添加文件夹",
+    "deleteProjectBtn": "删除项目",
+    "workWithoutProject": "无项目工作",
+    "pin": "置顶",
+    "unpin": "取消置顶",
+    "rename": "重命名",
+    "newChat": "新对话"
   },
   "chat": {
     "placeholder": "输入消息...",
     "welcome": "有什么可以帮你的？",
     "welcomeSub": "编码、浏览、自动化 — 尽在一处。",
-    "send": "发送"
+    "send": "发送",
+    "stop": "停止",
+    "export": "导出",
+    "you": "你",
+    "assistant": "助手",
+    "thinking": "思考中...",
+    "noProvider": "未配置提供商",
+    "taskComplete": "任务完成",
+    "modelSelected": "已选择模型",
+    "suggestions": {
+      "summarize": "读取并总结项目结构",
+      "searchWeb": "搜索AI代理最新新闻",
+      "draftEmail": "撰写专业的电子邮件回复",
+      "setupAutomation": "设置每日自动化任务",
+      "screenshot": "截图并描述你看到的内容",
+      "writeReport": "帮我撰写报告摘要"
+    },
+    "welcomeProject": "在{{name}}中构建什么？",
+    "slash": {
+      "title": "命令",
+      "noResults": "没有匹配的命令",
+      "new": "新对话",
+      "newDesc": "开始新会话",
+      "clear": "清空对话",
+      "clearDesc": "删除当前会话的消息",
+      "model": "模型",
+      "modelDesc": "选择使用的模型",
+      "theme": "主题",
+      "themeDesc": "切换浅色 / 深色",
+      "settings": "设置",
+      "settingsDesc": "打开偏好设置",
+      "export": "导出",
+      "exportDesc": "将对话保存为 Markdown"
+    },
+    "mention": {
+      "title": "文件与文件夹",
+      "noResults": "没有匹配的文件"
+    }
+  },
+  "contextBar": {
+    "switchProject": "切换项目",
+    "noProject": "未选择项目",
+    "workWithoutProject": "无项目工作"
+  },
+  "modelPicker": {
+    "noModels": "没有可用模型"
+  },
+  "permission": {
+    "title": "权限请求",
+    "ask": "询问",
+    "auto": "自动批准",
+    "yolo": "YOLO",
+    "askDesc": "每次操作前请求批准",
+    "autoDesc": "自动批准常规操作",
+    "yoloDesc": "无需确认即批准所有操作",
+    "deny": "拒绝",
+    "allow": "允许",
+    "types": {
+      "computer_use": "计算机操作",
+      "file_write": "文件写入",
+      "shell_exec": "Shell执行",
+      "browser": "浏览器"
+    }
+  },
+  "statusBar": {
+    "working": "工作中...",
+    "ready": "就绪",
+    "noProvider": "无提供商",
+    "auto": "自动",
+    "manual": "手动"
+  },
+  "settings": {
+    "title": "设置",
+    "backToApp": "返回应用",
+    "appearance": "外观",
+    "providers": "提供商",
+    "models": "模型",
+    "agent": "代理",
+    "plugins": "插件",
+    "data": "数据",
+    "groups": {
+      "general": "通用",
+      "coding": "编码",
+      "integration": "集成"
+    },
+    "appearanceSection": {
+      "title": "外观",
+      "desc": "自定义Pawn的外观和体验",
+      "theme": "主题",
+      "themeDesc": "选择浅色、深色或系统主题",
+      "language": "语言",
+      "languageDesc": "选择您偏好的界面语言"
+    },
+    "providerSection": {
+      "title": "提供商",
+      "desc": "管理AI提供商连接",
+      "empty": "未配置提供商",
+      "add": "添加提供商",
+      "name": "名称",
+      "apiFormat": "API格式",
+      "authMethod": "认证方式",
+      "baseUrl": "基础URL",
+      "apiKey": "API密钥",
+      "test": "测试连接",
+      "testing": "测试中...",
+      "openai": "OpenAI",
+      "claude": "Claude",
+      "apiKeyMethod": "API密钥",
+      "oauth": "OAuth",
+      "namePlaceholder": "我的提供商",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "apiKeyPlaceholder": "sk-..."
+    },
+    "modelSection": {
+      "title": "模型",
+      "desc": "管理可用模型",
+      "empty": "未配置模型",
+      "add": "添加模型",
+      "selectProvider": "选择提供商",
+      "modelId": "模型ID",
+      "modelIdPlaceholder": "gpt-4o",
+      "displayName": "显示名称",
+      "displayNamePlaceholder": "GPT-4o",
+      "tier": "层级",
+      "tierLow": "低",
+      "tierMid": "中",
+      "tierHigh": "高"
+    },
+    "agentSection": {
+      "title": "代理",
+      "desc": "配置代理行为和路由",
+      "routing": "模型路由",
+      "routingDesc": "自动将任务路由到最佳可用模型",
+      "sendMode": "发送模式",
+      "sendModeDesc": "选择消息发送到代理的方式",
+      "queue": "队列",
+      "steer": "直接发送",
+      "permissionMode": "权限模式",
+      "permissionModeDesc": "控制代理请求权限的方式"
+    },
+    "pluginSection": {
+      "title": "插件",
+      "desc": "管理插件和集成",
+      "claudeSkills": "Claude技能",
+      "claudeSkillsDesc": "Claude技能目录路径",
+      "claudeMd": "CLAUDE.md",
+      "claudeMdDesc": "项目级CLAUDE.md文件路径",
+      "agentDir": "代理目录",
+      "agentDirDesc": "代理特定配置的目录",
+      "auto": "自动检测"
+    },
+    "dataSection": {
+      "title": "数据",
+      "desc": "管理数据和配置",
+      "export": "导出数据",
+      "exportDesc": "将所有设置导出到文件",
+      "import": "导入数据",
+      "importDesc": "从之前导出的文件导入设置",
+      "configFile": "配置文件",
+      "configFileDesc": "查看和编辑原始配置文件",
+      "database": "数据库",
+      "databaseDesc": "管理本地数据库"
+    }
+  },
+  "projectEdit": {
+    "edit": "编辑项目",
+    "create": "创建项目",
+    "namePlaceholder": "项目名称",
+    "sourceFolders": "源文件夹",
+    "addFolder": "添加文件夹",
+    "delete": "移除"
+  },
+  "confirmDialog": {
+    "confirm": "确认",
+    "cancel": "取消"
+  },
+  "fileBrowser": {
+    "title": "选择文件夹",
+    "select": "选择",
+    "cancel": "取消",
+    "empty": "此文件夹为空",
+    "parent": "上级目录"
+  },
+  "rightPanel": {
+    "title": "详情",
+    "changes": "变更",
+    "local": "本地",
+    "branch": "分支",
+    "project": "项目"
+  },
+  "commandPalette": {
+    "placeholder": "输入命令...",
+    "noResults": "无匹配命令",
+    "navigate": "导航",
+    "select": "选择",
+    "close": "关闭",
+    "groups": {
+      "actions": "操作",
+      "sessions": "会话",
+      "projects": "项目"
+    },
+    "commands": {
+      "newSession": "新会话",
+      "newSessionDesc": "开始新的聊天会话",
+      "toggleTheme": "切换主题",
+      "toggleThemeDesc": "在浅色和深色模式之间切换",
+      "stopStreaming": "停止流式传输",
+      "stopStreamingDesc": "停止当前的响应流",
+      "openSettings": "打开设置",
+      "openSettingsDesc": "打开应用设置"
+    }
+  },
+  "fileTree": {
+    "loading": "加载文件中...",
+    "empty": "没有可显示的文件"
+  },
+  "toolMessage": {
+    "showFullOutput": "显示完整输出",
+    "showLess": "收起",
+    "read": "读取文件",
+    "write": "写入文件",
+    "edit": "编辑文件",
+    "list": "列出目录",
+    "shell": "运行命令",
+    "screenshot": "截取屏幕",
+    "click": "点击元素",
+    "type": "输入文本",
+    "browser": "浏览页面",
+    "search": "搜索"
+  },
+  "diffView": {
+    "showAllLines": "显示所有行"
+  },
+  "agent": {
+    "taskComplete": "任务已完成",
+    "permissionDenied": "权限被拒绝"
   },
   "theme": {
     "light": "浅色",
     "dark": "深色"
-  },
-  "settings": {
-    "title": "设置",
-    "appearance": "外观",
-    "providers": "提供商",
-    "models": "模型",
-    "language": "语言",
-    "theme": "主题",
-    "chat": "聊天",
-    "defaultSendMode": "默认发送模式",
-    "routing": "模型路由",
-    "scheduling": "计划任务"
   }
 }

@@ -2,33 +2,286 @@
   "app": {
     "name": "Pawn"
   },
+  "common": {
+    "save": "저장",
+    "cancel": "취소",
+    "delete": "삭제",
+    "close": "닫기",
+    "loading": "로딩 중...",
+    "empty": "아직 아무것도 없습니다",
+    "ok": "확인",
+    "error": "오류",
+    "noResults": "검색 결과가 없습니다"
+  },
   "sidebar": {
     "newSession": "새 세션",
     "addProject": "프로젝트 추가",
-    "sessions": "세션",
     "settings": "설정",
-    "noProjects": "프로젝트가 없습니다"
+    "search": "세션 검색...",
+    "pinned": "고정됨",
+    "projects": "프로젝트",
+    "recent": "최근",
+    "noProjects": "프로젝트가 없습니다",
+    "noSessions": "세션이 없습니다",
+    "deleteProject": "프로젝트 삭제",
+    "deleteSession": "세션 삭제",
+    "deleteProjectConfirm": "이 프로젝트를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "deleteSessionConfirm": "이 세션을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
+    "projectName": "프로젝트 이름",
+    "sessionTitle": "세션 제목",
+    "newProject": "새 프로젝트",
+    "editProject": "프로젝트 편집",
+    "addFolder": "폴더 추가",
+    "deleteProjectBtn": "프로젝트 삭제",
+    "workWithoutProject": "프로젝트 없이 작업",
+    "pin": "고정",
+    "unpin": "고정 해제",
+    "rename": "이름 바꾸기",
+    "newChat": "새 작업"
   },
   "chat": {
     "placeholder": "메시지를 입력하세요...",
     "welcome": "무엇을 도와드릴까요?",
     "welcomeSub": "코딩, 브라우징, 자동화 — 한 곳에서.",
-    "send": "전송"
+    "send": "전송",
+    "stop": "중지",
+    "export": "내보내기",
+    "you": "나",
+    "assistant": "어시스턴트",
+    "thinking": "생각 중...",
+    "noProvider": "설정된 프로바이더가 없습니다",
+    "taskComplete": "작업 완료",
+    "modelSelected": "모델 선택됨",
+    "suggestions": {
+      "summarize": "프로젝트 구조를 읽고 요약해줘",
+      "searchWeb": "AI 에이전트 관련 최신 뉴스 검색",
+      "draftEmail": "전문적인 이메일 답장 작성",
+      "setupAutomation": "일일 자동화 작업 설정",
+      "screenshot": "스크린샷을 찍고 설명해줘",
+      "writeReport": "리포트 요약 작성 도와줘"
+    },
+    "welcomeProject": "{{name}}에서 무엇을 만들까요?",
+    "slash": {
+      "title": "명령어",
+      "noResults": "일치하는 명령어가 없습니다",
+      "new": "새 작업",
+      "newDesc": "새 세션 시작",
+      "clear": "대화 비우기",
+      "clearDesc": "현재 세션 메시지 삭제",
+      "model": "모델",
+      "modelDesc": "사용할 모델 선택",
+      "theme": "테마",
+      "themeDesc": "라이트 / 다크 전환",
+      "settings": "설정",
+      "settingsDesc": "환경설정 열기",
+      "export": "내보내기",
+      "exportDesc": "대화를 Markdown으로 저장"
+    },
+    "mention": {
+      "title": "파일 및 폴더",
+      "noResults": "일치하는 파일이 없습니다"
+    }
+  },
+  "contextBar": {
+    "switchProject": "프로젝트 전환",
+    "noProject": "선택된 프로젝트 없음",
+    "workWithoutProject": "프로젝트 없이 작업하기"
+  },
+  "modelPicker": {
+    "noModels": "사용 가능한 모델이 없습니다"
+  },
+  "permission": {
+    "title": "권한 요청",
+    "ask": "묻기",
+    "auto": "자동 승인",
+    "yolo": "YOLO",
+    "askDesc": "각 작업 전에 승인 요청",
+    "autoDesc": "일상적인 작업을 자동 승인",
+    "yoloDesc": "확인 없이 모든 작업 승인",
+    "deny": "거부",
+    "allow": "허용",
+    "types": {
+      "computer_use": "컴퓨터 사용",
+      "file_write": "파일 쓰기",
+      "shell_exec": "셸 실행",
+      "browser": "브라우저"
+    }
+  },
+  "statusBar": {
+    "working": "작업 중...",
+    "ready": "준비됨",
+    "noProvider": "프로바이더 없음",
+    "auto": "자동",
+    "manual": "수동"
+  },
+  "settings": {
+    "title": "설정",
+    "backToApp": "앱으로 돌아가기",
+    "appearance": "외관",
+    "providers": "프로바이더",
+    "models": "모델",
+    "agent": "에이전트",
+    "plugins": "플러그인",
+    "data": "데이터",
+    "groups": {
+      "general": "일반",
+      "coding": "코딩",
+      "integration": "통합"
+    },
+    "appearanceSection": {
+      "title": "외관",
+      "desc": "Pawn의 모양과 느낌을 사용자 지정합니다",
+      "theme": "테마",
+      "themeDesc": "라이트, 다크 또는 시스템 테마 중에서 선택하세요",
+      "language": "언어",
+      "languageDesc": "원하는 인터페이스 언어를 선택하세요"
+    },
+    "providerSection": {
+      "title": "프로바이더",
+      "desc": "AI 프로바이더 연결 관리",
+      "empty": "설정된 프로바이더가 없습니다",
+      "add": "프로바이더 추가",
+      "name": "이름",
+      "apiFormat": "API 형식",
+      "authMethod": "인증 방식",
+      "baseUrl": "기본 URL",
+      "apiKey": "API 키",
+      "test": "연결 테스트",
+      "testing": "테스트 중...",
+      "openai": "OpenAI",
+      "claude": "Claude",
+      "apiKeyMethod": "API 키",
+      "oauth": "OAuth",
+      "namePlaceholder": "내 프로바이더",
+      "baseUrlPlaceholder": "https://api.example.com",
+      "apiKeyPlaceholder": "sk-..."
+    },
+    "modelSection": {
+      "title": "모델",
+      "desc": "사용 가능한 모델 관리",
+      "empty": "설정된 모델이 없습니다",
+      "add": "모델 추가",
+      "selectProvider": "프로바이더 선택",
+      "modelId": "모델 ID",
+      "modelIdPlaceholder": "gpt-4o",
+      "displayName": "표시 이름",
+      "displayNamePlaceholder": "GPT-4o",
+      "tier": "티어",
+      "tierLow": "낮음",
+      "tierMid": "중간",
+      "tierHigh": "높음"
+    },
+    "agentSection": {
+      "title": "에이전트",
+      "desc": "에이전트 동작 및 라우팅 구성",
+      "routing": "모델 라우팅",
+      "routingDesc": "작업을 최적의 모델에 자동으로 라우팅합니다",
+      "sendMode": "전송 모드",
+      "sendModeDesc": "에이전트에 메시지를 전송하는 방식을 선택하세요",
+      "queue": "큐",
+      "steer": "직접 전송",
+      "permissionMode": "권한 모드",
+      "permissionModeDesc": "에이전트가 권한을 요청하는 방식 제어"
+    },
+    "pluginSection": {
+      "title": "플러그인",
+      "desc": "플러그인 및 통합 관리",
+      "claudeSkills": "Claude 스킬",
+      "claudeSkillsDesc": "Claude 스킬 디렉토리 경로",
+      "claudeMd": "CLAUDE.md",
+      "claudeMdDesc": "프로젝트 수준 CLAUDE.md 파일 경로",
+      "agentDir": "에이전트 디렉토리",
+      "agentDirDesc": "에이전트별 설정 디렉토리",
+      "auto": "자동 감지"
+    },
+    "dataSection": {
+      "title": "데이터",
+      "desc": "데이터 및 설정 관리",
+      "export": "데이터 내보내기",
+      "exportDesc": "모든 설정을 파일로 내보내기",
+      "import": "데이터 가져오기",
+      "importDesc": "이전에 내보낸 파일에서 설정 가져오기",
+      "configFile": "설정 파일",
+      "configFileDesc": "원시 설정 파일 보기 및 편집",
+      "database": "데이터베이스",
+      "databaseDesc": "로컬 데이터베이스 관리"
+    }
+  },
+  "projectEdit": {
+    "edit": "프로젝트 편집",
+    "create": "프로젝트 만들기",
+    "namePlaceholder": "프로젝트 이름",
+    "sourceFolders": "소스 폴더",
+    "addFolder": "폴더 추가",
+    "delete": "제거"
+  },
+  "confirmDialog": {
+    "confirm": "확인",
+    "cancel": "취소"
+  },
+  "fileBrowser": {
+    "title": "폴더 선택",
+    "select": "선택",
+    "cancel": "취소",
+    "empty": "이 폴더는 비어 있습니다",
+    "parent": "상위 디렉토리"
+  },
+  "rightPanel": {
+    "title": "세부 정보",
+    "changes": "변경사항",
+    "local": "로컬",
+    "branch": "브랜치",
+    "project": "프로젝트"
+  },
+  "commandPalette": {
+    "placeholder": "명령어 입력...",
+    "noResults": "일치하는 명령어가 없습니다",
+    "navigate": "이동",
+    "select": "선택",
+    "close": "닫기",
+    "groups": {
+      "actions": "액션",
+      "sessions": "세션",
+      "projects": "프로젝트"
+    },
+    "commands": {
+      "newSession": "새 세션",
+      "newSessionDesc": "새 채팅 세션 시작",
+      "toggleTheme": "테마 전환",
+      "toggleThemeDesc": "라이트 모드와 다크 모드 간 전환",
+      "stopStreaming": "스트리밍 중지",
+      "stopStreamingDesc": "현재 응답 스트림 중지",
+      "openSettings": "설정 열기",
+      "openSettingsDesc": "애플리케이션 설정 열기"
+    }
+  },
+  "fileTree": {
+    "loading": "파일 로딩 중...",
+    "empty": "표시할 파일이 없습니다"
+  },
+  "toolMessage": {
+    "showFullOutput": "전체 출력 보기",
+    "showLess": "간략히 보기",
+    "read": "파일 읽기",
+    "write": "파일 쓰기",
+    "edit": "파일 편집",
+    "list": "디렉토리 목록",
+    "shell": "명령어 실행",
+    "screenshot": "스크린샷 촬영",
+    "click": "요소 클릭",
+    "type": "텍스트 입력",
+    "browser": "페이지 탐색",
+    "search": "검색"
+  },
+  "diffView": {
+    "showAllLines": "모든 줄 표시"
+  },
+  "agent": {
+    "taskComplete": "작업이 성공적으로 완료되었습니다",
+    "permissionDenied": "권한이 거부되었습니다"
   },
   "theme": {
     "light": "라이트",
     "dark": "다크"
-  },
-  "settings": {
-    "title": "설정",
-    "appearance": "외관",
-    "providers": "프로바이더",
-    "models": "모델",
-    "language": "언어",
-    "theme": "테마",
-    "chat": "채팅",
-    "defaultSendMode": "기본 전송 모드",
-    "routing": "모델 라우팅",
-    "scheduling": "스케줄링"
   }
 }

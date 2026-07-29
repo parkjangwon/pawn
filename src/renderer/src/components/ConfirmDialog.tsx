@@ -10,7 +10,7 @@ interface ConfirmDialogProps {
   onCancel: () => void
 }
 
-export default function ConfirmDialog({ title, message, confirmLabel = '삭제', cancelLabel = '취소', danger = true, onConfirm, onCancel }: ConfirmDialogProps): React.JSX.Element {
+export default function ConfirmDialog({ title, message, confirmLabel = "Delete", cancelLabel = "Cancel", danger = true, onConfirm, onCancel }: ConfirmDialogProps): React.JSX.Element {
   return (
     <div className="confirm-overlay" onClick={onCancel}>
       <div className="confirm-dialog" onClick={(e) => e.stopPropagation()}>

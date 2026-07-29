@@ -1,0 +1,149 @@
+.diff-view {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  margin: 8px 0;
+  font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: var(--bg-secondary);
+  cursor: pointer;
+  user-select: none;
+}
+
+.diff-header:hover {
+  background: var(--bg-hover);
+}
+
+.diff-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diff-chevron {
+  transition: transform 0.15s ease;
+  color: var(--text-muted);
+}
+
+.diff-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.diff-filename {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.diff-stats {
+  display: flex;
+  gap: 8px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.diff-stat-added {
+  color: #22c55e;
+}
+
+.diff-stat-removed {
+  color: #ef4444;
+}
+
+.diff-body {
+  overflow-x: auto;
+}
+
+.diff-line {
+  display: flex;
+  align-items: stretch;
+  min-height: 20px;
+  padding: 0 4px;
+}
+
+.diff-line-add {
+  background: rgba(34, 197, 94, 0.08);
+}
+
+.diff-line-remove {
+  background: rgba(239, 68, 68, 0.08);
+}
+
+.diff-line-same {
+  background: transparent;
+}
+
+.diff-line-num {
+  width: 32px;
+  min-width: 32px;
+  text-align: right;
+  padding: 0 6px;
+  color: var(--text-muted);
+  font-size: 11px;
+  user-select: none;
+}
+
+.diff-line-num-old.diff-line-remove {
+  color: rgba(239, 68, 68, 0.6);
+}
+
+.diff-line-num-new.diff-line-add {
+  color: rgba(34, 197, 94, 0.6);
+}
+
+.diff-line-prefix {
+  width: 16px;
+  min-width: 16px;
+  text-align: center;
+  color: var(--text-muted);
+  user-select: none;
+  font-weight: 600;
+}
+
+.diff-line-add .diff-line-prefix {
+  color: #22c55e;
+}
+
+.diff-line-remove .diff-line-prefix {
+  color: #ef4444;
+}
+
+.diff-line-text {
+  flex: 1;
+  white-space: pre;
+  overflow-x: auto;
+  padding-left: 4px;
+}
+
+.diff-show-more {
+  width: 100%;
+  padding: 6px;
+  text-align: center;
+  background: var(--bg-secondary);
+  border: none;
+  border-top: 1px solid var(--border-color);
+  color: var(--accent);
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.diff-show-more:hover {
+  background: var(--bg-hover);
+}
+
+/* Dark theme adjustments */
+.app.dark .diff-line-add {
+  background: rgba(34, 197, 94, 0.12);
+}
+
+.app.dark .diff-line-remove {
+  background: rgba(239, 68, 68, 0.12);
+}

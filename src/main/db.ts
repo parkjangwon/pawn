@@ -107,6 +107,10 @@ export function updateMessageContent(id: string, content: string): void {
   getDb().prepare('UPDATE messages SET content = ? WHERE id = ?').run(content, id)
 }
 
+export function clearMessages(sessionId: string): void {
+  getDb().prepare('DELETE FROM messages WHERE session_id = ?').run(sessionId)
+}
+
 // --- Full state load (for initial app load) ---
 
 export function loadFullState(): {
