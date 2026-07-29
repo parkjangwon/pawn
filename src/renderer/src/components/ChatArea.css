@@ -12,8 +12,10 @@
   align-items: center;
   gap: var(--space-md);
   padding: var(--space-md) var(--space-lg);
+  padding-top: calc(var(--space-md) + env(safe-area-inset-top, 0px));
   border-bottom: 1px solid var(--border-color);
   -webkit-app-region: drag;
+  flex-shrink: 0;
 }
 
 .mobile-menu-btn {
