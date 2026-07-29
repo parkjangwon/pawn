@@ -59,9 +59,7 @@ export default function App(): React.JSX.Element {
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={closeSidebar} />
       )}
-      <div className={`sidebar-wrapper ${sidebarOpen ? 'open' : ''}`}>
-        <Sidebar onOpenSettings={() => setShowSettings(true)} />
-      </div>
+      <Sidebar onOpenSettings={() => setShowSettings(true)} open={sidebarOpen} />
       <div className="main-column">
         <ChatArea onToggleSidebar={toggleSidebar} />
         <StatusBar />

@@ -1,14 +1,17 @@
 .sidebar {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
-  height: 100%;
+  height: 100vh;
   display: flex;
   flex-direction: column;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   -webkit-app-region: drag;
-  position: relative;
+  position: fixed;
+  top: 0;
+  left: 0;
   z-index: 10;
+  overflow: hidden;
 }
 
 .sidebar button,
@@ -25,8 +28,10 @@
   align-items: center;
   padding: var(--space-sm) var(--space-md);
   height: var(--titlebar-height);
+  min-height: var(--titlebar-height);
   flex-shrink: 0;
   background: var(--bg-sidebar);
+  border-bottom: 1px solid transparent;
 }
 
 .sidebar-title {
@@ -34,6 +39,7 @@
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.3px;
+  line-height: 1;
 }
 
 /* Quick actions */

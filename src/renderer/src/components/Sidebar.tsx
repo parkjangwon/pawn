@@ -6,11 +6,12 @@ import './Sidebar.css'
 
 interface SidebarProps {
   onOpenSettings: () => void
+  open?: boolean
 }
 
 const GENERAL_PROJECT_ID = '__general__'
 
-export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Element {
+export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.JSX.Element {
   const { t } = useTranslation()
   const {
     projects,
@@ -126,7 +127,7 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
   ).sort((a, b) => b.createdAt - a.createdAt).slice(0, 8)
 
   return (
-    <aside className="sidebar">
+    <aside className={`sidebar ${open ? 'open' : ''}`}>
       <div className="sidebar-header">
         <span className="sidebar-title">Pawn</span>
       </div>
