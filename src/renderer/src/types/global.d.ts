@@ -39,6 +39,22 @@ declare global {
         list: () => Promise<string[]>
         onTick: (callback: (data: { id: string; payload: unknown }) => void) => void
       }
+      config: {
+        load: () => Promise<Record<string, unknown>>
+        save: (config: unknown) => Promise<{ ok?: boolean }>
+      }
+      db: {
+        loadAll: () => Promise<{ projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number; messages: Array<{ id: string; role: string; content: string; createdAt: number }> }> }> }>
+        addProject: (id: string, name: string, path: string) => Promise<{ ok?: boolean }>
+        updateProjectName: (id: string, name: string) => Promise<{ ok?: boolean }>
+        removeProject: (id: string) => Promise<{ ok?: boolean }>
+        addSession: (id: string, projectId: string, title: string, path: string) => Promise<{ ok?: boolean }>
+        updateSessionTitle: (id: string, title: string) => Promise<{ ok?: boolean }>
+        updateSessionPath: (id: string, path: string) => Promise<{ ok?: boolean }>
+        removeSession: (id: string) => Promise<{ ok?: boolean }>
+        addMessage: (id: string, sessionId: string, role: string, content: string) => Promise<{ ok?: boolean }>
+        updateMessageContent: (id: string, content: string) => Promise<{ ok?: boolean }>
+      }
     }
   }
 }

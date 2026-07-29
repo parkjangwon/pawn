@@ -73,6 +73,32 @@ if (typeof window !== 'undefined' && !window.api) {
       remove: async () => ({ ok: true }),
       list: async () => [],
       onTick: () => {}
+    },
+
+    // Config (TOML via HTTP)
+    config: {
+      load: async () => {
+        const res = await fetch('/api/config/load', { method: 'POST' })
+        return res.json()
+      },
+      save: async (config: unknown) => {
+        await fetch('/api/config/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) })
+        return { ok: true }
+      }
+    },
+
+    // Database (SQLite via HTTP)
+    db: {
+      loadAll: async () => { const res = await fetch('/api/db/loadAll', { method: 'POST' }); return res.json() },
+      addProject: async (id: string, name: string, path: string) => { await fetch('/api/db/addProject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, name, path }) }); return { ok: true } },
+      updateProjectName: async (id: string, name: string) => { await fetch('/api/db/updateProjectName', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, name }) }); return { ok: true } },
+      removeProject: async (id: string) => { await fetch('/api/db/removeProject', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); return { ok: true } },
+      addSession: async (id: string, projectId: string, title: string, path: string) => { await fetch('/api/db/addSession', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, projectId, title, path }) }); return { ok: true } },
+      updateSessionTitle: async (id: string, title: string) => { await fetch('/api/db/updateSessionTitle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, title }) }); return { ok: true } },
+      updateSessionPath: async (id: string, path: string) => { await fetch('/api/db/updateSessionPath', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, path }) }); return { ok: true } },
+      removeSession: async (id: string) => { await fetch('/api/db/removeSession', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); return { ok: true } },
+      addMessage: async (id: string, sessionId: string, role: string, content: string) => { await fetch('/api/db/addMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, sessionId, role, content }) }); return { ok: true } },
+      updateMessageContent: async (id: string, content: string) => { await fetch('/api/db/updateMessageContent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, content }) }); return { ok: true } }
     }
   }
 }

@@ -56,6 +56,26 @@ const api = {
     onTick: (callback: (data: { id: string; payload: unknown }) => void) => {
       ipcRenderer.on('schedule:tick', (_, data) => callback(data))
     }
+  },
+
+  // Config (TOML)
+  config: {
+    load: () => ipcRenderer.invoke('config:load'),
+    save: (config: unknown) => ipcRenderer.invoke('config:save', config)
+  },
+
+  // Database (SQLite)
+  db: {
+    loadAll: () => ipcRenderer.invoke('db:loadAll'),
+    addProject: (id: string, name: string, path: string) => ipcRenderer.invoke('db:addProject', id, name, path),
+    updateProjectName: (id: string, name: string) => ipcRenderer.invoke('db:updateProjectName', id, name),
+    removeProject: (id: string) => ipcRenderer.invoke('db:removeProject', id),
+    addSession: (id: string, projectId: string, title: string, path: string) => ipcRenderer.invoke('db:addSession', id, projectId, title, path),
+    updateSessionTitle: (id: string, title: string) => ipcRenderer.invoke('db:updateSessionTitle', id, title),
+    updateSessionPath: (id: string, path: string) => ipcRenderer.invoke('db:updateSessionPath', id, path),
+    removeSession: (id: string) => ipcRenderer.invoke('db:removeSession', id),
+    addMessage: (id: string, sessionId: string, role: string, content: string) => ipcRenderer.invoke('db:addMessage', id, sessionId, role, content),
+    updateMessageContent: (id: string, content: string) => ipcRenderer.invoke('db:updateMessageContent', id, content)
   }
 }
 

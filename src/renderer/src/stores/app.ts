@@ -1,5 +1,4 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
 
 export interface Session {
   id: string
@@ -27,6 +26,8 @@ interface AppState {
   projects: Project[]
   activeProjectId: string | null
   activeSessionId: string | null
+  initialized: boolean
+  init: () => Promise<void>
   addProject: (name: string, path: string) => void
   removeProject: (id: string) => void
   setActiveProject: (id: string) => void
@@ -43,127 +44,107 @@ interface AppState {
 let counter = 0
 const uid = (): string => `${Date.now()}-${++counter}`
 
-export const useAppStore = create<AppState>()(
-  persist(
-    (set) => ({
-      projects: [],
-      activeProjectId: null,
-      activeSessionId: null,
+export const useAppStore = create<AppState>((set, get) => ({
+  projects: [],
+  activeProjectId: null,
+  activeSessionId: null,
+  initialized: false,
 
-      addProject: (name, path) =>
-        set((s) => {
-          const project: Project = { id: uid(), name, path, sessions: [] }
-          return { projects: [...s.projects, project], activeProjectId: project.id }
-        }),
+  init: async () => {
+    if (get().initialized) return
+    try {
+      const state = await window.api.db.loadAll()
+      set({ projects: state.projects || [], initialized: true })
+    } catch {
+      set({ initialized: true })
+    }
+  },
 
-      removeProject: (id) =>
-        set((s) => ({
-          projects: s.projects.filter((p) => p.id !== id),
-          activeProjectId: s.activeProjectId === id ? null : s.activeProjectId
-        })),
+  addProject: (name, path) => {
+    const id = uid()
+    const project: Project = { id, name, path, sessions: [] }
+    set((s) => ({ projects: [...s.projects, project], activeProjectId: id }))
+    window.api.db.addProject(id, name, path)
+  },
 
-      setActiveProject: (id) => set({ activeProjectId: id }),
+  removeProject: (id) => {
+    set((s) => ({
+      projects: s.projects.filter((p) => p.id !== id),
+      activeProjectId: s.activeProjectId === id ? null : s.activeProjectId
+    }))
+    window.api.db.removeProject(id)
+  },
 
-      addSession: (projectId, title) =>
-        set((s) => {
-          const session: Session = {
-            id: uid(),
-            title: title || 'New Session',
-            createdAt: Date.now(),
-            messages: []
-          }
-          return {
-            projects: s.projects.map((p) =>
-              p.id === projectId ? { ...p, sessions: [...p.sessions, session] } : p
-            ),
-            activeSessionId: session.id
-          }
-        }),
+  setActiveProject: (id) => set({ activeProjectId: id }),
 
-      removeSession: (projectId, sessionId) =>
-        set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === projectId
-              ? { ...p, sessions: p.sessions.filter((ss) => ss.id !== sessionId) }
-              : p
-          ),
-          activeSessionId: s.activeSessionId === sessionId ? null : s.activeSessionId
-        })),
+  addSession: (projectId, title) => {
+    const id = uid()
+    const session: Session = { id, title: title || 'New Session', createdAt: Date.now(), messages: [] }
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId ? { ...p, sessions: [...p.sessions, session] } : p
+      ),
+      activeSessionId: id
+    }))
+    window.api.db.addSession(id, projectId, session.title, '')
+  },
 
-      setActiveSession: (id) => set({ activeSessionId: id }),
+  removeSession: (projectId, sessionId) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId ? { ...p, sessions: p.sessions.filter((ss) => ss.id !== sessionId) } : p
+      ),
+      activeSessionId: s.activeSessionId === sessionId ? null : s.activeSessionId
+    }))
+    window.api.db.removeSession(sessionId)
+  },
 
-      addMessage: (projectId, sessionId, message) =>
-        set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  sessions: p.sessions.map((ss) =>
-                    ss.id === sessionId
-                      ? { ...ss, messages: [...ss.messages, message] }
-                      : ss
-                  )
-                }
-              : p
-          )
-        })),
+  setActiveSession: (id) => set({ activeSessionId: id }),
 
-      updateMessageContent: (projectId, sessionId, messageId, content) =>
-        set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  sessions: p.sessions.map((ss) =>
-                    ss.id === sessionId
-                      ? {
-                          ...ss,
-                          messages: ss.messages.map((m) =>
-                            m.id === messageId ? { ...m, content } : m
-                          )
-                        }
-                      : ss
-                  )
-                }
-              : p
-          )
-        })),
+  addMessage: (projectId, sessionId, message) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, messages: [...ss.messages, message] } : ss) }
+          : p
+      )
+    }))
+    window.api.db.addMessage(message.id, sessionId, message.role, message.content)
+  },
 
-      updateSessionTitle: (projectId, sessionId, title) =>
-        set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  sessions: p.sessions.map((ss) =>
-                    ss.id === sessionId ? { ...ss, title } : ss
-                  )
-                }
-              : p
-          )
-        })),
+  updateMessageContent: (projectId, sessionId, messageId, content) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, messages: ss.messages.map((m) => m.id === messageId ? { ...m, content } : m) } : ss) }
+          : p
+      )
+    }))
+    window.api.db.updateMessageContent(messageId, content)
+  },
 
-      updateSessionPath: (projectId, sessionId, path) =>
-        set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === projectId
-              ? {
-                  ...p,
-                  sessions: p.sessions.map((ss) =>
-                    ss.id === sessionId ? { ...ss, path: path || undefined } : ss
-                  )
-                }
-              : p
-          )
-        })),
+  updateSessionTitle: (projectId, sessionId, title) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, title } : ss) } : p
+      )
+    }))
+    window.api.db.updateSessionTitle(sessionId, title)
+  },
 
-      updateProjectName: (projectId, name) =>
-        set((s) => ({
-          projects: s.projects.map((p) =>
-            p.id === projectId ? { ...p, name } : p
-          )
-        }))
-    }),
-    { name: 'pawn-app-state' }
-  )
-)
+  updateSessionPath: (projectId, sessionId, path) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, path: path || undefined } : ss) } : p
+      )
+    }))
+    window.api.db.updateSessionPath(sessionId, path)
+  },
+
+  updateProjectName: (projectId, name) => {
+    set((s) => ({
+      projects: s.projects.map((p) => p.id === projectId ? { ...p, name } : p)
+    }))
+    window.api.db.updateProjectName(projectId, name)
+  }
+}))

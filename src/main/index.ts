@@ -4,6 +4,8 @@ import { is } from '@electron-toolkit/utils'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 import { exec } from 'child_process'
 import { promisify } from 'util'
+import { loadConfig, saveConfig } from './config'
+import * as db from './db'
 
 const execAsync = promisify(exec)
 
@@ -242,6 +244,22 @@ function registerIpc(): void {
   ipcMain.handle('schedule:list', async () => {
     return Array.from(scheduledTasks.keys())
   })
+
+  // --- Config (TOML) ---
+  ipcMain.handle('config:load', async () => loadConfig())
+  ipcMain.handle('config:save', async (_, config) => { saveConfig(config); return { ok: true } })
+
+  // --- Database (SQLite) ---
+  ipcMain.handle('db:loadAll', async () => db.loadFullState())
+  ipcMain.handle('db:addProject', async (_, id, name, path) => { db.addProject(id, name, path); return { ok: true } })
+  ipcMain.handle('db:updateProjectName', async (_, id, name) => { db.updateProjectName(id, name); return { ok: true } })
+  ipcMain.handle('db:removeProject', async (_, id) => { db.removeProject(id); return { ok: true } })
+  ipcMain.handle('db:addSession', async (_, id, projectId, title, path) => { db.addSession(id, projectId, title, path); return { ok: true } })
+  ipcMain.handle('db:updateSessionTitle', async (_, id, title) => { db.updateSessionTitle(id, title); return { ok: true } })
+  ipcMain.handle('db:updateSessionPath', async (_, id, path) => { db.updateSessionPath(id, path); return { ok: true } })
+  ipcMain.handle('db:removeSession', async (_, id) => { db.removeSession(id); return { ok: true } })
+  ipcMain.handle('db:addMessage', async (_, id, sessionId, role, content) => { db.addMessage(id, sessionId, role, content); return { ok: true } })
+  ipcMain.handle('db:updateMessageContent', async (_, id, content) => { db.updateMessageContent(id, content); return { ok: true } })
 }
 
 app.commandLine.appendSwitch('no-sandbox')

@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { useThemeStore } from './stores/theme'
 import { useAppStore } from './stores/app'
+import { useProviderStore } from './stores/provider'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
 import Settings from './components/Settings'
@@ -11,6 +12,13 @@ export default function App(): React.JSX.Element {
   const theme = useThemeStore((s) => s.theme)
   const [showSettings, setShowSettings] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  // Initialize data from backend on mount
+  useEffect(() => {
+    useThemeStore.getState().init()
+    useAppStore.getState().init()
+    useProviderStore.getState().init()
+  }, [])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
   const toggleSidebar = useCallback(() => setSidebarOpen((v) => !v), [])

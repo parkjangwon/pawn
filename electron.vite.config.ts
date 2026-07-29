@@ -3,6 +3,8 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import type { Plugin } from 'vite'
 import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
+import { loadConfig, saveConfig } from './src/main/config'
+import * as db from './src/main/db'
 
 // Dev-only proxy to bypass CORS when testing in browser (not Electron)
 function apiProxyPlugin(): Plugin {
@@ -106,6 +108,62 @@ function apiProxyPlugin(): Plugin {
               default:
                 res.statusCode = 404
                 res.end(JSON.stringify({ error: 'Unknown action' }))
+            }
+          } catch (err) {
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: String(err) }))
+          }
+        })
+      })
+
+      // Config API (TOML)
+      server.middlewares.use('/api/config', async (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        let body = ''
+        req.on('data', (chunk: Buffer) => { body += chunk })
+        req.on('end', () => {
+          try {
+            const url = new URL(req.url || '', 'http://localhost')
+            const action = url.pathname.replace(/^\//, '')
+            if (action === 'load') {
+              res.end(JSON.stringify(loadConfig()))
+            } else if (action === 'save') {
+              const config = JSON.parse(body || '{}')
+              saveConfig(config)
+              res.end(JSON.stringify({ ok: true }))
+            } else {
+              res.statusCode = 404
+              res.end(JSON.stringify({ error: 'Unknown action' }))
+            }
+          } catch (err) {
+            res.statusCode = 500
+            res.end(JSON.stringify({ error: String(err) }))
+          }
+        })
+      })
+
+      // Database API (SQLite)
+      server.middlewares.use('/api/db', async (req, res) => {
+        res.setHeader('Content-Type', 'application/json')
+        let body = ''
+        req.on('data', (chunk: Buffer) => { body += chunk })
+        req.on('end', () => {
+          try {
+            const url = new URL(req.url || '', 'http://localhost')
+            const action = url.pathname.replace(/^\//, '')
+            const data = JSON.parse(body || '{}')
+            switch (action) {
+              case 'loadAll': res.end(JSON.stringify(db.loadFullState())); break
+              case 'addProject': db.addProject(data.id, data.name, data.path); res.end('{"ok":true}'); break
+              case 'updateProjectName': db.updateProjectName(data.id, data.name); res.end('{"ok":true}'); break
+              case 'removeProject': db.removeProject(data.id); res.end('{"ok":true}'); break
+              case 'addSession': db.addSession(data.id, data.projectId, data.title, data.path || ''); res.end('{"ok":true}'); break
+              case 'updateSessionTitle': db.updateSessionTitle(data.id, data.title); res.end('{"ok":true}'); break
+              case 'updateSessionPath': db.updateSessionPath(data.id, data.path); res.end('{"ok":true}'); break
+              case 'removeSession': db.removeSession(data.id); res.end('{"ok":true}'); break
+              case 'addMessage': db.addMessage(data.id, data.sessionId, data.role, data.content); res.end('{"ok":true}'); break
+              case 'updateMessageContent': db.updateMessageContent(data.id, data.content); res.end('{"ok":true}'); break
+              default: res.statusCode = 404; res.end('{"error":"Unknown action"}')
             }
           } catch (err) {
             res.statusCode = 500
