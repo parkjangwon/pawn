@@ -7,6 +7,7 @@ import ChatArea from './components/ChatArea'
 import Settings from './components/Settings'
 import PermissionDialog from './components/PermissionDialog'
 import StatusBar from './components/StatusBar'
+import RightPanel from './components/RightPanel'
 
 export default function App(): React.JSX.Element {
   const theme = useThemeStore((s) => s.theme)
@@ -65,6 +66,7 @@ export default function App(): React.JSX.Element {
         <ChatArea onToggleSidebar={toggleSidebar} />
         <StatusBar />
       </div>
+      <RightPanel />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}
       <PermissionDialog />
     </div>

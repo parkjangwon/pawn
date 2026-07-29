@@ -1,0 +1,103 @@
+.right-panel {
+  width: 220px;
+  min-width: 220px;
+  height: 100%;
+  border-left: 1px solid var(--border-color);
+  background: var(--bg-sidebar);
+  display: flex;
+  flex-direction: column;
+  padding: var(--space-md);
+  gap: var(--space-md);
+  overflow-y: auto;
+}
+
+.rp-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.rp-title {
+  font-size: var(--font-sm);
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.rp-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.rp-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.rp-section {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rp-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-sm);
+}
+
+.rp-row svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.rp-label {
+  color: var(--text-muted);
+}
+
+.rp-value {
+  margin-left: auto;
+  color: var(--text-primary);
+  font-weight: 500;
+  font-size: var(--font-sm);
+}
+
+.rp-value.branch {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: 11px;
+  color: var(--accent);
+}
+
+.rp-value.changes .added {
+  color: #22c55e;
+}
+
+.rp-value.changes .deleted {
+  color: var(--danger);
+}
+
+.rp-path {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-left: 18px;
+}
+
+@media (max-width: 1024px) {
+  .right-panel {
+    display: none;
+  }
+}

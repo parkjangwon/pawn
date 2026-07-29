@@ -6,23 +6,22 @@
   flex-direction: column;
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
-  padding: var(--space-md);
-  gap: var(--space-sm);
   -webkit-app-region: drag;
 }
 
 .sidebar button,
+.sidebar .sidebar-scroll,
 .sidebar .tree-project-header,
 .sidebar .tree-session,
-.sidebar .project-tree {
+.sidebar .sidebar-item,
+.sidebar input {
   -webkit-app-region: no-drag;
 }
 
 .sidebar-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  padding: var(--space-sm) var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
   height: var(--titlebar-height);
   flex-shrink: 0;
 }
@@ -34,56 +33,110 @@
   letter-spacing: -0.3px;
 }
 
-.new-session-btn {
+/* Quick actions */
+.sidebar-actions {
+  padding: 0 var(--space-sm) var(--space-sm);
+  flex-shrink: 0;
+}
+
+.sidebar-action-btn {
   display: flex;
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  padding: var(--space-sm) var(--space-md);
+  padding: 7px var(--space-sm);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: var(--font-md);
   cursor: pointer;
-  text-align: left;
   transition: background 0.15s;
 }
 
-.new-session-btn:hover {
+.sidebar-action-btn:hover {
   background: var(--bg-hover);
 }
 
-.new-session-btn svg {
+.sidebar-action-btn svg {
   flex-shrink: 0;
   color: var(--text-muted);
 }
 
-/* Project Tree */
-.project-tree {
+/* Scrollable content */
+.sidebar-scroll {
   flex: 1;
   overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+  padding: 0 var(--space-sm);
 }
 
-.tree-project {
+/* Sections */
+.sidebar-section {
+  margin-bottom: var(--space-md);
+}
+
+.section-label {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: var(--space-sm) var(--space-xs) var(--space-xs);
+}
+
+/* Generic sidebar item (pinned, recent) */
+.sidebar-item {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  padding: 5px var(--space-sm);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-size: var(--font-md);
+  color: var(--text-secondary);
+  transition: background 0.1s;
+}
+
+.sidebar-item:hover {
+  background: var(--bg-hover);
+}
+
+.sidebar-item.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.sidebar-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.sidebar-item.active svg {
+  color: var(--text-primary);
+}
+
+.item-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Project tree */
+.tree-project {
+  margin-bottom: 2px;
 }
 
 .tree-project-header {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: var(--space-sm) var(--space-sm);
-  border-radius: var(--radius-md);
+  gap: 4px;
+  padding: 5px var(--space-xs);
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-secondary);
-  transition: background 0.15s;
-  position: relative;
+  transition: background 0.1s;
 }
 
 .tree-project-header:hover {
@@ -107,6 +160,7 @@
 .tree-folder-icon {
   flex-shrink: 0;
   color: var(--accent);
+  opacity: 0.8;
 }
 
 .tree-project-name {
@@ -132,10 +186,10 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: none;
-  border-radius: 4px;
+  border-radius: 3px;
   background: none;
   color: var(--text-muted);
   cursor: pointer;
@@ -151,27 +205,30 @@
   color: var(--danger);
 }
 
-/* Sessions (children) */
+.tree-action-btn.pin:hover {
+  color: var(--warning);
+}
+
+/* Sessions under project */
 .tree-sessions {
   display: flex;
   flex-direction: column;
   gap: 1px;
-  padding-left: 20px;
-  margin-left: 8px;
+  padding-left: 18px;
+  margin-left: 6px;
   border-left: 1px solid var(--border-color);
 }
 
 .tree-session {
   display: flex;
   align-items: center;
-  gap: var(--space-xs);
-  padding: 6px var(--space-sm);
+  gap: 4px;
+  padding: 4px var(--space-xs);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: var(--font-md);
+  font-size: var(--font-sm);
   color: var(--text-muted);
-  transition: all 0.15s;
-  position: relative;
+  transition: all 0.1s;
 }
 
 .tree-session:hover {
@@ -186,11 +243,6 @@
 
 .tree-session svg {
   flex-shrink: 0;
-  color: var(--text-muted);
-}
-
-.tree-session.active svg {
-  color: var(--text-primary);
 }
 
 .tree-session-title {
@@ -200,11 +252,14 @@
   white-space: nowrap;
 }
 
-.tree-session .session-del {
+.tree-session-actions {
   display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
 }
 
-.tree-session:hover .session-del {
+.tree-session:hover .tree-session-actions {
   display: flex;
 }
 
@@ -218,9 +273,9 @@
 /* Rename input */
 .rename-input {
   flex: 1;
-  padding: 2px 6px;
+  padding: 1px 4px;
   border: 1px solid var(--accent);
-  border-radius: var(--radius-sm);
+  border-radius: 3px;
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: var(--font-sm);
@@ -230,7 +285,7 @@
 
 /* Empty state */
 .empty-hint {
-  padding: var(--space-lg) var(--space-sm);
+  padding: var(--space-md) var(--space-sm);
   font-size: var(--font-sm);
   color: var(--text-muted);
   text-align: center;
@@ -239,7 +294,7 @@
 /* Footer */
 .sidebar-footer {
   flex-shrink: 0;
-  padding-top: var(--space-md);
+  padding: var(--space-sm);
   border-top: 1px solid var(--border-color);
 }
 
@@ -248,9 +303,9 @@
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  padding: var(--space-sm) var(--space-sm);
+  padding: 6px var(--space-sm);
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--text-secondary);
   font-size: var(--font-md);
