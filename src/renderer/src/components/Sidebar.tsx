@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import ProjectEditDialog from './ProjectEditDialog'
+import ConfirmDialog from './ConfirmDialog'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -34,6 +35,7 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
+  const [confirmDelete, setConfirmDelete] = useState<{ type: 'project' | 'session'; id: string; projectId?: string; name: string } | null>(null)
 
   // Ensure general project exists
   const ensureGeneral = (): string => {
@@ -75,12 +77,24 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
   const handleDeleteProject = (e: React.MouseEvent, id: string): void => {
     e.stopPropagation()
     if (id === GENERAL_PROJECT_ID) return
-    removeProject(id)
+    const project = projects.find((p) => p.id === id)
+    setConfirmDelete({ type: 'project', id, name: project?.name || '프로젝트' })
   }
 
   const handleDeleteSession = (e: React.MouseEvent, projectId: string, sessionId: string): void => {
     e.stopPropagation()
-    removeSession(projectId, sessionId)
+    const session = projects.find((p) => p.id === projectId)?.sessions.find((s) => s.id === sessionId)
+    setConfirmDelete({ type: 'session', id: sessionId, projectId, name: session?.title || '세션' })
+  }
+
+  const handleConfirmDelete = (): void => {
+    if (!confirmDelete) return
+    if (confirmDelete.type === 'project') {
+      removeProject(confirmDelete.id)
+    } else if (confirmDelete.type === 'session' && confirmDelete.projectId) {
+      removeSession(confirmDelete.projectId, confirmDelete.id)
+    }
+    setConfirmDelete(null)
   }
 
   const togglePin = (e: React.MouseEvent, sessionId: string): void => {
@@ -240,6 +254,15 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
 
       {showProjectDialog && (
         <ProjectEditDialog projectId={editingProjectId} onClose={() => setShowProjectDialog(false)} />
+      )}
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`${confirmDelete.name} 삭제`}
+          message={confirmDelete.type === 'project' ? '이 프로젝트와 모든 세션이 영구 삭제됩니다.' : '이 세션과 모든 대화 기록이 영구 삭제됩니다.'}
+          confirmLabel="삭제"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDelete(null)}
+        />
       )}
     </aside>
   )
