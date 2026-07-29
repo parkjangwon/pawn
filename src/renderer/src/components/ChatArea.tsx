@@ -14,9 +14,12 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>('queue')
+  const [permissionMode, setPermissionMode] = useState<'ask' | 'auto' | 'yolo'>('ask')
+  const [showModelPicker, setShowModelPicker] = useState(false)
+  const [showPermPicker, setShowPermPicker] = useState(false)
   const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming } = useChatStore()
-  const { models } = useProviderStore()
+  const { models, providers, activeModelId, setActiveModel } = useProviderStore()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [showProjectPicker, setShowProjectPicker] = useState(false)
@@ -27,6 +30,14 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   const messages = activeSession?.messages || []
   const effectivePath = activeProject?.paths?.[0] || ''
 
+  // Current model info
+  const currentModel = models.find((m) => m.id === activeModelId) || models.find((m) => m.enabled)
+  const currentModelLabel = currentModel?.label || currentModel?.modelId || 'No model'
+  const currentProviderName = providers.find((p) => p.id === currentModel?.providerId)?.name || ''
+
+  const permLabels: Record<string, string> = { ask: '승인 요청', auto: '자동 승인', yolo: '전체 권한' }
+  const permDescs: Record<string, string> = { ask: '외부 파일 수정 전 확인', auto: '위험한 것만 확인', yolo: '모든 작업 자동 실행' }
+
   // Detect git branch
   useEffect(() => {
     if (!effectivePath) { setGitBranch(null); return }
@@ -36,9 +47,6 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   }, [effectivePath])
 
   // Current model label
-  const activeModel = models.find((m) => m.enabled)
-  const modelLabel = activeModel?.label || activeModel?.modelId || ''
-
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages.length, isStreaming])
@@ -228,9 +236,6 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
                   <span>{gitBranch}</span>
                 </span>
               )}
-              {modelLabel && (
-                <span className="context-chip model-chip">{modelLabel}</span>
-              )}
             </div>
           )}
 
@@ -245,33 +250,72 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
               rows={1}
             />
             <div className="input-actions">
-              {messages.length > 0 && (
-                <button className="input-action-btn" onClick={handleExport} title="Export">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                  </svg>
-                </button>
-              )}
-              <select
-                className="mode-select"
-                value={sendMode}
-                onChange={(e) => setSendMode(e.target.value as 'queue' | 'steer')}
-                disabled={isStreaming}
-              >
-                <option value="queue">Queue</option>
-                <option value="steer">Steer</option>
-              </select>
-              {isStreaming ? (
-                <button className="stop-btn" onClick={stopStreaming} title="Stop">
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
-                </button>
-              ) : (
-                <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
-                  </svg>
-                </button>
-              )}
+              {/* Left: permission mode */}
+              <div className="input-actions-left">
+                <div className="context-chip-wrapper">
+                  <button className={`perm-chip perm-${permissionMode}`} onClick={() => { setShowPermPicker(!showPermPicker); setShowModelPicker(false) }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                    <span>{permLabels[permissionMode]}</span>
+                  </button>
+                  {showPermPicker && (
+                    <div className="project-picker perm-picker">
+                      {(['ask', 'auto', 'yolo'] as const).map((mode) => (
+                        <button key={mode} className={`picker-item ${permissionMode === mode ? 'active' : ''}`} onClick={() => { setPermissionMode(mode); setShowPermPicker(false) }}>
+                          <span className="picker-item-label">{permLabels[mode]}</span>
+                          <span className="picker-item-desc">{permDescs[mode]}</span>
+                          {permissionMode === mode && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: model + send */}
+              <div className="input-actions-right">
+                {messages.length > 0 && (
+                  <button className="input-action-btn" onClick={handleExport} title="Export">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                  </button>
+                )}
+                <div className="context-chip-wrapper">
+                  <button className="context-chip model-chip-btn" onClick={() => { setShowModelPicker(!showModelPicker); setShowPermPicker(false) }}>
+                    <span>{currentModelLabel}</span>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                  </button>
+                  {showModelPicker && (
+                    <div className="project-picker model-picker">
+                      {providers.filter((p) => p.enabled).map((provider) => (
+                        <div key={provider.id} className="picker-group">
+                          <div className="picker-group-label">{provider.name}</div>
+                          {models.filter((m) => m.providerId === provider.id && m.enabled).map((m) => (
+                            <button key={m.id} className={`picker-item ${m.id === activeModelId ? 'active' : ''}`} onClick={() => { setActiveModel(m.id); setShowModelPicker(false) }}>
+                              <span>{m.label || m.modelId}</span>
+                              {m.id === activeModelId && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                      {models.filter((m) => m.enabled).length === 0 && (
+                        <div className="picker-empty">No models configured</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                {isStreaming ? (
+                  <button className="stop-btn" onClick={stopStreaming} title="Stop">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                  </button>
+                ) : (
+                  <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>

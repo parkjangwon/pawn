@@ -380,9 +380,128 @@
 .input-actions {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: var(--space-sm);
+  justify-content: space-between;
   padding-top: var(--space-xs);
+}
+
+.input-actions-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.input-actions-right {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+/* Permission chip */
+.perm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: var(--bg-secondary);
+  color: var(--text-muted);
+}
+
+.perm-chip:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+.perm-chip.perm-ask {
+  color: var(--warning);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.perm-chip.perm-auto {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.perm-chip.perm-yolo {
+  color: var(--danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.perm-chip svg {
+  flex-shrink: 0;
+}
+
+/* Model chip button */
+.model-chip-btn {
+  cursor: pointer !important;
+}
+
+.model-chip-btn:hover {
+  background: var(--bg-hover) !important;
+  color: var(--text-primary) !important;
+}
+
+/* Picker group (model picker) */
+.picker-group {
+  padding: var(--space-xs) 0;
+}
+
+.picker-group + .picker-group {
+  border-top: 1px solid var(--border-color);
+}
+
+.picker-group-label {
+  padding: 4px var(--space-sm);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.picker-empty {
+  padding: var(--space-md);
+  text-align: center;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+/* Permission picker items */
+.perm-picker .picker-item {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  padding: 8px var(--space-sm);
+}
+
+.picker-item-label {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.picker-item-desc {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.perm-picker .picker-item svg {
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.perm-picker .picker-item {
+  position: relative;
+}
+
+.model-picker {
+  right: 0;
+  left: auto;
 }
 
 .input-action-btn {
