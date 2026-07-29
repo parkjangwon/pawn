@@ -8,6 +8,8 @@ interface SidebarProps {
   onOpenSettings: () => void
 }
 
+const GENERAL_PROJECT_ID = '__general__'
+
 export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Element {
   const { t } = useTranslation()
   const {
@@ -31,6 +33,22 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
   const [showFileBrowser, setShowFileBrowser] = useState(false)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
 
+  // Ensure general project exists
+  const ensureGeneral = (): string => {
+    const existing = projects.find((p) => p.id === GENERAL_PROJECT_ID)
+    if (existing) return GENERAL_PROJECT_ID
+    addProject('General', '')
+    // The addProject sets activeProjectId, but we need to return the ID
+    // Since addProject generates the ID internally, we use a known ID
+    // Actually let's just use the GENERAL_PROJECT_ID directly
+    return GENERAL_PROJECT_ID
+  }
+
+  const handleNewSession = (): void => {
+    const targetProjectId = activeProjectId || ensureGeneral()
+    addSession(targetProjectId)
+  }
+
   const toggleProject = (id: string): void => {
     setExpandedProjects((prev) => {
       const next = new Set(prev)
@@ -53,6 +71,7 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
 
   const handleDeleteProject = (e: React.MouseEvent, id: string): void => {
     e.stopPropagation()
+    if (id === GENERAL_PROJECT_ID) return
     removeProject(id)
   }
 
@@ -78,9 +97,7 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
   }
 
   const commitRenameSession = (projectId: string, sessionId: string): void => {
-    if (renameValue.trim()) {
-      updateSessionTitle(projectId, sessionId, renameValue.trim())
-    }
+    if (renameValue.trim()) updateSessionTitle(projectId, sessionId, renameValue.trim())
     setRenamingSession(null)
   }
 
@@ -91,21 +108,22 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
   }
 
   const commitRenameProject = (projectId: string): void => {
-    if (renameValue.trim()) {
-      updateProjectName(projectId, renameValue.trim())
-    }
+    if (renameValue.trim()) updateProjectName(projectId, renameValue.trim())
     setRenamingProject(null)
   }
 
-  // Collect pinned sessions across all projects
+  // Pinned sessions across all projects
   const pinnedItems = projects.flatMap((p) =>
-    p.sessions.filter((s) => pinnedSessions.has(s.id)).map((s) => ({ ...s, projectName: p.name, projectId: p.id }))
+    p.sessions.filter((s) => pinnedSessions.has(s.id)).map((s) => ({ ...s, projectId: p.id }))
   )
 
-  // Recent sessions (last 5 active, not pinned)
+  // User-created projects (exclude general)
+  const userProjects = projects.filter((p) => p.id !== GENERAL_PROJECT_ID)
+
+  // Recent sessions (not pinned, sorted by creation)
   const recentSessions = projects.flatMap((p) =>
     p.sessions.filter((s) => !pinnedSessions.has(s.id)).map((s) => ({ ...s, projectId: p.id }))
-  ).sort((a, b) => b.createdAt - a.createdAt).slice(0, 5)
+  ).sort((a, b) => b.createdAt - a.createdAt).slice(0, 8)
 
   return (
     <aside className="sidebar">
@@ -113,49 +131,43 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
         <span className="sidebar-title">Pawn</span>
       </div>
 
-      {/* Quick actions */}
+      {/* Primary action: New Session */}
       <div className="sidebar-actions">
-        <button className="sidebar-action-btn" onClick={handleAddProject}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /><line x1="12" y1="11" x2="12" y2="17" /><line x1="9" y1="14" x2="15" y2="14" /></svg>
-          <span>{t('sidebar.addProject')}</span>
+        <button className="sidebar-action-btn primary" onClick={handleNewSession}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+          <span>New Session</span>
         </button>
       </div>
 
       <div className="sidebar-scroll">
-        {/* Pinned sessions */}
+        {/* 1. Pinned */}
         {pinnedItems.length > 0 && (
           <div className="sidebar-section">
             <div className="section-label">Pinned</div>
             {pinnedItems.map((session) => (
-              <div
-                key={session.id}
-                className={`sidebar-item ${session.id === activeSessionId ? 'active' : ''}`}
-                onClick={() => { setActiveSession(session.id); setActiveProject(session.projectId) }}
-              >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+              <div key={session.id} className={`sidebar-item ${session.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSession(session.id); setActiveProject(session.projectId) }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
                 <span className="item-title">{session.title}</span>
               </div>
             ))}
           </div>
         )}
 
-        {/* Projects */}
+        {/* 2. Projects */}
         <div className="sidebar-section">
-          <div className="section-label">Projects</div>
-          {projects.map((project) => {
+          <div className="section-header">
+            <span className="section-label">Projects</span>
+            <button className="section-add-btn" onClick={handleAddProject} title="Add project">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+            </button>
+          </div>
+          {userProjects.map((project) => {
             const isExpanded = expandedProjects.has(project.id) || project.id === activeProjectId
             return (
               <div key={project.id} className="tree-project">
-                <div
-                  className={`tree-project-header ${project.id === activeProjectId ? 'active' : ''}`}
-                  onClick={() => toggleProject(project.id)}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${isExpanded ? 'expanded' : ''}`}>
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="tree-folder-icon">
-                    <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-                  </svg>
+                <div className={`tree-project-header ${project.id === activeProjectId ? 'active' : ''}`} onClick={() => toggleProject(project.id)}>
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${isExpanded ? 'expanded' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="tree-folder-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
                   {renamingProject === project.id ? (
                     <input className="rename-input" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={() => commitRenameProject(project.id)} onKeyDown={(e) => { if (e.key === 'Enter') commitRenameProject(project.id); if (e.key === 'Escape') setRenamingProject(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
                   ) : (
@@ -170,7 +182,6 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
                     </button>
                   </div>
                 </div>
-
                 {isExpanded && (
                   <div className="tree-sessions">
                     {project.sessions.map((session) => (
@@ -197,10 +208,10 @@ export default function Sidebar({ onOpenSettings }: SidebarProps): React.JSX.Ele
               </div>
             )
           })}
-          {projects.length === 0 && <div className="empty-hint">{t('sidebar.noProjects')}</div>}
+          {userProjects.length === 0 && <div className="empty-hint">No projects yet</div>}
         </div>
 
-        {/* Recent */}
+        {/* 3. Recent */}
         {recentSessions.length > 0 && (
           <div className="sidebar-section">
             <div className="section-label">Recent</div>

@@ -58,9 +58,22 @@
   background: var(--bg-hover);
 }
 
+.sidebar-action-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.sidebar-action-btn.primary:hover {
+  background: var(--accent-hover);
+}
+
 .sidebar-action-btn svg {
   flex-shrink: 0;
-  color: var(--text-muted);
+}
+
+.sidebar-action-btn.primary svg {
+  color: #fff;
 }
 
 /* Scrollable content */
@@ -82,6 +95,42 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   padding: var(--space-sm) var(--space-xs) var(--space-xs);
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-sm) var(--space-xs) var(--space-xs);
+}
+
+.section-header .section-label {
+  padding: 0;
+}
+
+.section-add-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 3px;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.sidebar-section:hover .section-add-btn {
+  opacity: 1;
+}
+
+.section-add-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 /* Generic sidebar item (pinned, recent) */
