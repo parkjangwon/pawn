@@ -42,10 +42,12 @@
 
 .markdown-body code:not(pre code) {
   background: var(--bg-hover);
+  color: var(--text-primary);
   padding: 2px 6px;
   border-radius: 4px;
   font-size: 0.9em;
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  border: 1px solid var(--border-color);
 }
 
 .markdown-body a {
@@ -123,6 +125,7 @@
   padding: 12px 16px;
   overflow-x: auto;
   background: #1e1e1e;
+  color: #d4d4d4;
   font-size: var(--font-sm);
   line-height: 1.5;
 }
@@ -131,4 +134,38 @@
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   background: none;
   padding: 0;
+  color: #d4d4d4;
+}
+
+.code-block-wrapper pre ::selection {
+  background: #264f78;
+  color: #ffffff;
+}
+
+/* Light mode: ensure inline code has enough contrast */
+.app.light .markdown-body code:not(pre code) {
+  background: #f0f0f0;
+  color: #c7254e;
+  border-color: #e0e0e0;
+}
+
+/* Dark mode: inline code contrast */
+.app.dark .markdown-body code:not(pre code) {
+  background: #2d2d2d;
+  color: #e06c75;
+  border-color: #404040;
+}
+
+/* Table readability */
+.app.light .markdown-body th {
+  background: #f5f5f5;
+}
+
+.app.dark .markdown-body th {
+  background: #2a2a2a;
+}
+
+.app.dark .markdown-body td,
+.app.dark .markdown-body th {
+  border-color: #3a3a3a;
 }
