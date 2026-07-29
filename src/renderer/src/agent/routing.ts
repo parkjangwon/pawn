@@ -6,7 +6,8 @@ export function selectModelForTask(taskComplexity: 'simple' | 'medium' | 'comple
   const { models, routingMode, activeModelId } = useProviderStore.getState()
 
   // Manual mode: use the explicitly selected model
-  if (routingMode === 'manual' && activeModelId) {
+  if (routingMode === 'manual') {
+    if (!activeModelId) return null
     return models.find((m) => m.id === activeModelId && m.enabled) || null
   }
 

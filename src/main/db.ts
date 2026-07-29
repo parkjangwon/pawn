@@ -112,20 +112,15 @@ export function clearMessages(sessionId: string): void {
 }
 
 // --- Full state load (for initial app load) ---
+// Messages are NOT included here; they are loaded lazily per session via db:getMessages.
 
 export function loadFullState(): {
-  projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number; messages: Array<{ id: string; role: string; content: string; createdAt: number }> }> }>
+  projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number }> }>
 } {
   const projects = getAllProjects()
-  const result = projects.map((p) => {
-    const sessions = getSessionsByProject(p.id)
-    return {
-      ...p,
-      sessions: sessions.map((s) => ({
-        ...s,
-        messages: getMessagesBySession(s.id)
-      }))
-    }
-  })
+  const result = projects.map((p) => ({
+    ...p,
+    sessions: getSessionsByProject(p.id)
+  }))
   return { projects: result }
 }

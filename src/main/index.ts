@@ -1,14 +1,14 @@
-import { app, BrowserWindow, shell, ipcMain, dialog, Notification, desktopCapturer, systemPreferences, session } from 'electron'
-import { BrowserView } from 'electron'
+import { app, BrowserWindow, WebContentsView, shell, ipcMain, dialog, Notification, desktopCapturer, systemPreferences, session } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
-import { exec } from 'child_process'
+import { exec, execFile } from 'child_process'
 import { promisify } from 'util'
 import { loadConfig, saveConfig } from './config'
 import * as db from './db'
 
 const execAsync = promisify(exec)
+const execFileAsync = promisify(execFile)
 
 let mainWindow: BrowserWindow | null = null
 
@@ -172,16 +172,16 @@ function registerIpc(): void {
     }
   })
 
-  // Computer Use - Mouse/Keyboard (via shell commands, platform-specific)
+  // Computer Use - Mouse/Keyboard (via platform-specific tools)
   ipcMain.handle('computer:click', async (_, x: number, y: number) => {
-    const cmd = process.platform === 'darwin'
-      ? `cliclick c:${x},${y}`
-      : process.platform === 'linux'
-        ? `xdotool mousemove ${x} ${y} click 1`
-        : ''
-    if (!cmd) return { error: 'Unsupported platform' }
     try {
-      await execAsync(cmd)
+      if (process.platform === 'darwin') {
+        await execFileAsync('cliclick', [`c:${x},${y}`])
+      } else if (process.platform === 'linux') {
+        await execFileAsync('xdotool', ['mousemove', String(x), String(y), 'click', '1'])
+      } else {
+        return { error: 'Unsupported platform' }
+      }
       return { ok: true }
     } catch (err) {
       return { error: String(err) }
@@ -189,14 +189,14 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('computer:type', async (_, text: string) => {
-    const cmd = process.platform === 'darwin'
-      ? `cliclick t:"${text.replace(/"/g, '\\"')}"`
-      : process.platform === 'linux'
-        ? `xdotool type -- "${text.replace(/"/g, '\\"')}"`
-        : ''
-    if (!cmd) return { error: 'Unsupported platform' }
     try {
-      await execAsync(cmd)
+      if (process.platform === 'darwin') {
+        await execFileAsync('cliclick', [`t:${text}`])
+      } else if (process.platform === 'linux') {
+        await execFileAsync('xdotool', ['type', '--', text])
+      } else {
+        return { error: 'Unsupported platform' }
+      }
       return { ok: true }
     } catch (err) {
       return { error: String(err) }
@@ -204,14 +204,14 @@ function registerIpc(): void {
   })
 
   ipcMain.handle('computer:keypress', async (_, key: string) => {
-    const cmd = process.platform === 'darwin'
-      ? `cliclick kp:${key}`
-      : process.platform === 'linux'
-        ? `xdotool key ${key}`
-        : ''
-    if (!cmd) return { error: 'Unsupported platform' }
     try {
-      await execAsync(cmd)
+      if (process.platform === 'darwin') {
+        await execFileAsync('cliclick', [`kp:${key}`])
+      } else if (process.platform === 'linux') {
+        await execFileAsync('xdotool', ['key', key])
+      } else {
+        return { error: 'Unsupported platform' }
+      }
       return { ok: true }
     } catch (err) {
       return { error: String(err) }
@@ -291,15 +291,16 @@ function registerIpc(): void {
   ipcMain.handle('db:addMessage', async (_, id, sessionId, role, content) => { db.addMessage(id, sessionId, role, content); return { ok: true } })
   ipcMain.handle('db:updateMessageContent', async (_, id, content) => { db.updateMessageContent(id, content); return { ok: true } })
   ipcMain.handle('db:clearMessages', async (_, sessionId) => { db.clearMessages(sessionId); return { ok: true } })
+  ipcMain.handle('db:getMessages', async (_, sessionId) => db.getMessagesBySession(sessionId))
 
   // --- Browser (Embedded) ---
-  let browserView: BrowserView | null = null
+  let browserView: WebContentsView | null = null
   let browserViewVisible = false
 
   ipcMain.handle('browser:create', async () => {
     if (browserView) return { ok: true }
     try {
-      browserView = new BrowserView({
+      browserView = new WebContentsView({
         webPreferences: {
           nodeIntegration: false,
           contextIsolation: true,
@@ -307,14 +308,13 @@ function registerIpc(): void {
         }
       })
       if (mainWindow) {
-        mainWindow.addBrowserView(browserView)
+        mainWindow.contentView.addChildView(browserView)
         // Default bounds matching right panel area (will be updated by renderer)
         const bounds = mainWindow.getBounds()
         browserView.setBounds({
           x: bounds.width - 320, y: 60,
           width: 320, height: bounds.height - 60
         })
-        browserView.setAutoResize({ width: true, height: true })
         browserViewVisible = true
       }
       return { ok: true }
@@ -326,8 +326,8 @@ function registerIpc(): void {
   ipcMain.handle('browser:destroy', async () => {
     try {
       if (browserView && mainWindow) {
-        mainWindow.removeBrowserView(browserView)
-        ;(browserView.webContents as any).destroy?.()
+        mainWindow.contentView.removeChildView(browserView)
+        browserView.webContents.close()
         browserView = null
         browserViewVisible = false
       }
@@ -431,8 +431,6 @@ function registerIpc(): void {
     return { url: browserView.webContents.getURL() }
   })
 }
-
-app.commandLine.appendSwitch('no-sandbox')
 
 app.whenReady().then(() => {
   // CSP for security
