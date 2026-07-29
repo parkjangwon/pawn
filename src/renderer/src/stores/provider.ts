@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { uid } from '../utils/uid'
 import type { Provider, ModelEntry, RoutingMode } from '../types/provider'
 
 interface ProviderState {
@@ -22,9 +23,6 @@ interface ProviderState {
   setDefaultSendMode: (mode: 'queue' | 'steer') => void
   setPermissionMode: (mode: 'ask' | 'auto' | 'yolo') => void
 }
-
-let counter = 0
-const uid = (): string => `p-${Date.now()}-${++counter}`
 
 function saveToBackend(state: ProviderState): void {
   window.api.config.save({
