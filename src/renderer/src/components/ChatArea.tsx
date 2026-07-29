@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
+import { useProviderStore } from '../stores/provider'
 import MarkdownRenderer from './MarkdownRenderer'
 import FileBrowser from './FileBrowser'
 import './ChatArea.css'
@@ -16,16 +17,28 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>('queue')
   const { projects, activeProjectId, activeSessionId, updateSessionPath } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming } = useChatStore()
+  const { models } = useProviderStore()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [showFileBrowser, setShowFileBrowser] = useState(false)
+  const [gitBranch, setGitBranch] = useState<string | null>(null)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
   const messages = activeSession?.messages || []
-
-  // Effective path: session override > project path
   const effectivePath = activeSession?.path || activeProject?.path || ''
+
+  // Detect git branch
+  useEffect(() => {
+    if (!effectivePath) { setGitBranch(null); return }
+    window.api.shell.exec('git rev-parse --abbrev-ref HEAD', effectivePath)
+      .then((r) => { if (r.exitCode === 0) setGitBranch(r.stdout.trim()); else setGitBranch(null) })
+      .catch(() => setGitBranch(null))
+  }, [effectivePath])
+
+  // Current model label
+  const activeModel = models.find((m) => m.enabled)
+  const modelLabel = activeModel?.label || activeModel?.modelId || ''
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -47,7 +60,7 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
     URL.revokeObjectURL(url)
   }
 
-  const handleChangePath = async (): Promise<void> => {
+  const handleChangePath = (): void => {
     if (!activeProjectId || !activeSessionId) return
     setShowFileBrowser(true)
   }
@@ -99,9 +112,7 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
       <div className="mobile-header">
         <button className="mobile-menu-btn" onClick={onToggleSidebar}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <line x1="3" y1="6" x2="21" y2="6" />
-            <line x1="3" y1="12" x2="21" y2="12" />
-            <line x1="3" y1="18" x2="21" y2="18" />
+            <line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="18" x2="21" y2="18" />
           </svg>
         </button>
         <span className="mobile-title">Pawn</span>
@@ -109,8 +120,13 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
 
       {!activeSession || messages.length === 0 ? (
         <div className="chat-welcome">
-          <h1>{t('chat.welcome')}</h1>
-          <p>{t('chat.welcomeSub')}</p>
+          <div className="welcome-icon">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" opacity="0.4">
+              <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+            </svg>
+          </div>
+          <h1>{activeProject ? `What should we build in ${activeProject.name}?` : t('chat.welcome')}</h1>
+          {!activeProject && <p>{t('chat.welcomeSub')}</p>}
           <div className="welcome-actions">
             {suggestions.map((s, i) => (
               <button key={i} className="welcome-btn" onClick={() => setInput(s.text)}>
@@ -122,7 +138,7 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
                   {s.icon === 'monitor' && <><rect x="2" y="3" width="20" height="14" rx="2" /><line x1="8" y1="21" x2="16" y2="21" /><line x1="12" y1="17" x2="12" y2="21" /></>}
                   {s.icon === 'edit' && <><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></>}
                 </svg>
-                {s.text}
+                <span>{s.text}</span>
               </button>
             ))}
           </div>
@@ -153,71 +169,81 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
         </div>
       )}
 
+      {/* Input area with context bar */}
       <div className="chat-input-wrapper">
-        {activeSession && (
-          <div className="input-path-row">
-            <button className="path-chip" onClick={handleChangePath} title={effectivePath || 'Set working directory'}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-              </svg>
-              <span>{effectivePath ? effectivePath.split('/').filter(Boolean).pop() : 'Set path'}</span>
-              {effectivePath && (
-                <span
-                  className="path-chip-clear"
-                  onClick={(e) => { e.stopPropagation(); if (confirm('Clear working directory?')) handleClearPath() }}
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+        <div className="chat-input-container">
+          {/* Context chips bar */}
+          {activeSession && (
+            <div className="context-bar">
+              {activeProject && (
+                <button className="context-chip project-chip" onClick={handleChangePath} title={effectivePath || 'Set path'}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                  <span>{activeProject.name}</span>
+                </button>
+              )}
+              {gitBranch && (
+                <span className="context-chip branch-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></svg>
+                  <span>{gitBranch}</span>
                 </span>
               )}
-            </button>
-          </div>
-        )}
-        <div className="chat-input-box">
-          <textarea
-            ref={textareaRef}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder={t('chat.placeholder')}
-            rows={1}
-          />
-          <div className="input-actions">
-            {messages.length > 0 && (
-              <button className="export-btn" onClick={handleExport} title="Export conversation">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-                  <polyline points="7 10 12 15 17 10" />
-                  <line x1="12" y1="15" x2="12" y2="3" />
-                </svg>
-              </button>
-            )}
-            <select
-              className="mode-select"
-              value={sendMode}
-              onChange={(e) => setSendMode(e.target.value as 'queue' | 'steer')}
-              title="Send mode"
-              disabled={isStreaming}
-            >
-              <option value="queue">Queue</option>
-              <option value="steer">Steer</option>
-            </select>
-            {isStreaming ? (
-              <button className="stop-btn" onClick={stopStreaming} title="Stop">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-                  <rect x="4" y="4" width="16" height="16" rx="2" />
-                </svg>
-              </button>
-            ) : (
-              <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="12" y1="19" x2="12" y2="5" />
-                  <polyline points="5 12 12 5 19 12" />
-                </svg>
-              </button>
-            )}
+              {effectivePath && effectivePath !== activeProject?.path && (
+                <button className="context-chip path-chip" onClick={handleChangePath} title={effectivePath}>
+                  <span>{effectivePath.split('/').filter(Boolean).pop()}</span>
+                  <span className="chip-clear" onClick={(e) => { e.stopPropagation(); if (confirm('Clear path?')) handleClearPath() }}>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </span>
+                </button>
+              )}
+              {modelLabel && (
+                <span className="context-chip model-chip">{modelLabel}</span>
+              )}
+            </div>
+          )}
+
+          {/* Text input */}
+          <div className="chat-input-box">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder={t('chat.placeholder')}
+              rows={1}
+            />
+            <div className="input-actions">
+              {messages.length > 0 && (
+                <button className="input-action-btn" onClick={handleExport} title="Export">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
+                  </svg>
+                </button>
+              )}
+              <select
+                className="mode-select"
+                value={sendMode}
+                onChange={(e) => setSendMode(e.target.value as 'queue' | 'steer')}
+                disabled={isStreaming}
+              >
+                <option value="queue">Queue</option>
+                <option value="steer">Steer</option>
+              </select>
+              {isStreaming ? (
+                <button className="stop-btn" onClick={stopStreaming} title="Stop">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                </button>
+              ) : (
+                <button className="send-btn" onClick={handleSend} disabled={!input.trim()}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
+
       {showFileBrowser && (
         <FileBrowser
           initialPath={effectivePath || activeProject?.path || '/'}
