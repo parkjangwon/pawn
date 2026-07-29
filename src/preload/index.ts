@@ -69,6 +69,7 @@ const api = {
     loadAll: () => ipcRenderer.invoke('db:loadAll'),
     addProject: (id: string, name: string, path: string) => ipcRenderer.invoke('db:addProject', id, name, path),
     updateProjectName: (id: string, name: string) => ipcRenderer.invoke('db:updateProjectName', id, name),
+    updateProjectPaths: (id: string, paths: string) => ipcRenderer.invoke('db:updateProjectPaths', id, paths),
     removeProject: (id: string) => ipcRenderer.invoke('db:removeProject', id),
     addSession: (id: string, projectId: string, title: string, path: string) => ipcRenderer.invoke('db:addSession', id, projectId, title, path),
     updateSessionTitle: (id: string, title: string) => ipcRenderer.invoke('db:updateSessionTitle', id, title),

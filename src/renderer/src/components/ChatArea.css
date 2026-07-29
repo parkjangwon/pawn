@@ -278,6 +278,80 @@
   font-style: italic;
 }
 
+/* Project picker dropdown */
+.context-chip-wrapper {
+  position: relative;
+}
+
+.project-picker {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  min-width: 260px;
+  max-width: 360px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.picker-list {
+  max-height: 200px;
+  overflow-y: auto;
+  padding: var(--space-xs);
+}
+
+.picker-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 6px var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--font-md);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.picker-item:hover {
+  background: var(--bg-hover);
+}
+
+.picker-item.active {
+  background: var(--accent-subtle);
+}
+
+.picker-item svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.picker-item.active svg:last-child {
+  color: var(--accent);
+  margin-left: auto;
+}
+
+.picker-path {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-left: auto;
+}
+
+.picker-item.active .picker-path {
+  margin-left: 0;
+}
+
+.picker-footer {
+  border-top: 1px solid var(--border-color);
+  padding: var(--space-xs);
+}
+
 /* Text input box */
 .chat-input-box {
   display: flex;

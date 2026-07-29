@@ -253,6 +253,7 @@ function registerIpc(): void {
   ipcMain.handle('db:loadAll', async () => db.loadFullState())
   ipcMain.handle('db:addProject', async (_, id, name, path) => { db.addProject(id, name, path); return { ok: true } })
   ipcMain.handle('db:updateProjectName', async (_, id, name) => { db.updateProjectName(id, name); return { ok: true } })
+  ipcMain.handle('db:updateProjectPaths', async (_, id, paths) => { db.updateProjectPaths(id, paths); return { ok: true } })
   ipcMain.handle('db:removeProject', async (_, id) => { db.removeProject(id); return { ok: true } })
   ipcMain.handle('db:addSession', async (_, id, projectId, title, path) => { db.addSession(id, projectId, title, path); return { ok: true } })
   ipcMain.handle('db:updateSessionTitle', async (_, id, title) => { db.updateSessionTitle(id, title); return { ok: true } })

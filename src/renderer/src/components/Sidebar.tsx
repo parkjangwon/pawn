@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
-import FileBrowser from './FileBrowser'
+import ProjectEditDialog from './ProjectEditDialog'
 import './Sidebar.css'
 
 interface SidebarProps {
@@ -31,7 +31,8 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
   const [renamingSession, setRenamingSession] = useState<string | null>(null)
   const [renamingProject, setRenamingProject] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const [showFileBrowser, setShowFileBrowser] = useState(false)
+  const [showProjectDialog, setShowProjectDialog] = useState(false)
+  const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
 
   // Ensure general project exists
@@ -61,13 +62,14 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
   }
 
   const handleAddProject = (): void => {
-    setShowFileBrowser(true)
+    setEditingProjectId(undefined)
+    setShowProjectDialog(true)
   }
 
-  const handleProjectFolderSelected = (path: string): void => {
-    const name = path.split('/').pop() || path.split('\\').pop() || path
-    addProject(name, path)
-    setShowFileBrowser(false)
+  const handleEditProject = (e: React.MouseEvent, projectId: string): void => {
+    e.stopPropagation()
+    setEditingProjectId(projectId)
+    setShowProjectDialog(true)
   }
 
   const handleDeleteProject = (e: React.MouseEvent, id: string): void => {
@@ -236,8 +238,8 @@ export default function Sidebar({ onOpenSettings, open }: SidebarProps): React.J
         </button>
       </div>
 
-      {showFileBrowser && (
-        <FileBrowser initialPath="/" onSelect={handleProjectFolderSelected} onClose={() => setShowFileBrowser(false)} />
+      {showProjectDialog && (
+        <ProjectEditDialog projectId={editingProjectId} onClose={() => setShowProjectDialog(false)} />
       )}
     </aside>
   )

@@ -63,6 +63,10 @@ export function updateProjectName(id: string, name: string): void {
   getDb().prepare('UPDATE projects SET name = ? WHERE id = ?').run(name, id)
 }
 
+export function updateProjectPaths(id: string, paths: string): void {
+  getDb().prepare('UPDATE projects SET path = ? WHERE id = ?').run(paths, id)
+}
+
 export function removeProject(id: string): void {
   getDb().prepare('DELETE FROM projects WHERE id = ?').run(id)
 }

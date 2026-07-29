@@ -5,7 +5,6 @@ export interface Session {
   title: string
   createdAt: number
   messages: Message[]
-  path?: string
 }
 
 export interface Message {
@@ -18,7 +17,7 @@ export interface Message {
 export interface Project {
   id: string
   name: string
-  path: string
+  paths: string[]
   sessions: Session[]
 }
 
@@ -28,17 +27,17 @@ interface AppState {
   activeSessionId: string | null
   initialized: boolean
   init: () => Promise<void>
-  addProject: (name: string, path: string) => void
+  addProject: (name: string, paths: string[]) => void
   removeProject: (id: string) => void
   setActiveProject: (id: string) => void
+  updateProjectName: (projectId: string, name: string) => void
+  updateProjectPaths: (projectId: string, paths: string[]) => void
   addSession: (projectId: string, title?: string) => void
   removeSession: (projectId: string, sessionId: string) => void
   setActiveSession: (id: string) => void
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
-  updateSessionPath: (projectId: string, sessionId: string, path: string) => void
-  updateProjectName: (projectId: string, name: string) => void
 }
 
 let counter = 0
@@ -54,17 +53,24 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().initialized) return
     try {
       const state = await window.api.db.loadAll()
-      set({ projects: state.projects || [], initialized: true })
+      // Parse paths from JSON string stored in DB
+      const projects = (state.projects || []).map((p: Record<string, unknown>) => {
+        let paths: string[] = []
+        const rawPath = p.path as string || p.paths as string || ''
+        try { paths = JSON.parse(rawPath) } catch { paths = rawPath ? [rawPath] : [] }
+        return { ...p, paths, path: undefined } as unknown as Project
+      })
+      set({ projects, initialized: true })
     } catch {
       set({ initialized: true })
     }
   },
 
-  addProject: (name, path) => {
+  addProject: (name, paths) => {
     const id = uid()
-    const project: Project = { id, name, path, sessions: [] }
+    const project: Project = { id, name, paths, sessions: [] }
     set((s) => ({ projects: [...s.projects, project], activeProjectId: id }))
-    window.api.db.addProject(id, name, path)
+    window.api.db.addProject(id, name, JSON.stringify(paths))
   },
 
   removeProject: (id) => {
@@ -76,6 +82,20 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setActiveProject: (id) => set({ activeProjectId: id }),
+
+  updateProjectName: (projectId, name) => {
+    set((s) => ({
+      projects: s.projects.map((p) => p.id === projectId ? { ...p, name } : p)
+    }))
+    window.api.db.updateProjectName(projectId, name)
+  },
+
+  updateProjectPaths: (projectId, paths) => {
+    set((s) => ({
+      projects: s.projects.map((p) => p.id === projectId ? { ...p, paths } : p)
+    }))
+    window.api.db.updateProjectPaths(projectId, JSON.stringify(paths))
+  },
 
   addSession: (projectId, title) => {
     const id = uid()
@@ -130,21 +150,5 @@ export const useAppStore = create<AppState>((set, get) => ({
       )
     }))
     window.api.db.updateSessionTitle(sessionId, title)
-  },
-
-  updateSessionPath: (projectId, sessionId, path) => {
-    set((s) => ({
-      projects: s.projects.map((p) =>
-        p.id === projectId ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, path: path || undefined } : ss) } : p
-      )
-    }))
-    window.api.db.updateSessionPath(sessionId, path)
-  },
-
-  updateProjectName: (projectId, name) => {
-    set((s) => ({
-      projects: s.projects.map((p) => p.id === projectId ? { ...p, name } : p)
-    }))
-    window.api.db.updateProjectName(projectId, name)
   }
 }))

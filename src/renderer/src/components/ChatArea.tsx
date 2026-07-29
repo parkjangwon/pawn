@@ -4,7 +4,6 @@ import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useProviderStore } from '../stores/provider'
 import MarkdownRenderer from './MarkdownRenderer'
-import FileBrowser from './FileBrowser'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -15,18 +14,18 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>('queue')
-  const { projects, activeProjectId, activeSessionId, updateSessionPath } = useAppStore()
+  const { projects, activeProjectId, activeSessionId, setActiveProject } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming } = useChatStore()
   const { models } = useProviderStore()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  const [showFileBrowser, setShowFileBrowser] = useState(false)
+  const [showProjectPicker, setShowProjectPicker] = useState(false)
   const [gitBranch, setGitBranch] = useState<string | null>(null)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
   const messages = activeSession?.messages || []
-  const effectivePath = activeSession?.path || activeProject?.path || ''
+  const effectivePath = activeProject?.paths?.[0] || ''
 
   // Detect git branch
   useEffect(() => {
@@ -60,21 +59,9 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
     URL.revokeObjectURL(url)
   }
 
-  const handleChangePath = (): void => {
-    if (!activeProjectId || !activeSessionId) return
-    setShowFileBrowser(true)
-  }
-
-  const handlePathSelected = (path: string): void => {
-    if (activeProjectId && activeSessionId) {
-      updateSessionPath(activeProjectId, activeSessionId, path)
-    }
-    setShowFileBrowser(false)
-  }
-
-  const handleClearPath = (): void => {
-    if (!activeProjectId || !activeSessionId) return
-    updateSessionPath(activeProjectId, activeSessionId, '')
+  const handleSelectProject = (projectId: string): void => {
+    setActiveProject(projectId)
+    setShowProjectPicker(false)
   }
 
   useEffect(() => {
@@ -175,25 +162,42 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
           {/* Context chips bar */}
           {activeSession && (
             <div className="context-bar">
-              {activeProject && (
-                <button className="context-chip project-chip" onClick={handleChangePath} title={effectivePath || 'Set path'}>
+              <div className="context-chip-wrapper">
+                <button className="context-chip project-chip" onClick={() => setShowProjectPicker(!showProjectPicker)} title="Switch project">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-                  <span>{activeProject.name}</span>
+                  <span>{activeProject?.name || 'No project'}</span>
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                 </button>
-              )}
+                {showProjectPicker && (
+                  <div className="project-picker">
+                    <div className="picker-list">
+                      {projects.filter((p) => p.id !== '__general__').map((p) => (
+                        <button
+                          key={p.id}
+                          className={`picker-item ${p.id === activeProjectId ? 'active' : ''}`}
+                          onClick={() => handleSelectProject(p.id)}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                          <span>{p.name}</span>
+                          {p.paths?.[0] && <span className="picker-path">{p.paths[0].split('/').pop()}</span>}
+                          {p.id === activeProjectId && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="picker-footer">
+                      <button className="picker-item" onClick={() => { handleSelectProject('__general__') }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        <span>프로젝트 없이 작업하기</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
               {gitBranch && (
                 <span className="context-chip branch-chip">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></svg>
                   <span>{gitBranch}</span>
                 </span>
-              )}
-              {effectivePath && effectivePath !== activeProject?.path && (
-                <button className="context-chip path-chip" onClick={handleChangePath} title={effectivePath}>
-                  <span>{effectivePath.split('/').filter(Boolean).pop()}</span>
-                  <span className="chip-clear" onClick={(e) => { e.stopPropagation(); if (confirm('Clear path?')) handleClearPath() }}>
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                  </span>
-                </button>
               )}
               {modelLabel && (
                 <span className="context-chip model-chip">{modelLabel}</span>
@@ -243,14 +247,6 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
           </div>
         </div>
       </div>
-
-      {showFileBrowser && (
-        <FileBrowser
-          initialPath={effectivePath || activeProject?.path || '/'}
-          onSelect={handlePathSelected}
-          onClose={() => setShowFileBrowser(false)}
-        />
-      )}
     </main>
   )
 }

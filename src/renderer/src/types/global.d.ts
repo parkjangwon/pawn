@@ -47,6 +47,7 @@ declare global {
         loadAll: () => Promise<{ projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number; messages: Array<{ id: string; role: string; content: string; createdAt: number }> }> }> }>
         addProject: (id: string, name: string, path: string) => Promise<{ ok?: boolean }>
         updateProjectName: (id: string, name: string) => Promise<{ ok?: boolean }>
+        updateProjectPaths: (id: string, paths: string) => Promise<{ ok?: boolean }>
         removeProject: (id: string) => Promise<{ ok?: boolean }>
         addSession: (id: string, projectId: string, title: string, path: string) => Promise<{ ok?: boolean }>
         updateSessionTitle: (id: string, title: string) => Promise<{ ok?: boolean }>

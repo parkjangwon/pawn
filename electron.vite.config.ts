@@ -159,6 +159,7 @@ function apiProxyPlugin(): Plugin {
               case 'loadAll': res.end(JSON.stringify(db.loadFullState())); break
               case 'addProject': db.addProject(data.id, data.name, data.path); res.end('{"ok":true}'); break
               case 'updateProjectName': db.updateProjectName(data.id, data.name); res.end('{"ok":true}'); break
+              case 'updateProjectPaths': db.updateProjectPaths(data.id, data.paths); res.end('{"ok":true}'); break
               case 'removeProject': db.removeProject(data.id); res.end('{"ok":true}'); break
               case 'addSession': db.addSession(data.id, data.projectId, data.title, data.path || ''); res.end('{"ok":true}'); break
               case 'updateSessionTitle': db.updateSessionTitle(data.id, data.title); res.end('{"ok":true}'); break
