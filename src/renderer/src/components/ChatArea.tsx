@@ -14,7 +14,7 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>('queue')
-  const { projects, activeProjectId, activeSessionId, setActiveProject } = useAppStore()
+  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming } = useChatStore()
   const { models } = useProviderStore()
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -72,8 +72,37 @@ export default function ChatArea({ onToggleSidebar }: ChatAreaProps): React.JSX.
   }, [input])
 
   const handleSend = (): void => {
-    if (!input.trim() || !activeProjectId || !activeSessionId) return
-    sendMessage(activeProjectId, activeSessionId, input.trim(), sendMode)
+    if (!input.trim()) return
+
+    let projectId = activeProjectId
+    let sessionId = activeSessionId
+
+    // Auto-create project + session if none active
+    if (!projectId || !sessionId) {
+      // Find or create general project
+      let general = projects.find((p) => p.id === '__general__')
+      if (!general) {
+        addProject('General', [])
+        // addProject sets activeProjectId, get it from store after state update
+        // We need to use the store directly since state hasn't updated yet
+        const store = useAppStore.getState()
+        general = store.projects.find((p) => p.id === '__general__') || store.projects[store.projects.length - 1]
+        projectId = general?.id || store.activeProjectId || ''
+      } else {
+        projectId = general.id
+      }
+
+      // Create session with first message as title
+      const title = input.trim().slice(0, 40) + (input.trim().length > 40 ? '...' : '')
+      addSession(projectId, title)
+      const store = useAppStore.getState()
+      sessionId = store.activeSessionId || ''
+      projectId = store.activeProjectId || projectId
+    }
+
+    if (!projectId || !sessionId) return
+
+    sendMessage(projectId, sessionId, input.trim(), sendMode)
     setInput('')
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
