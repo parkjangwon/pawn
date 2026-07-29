@@ -7,6 +7,8 @@
   background: var(--bg-sidebar);
   border-right: 1px solid var(--border-color);
   -webkit-app-region: drag;
+  position: relative;
+  z-index: 10;
 }
 
 .sidebar button,
@@ -24,6 +26,10 @@
   padding: var(--space-sm) var(--space-md);
   height: var(--titlebar-height);
   flex-shrink: 0;
+  background: var(--bg-sidebar);
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .sidebar-title {

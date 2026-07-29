@@ -128,8 +128,11 @@ function apiProxyPlugin(): Plugin {
             if (action === 'load') {
               res.end(JSON.stringify(loadConfig()))
             } else if (action === 'save') {
-              const config = JSON.parse(body || '{}')
-              saveConfig(config)
+              const partial = JSON.parse(body || '{}')
+              // Merge with existing config
+              const existing = loadConfig()
+              const merged = { ...existing, ...partial, settings: { ...existing.settings, ...partial.settings } }
+              saveConfig(merged)
               res.end(JSON.stringify({ ok: true }))
             } else {
               res.statusCode = 404

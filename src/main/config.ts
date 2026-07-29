@@ -56,9 +56,16 @@ export function loadConfig(): PawnConfig {
   }
 }
 
-export function saveConfig(config: PawnConfig): void {
+export function saveConfig(partial: PawnConfig): void {
   ensureDir()
-  const raw = stringify(config as Record<string, unknown>)
+  // Merge with existing config instead of overwriting
+  const existing = loadConfig()
+  const merged: PawnConfig = {
+    ...existing,
+    ...partial,
+    settings: { ...existing.settings, ...partial.settings }
+  }
+  const raw = stringify(merged as Record<string, unknown>)
   writeFileSync(CONFIG_PATH, raw, 'utf-8')
 }
 
