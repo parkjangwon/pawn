@@ -1,8 +1,10 @@
 import { create } from 'zustand'
 
+export type PermissionType = 'computer_use' | 'file_write' | 'file_read' | 'shell_exec' | 'browser'
+
 interface PermissionRequest {
   id: string
-  type: 'computer_use' | 'file_write' | 'shell_exec' | 'browser'
+  type: PermissionType
   description: string
   details?: string
 }

@@ -104,7 +104,8 @@
       "computer_use": "컴퓨터 사용",
       "file_write": "파일 쓰기",
       "shell_exec": "셸 실행",
-      "browser": "브라우저"
+      "browser": "브라우저",
+      "file_read": "파일 읽기"
     }
   },
   "statusBar": {
@@ -140,7 +141,7 @@
       "title": "프로바이더",
       "desc": "AI 프로바이더 연결 관리",
       "empty": "설정된 프로바이더가 없습니다",
-      "add": "프로바이더 추가",
+      "add": "커스텀 프로바이더 추가",
       "name": "이름",
       "apiFormat": "API 형식",
       "authMethod": "인증 방식",

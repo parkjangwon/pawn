@@ -21,15 +21,11 @@
 }
 
 .close-sidebar-btn {
-  display: none;
+  display: flex;
 }
 
 .app.sidebar-collapsed .chat-header {
   padding-left: 72px;
-}
-
-.app.sidebar-collapsed .close-sidebar-btn {
-  display: flex;
 }
 
 .chat-header-spacer {
@@ -253,10 +249,6 @@
   background: var(--bg-primary);
   overflow: visible;
   transition: border-color 0.15s;
-}
-
-.chat-input-container:focus-within {
-  border-color: var(--accent);
 }
 
 /* Context bar (project, branch, model chips) */
@@ -559,6 +551,46 @@
 .model-picker {
   right: 0;
   left: auto;
+}
+
+.usage-chip {
+  font-variant-numeric: tabular-nums;
+}
+
+.usage-chip-cache {
+  color: var(--text-muted);
+}
+
+.usage-popover {
+  right: 0;
+  left: auto;
+  padding: 10px 12px;
+  min-width: 200px;
+}
+
+.usage-popover-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 3px 0;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.usage-popover-row.total {
+  border-top: 1px solid var(--border-color);
+  margin-top: 4px;
+  padding-top: 6px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.usage-popover-route {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }
 
 .input-action-btn {

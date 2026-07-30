@@ -104,7 +104,8 @@
       "computer_use": "コンピューター操作",
       "file_write": "ファイル書き込み",
       "shell_exec": "シェル実行",
-      "browser": "ブラウザ"
+      "browser": "ブラウザ",
+      "file_read": "ファイル読み取り"
     }
   },
   "statusBar": {
@@ -140,7 +141,7 @@
       "title": "プロバイダー",
       "desc": "AIプロバイダー接続を管理",
       "empty": "プロバイダーが設定されていません",
-      "add": "プロバイダーを追加",
+      "add": "カスタムプロバイダーを追加",
       "name": "名前",
       "apiFormat": "API形式",
       "authMethod": "認証方法",

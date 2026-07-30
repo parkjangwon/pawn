@@ -3,7 +3,9 @@ import { useTranslation } from 'react-i18next'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
 import { usePermissionStore } from '../stores/permission'
-import type { ApiFormat, AuthMethod } from '../types/provider'
+import { guessPricing } from '../types/provider'
+import type { ApiFormat, AuthMethod, ModelPricing, Provider } from '../types/provider'
+import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
 import './Settings.css'
 
 type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'data'
@@ -32,11 +34,55 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
 
   const [activeSection, setActiveSection] = useState<SettingsSection>('appearance')
   const [showAddProvider, setShowAddProvider] = useState(false)
+  const [presetPicking, setPresetPicking] = useState<ProviderPreset | null>(null)
+  const [presetKey, setPresetKey] = useState('')
   const [showAddModel, setShowAddModel] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<Record<string, string>>({})
   const [form, setForm] = useState({ name: '', apiFormat: 'openai' as ApiFormat, authMethod: 'api-key' as AuthMethod, baseUrl: '', apiKey: '' })
-  const [modelForm, setModelForm] = useState({ providerId: '', modelId: '', label: '', tier: 'mid' as 'low' | 'mid' | 'high' })
+  const [modelForm, setModelForm] = useState({
+    providerId: '', modelId: '', label: '', tier: 'mid' as 'low' | 'mid' | 'high',
+    input: '', output: '', cacheRead: '', cacheWrite: '', contextWindow: ''
+  })
+
+  // Auto-fill pricing/tier from the known-model table as soon as the id is
+  // recognizable, so the router has a cost model without the user looking up rates.
+  const applyModelIdGuess = (modelId: string): void => {
+    const guess = guessPricing(modelId)
+    setModelForm((f) => ({
+      ...f,
+      modelId,
+      tier: guess?.tier || f.tier,
+      input: guess ? String(guess.input) : f.input,
+      output: guess ? String(guess.output) : f.output,
+      cacheRead: guess ? String(guess.cacheRead) : f.cacheRead,
+      cacheWrite: guess ? String(guess.cacheWrite) : f.cacheWrite,
+      contextWindow: guess ? String(guess.contextWindow) : f.contextWindow
+    }))
+  }
+
+  const handleAddFromPreset = (preset: ProviderPreset, apiKey: string): void => {
+    if (!preset.localNoKey && !apiKey.trim()) return
+    const before = useProviderStore.getState().providers.length
+    addProvider({
+      id: '', name: preset.name, apiFormat: preset.apiFormat, authMethod: 'api-key',
+      baseUrl: preset.baseUrl, apiKey: apiKey.trim() || undefined, enabled: true
+    })
+    const after = useProviderStore.getState().providers
+    const created: Provider | undefined = after.length > before ? after[after.length - 1] : undefined
+    if (created) {
+      for (const m of preset.models) {
+        const guess = guessPricing(m.modelId)
+        useProviderStore.getState().addModel({
+          id: '', providerId: created.id, modelId: m.modelId, label: m.label, tier: m.tier, enabled: true,
+          pricing: guess ? { input: guess.input, output: guess.output, cacheRead: guess.cacheRead, cacheWrite: guess.cacheWrite } : undefined,
+          contextWindow: guess?.contextWindow
+        })
+      }
+    }
+    setPresetPicking(null)
+    setPresetKey('')
+  }
 
   const handleAddProvider = (): void => {
     if (!form.name.trim() || !form.baseUrl.trim()) return
@@ -47,8 +93,26 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
 
   const handleAddModel = (): void => {
     if (!modelForm.providerId || !modelForm.modelId.trim()) return
-    addModel({ id: '', providerId: modelForm.providerId, modelId: modelForm.modelId.trim(), label: modelForm.label.trim() || modelForm.modelId.trim(), tier: modelForm.tier, enabled: true })
-    setModelForm({ providerId: '', modelId: '', label: '', tier: 'mid' })
+    const num = (s: string): number | undefined => (s.trim() ? Number(s) : undefined)
+    const input = num(modelForm.input)
+    const output = num(modelForm.output)
+    const cacheRead = num(modelForm.cacheRead)
+    const cacheWrite = num(modelForm.cacheWrite)
+    const pricing: ModelPricing | undefined =
+      input !== undefined && output !== undefined
+        ? { input, output, cacheRead: cacheRead ?? input * 0.1, cacheWrite: cacheWrite ?? input * 1.25 }
+        : undefined
+    addModel({
+      id: '',
+      providerId: modelForm.providerId,
+      modelId: modelForm.modelId.trim(),
+      label: modelForm.label.trim() || modelForm.modelId.trim(),
+      tier: modelForm.tier,
+      enabled: true,
+      pricing,
+      contextWindow: num(modelForm.contextWindow)
+    })
+    setModelForm({ providerId: '', modelId: '', label: '', tier: 'mid', input: '', output: '', cacheRead: '', cacheWrite: '', contextWindow: '' })
     setShowAddModel(false)
   }
 
@@ -133,6 +197,44 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
               ))}
               {providers.length === 0 && <div className="settings-empty">{t('settings.providerSection.empty')}</div>}
             </div>
+
+            <div className="preset-section">
+              <div className="settings-row-desc preset-section-label">잘 알려진 프로바이더 — API 키만 입력하면 바로 사용</div>
+              <div className="preset-grid">
+                {PROVIDER_PRESETS.map((preset) => (
+                  <button key={preset.id} className="preset-chip" onClick={() => { setPresetPicking(preset); setPresetKey('') }}>
+                    {preset.name}
+                  </button>
+                ))}
+              </div>
+              {presetPicking && (
+                <div className="settings-card add-form preset-form">
+                  <div className="settings-row-label">{presetPicking.name}</div>
+                  <div className="settings-row-desc">{presetPicking.baseUrl}</div>
+                  <div className="settings-row-desc">{presetPicking.keyHint}</div>
+                  {!presetPicking.localNoKey && (
+                    <input
+                      type="password"
+                      placeholder="API 키를 붙여넣으세요"
+                      value={presetKey}
+                      onChange={(e) => setPresetKey(e.target.value)}
+                      autoFocus
+                    />
+                  )}
+                  <div className="form-actions">
+                    <button
+                      className="btn-primary"
+                      onClick={() => handleAddFromPreset(presetPicking, presetKey)}
+                      disabled={!presetPicking.localNoKey && !presetKey.trim()}
+                    >
+                      추가 ({presetPicking.models.length}개 모델 포함)
+                    </button>
+                    <button className="btn-cancel" onClick={() => setPresetPicking(null)}>{t('common.cancel')}</button>
+                  </div>
+                </div>
+              )}
+            </div>
+
             {showAddProvider ? (
               <div className="settings-card add-form">
                 <input placeholder={t('settings.providerSection.namePlaceholder')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -155,7 +257,13 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
             <div className="settings-card">
               {models.map((m) => (
                 <div key={m.id} className="settings-row">
-                  <div className="settings-row-info"><span className="settings-row-label">{m.label || m.modelId}</span><span className="settings-row-desc">{providers.find((p) => p.id === m.providerId)?.name} / {m.tier}</span></div>
+                  <div className="settings-row-info">
+                    <span className="settings-row-label">{m.label || m.modelId}</span>
+                    <span className="settings-row-desc">
+                      {providers.find((p) => p.id === m.providerId)?.name} / {m.tier}
+                      {m.pricing ? ` · $${m.pricing.input}/$${m.pricing.output} per 1M (in/out)` : ' · pricing unknown — cost tracking disabled for this model'}
+                    </span>
+                  </div>
                   <button className="delete-btn" onClick={() => removeModel(m.id)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
                 </div>
               ))}
@@ -164,9 +272,17 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
             {showAddModel ? (
               <div className="settings-card add-form">
                 <select value={modelForm.providerId} onChange={(e) => setModelForm({ ...modelForm, providerId: e.target.value })}><option value="">{t('settings.modelSection.selectProvider')}</option>{providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</select>
-                <input placeholder={t('settings.modelSection.modelIdPlaceholder')} value={modelForm.modelId} onChange={(e) => setModelForm({ ...modelForm, modelId: e.target.value })} />
+                <input placeholder={t('settings.modelSection.modelIdPlaceholder')} value={modelForm.modelId} onChange={(e) => applyModelIdGuess(e.target.value)} />
                 <input placeholder={t('settings.modelSection.displayNamePlaceholder')} value={modelForm.label} onChange={(e) => setModelForm({ ...modelForm, label: e.target.value })} />
                 <select value={modelForm.tier} onChange={(e) => setModelForm({ ...modelForm, tier: e.target.value as 'low' | 'mid' | 'high' })}><option value="low">{t('settings.modelSection.tierLow')}</option><option value="mid">{t('settings.modelSection.tierMid')}</option><option value="high">{t('settings.modelSection.tierHigh')}</option></select>
+                <div className="settings-row-desc" style={{ marginTop: 4 }}>가격 (USD / 1M 토큰) — 라우터의 비용 계산과 캐시 절감 표시에 사용됨. 모르면 비워두세요.</div>
+                <div className="pricing-grid">
+                  <input placeholder="입력가" type="number" step="0.01" value={modelForm.input} onChange={(e) => setModelForm({ ...modelForm, input: e.target.value })} />
+                  <input placeholder="출력가" type="number" step="0.01" value={modelForm.output} onChange={(e) => setModelForm({ ...modelForm, output: e.target.value })} />
+                  <input placeholder="캐시읽기" type="number" step="0.01" value={modelForm.cacheRead} onChange={(e) => setModelForm({ ...modelForm, cacheRead: e.target.value })} />
+                  <input placeholder="캐시기록" type="number" step="0.01" value={modelForm.cacheWrite} onChange={(e) => setModelForm({ ...modelForm, cacheWrite: e.target.value })} />
+                </div>
+                <input placeholder="컨텍스트 윈도우 (토큰, 선택)" type="number" value={modelForm.contextWindow} onChange={(e) => setModelForm({ ...modelForm, contextWindow: e.target.value })} />
                 <div className="form-actions"><button className="btn-primary" onClick={handleAddModel}>{t('common.save')}</button><button className="btn-cancel" onClick={() => setShowAddModel(false)}>{t('common.cancel')}</button></div>
               </div>
             ) : (

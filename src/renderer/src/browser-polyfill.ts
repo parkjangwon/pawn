@@ -102,7 +102,16 @@ if (typeof window !== 'undefined' && !window.api) {
       updateSessionPath: async (id: string, path: string) => { await fetch('/api/db/updateSessionPath', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, path }) }); return { ok: true } },
       removeSession: async (id: string) => { await fetch('/api/db/removeSession', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); return { ok: true } },
       addMessage: async (id: string, sessionId: string, role: string, content: string) => { await fetch('/api/db/addMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, sessionId, role, content }) }); return { ok: true } },
-      updateMessageContent: async (id: string, content: string) => { await fetch('/api/db/updateMessageContent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, content }) }); return { ok: true } }
+      updateMessageContent: async (id: string, content: string) => { await fetch('/api/db/updateMessageContent', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id, content }) }); return { ok: true } },
+      deleteMessage: async (id: string) => { await fetch('/api/db/deleteMessage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); return { ok: true } },
+      getTranscript: async (sessionId: string) => { const res = await fetch('/api/db/getTranscript', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); const j = await res.json(); return typeof j === 'string' ? j : j?.json ?? null },
+      saveTranscript: async (sessionId: string, json: string) => { await fetch('/api/db/saveTranscript', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId, json }) }); return { ok: true } },
+      clearTranscript: async (sessionId: string) => { await fetch('/api/db/clearTranscript', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); return { ok: true } },
+      addUsage: async (row: unknown) => { await fetch('/api/db/addUsage', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(row) }); return { ok: true } },
+      getUsageBySession: async (sessionId: string) => { const res = await fetch('/api/db/getUsageBySession', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); return res.json() },
+      getUsageSummary: async (since: number) => { const res = await fetch('/api/db/getUsageSummary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ since }) }); return res.json() },
+      getMessages: async (sessionId: string) => { const res = await fetch('/api/db/getMessages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); return res.json() },
+      clearMessages: async (sessionId: string) => { await fetch('/api/db/clearMessages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); return { ok: true } }
     }
   }
 }

@@ -1,6 +1,7 @@
-import type { ApiFormat } from '../types/provider'
-import { usePermissionStore } from '../stores/permission'
+import { usePermissionStore, type PermissionType } from '../stores/permission'
 import { useProviderStore } from '../stores/provider'
+import { readSkill } from './skills'
+import { getBrowserAgent, type BrowserAgent } from './browser'
 
 // Safety levels for permission system
 export type SafetyLevel = 'safe' | 'risky'
@@ -8,11 +9,18 @@ export type SafetyLevel = 'safe' | 'risky'
 export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   read_file: 'safe',
   list_dir: 'safe',
-  browser_open: 'safe',
-  browser_eval: 'risky',
-  browser_read: 'safe',
+  load_skill: 'safe',
   search_files: 'safe',
   grep_search: 'safe',
+  browser_navigate: 'safe',
+  browser_snapshot: 'safe',
+  browser_read_text: 'safe',
+  browser_screenshot: 'safe',
+  browser_back: 'safe',
+  browser_open_external: 'risky',
+  browser_click: 'risky',
+  browser_fill: 'risky',
+  browser_eval: 'risky',
   write_file: 'risky',
   edit_file: 'risky',
   shell_exec: 'risky',
@@ -129,8 +137,79 @@ export const TOOLS: ToolDefinition[] = [
     }
   },
   {
-    name: 'browser_open',
-    description: 'Open a URL in the browser.',
+    name: 'browser_navigate',
+    description: 'Load a URL in the embedded browser and wait for it to finish loading. Returns the final URL and page title. Follow with browser_snapshot to see what is on the page.',
+    parameters: {
+      type: 'object',
+      properties: { url: { type: 'string', description: 'URL to load. A bare domain is upgraded to https://.' } },
+      required: ['url']
+    }
+  },
+  {
+    name: 'browser_snapshot',
+    description: 'List the interactive elements of the current page (links, buttons, inputs, selects) with a stable "ref" for each. Use the ref with browser_click and browser_fill. Take a fresh snapshot after any navigation or click that changes the page.',
+    parameters: {
+      type: 'object',
+      properties: {
+        filter: { type: 'string', description: 'Optional case-insensitive substring to match against element text, label, name or placeholder.' }
+      }
+    }
+  },
+  {
+    name: 'browser_click',
+    description: 'Click an element on the current page.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'A ref from browser_snapshot, e.g. "e12".' },
+        selector: { type: 'string', description: 'CSS selector, used when no ref is given.' }
+      }
+    }
+  },
+  {
+    name: 'browser_fill',
+    description: 'Type a value into an input, textarea or contenteditable element, firing the input and change events the page listens for.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'A ref from browser_snapshot.' },
+        selector: { type: 'string', description: 'CSS selector, used when no ref is given.' },
+        value: { type: 'string', description: 'Text to enter.' },
+        submit: { type: 'boolean', description: 'Press Enter afterwards to submit the form.' }
+      },
+      required: ['value']
+    }
+  },
+  {
+    name: 'browser_read_text',
+    description: 'Read the visible text of the current page, or of one element.',
+    parameters: {
+      type: 'object',
+      properties: { selector: { type: 'string', description: 'Optional CSS selector to scope the read.' } }
+    }
+  },
+  {
+    name: 'browser_eval',
+    description: 'Evaluate a JavaScript expression in the current page and return its result as JSON. Use for anything the other browser tools do not cover.',
+    parameters: {
+      type: 'object',
+      properties: { code: { type: 'string', description: 'JS expression to evaluate.' } },
+      required: ['code']
+    }
+  },
+  {
+    name: 'browser_back',
+    description: 'Go back one entry in the embedded browser history.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
+    name: 'browser_screenshot',
+    description: 'Capture the embedded browser viewport. Use when the page layout matters or the text tools are not enough.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
+    name: 'browser_open_external',
+    description: 'Open a URL in the user default system browser instead of the embedded one.',
     parameters: {
       type: 'object',
       properties: { url: { type: 'string', description: 'URL to open' } },
@@ -138,18 +217,13 @@ export const TOOLS: ToolDefinition[] = [
     }
   },
   {
-    name: 'browser_eval',
-    description: 'Execute JavaScript code in the current browser page. Returns the result of the expression. Use to inspect/manipulate DOM, click, fill forms.',
+    name: 'load_skill',
+    description: 'Read the full instructions of a project skill listed in "Available Skills". Call this before following a skill.',
     parameters: {
       type: 'object',
-      properties: { code: { type: 'string', description: 'JS code to evaluate' } },
-      required: ['code']
+      properties: { name: { type: 'string', description: 'Skill name exactly as listed.' } },
+      required: ['name']
     }
-  },
-  {
-    name: 'browser_read',
-    description: 'Read the current browser state: URL, console logs.',
-    parameters: { type: 'object', properties: {} }
   },
   {
     name: 'search_files',
@@ -199,17 +273,41 @@ async function checkPermission(
     computer_screenshot: 'Take Screenshot',
     computer_click: 'Mouse Click',
     computer_type: 'Type Text',
-    browser_open: 'Open Browser',
-    browser_eval: 'Evaluate JS',
-    browser_read: 'Read Page'
+    browser_click: 'Click in Browser',
+    browser_fill: 'Type in Browser',
+    browser_eval: 'Evaluate JS in Page',
+    browser_open_external: 'Open External Browser'
   }
 
   const approved = await usePermissionStore.getState().request({
-    type: callName.startsWith('computer_') ? 'computer_use' : callName.startsWith('browser_') ? 'browser' : callName === 'shell_exec' ? 'shell_exec' : 'file_write',
+    type: (() => {
+      const map: Record<string, string> = {
+        computer_screenshot: 'computer_use', computer_click: 'computer_use', computer_type: 'computer_use', computer_keypress: 'computer_use',
+        browser_eval: 'browser', browser_click: 'browser', browser_fill: 'browser', browser_open_external: 'browser',
+        shell_exec: 'shell_exec',
+        write_file: 'file_write', edit_file: 'file_write'
+      }
+      return map[callName] || 'file_read'
+    })() as PermissionType,
     description: typeLabels[callName] || callName,
     details: JSON.stringify(args, null, 2).slice(0, 500)
   })
   return approved
+}
+
+/**
+ * Resolve the browser bridge, creating the embedded page if the panel was never
+ * opened. The agent should be able to drive the browser headlessly; requiring the
+ * user to open a panel first made every browser tool fail on the first call.
+ */
+async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: string }> {
+  const agent = getBrowserAgent()
+  if (!agent) {
+    return { error: 'The embedded browser is only available in the desktop app.' }
+  }
+  const ready = await agent.ensure()
+  if (ready.error) return { error: ready.error }
+  return { agent }
 }
 
 // Convert a glob pattern to a RegExp and test against a filename
@@ -239,8 +337,26 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
   try {
     switch (call.name) {
       case 'read_file': {
-        const result = await api.fs.readFile(call.arguments.path as string)
+        const filePath = call.arguments.path as string
+        const result = await api.fs.readFile(filePath)
         if (typeof result === 'object' && 'error' in result) {
+          // Attempt fuzzy suggestion from the parent directory
+          const parent = filePath.split('/').slice(0, -1).join('/') || '/'
+          if (parent && parent !== filePath) {
+            try {
+              const listing = await api.fs.listDir(parent)
+              if (Array.isArray(listing)) {
+                const target = filePath.split('/').pop() || ''
+                const similar = listing
+                  .filter((e) => e.name.toLowerCase().includes(target.toLowerCase().slice(0, 3)) || target.toLowerCase().includes(e.name.toLowerCase().slice(0, 3)))
+                  .slice(0, 5)
+                  .map((e) => e.name)
+                if (similar.length > 0) {
+                  return { toolCallId: call.id, content: `File not found: ${filePath}\n\nDid you mean one of these?\n${similar.map((s) => `  - ${parent}/${s}`).join('\n')}`, isError: true }
+                }
+              }
+            } catch { /* listing may fail, fall through */ }
+          }
           return { toolCallId: call.id, content: result.error, isError: true }
         }
         return { toolCallId: call.id, content: result as string }
@@ -340,35 +456,104 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         return { toolCallId: call.id, content: `Typed: ${call.arguments.text}` }
       }
 
-      case 'browser_open': {
-        const url = call.arguments.url as string
-        // Try internal browser first
-        const pawb = (window as any).__pawnBrowser
-        if (pawb) {
-          pawb.navigate(url)
-          return { toolCallId: call.id, content: `Navigated to: ${url}` }
+      case 'browser_navigate': {
+        const b = await requireBrowser()
+        if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+        const res = await b.agent.navigate(call.arguments.url as string)
+        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+        return {
+          toolCallId: call.id,
+          content: `Loaded ${res.url}\nTitle: ${res.title || '(none)'}\n\nCall browser_snapshot to see the interactive elements.`
         }
-        await api.browser.open(url)
-        return { toolCallId: call.id, content: `Opened externally: ${url}` }
+      }
+
+      case 'browser_snapshot': {
+        const b = await requireBrowser()
+        if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+        const res = await b.agent.snapshot((call.arguments.filter as string) || '')
+        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+        if (res.elements.length === 0) {
+          return { toolCallId: call.id, content: `${res.url}\nNo interactive elements matched. The page may still be loading, or the content may be inside a cross-origin frame.` }
+        }
+        const lines = res.elements.map((e) => {
+          const bits = [`[${e.ref}]`, e.role]
+          if (e.text) bits.push(JSON.stringify(e.text))
+          if (e.name) bits.push(`name=${e.name}`)
+          if (e.placeholder) bits.push(`placeholder=${JSON.stringify(e.placeholder)}`)
+          if (e.value) bits.push(`value=${JSON.stringify(e.value)}`)
+          if (e.href) bits.push(`href=${e.href}`)
+          return bits.join(' ')
+        })
+        return {
+          toolCallId: call.id,
+          content: `${res.title}\n${res.url}\n\n${lines.join('\n')}${res.truncated ? '\n...(more elements omitted; pass a filter to narrow)' : ''}`
+        }
+      }
+
+      case 'browser_click': {
+        const b = await requireBrowser()
+        if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+        const res = await b.agent.click(call.arguments.ref as string, call.arguments.selector as string)
+        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+        return { toolCallId: call.id, content: res.message }
+      }
+
+      case 'browser_fill': {
+        const b = await requireBrowser()
+        if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+        const res = await b.agent.fill(
+          call.arguments.ref as string,
+          call.arguments.selector as string,
+          String(call.arguments.value ?? ''),
+          call.arguments.submit === true
+        )
+        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+        return { toolCallId: call.id, content: res.message }
+      }
+
+      case 'browser_read_text': {
+        const b = await requireBrowser()
+        if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+        const res = await b.agent.readText((call.arguments.selector as string) || '')
+        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+        return { toolCallId: call.id, content: res.text || '(no visible text)' }
       }
 
       case 'browser_eval': {
-        const pawb = (window as any).__pawnBrowser
-        if (!pawb) return { toolCallId: call.id, content: 'Browser not active. Open the Browser panel first.', isError: true }
-        try {
-          const result = await pawb.evaluate(call.arguments.code as string)
-          return { toolCallId: call.id, content: JSON.stringify(result, null, 2) }
-        } catch (err) {
-          return { toolCallId: call.id, content: 'Eval error: ' + String(err), isError: true }
-        }
+        const b = await requireBrowser()
+        if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+        const res = await b.agent.evaluate(call.arguments.code as string)
+        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+        return { toolCallId: call.id, content: res.result }
       }
 
-      case 'browser_read': {
-        const pawb2 = (window as any).__pawnBrowser
-        if (!pawb2) return { toolCallId: call.id, content: 'Browser not active. Open the Browser panel first.', isError: true }
-        const url = pawb2.getUrl()
-        const logs = pawb2.getLogs()
-        return { toolCallId: call.id, content: `URL: ${url || '(none)'}\nConsole logs:\n${logs.slice(-20).join('\n')}` }
+      case 'browser_back': {
+        const b = await requireBrowser()
+        if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+        const res = await b.agent.back()
+        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+        return { toolCallId: call.id, content: `Went back to ${res.url}` }
+      }
+
+      case 'browser_screenshot': {
+        const b = await requireBrowser()
+        if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+        const res = await b.agent.screenshot()
+        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+        return { toolCallId: call.id, content: `[Screenshot captured, ${res.bytes} bytes of PNG data]` }
+      }
+
+      case 'browser_open_external': {
+        await api.browser.open(call.arguments.url as string)
+        return { toolCallId: call.id, content: `Opened in the system browser: ${call.arguments.url}` }
+      }
+
+      case 'load_skill': {
+        if (!projectPath) return { toolCallId: call.id, content: 'No project path set; skills come from the project directory.', isError: true }
+        const name = call.arguments.name as string
+        const content = await readSkill(projectPath, name)
+        if (!content) return { toolCallId: call.id, content: `No skill named "${name}". Check the Available Skills list.`, isError: true }
+        return { toolCallId: call.id, content }
       }
 
       case 'search_files': {
@@ -438,9 +623,15 @@ export function toolsToOpenAI(): Array<Record<string, unknown>> {
 
 // Convert tools to Claude format
 export function toolsToClaude(): Array<Record<string, unknown>> {
-  return TOOLS.map((t) => ({
+  const tools: Array<Record<string, unknown>> = TOOLS.map((t) => ({
     name: t.name,
     description: t.description,
     input_schema: t.parameters
   }))
+  // Tool schemas never change, so cache the whole definitions block. This is one
+  // of the largest stable prefixes and a big cache-hit win on every turn.
+  if (tools.length > 0) {
+    tools[tools.length - 1] = { ...tools[tools.length - 1], cache_control: { type: 'ephemeral' } }
+  }
+  return tools
 }

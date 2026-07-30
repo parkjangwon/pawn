@@ -371,23 +371,3 @@
   padding: 12px var(--space-md);
   flex-shrink: 0;
 }
-
-.sidebar-fold-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: none;
-  border-radius: 7px;
-  background: transparent;
-  color: var(--text-muted);
-  cursor: pointer;
-  flex-shrink: 0;
-  -webkit-app-region: no-drag;
-}
-
-.sidebar-fold-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-}

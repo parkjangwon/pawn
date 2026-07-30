@@ -104,7 +104,8 @@
       "computer_use": "计算机操作",
       "file_write": "文件写入",
       "shell_exec": "Shell执行",
-      "browser": "浏览器"
+      "browser": "浏览器",
+      "file_read": "文件读取"
     }
   },
   "statusBar": {
@@ -140,7 +141,7 @@
       "title": "提供商",
       "desc": "管理AI提供商连接",
       "empty": "未配置提供商",
-      "add": "添加提供商",
+      "add": "添加自定义提供商",
       "name": "名称",
       "apiFormat": "API格式",
       "authMethod": "认证方式",

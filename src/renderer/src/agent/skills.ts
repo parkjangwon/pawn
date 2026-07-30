@@ -78,20 +78,59 @@ export async function loadProjectContext(projectPath: string): Promise<ProjectCo
   return ctx
 }
 
-export function buildSystemPrompt(basePrompt: string, ctx: ProjectContext): string {
-  let prompt = basePrompt
+/** First meaningful line of a skill file — its front-matter description or heading. */
+export function skillSummary(skill: LoadedSkill): string {
+  const lines = skill.content.split('\n')
+  // Prefer a YAML front-matter `description:` when present.
+  if (lines[0]?.trim() === '---') {
+    for (let i = 1; i < lines.length && lines[i].trim() !== '---'; i++) {
+      const m = lines[i].match(/^description:\s*(.+)$/i)
+      if (m) return m[1].replace(/^["']|["']$/g, '').trim().slice(0, 160)
+    }
+  }
+  const firstProse = lines
+    .map((l) => l.trim())
+    .find((l) => l && !l.startsWith('---') && !l.startsWith('#') && !l.includes(':'))
+  return (firstProse || '').slice(0, 160)
+}
+
+/**
+ * Serialize the project-scoped context (CLAUDE.md, rules, skills) into a
+ * standalone block, kept separate from the global base prompt so that base layer
+ * stays byte-identical across every project and session.
+ *
+ * Skills are listed by name and summary only. Inlining every SKILL.md body used
+ * to push tens of thousands of tokens into the system prompt of every single
+ * request, for skills the model never invoked. The body is fetched on demand
+ * through the `load_skill` tool.
+ */
+export function buildProjectContextBlock(ctx: ProjectContext): string {
+  const parts: string[] = []
 
   if (ctx.systemAdditions.length > 0) {
-    prompt += '\n\n--- Project Context ---\n'
-    prompt += ctx.systemAdditions.join('\n\n')
+    parts.push('--- Project Context ---\n' + ctx.systemAdditions.join('\n\n'))
   }
 
   if (ctx.skills.length > 0) {
-    prompt += '\n\n--- Available Skills ---\n'
-    for (const skill of ctx.skills) {
-      prompt += `\n### ${skill.name}\n${skill.content}\n`
-    }
+    const lines = ctx.skills.map((s) => {
+      const summary = skillSummary(s)
+      return summary ? `- ${s.name}: ${summary}` : `- ${s.name}`
+    })
+    parts.push(
+      '--- Available Skills ---\n' +
+      'Call load_skill with the name to read the full instructions before following one.\n' +
+      lines.join('\n')
+    )
   }
 
-  return prompt
+  return parts.join('\n\n')
+}
+
+/** Resolve a skill body by name for the `load_skill` tool. */
+export async function readSkill(projectPath: string, name: string): Promise<string | null> {
+  const ctx = await loadProjectContext(projectPath)
+  const exact = ctx.skills.find((s) => s.name === name)
+  if (exact) return exact.content
+  const loose = ctx.skills.find((s) => s.name.toLowerCase() === name.toLowerCase())
+  return loose ? loose.content : null
 }

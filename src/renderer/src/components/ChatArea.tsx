@@ -4,6 +4,7 @@ import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
+import { useUsageStore, formatCost, formatTokens } from '../stores/usage'
 import MarkdownRenderer from './MarkdownRenderer'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
 import { loadProjectContext, type LoadedSkill } from '../agent/skills'
@@ -20,10 +21,14 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>(() => useProviderStore.getState().defaultSendMode)
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
+  const [showReasoningPicker, setShowReasoningPicker] = useState(false)
   const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, clearMessages } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming } = useChatStore()
-  const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode } = useProviderStore()
+  const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
+  const usageTotals = useUsageStore((s) => (activeSessionId ? s.bySession[activeSessionId] : undefined))
+  const lastRoute = useUsageStore((s) => (activeSessionId ? s.lastRoute[activeSessionId] : undefined))
+  const [showUsagePopover, setShowUsagePopover] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const [showProjectPicker, setShowProjectPicker] = useState(false)
@@ -47,6 +52,8 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
 
   const permLabels: Record<string, string> = { ask: '승인 요청', auto: '자동 승인', yolo: '전체 권한' }
   const permDescs: Record<string, string> = { ask: '외부 파일 수정 전 확인', auto: '위험한 것만 확인', yolo: '모든 작업 자동 실행' }
+  const reasoningLabels: Record<string, string> = { auto: '추론 자동', low: '추론 낮음', medium: '추론 중간', high: '추론 높음' }
+  const reasoningDescs: Record<string, string> = { auto: '작업에 따라 자동 선택', low: '빠른 응답', medium: '균형', high: '깊은 사고' }
 
   // Detect git branch
   useEffect(() => {
@@ -285,6 +292,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   }
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.nativeEvent.isComposing) return
     const items = getItems()
     if (trigger && items.length > 0) {
       if (e.key === 'ArrowDown') { e.preventDefault(); setMenuIndex((i) => Math.min(i + 1, items.length - 1)); return }
@@ -479,6 +487,51 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
                     </svg>
                   </button>
                 )}
+                {usageTotals && usageTotals.calls > 0 && (
+                  <div className="context-chip-wrapper">
+                    <button
+                      className="context-chip usage-chip"
+                      onClick={() => setShowUsagePopover(!showUsagePopover)}
+                      title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : undefined}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                      <span>{formatCost(usageTotals.cost)}</span>
+                      {usageTotals.cacheHitRate > 0.01 && (
+                        <span className="usage-chip-cache">· {Math.round(usageTotals.cacheHitRate * 100)}% cached</span>
+                      )}
+                    </button>
+                    {showUsagePopover && (
+                      <div className="project-picker usage-popover">
+                        <div className="picker-item-label">이번 세션 사용량</div>
+                        <div className="usage-popover-row"><span>입력</span><span>{formatTokens(usageTotals.inputTokens)}</span></div>
+                        <div className="usage-popover-row"><span>출력</span><span>{formatTokens(usageTotals.outputTokens)}</span></div>
+                        <div className="usage-popover-row"><span>캐시 읽기</span><span>{formatTokens(usageTotals.cacheReadTokens)}</span></div>
+                        <div className="usage-popover-row"><span>캐시 기록</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
+                        <div className="usage-popover-row"><span>캐시 적중률</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
+                        <div className="usage-popover-row total"><span>총 비용</span><span>{formatCost(usageTotals.cost)}</span></div>
+                        {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
+                      </div>
+                    )}
+                  </div>
+                )}
+                <div className="context-chip-wrapper">
+                  <button className="context-chip model-chip-btn" onClick={() => { setShowReasoningPicker(!showReasoningPicker); setShowModelPicker(false); setShowPermPicker(false) }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                    <span>{reasoningLabels[reasoningEffort]}</span>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                  </button>
+                  {showReasoningPicker && (
+                    <div className="project-picker">
+                      {(['auto', 'low', 'medium', 'high'] as const).map((e) => (
+                        <button key={e} className={`picker-item ${reasoningEffort === e ? 'active' : ''}`} onClick={() => { setReasoningEffort(e); setShowReasoningPicker(false) }}>
+                          <span className="picker-item-label">{reasoningLabels[e]}</span>
+                          <span className="picker-item-desc">{reasoningDescs[e]}</span>
+                          {reasoningEffort === e && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 <div className="context-chip-wrapper">
                   <button className="context-chip model-chip-btn" onClick={() => { setShowModelPicker(!showModelPicker); setShowPermPicker(false) }}>
                     <span>{currentModelLabel}</span>

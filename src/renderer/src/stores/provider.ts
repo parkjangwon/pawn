@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
+import { guessPricing } from '../types/provider'
 import type { Provider, ModelEntry, RoutingMode } from '../types/provider'
 
 interface ProviderState {
@@ -9,6 +10,7 @@ interface ProviderState {
   activeModelId: string | null
   defaultSendMode: 'queue' | 'steer'
   permissionMode: 'ask' | 'auto' | 'yolo'
+  reasoningEffort: 'auto' | 'low' | 'medium' | 'high'
   initialized: boolean
   init: () => Promise<void>
 
@@ -22,6 +24,7 @@ interface ProviderState {
   setActiveModel: (id: string | null) => void
   setDefaultSendMode: (mode: 'queue' | 'steer') => void
   setPermissionMode: (mode: 'ask' | 'auto' | 'yolo') => void
+  setReasoningEffort: (effort: 'auto' | 'low' | 'medium' | 'high') => void
 }
 
 function saveToBackend(state: ProviderState): void {
@@ -30,8 +33,10 @@ function saveToBackend(state: ProviderState): void {
     models: state.models,
     settings: {
       routingMode: state.routingMode,
+      activeModelId: state.activeModelId ?? '',
       defaultSendMode: state.defaultSendMode,
-      permissionMode: state.permissionMode
+      permissionMode: state.permissionMode,
+      reasoningEffort: state.reasoningEffort
     }
   })
 }
@@ -43,18 +48,35 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   activeModelId: null,
   defaultSendMode: 'queue',
   permissionMode: 'ask',
+  reasoningEffort: 'auto',
   initialized: false,
 
   init: async () => {
     if (get().initialized) return
     try {
-      const rawConfig = await window.api.config.load() as Record<string, unknown>
+      const rawConfig = await window.api.config.load() as Record<string, any>
+      const settings = rawConfig.settings || {}
+      const models = (rawConfig.models || []) as ModelEntry[]
+      // Backfill pricing/tier for models saved before the cost model existed, so
+      // the router can reason about them instead of treating them as free.
+      const hydrated = models.map((m) => {
+        if (m.pricing) return m
+        const guess = guessPricing(m.modelId)
+        if (!guess) return m
+        return {
+          ...m,
+          pricing: { input: guess.input, output: guess.output, cacheRead: guess.cacheRead, cacheWrite: guess.cacheWrite },
+          contextWindow: m.contextWindow || guess.contextWindow
+        }
+      })
       set({
-        providers: (rawConfig as any).providers || [],
-        models: (rawConfig as any).models || [],
-        routingMode: ((rawConfig as any).settings?.routingMode as RoutingMode) || 'auto',
-        defaultSendMode: ((rawConfig as any).settings?.defaultSendMode as 'queue' | 'steer') || 'queue',
-        permissionMode: ((rawConfig as any).settings?.permissionMode as 'ask' | 'auto' | 'yolo') || 'ask',
+        providers: rawConfig.providers || [],
+        models: hydrated,
+        routingMode: (settings.routingMode as RoutingMode) || 'auto',
+        activeModelId: settings.activeModelId || null,
+        defaultSendMode: (settings.defaultSendMode as 'queue' | 'steer') || 'queue',
+        permissionMode: (settings.permissionMode as 'ask' | 'auto' | 'yolo') || 'ask',
+        reasoningEffort: (settings.reasoningEffort as 'auto' | 'low' | 'medium' | 'high') || 'auto',
         initialized: true
       })
     } catch {
@@ -92,7 +114,15 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     set((s) => { const next = { ...s, routingMode: mode }; saveToBackend(next); return { routingMode: mode } })
   },
 
-  setActiveModel: (id) => set({ activeModelId: id }),
+  setActiveModel: (id) => {
+    // Picking a model from the chip is an explicit choice; auto mode must stop
+    // overriding it, and it has to survive a restart.
+    set((s) => {
+      const next = { ...s, activeModelId: id, routingMode: (id ? 'manual' : s.routingMode) as RoutingMode }
+      saveToBackend(next)
+      return { activeModelId: id, routingMode: next.routingMode }
+    })
+  },
 
   setDefaultSendMode: (mode) => {
     set((s) => { const next = { ...s, defaultSendMode: mode }; saveToBackend(next); return { defaultSendMode: mode } })
@@ -100,5 +130,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   setPermissionMode: (mode) => {
     set((s) => { const next = { ...s, permissionMode: mode }; saveToBackend(next); return { permissionMode: mode } })
+  },
+
+  setReasoningEffort: (effort) => {
+    set((s) => { const next = { ...s, reasoningEffort: effort }; saveToBackend(next); return { reasoningEffort: effort } })
   }
 }))
