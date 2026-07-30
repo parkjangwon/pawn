@@ -1,167 +1,179 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 
+/**
+ * The panel showing the SAME embedded browser the agent tools drive (see
+ * agent/browser.ts + the main-process WebContentsView in src/main/index.ts).
+ * There is exactly one native page; this component only positions it and
+ * reflects its navigation state — it never owns separate browser state, or the
+ * agent and the user would end up looking at two different pages.
+ *
+ * In dev:web mode there is no WebContentsView to host, so it falls back to a
+ * sandboxed iframe purely for manual browsing; agent browser tools report
+ * "desktop app only" there (see agent/tools.ts requireBrowser()).
+ */
 export default function BrowserView(): React.JSX.Element {
+  const isElectron = typeof window !== 'undefined' && window.api?.platform !== 'browser' && !!window.api?.browser?.ensure
+
+  return isElectron ? <NativeBrowserView /> : <IframeBrowserView />
+}
+
+// --- Electron: native WebContentsView, positioned over a placeholder div ---
+
+function NativeBrowserView(): React.JSX.Element {
+  const containerRef = useRef<HTMLDivElement>(null)
   const [url, setUrl] = useState('')
-  const [currentUrl, setCurrentUrl] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [devMode, setDevMode] = useState(false)
-  const [deviceMode, setDeviceMode] = useState<'desktop' | 'mobile'>('desktop')
-  const [history, setHistory] = useState<string[]>([])
-  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [state, setState] = useState<{ url: string; title: string; loading: boolean; canGoBack: boolean; canGoForward: boolean }>({
+    url: '', title: '', loading: false, canGoBack: false, canGoForward: false
+  })
+  const [error, setError] = useState<string | null>(null)
+  const [showConsole, setShowConsole] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
-  const [loadError, setLoadError] = useState<string | null>(null)
-  const [useProxy, setUseProxy] = useState(false)
-  const iframeRef = useRef<HTMLIFrameElement>(null)
 
-  const isBrowser = typeof window !== 'undefined' && (window as any).api?.platform === 'browser'
-  const isElectron = typeof window !== 'undefined' && (window as any).api?.platform !== 'browser' && !!(window as any).api?.browser?.create
-
-  // In Electron mode, create native BrowserView
-  useEffect(() => {
-    if (!isElectron) return
-    const api = (window as any).api
-    api.browser.create().catch(() => {})
-    return () => { api.browser.destroy().catch(() => {}) }
-  }, [isElectron])
-
-  const navigate = useCallback((targetUrl: string): void => {
-    let finalUrl = targetUrl.trim()
-    if (!finalUrl) return
-    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
-      finalUrl = 'https://' + finalUrl
-    }
-    setCurrentUrl(finalUrl)
-    setUrl(finalUrl)
-    setLoading(true)
-    setLogs([])
-    setLoadError(null)
-    setHistory((h) => { h.push(finalUrl); return h.slice(-50) })
-    setHistoryIndex((i) => i + 1)
+  const syncBounds = useCallback(() => {
+    const el = containerRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    window.api.browser.setBounds(rect.left, rect.top, rect.width, rect.height)
   }, [])
 
-  const handleGo = (): void => navigate(url)
-  const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === 'Enter') handleGo()
-  }
-
-  const goBack = (): void => {
-    if (historyIndex > 0) {
-      const newIdx = historyIndex - 1
-      setHistoryIndex(newIdx)
-      const prev = history[newIdx]
-      setCurrentUrl(prev); setUrl(prev); setLoading(true); setLogs([]); setLoadError(null)
-    }
-  }
-
-  const goForward = (): void => {
-    if (historyIndex < history.length - 1) {
-      const newIdx = historyIndex + 1
-      setHistoryIndex(newIdx)
-      const next = history[newIdx]
-      setCurrentUrl(next); setUrl(next); setLoading(true); setLogs([]); setLoadError(null)
-    }
-  }
-
-  const refresh = (): void => {
-    if (currentUrl) navigate(currentUrl)
-  }
-
-  // Expose browser API
+  // Create (or reuse — the agent may have created it already) the native view,
+  // show it, and start positioning it over the placeholder. Hide + stop on
+  // unmount so switching to another right-panel tab doesn't leave the page
+  // floating over the new tab's content.
   useEffect(() => {
-    (window as any).__pawnBrowser = {
-      navigate,
-      refresh,
-      evaluate: (code: string): Promise<unknown> => {
-        if (isElectron) { return (window as any).api.browser.eval(code).then((r: any) => r.result) }
-        return new Promise((resolve, reject) => {
-          try {
-            if (!iframeRef.current?.contentWindow) return reject('no iframe')
-            const w = iframeRef.current.contentWindow as any
-            const result = w.eval ? w.eval(code) : undefined
-            resolve(result)
-          } catch (e) { reject(e) }
+    let cancelled = false
+    window.api.browser.ensure().then((res) => {
+      if (cancelled) return
+      if (res.error) { setError(res.error); return }
+      window.api.browser.setVisible(true)
+      syncBounds()
+      window.api.browser.state().then((s) => {
+        if (cancelled || !s.created) return
+        setState({
+          url: s.url || '', title: s.title || '', loading: s.loading === true,
+          canGoBack: s.canGoBack === true, canGoForward: s.canGoForward === true
         })
-      },
-      getUrl: () => currentUrl,
-      getLogs: () => [...logs],
-      setDevice: (mode: 'desktop' | 'mobile') => setDeviceMode(mode)
+        setUrl(s.url || '')
+      })
+    })
+
+    const off = window.api.browser.onEvent((data) => {
+      if (data.type === 'error') {
+        setError(`${data.description || 'Failed to load'} (${data.url || ''})`)
+        return
+      }
+      setError(null)
+      setState({
+        url: (data.url as string) || '', title: (data.title as string) || '',
+        loading: data.loading === true, canGoBack: data.canGoBack === true, canGoForward: data.canGoForward === true
+      })
+      if (data.type !== 'title') setUrl((data.url as string) || '')
+    })
+
+    return () => {
+      cancelled = true
+      off()
+      window.api.browser.setVisible(false)
     }
-    return () => { delete (window as any).__pawnBrowser }
-  }, [currentUrl, logs, navigate, refresh, isElectron])
+  }, [syncBounds])
 
-  // Build the src URL
-  const iframeSrc = currentUrl && isBrowser && (useProxy || devMode)
-    ? `/api/browser/proxy?url=${encodeURIComponent(currentUrl)}`
-    : currentUrl
+  // Keep the native view aligned with the placeholder across window resizes,
+  // sidebar toggles, and right-panel drag-resize — all of which change this
+  // element's rect without the element itself re-mounting.
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+    const observer = new ResizeObserver(syncBounds)
+    observer.observe(el)
+    window.addEventListener('resize', syncBounds)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener('resize', syncBounds)
+    }
+  }, [syncBounds])
 
-  const displayUrl = currentUrl ? currentUrl.replace(/^https?:\/\//, '') : ''
+  useEffect(() => {
+    if (!showConsole) return
+    let cancelled = false
+    const pull = (): void => {
+      window.api.browser.logs().then((l) => { if (!cancelled) setLogs(l) })
+    }
+    pull()
+    const id = setInterval(pull, 1000)
+    return () => { cancelled = true; clearInterval(id) }
+  }, [showConsole])
+
+  const navigate = async (target: string): Promise<void> => {
+    const t = target.trim()
+    if (!t) return
+    setError(null)
+    const res = await window.api.browser.navigate(t)
+    if (res.error) setError(res.error)
+  }
+
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.key === 'Enter') navigate(url)
+  }
 
   return (
     <div className="rp-browser">
-      {/* Navigation bar */}
       <div className="rp-browser-toolbar">
         <div className="rp-browser-nav">
-          <button className="rp-browser-navbtn" onClick={goBack} disabled={historyIndex <= 0} title="Back">
+          <button className="rp-browser-navbtn" onClick={() => window.api.browser.back()} disabled={!state.canGoBack} title="Back">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
-          <button className="rp-browser-navbtn" onClick={goForward} disabled={historyIndex >= history.length - 1} title="Forward">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
-          </button>
-          <button className="rp-browser-navbtn" onClick={refresh} title="Refresh">
+          <button className="rp-browser-navbtn" onClick={() => window.api.browser.reload()} title="Reload">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
           </button>
         </div>
 
-        {/* URL bar */}
         <div className="rp-browser-urlbar">
-          <input className="rp-browser-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={handleKeyDown} placeholder="Enter URL..." onFocus={(e) => e.target.select()} />
-          <button className="rp-browser-go" onClick={handleGo} title="Go">
+          <input
+            className="rp-browser-input"
+            value={url}
+            onChange={(e) => setUrl(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Enter URL..."
+            onFocus={(e) => e.target.select()}
+          />
+          <button className="rp-browser-go" onClick={() => navigate(url)} title="Go">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 10 4 15 9 20" /><path d="M20 4v7a4 4 0 0 1-4 4H4" /></svg>
           </button>
         </div>
 
-        {/* Mode toggles */}
         <div className="rp-browser-modes">
-          <button className={`rp-browser-modebtn ${useProxy ? 'active' : ''}`} onClick={() => setUseProxy(!useProxy)} title="Proxy mode (bypass X-Frame-Options)">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>
-          </button>
-          <button className={`rp-browser-modebtn ${deviceMode === 'mobile' ? 'active' : ''}`} onClick={() => setDeviceMode(deviceMode === 'mobile' ? 'desktop' : 'mobile')} title="Mobile view">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="5" y="2" width="14" height="20" rx="2" /><line x1="12" y1="18" x2="12" y2="18" /></svg>
-          </button>
-          <button className={`rp-browser-modebtn ${devMode ? 'active' : ''}`} onClick={() => setDevMode(!devMode)} title="Dev tools">
+          <button className={`rp-browser-modebtn ${showConsole ? 'active' : ''}`} onClick={() => setShowConsole(!showConsole)} title="Console (page logs)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+          </button>
+          <button className="rp-browser-modebtn" onClick={() => window.api.browser.devtools()} title="Open DevTools">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /></svg>
           </button>
         </div>
       </div>
 
-      {/* Viewport */}
-      <div className={`rp-browser-viewport ${deviceMode}`}>
-        {currentUrl ? (
-          <>
-            {loading && <div className="rp-browser-loading"><div className="rp-browser-spinner" /></div>}
-            {loadError && (
-              <div className="rp-browser-error-overlay">
-                <div className="rp-browser-error">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
-                  <div className="rp-browser-error-text">{loadError}</div>
-                  <button className="rp-browser-error-btn" onClick={() => setUseProxy(true)}>Enable proxy mode</button>
-                  <button className="rp-browser-error-btn secondary" onClick={() => { setUseProxy(true); navigate(currentUrl) }}>Retry with proxy</button>
-                  <button className="rp-browser-error-btn secondary" onClick={() => window.open(currentUrl, '_blank')}>Open externally</button>
-                </div>
-              </div>
-            )}
-            <iframe ref={iframeRef} className="rp-browser-frame" src={iframeSrc} onLoad={() => { setLoading(false); setLoadError(null) }} sandbox={devMode ? undefined : 'allow-scripts allow-same-origin allow-forms allow-popups'} />
-          </>
-        ) : (
+      <div className="rp-browser-viewport desktop">
+        {/* This div is a placeholder: its screen rect tells the main process where
+            to place the real WebContentsView. Nothing is ever painted inside it. */}
+        <div ref={containerRef} className="rp-browser-native-slot" />
+        {state.loading && <div className="rp-browser-loading"><div className="rp-browser-spinner" /></div>}
+        {!state.url && !error && (
           <div className="rp-browser-content">
             <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
-            <span>Enter a URL above to start browsing</span>
+            <span>Enter a URL, or let the agent navigate here</span>
+          </div>
+        )}
+        {error && (
+          <div className="rp-browser-error-overlay">
+            <div className="rp-browser-error">
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+              <div className="rp-browser-error-text">{error}</div>
+              <button className="rp-browser-error-btn secondary" onClick={() => window.api.browser.reload()}>Retry</button>
+            </div>
           </div>
         )}
       </div>
 
-      {/* Dev console */}
-      {devMode && (
+      {showConsole && (
         <div className="rp-browser-devtools">
           <div className="rp-browser-devtools-header">
             <span>Console</span>
@@ -180,6 +192,111 @@ export default function BrowserView(): React.JSX.Element {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// --- Browser (dev:web) fallback: sandboxed iframe, manual browsing only ---
+
+function IframeBrowserView(): React.JSX.Element {
+  const [url, setUrl] = useState('')
+  const [currentUrl, setCurrentUrl] = useState('')
+  const [loading, setLoading] = useState(false)
+  const [devMode, setDevMode] = useState(false)
+  const [history, setHistory] = useState<string[]>([])
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [useProxy, setUseProxy] = useState(false)
+  const iframeRef = useRef<HTMLIFrameElement>(null)
+
+  const navigate = useCallback((targetUrl: string): void => {
+    let finalUrl = targetUrl.trim()
+    if (!finalUrl) return
+    if (!finalUrl.startsWith('http://') && !finalUrl.startsWith('https://')) {
+      finalUrl = 'https://' + finalUrl
+    }
+    setCurrentUrl(finalUrl)
+    setUrl(finalUrl)
+    setLoading(true)
+    setLoadError(null)
+    setHistory((h) => { const next = [...h.slice(0, historyIndex + 1), finalUrl]; return next.slice(-50) })
+    setHistoryIndex((i) => i + 1)
+  }, [historyIndex])
+
+  const handleGo = (): void => navigate(url)
+  const handleKeyDown = (e: React.KeyboardEvent): void => { if (e.key === 'Enter') handleGo() }
+
+  const goBack = (): void => {
+    if (historyIndex > 0) {
+      const idx = historyIndex - 1
+      setHistoryIndex(idx)
+      setCurrentUrl(history[idx]); setUrl(history[idx]); setLoading(true); setLoadError(null)
+    }
+  }
+  const goForward = (): void => {
+    if (historyIndex < history.length - 1) {
+      const idx = historyIndex + 1
+      setHistoryIndex(idx)
+      setCurrentUrl(history[idx]); setUrl(history[idx]); setLoading(true); setLoadError(null)
+    }
+  }
+  const refresh = (): void => { if (currentUrl) navigate(currentUrl) }
+
+  const iframeSrc = currentUrl && (useProxy || devMode)
+    ? `/api/browser/proxy?url=${encodeURIComponent(currentUrl)}`
+    : currentUrl
+
+  return (
+    <div className="rp-browser">
+      <div className="rp-browser-toolbar">
+        <div className="rp-browser-nav">
+          <button className="rp-browser-navbtn" onClick={goBack} disabled={historyIndex <= 0} title="Back">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
+          <button className="rp-browser-navbtn" onClick={goForward} disabled={historyIndex >= history.length - 1} title="Forward">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
+          <button className="rp-browser-navbtn" onClick={refresh} title="Refresh">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+          </button>
+        </div>
+
+        <div className="rp-browser-urlbar">
+          <input className="rp-browser-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={handleKeyDown} placeholder="Enter URL..." onFocus={(e) => e.target.select()} />
+          <button className="rp-browser-go" onClick={handleGo} title="Go">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 10 4 15 9 20" /><path d="M20 4v7a4 4 0 0 1-4 4H4" /></svg>
+          </button>
+        </div>
+
+        <div className="rp-browser-modes">
+          <button className={`rp-browser-modebtn ${useProxy ? 'active' : ''}`} onClick={() => setUseProxy(!useProxy)} title="Proxy mode (bypass X-Frame-Options)">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <div className="rp-browser-viewport desktop">
+        {currentUrl ? (
+          <>
+            {loading && <div className="rp-browser-loading"><div className="rp-browser-spinner" /></div>}
+            {loadError && (
+              <div className="rp-browser-error-overlay">
+                <div className="rp-browser-error">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                  <div className="rp-browser-error-text">{loadError}</div>
+                  <button className="rp-browser-error-btn" onClick={() => setUseProxy(true)}>Enable proxy mode</button>
+                </div>
+              </div>
+            )}
+            <iframe ref={iframeRef} className="rp-browser-frame" src={iframeSrc} onLoad={() => { setLoading(false); setLoadError(null) }} sandbox="allow-scripts allow-same-origin allow-forms allow-popups" />
+          </>
+        ) : (
+          <div className="rp-browser-content">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+            <span>Enter a URL above to start browsing (agent automation requires the desktop app)</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }

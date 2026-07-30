@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useLayoutEffect } from 'react'
+import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { useAppStore } from '../stores/app'
 import TerminalView from './TerminalView'
 import FilesView from './FilesView'
@@ -40,9 +40,8 @@ export default function RightPanel(): React.JSX.Element | null {
   const [showPicker, setShowPicker] = useState(false)
   const [panelWidth, setPanelWidth] = useState(loadWidth)
   const [visible, setVisible] = useState(() => {
-    try { return localStorage.getItem('pawn-right-panel-visible') !== 'false' } catch { return false }
+    try { return localStorage.getItem('pawn-right-panel-visible') === 'true' } catch { return false }
   })
-  const resizerRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const isResizing = useRef(false)
 
@@ -104,44 +103,55 @@ export default function RightPanel(): React.JSX.Element | null {
     })
   }
 
-  // Resize logic
-  useEffect(() => {
-    const resizer = resizerRef.current
-    if (!resizer) return
-    const startResize = (e: MouseEvent) => {
+  // Resize logic. A plain useRef + useLayoutEffect(..., []) would only ever look
+  // for the resizer element on the component's FIRST render — and this component
+  // returns null whenever the panel is hidden, so on that first render (almost
+  // always `visible === false`) the element does not exist yet and the effect
+  // finds nothing and never runs again; reopening the panel later never re-runs
+  // it. A callback ref fires every time the node actually attaches to (or
+  // detaches from) the DOM, which is exactly the panel's open/close lifecycle.
+  const resizerCleanup = useRef<(() => void) | null>(null)
+  const attachResizer = useCallback((node: HTMLDivElement | null) => {
+    resizerCleanup.current?.()
+    resizerCleanup.current = null
+    if (!node) return
+
+    const startResize = (e: PointerEvent): void => {
       e.preventDefault()
       if (!panelRef.current) return
+      node.setPointerCapture?.(e.pointerId)
       isResizing.current = true
       document.body.style.cursor = 'col-resize'
       document.body.style.userSelect = 'none'
 
-      const handleMouseMove = (ev: MouseEvent) => {
-        if (!isResizing.current) return
+      const handleMove = (ev: PointerEvent): void => {
+        if (!isResizing.current || !panelRef.current) return
         const newWidth = Math.max(200, Math.min(window.innerWidth * 0.7, window.innerWidth - ev.clientX))
-        if (panelRef.current) {
-          panelRef.current.style.width = newWidth + 'px'
-          panelRef.current.style.minWidth = newWidth + 'px'
-        }
+        panelRef.current.style.width = newWidth + 'px'
+        panelRef.current.style.minWidth = newWidth + 'px'
       }
 
-      const handleMouseUp = () => {
+      const finish = (): void => {
         isResizing.current = false
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
         if (panelRef.current) {
           const finalWidth = panelRef.current.offsetWidth
           setPanelWidth(finalWidth)
-          localStorage.setItem(WIDTH_KEY, String(finalWidth))
+          try { localStorage.setItem(WIDTH_KEY, String(finalWidth)) } catch {}
         }
-        document.removeEventListener('mousemove', handleMouseMove)
-        document.removeEventListener('mouseup', handleMouseUp)
+        document.removeEventListener('pointermove', handleMove)
+        document.removeEventListener('pointerup', finish)
+        document.removeEventListener('pointercancel', finish)
       }
 
-      document.addEventListener('mousemove', handleMouseMove)
-      document.addEventListener('mouseup', handleMouseUp)
+      document.addEventListener('pointermove', handleMove)
+      document.addEventListener('pointerup', finish)
+      document.addEventListener('pointercancel', finish)
     }
-    resizer.addEventListener('mousedown', startResize)
-    return () => resizer.removeEventListener('mousedown', startResize)
+
+    node.addEventListener('pointerdown', startResize)
+    resizerCleanup.current = () => node.removeEventListener('pointerdown', startResize)
   }, [])
 
   // Cmd+B toggle
@@ -202,7 +212,7 @@ export default function RightPanel(): React.JSX.Element | null {
 
   return (
     <aside ref={panelRef} className="right-panel">
-      <div className="rp-resizer" ref={resizerRef} />
+      <div className="rp-resizer" ref={attachResizer} />
 
       {/* Tab bar */}
       <div className="rp-tabs">

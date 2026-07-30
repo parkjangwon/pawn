@@ -324,6 +324,12 @@
   gap: var(--space-sm);
 }
 
+.pricing-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-sm);
+}
+
 .add-form input,
 .add-form select {
   padding: 8px 12px;
@@ -402,6 +408,40 @@
 .add-btn-full:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.preset-section {
+  margin: var(--space-md) 0;
+}
+
+.preset-section-label {
+  margin-bottom: var(--space-sm);
+}
+
+.preset-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+}
+
+.preset-chip {
+  padding: 6px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.preset-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.preset-form {
+  margin-top: var(--space-sm);
 }
 
 @media (max-width: 768px) {

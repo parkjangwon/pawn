@@ -1,3 +1,4 @@
+import * as db from './src/main/db'
 import { resolve, join } from 'path'
 import { readFileSync, readdirSync, statSync, existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
 import { defineConfig, type Plugin } from 'vite'
@@ -36,6 +37,106 @@ function apiProxyPlugin(): Plugin {
       })
 
       
+      // Database API for browser mode — backs sessions, messages, and project lists
+      server.middlewares.use('/api/db', (req, res) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.end('Method not allowed'); return }
+        const action = (req.url || '').replace(/^\//, '').split('?')[0]
+        let body = ''
+        req.on('data', (chunk) => { body += chunk })
+        req.on('end', () => {
+          let data: Record<string, unknown> = {}
+          try { data = body ? JSON.parse(body) : {} } catch { /* empty body */ }
+          const send = (obj: unknown): void => {
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(obj))
+          }
+          try {
+            switch (action) {
+              case 'loadAll':
+                send(db.loadFullState())
+                break
+              case 'addProject':
+                db.addProject(data.id as string, data.name as string, data.path as string)
+                send({ ok: true })
+                break
+              case 'updateProjectName':
+                db.updateProjectName(data.id as string, data.name as string)
+                send({ ok: true })
+                break
+              case 'updateProjectPaths':
+                db.updateProjectPaths(data.id as string, data.paths as string)
+                send({ ok: true })
+                break
+              case 'removeProject':
+                db.removeProject(data.id as string)
+                send({ ok: true })
+                break
+              case 'addSession':
+                db.addSession(data.id as string, data.projectId as string, data.title as string, (data.path as string) || '')
+                send({ ok: true })
+                break
+              case 'updateSessionTitle':
+                db.updateSessionTitle(data.id as string, data.title as string)
+                send({ ok: true })
+                break
+              case 'updateSessionPath':
+                db.updateSessionPath(data.id as string, data.path as string)
+                send({ ok: true })
+                break
+              case 'removeSession':
+                db.removeSession(data.id as string)
+                send({ ok: true })
+                break
+              case 'addMessage':
+                db.addMessage(data.id as string, data.sessionId as string, data.role as string, data.content as string)
+                send({ ok: true })
+                break
+              case 'updateMessageContent':
+                db.updateMessageContent(data.id as string, data.content as string)
+                send({ ok: true })
+                break
+              case 'getMessages':
+                send(db.getMessagesBySession(data.sessionId as string) || [])
+                break
+              case 'deleteMessage':
+                db.deleteMessage(data.id as string)
+                send({ ok: true })
+                break
+              case 'clearMessages':
+                db.clearMessages(data.sessionId as string)
+                send({ ok: true })
+                break
+              case 'getTranscript':
+                send(db.getTranscript(data.sessionId as string))
+                break
+              case 'saveTranscript':
+                db.saveTranscript(data.sessionId as string, data.json as string)
+                send({ ok: true })
+                break
+              case 'clearTranscript':
+                db.clearTranscript(data.sessionId as string)
+                send({ ok: true })
+                break
+              case 'addUsage':
+                db.addUsage(data as unknown as Parameters<typeof db.addUsage>[0])
+                send({ ok: true })
+                break
+              case 'getUsageBySession':
+                send(db.getUsageBySession(data.sessionId as string))
+                break
+              case 'getUsageSummary':
+                send(db.getUsageSummary(Number(data.since) || 0))
+                break
+              default:
+                res.statusCode = 404
+                res.end(JSON.stringify({ error: 'Unknown db action' }))
+            }
+          } catch (err) {
+            send({ error: String(err) })
+          }
+        })
+      })
+
       // Filesystem API for browser (dev:web) mode — backs FileTree, skills, and @ mentions
       server.middlewares.use('/api/fs', (req, res) => {
         if (req.method !== 'POST') { res.statusCode = 405; res.end('Method not allowed'); return }

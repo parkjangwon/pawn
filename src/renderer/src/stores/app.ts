@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
+import { clearSessionRoute } from '../agent/router'
 
 export interface Session {
   id: string
@@ -41,6 +42,7 @@ interface AppState {
   loadMessages: (projectId: string, sessionId: string) => Promise<void>
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
+  removeMessage: (projectId: string, sessionId: string, messageId: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
   clearMessages: (projectId: string, sessionId: string) => void
 }
@@ -149,7 +151,8 @@ export const useAppStore = create<AppState>((set, get) => ({
   loadMessages: async (projectId, sessionId) => {
     if (get().loadedSessions.has(sessionId)) return
     try {
-      const messages = await window.api.db.getMessages(sessionId)
+      const raw = await window.api.db.getMessages(sessionId)
+      const messages: Message[] = Array.isArray(raw) ? (raw as Message[]) : []
       set((s) => ({
         loadedSessions: new Set([...s.loadedSessions, sessionId]),
         projects: s.projects.map((p) =>
@@ -157,7 +160,7 @@ export const useAppStore = create<AppState>((set, get) => ({
             ? {
                 ...p,
                 sessions: p.sessions.map((ss) =>
-                  ss.id === sessionId ? { ...ss, messages: messages as Message[] } : ss
+                  ss.id === sessionId ? { ...ss, messages } : ss
                 )
               }
             : p
@@ -191,6 +194,17 @@ export const useAppStore = create<AppState>((set, get) => ({
     window.api.db.updateMessageContent(messageId, content)
   },
 
+  removeMessage: (projectId, sessionId, messageId) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, messages: ss.messages.filter((m) => m.id !== messageId) } : ss) }
+          : p
+      )
+    }))
+    window.api.db.deleteMessage(messageId)
+  },
+
   updateSessionTitle: (projectId, sessionId, title) => {
     set((s) => ({
       projects: s.projects.map((p) =>
@@ -208,6 +222,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
+    // Also drops the replayed API transcript on the backend, so a cleared
+    // session really starts cold instead of silently resending the old thread.
     window.api.db.clearMessages(sessionId)
+    clearSessionRoute(sessionId)
   }
 }))

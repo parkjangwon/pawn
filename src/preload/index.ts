@@ -32,20 +32,33 @@ const api = {
     keypress: (key: string) => ipcRenderer.invoke('computer:keypress', key)
   },
 
-  // Browser
+  // Browser (embedded WebContentsView, driven by both the UI panel and the agent)
   browser: {
     open: (url: string) => ipcRenderer.invoke('browser:open', url),
+    ensure: () => ipcRenderer.invoke('browser:ensure'),
     create: () => ipcRenderer.invoke('browser:create'),
     destroy: () => ipcRenderer.invoke('browser:destroy'),
+    setVisible: (visible: boolean) => ipcRenderer.invoke('browser:setVisible', visible),
+    state: () => ipcRenderer.invoke('browser:state'),
+    logs: () => ipcRenderer.invoke('browser:logs'),
     navigate: (url: string) => ipcRenderer.invoke('browser:navigate', url),
+    back: () => ipcRenderer.invoke('browser:back'),
+    reload: () => ipcRenderer.invoke('browser:reload'),
     eval: (code: string) => ipcRenderer.invoke('browser:eval', code),
+    snapshot: (filter?: string) => ipcRenderer.invoke('browser:snapshot', filter || ''),
+    click: (ref?: string, selector?: string) => ipcRenderer.invoke('browser:click', ref || '', selector || ''),
+    fill: (ref: string | undefined, selector: string | undefined, value: string, submit?: boolean) =>
+      ipcRenderer.invoke('browser:fill', ref || '', selector || '', value, submit === true),
+    readText: (selector?: string) => ipcRenderer.invoke('browser:readText', selector || ''),
     screenshot: () => ipcRenderer.invoke('browser:screenshot'),
     devtools: () => ipcRenderer.invoke('browser:devtools'),
     setBounds: (x: number, y: number, w: number, h: number) => ipcRenderer.invoke('browser:bounds', x, y, w, h),
-    reload: () => ipcRenderer.invoke('browser:reload'),
-    goBack: () => ipcRenderer.invoke('browser:goBack'),
-    goForward: () => ipcRenderer.invoke('browser:goForward'),
-    getURL: () => ipcRenderer.invoke('browser:getURL')
+    getURL: () => ipcRenderer.invoke('browser:getURL'),
+    onEvent: (callback: (data: Record<string, unknown>) => void) => {
+      const handler = (_: unknown, data: Record<string, unknown>): void => callback(data)
+      ipcRenderer.on('browser:event', handler)
+      return () => ipcRenderer.removeListener('browser:event', handler)
+    }
   },
 
   // Notifications
@@ -89,8 +102,15 @@ const api = {
     removeSession: (id: string) => ipcRenderer.invoke('db:removeSession', id),
     addMessage: (id: string, sessionId: string, role: string, content: string) => ipcRenderer.invoke('db:addMessage', id, sessionId, role, content),
     updateMessageContent: (id: string, content: string) => ipcRenderer.invoke('db:updateMessageContent', id, content),
+    deleteMessage: (id: string) => ipcRenderer.invoke('db:deleteMessage', id),
     clearMessages: (sessionId: string) => ipcRenderer.invoke('db:clearMessages', sessionId),
-    getMessages: (sessionId: string) => ipcRenderer.invoke('db:getMessages', sessionId)
+    getMessages: (sessionId: string) => ipcRenderer.invoke('db:getMessages', sessionId),
+    getTranscript: (sessionId: string) => ipcRenderer.invoke('db:getTranscript', sessionId),
+    saveTranscript: (sessionId: string, json: string) => ipcRenderer.invoke('db:saveTranscript', sessionId, json),
+    clearTranscript: (sessionId: string) => ipcRenderer.invoke('db:clearTranscript', sessionId),
+    addUsage: (row: unknown) => ipcRenderer.invoke('db:addUsage', row),
+    getUsageBySession: (sessionId: string) => ipcRenderer.invoke('db:getUsageBySession', sessionId),
+    getUsageSummary: (since: number) => ipcRenderer.invoke('db:getUsageSummary', since)
   }
 }
 

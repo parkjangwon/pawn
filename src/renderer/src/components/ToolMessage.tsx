@@ -1,5 +1,7 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import './ToolMessage.css'
+import DiffView from './DiffView'
 
 interface ToolMessageProps {
   content: string
@@ -11,14 +13,22 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
   const [showAll, setShowAll] = useState(false)
 
   // Parse tool name and result
+  // Peel off an inline <<<DIFF:...>>> marker so we can render a DiffView
+  const diffMatch = content.match(/<<<DIFF:(.+)>>>\n--- old\n([\s\S]*?)\n\+\+\+ new\n([\s\S]*?)<<<END>>>/)
+  const diffFilename = diffMatch?.[1] || ''
+  const diffOld = diffMatch?.[2] || ''
+  const diffNew = diffMatch?.[3] || ''
+  const displayContentBase = diffMatch ? content.replace(diffMatch[0], '').trim() : content
+
   const firstLine = content.split('\n')[0] || ''
   const toolMatch = firstLine.match(/\[Tool: (\w+)\] (\w+)/)
-  const toolName = toolMatch?.[1] || 'tool'
-  const toolStatus = toolMatch?.[2] || 'OK'
+  const toolName = toolMatch?.[1] || firstLine.match(/\[Tool: (\w+)\]/)?.[1] || 'tool'
+  const toolStatus = toolMatch?.[2] || 'running'
   const isError = toolStatus === 'ERROR'
+  const isRunning = toolStatus === 'running'
 
   // Remaining content after first line
-  const remaining = content.split('\n').slice(1).join('\n').trim()
+  const remaining = displayContentBase.split('\n').slice(1).join('\n').trim()
   const truncated = remaining.length > 300 && !showAll
   const displayContent = showAll ? remaining : remaining.slice(0, 300)
 
@@ -37,7 +47,7 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
   const info = toolLabels[toolName] || { icon: '', label: toolName }
 
   return (
-    <div className={`tool-message ${isError ? 'tool-error' : ''}`}>
+    <div className={`tool-message ${isError ? 'tool-error' : ''} ${isRunning ? 'tool-running' : ''}`}>
       <div className="tool-message-header" onClick={() => setCollapsed(!collapsed)}>
         <svg
           width="10"
@@ -56,12 +66,17 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
           </svg>
         )}
         <span className="tool-name">{info.label}</span>
-        <span className={`tool-status ${isError ? 'error' : 'ok'}`}>
-          {isError ? 'ERROR' : 'OK'}
+        <span className={`tool-status ${isRunning ? 'running' : isError ? 'error' : 'ok'}`}>
+          {isRunning ? '⋯' : isError ? 'ERR' : 'OK'}
         </span>
       </div>
       {!collapsed && remaining && (
         <div className="tool-message-body">
+          {diffFilename && (
+            <div className="tool-diff-preview">
+              <DiffView oldText={diffOld} newText={diffNew} filename={diffFilename} maxLines={50} />
+            </div>
+          )}
           <pre className="tool-message-content">
             {displayContent || '(empty)'}
           </pre>

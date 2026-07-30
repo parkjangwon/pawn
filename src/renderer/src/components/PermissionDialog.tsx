@@ -11,10 +11,11 @@ export default function PermissionDialog(): React.JSX.Element | null {
   const current = pending[0]
 
   const typeLabels: Record<string, string> = {
-    computer_use: '{t("permission.types.computer_use")}',
-    file_write: '{t("permission.types.file_write")}',
-    shell_exec: '{t("permission.types.shell_exec")}',
-    browser: '{t("permission.types.browser")}'
+    computer_use: t('permission.types.computer_use'),
+    file_write: t('permission.types.file_write'),
+    file_read: t('permission.types.file_read'),
+    shell_exec: t('permission.types.shell_exec'),
+    browser: t('permission.types.browser')
   }
 
   return (

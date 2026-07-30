@@ -104,7 +104,8 @@
       "computer_use": "Computer Use",
       "file_write": "File Write",
       "shell_exec": "Shell Execution",
-      "browser": "Browser"
+      "browser": "Browser",
+      "file_read": "File Read"
     }
   },
   "statusBar": {
@@ -140,7 +141,7 @@
       "title": "Providers",
       "desc": "Manage AI provider connections",
       "empty": "No providers configured",
-      "add": "Add Provider",
+      "add": "Add Custom Provider",
       "name": "Name",
       "apiFormat": "API Format",
       "authMethod": "Auth Method",

@@ -1,0 +1,100 @@
+.tool-message {
+  margin: 4px 0;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  overflow: hidden;
+  font-size: 12px;
+}
+
+.tool-message-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tool-message-header:hover {
+  background: var(--bg-hover);
+}
+
+.tool-chevron {
+  flex-shrink: 0;
+  transition: transform 0.15s;
+  opacity: 0.5;
+}
+
+.tool-chevron.expanded {
+  transform: rotate(90deg);
+}
+
+.tool-icon {
+  flex-shrink: 0;
+  opacity: 0.5;
+}
+
+.tool-name {
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.tool-status {
+  margin-left: auto;
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+}
+
+.tool-status.ok {
+  background: rgba(34, 197, 94, 0.12);
+  color: #22c55e;
+}
+
+.tool-status.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #ef4444;
+}
+
+.tool-status.running {
+  background: rgba(59, 130, 246, 0.12);
+  color: #3b82f6;
+  animation: tool-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes tool-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+.tool-message-body {
+  border-top: 1px solid var(--border-color);
+  padding: 8px 10px;
+}
+
+.tool-message-content {
+  font-size: 11px;
+  line-height: 1.4;
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-muted);
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.tool-show-more {
+  font-size: 11px;
+  color: var(--accent);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.tool-diff-preview {
+  margin-bottom: 6px;
+}
