@@ -1,4 +1,5 @@
 import * as db from './src/main/db'
+import { loadConfig, saveConfig } from './src/main/config'
 import { resolve, join } from 'path'
 import { readFileSync, readdirSync, statSync, existsSync, mkdirSync, writeFileSync, unlinkSync } from 'fs'
 import { defineConfig, type Plugin } from 'vite'
@@ -37,6 +38,42 @@ function apiProxyPlugin(): Plugin {
       })
 
       
+      // Config API for browser mode — backs provider/model/settings persistence.
+      // Missing entirely before this: window.api.config.load()/save() called
+      // '/api/config/load' and '/api/config/save', but no middleware answered
+      // them, so every request 404'd and dev:web silently ran with providers
+      // and models that never persisted across a reload.
+      server.middlewares.use('/api/config', (req, res) => {
+        if (req.method !== 'POST') { res.statusCode = 405; res.end('Method not allowed'); return }
+        const action = (req.url || '').replace(/^\//, '').split('?')[0]
+        let body = ''
+        req.on('data', (chunk) => { body += chunk })
+        req.on('end', () => {
+          const send = (obj: unknown): void => {
+            res.setHeader('Content-Type', 'application/json')
+            res.end(JSON.stringify(obj))
+          }
+          try {
+            switch (action) {
+              case 'load':
+                send(loadConfig())
+                break
+              case 'save': {
+                const partial = body ? JSON.parse(body) : {}
+                saveConfig(partial)
+                send({ ok: true })
+                break
+              }
+              default:
+                res.statusCode = 404
+                res.end(JSON.stringify({ error: 'Unknown config action' }))
+            }
+          } catch (err) {
+            send({ error: String(err) })
+          }
+        })
+      })
+
       // Database API for browser mode — backs sessions, messages, and project lists
       server.middlewares.use('/api/db', (req, res) => {
         if (req.method !== 'POST') { res.statusCode = 405; res.end('Method not allowed'); return }
