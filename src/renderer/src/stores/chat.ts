@@ -114,6 +114,14 @@ function autoTitle(projectId: string, sessionId: string, content: string): void 
   }
 }
 
+function currentMessageContent(projectId: string, sessionId: string, messageId: string): string {
+  const msg = useAppStore.getState().projects
+    .find((p) => p.id === projectId)
+    ?.sessions.find((s) => s.id === sessionId)
+    ?.messages.find((m) => m.id === messageId)
+  return msg?.content ?? ''
+}
+
 function systemError(projectId: string, sessionId: string, text: string): void {
   useAppStore.getState().addMessage(projectId, sessionId, {
     id: `${Date.now()}-err-${Math.random().toString(36).slice(2, 8)}`,
@@ -269,16 +277,32 @@ async function agentLoop(
           )
           useUsageStore.getState().record(sessionId, decision.model, result.usage)
 
-          // Drop the placeholder if the model produced no prose — an empty
-          // bubble next to a tool card is just noise.
-          if (!result.text.trim()) {
+          // Drop the placeholder only if NOTHING was ever shown for it — an
+          // empty bubble next to a tool card is just noise. Check what was
+          // actually displayed, not result.text alone: a reasoning model can
+          // stream substantial "thinking" while result.text (the replayable
+          // final answer) stays empty, and that thinking must not vanish.
+          if (!currentMessageContent(projectId, sessionId, assistantMsgId).trim()) {
             useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
           }
           lastDecision = decision
           break
         } catch (err) {
+          // The message may already hold real, useful text streamed before the
+          // failure (a dropped connection mid-stream, or the user hitting Stop).
+          // Deleting it unconditionally threw away content the user had already
+          // read on screen. Only discard a truly empty placeholder outright.
+          const streamed = currentMessageContent(projectId, sessionId, assistantMsgId)
+          if (signal.aborted) {
+            // Stop is terminal — there is no retry to deduplicate against, so
+            // whatever was streamed becomes the final answer for this round.
+            if (!streamed.trim()) useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
+            throw err
+          }
+          // A genuine failure retries on a different model in the next attempt,
+          // which creates its own fresh bubble — keeping this attempt's partial
+          // text around would leave a confusing duplicate next to the retry.
           useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
-          if (signal.aborted) throw err
           const message = err instanceof Error ? err.message : String(err)
           noteProviderFailure(decision.provider.id)
           excluded.add(decision.key)
@@ -518,6 +542,12 @@ async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const decoder = new TextDecoder()
   let buffer = ''
   let fullText = ''
+  // Some OpenAI-compatible reasoning models (DeepSeek Reasoner, QwQ, etc.) stream
+  // their visible "thinking" in a separate `reasoning_content` field instead of
+  // `content`. It has no replayable wire form on OpenAI-format APIs, so it is
+  // shown live but never included in `fullText` — persisting it back as the
+  // assistant's message would resend "thinking" as if it were a real answer.
+  let reasoningText = ''
   const toolCalls: ToolCall[] = []
   const thinking: TranscriptThinking[] = []
   const usage: CallUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
@@ -525,7 +555,8 @@ async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const thinkingBuffers = new Map<number, TranscriptThinking>()
 
   const flushText = (): void => {
-    useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, fullText)
+    const display = reasoningText ? `${reasoningText}${fullText ? '\n\n' + fullText : ''}` : fullText
+    useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, display)
   }
 
   try {
@@ -626,10 +657,9 @@ async function callLLM(req: LlmRequest): Promise<LlmResult> {
           fullText += choice.delta.content
           flushText()
         }
-        // Some gateways stream reasoning separately; surface it as text rather
-        // than dropping it, but never echo it back as a provider-native block.
         if (typeof choice.delta?.reasoning_content === 'string' && choice.delta.reasoning_content) {
-          // Reasoning text is not replayable on OpenAI-format APIs — show only.
+          reasoningText += choice.delta.reasoning_content
+          flushText()
         }
         if (choice.delta?.tool_calls) {
           for (const tc of choice.delta.tool_calls) {
