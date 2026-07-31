@@ -7,6 +7,7 @@
   border-left: 1px solid var(--border-color);
   position: relative;
   overflow: hidden;
+  transition: width 0.2s var(--ease-spring), min-width 0.2s var(--ease-spring);
 }
 
 /* Resize handle */

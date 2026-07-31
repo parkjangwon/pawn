@@ -167,6 +167,15 @@ function apiProxyPlugin(): Plugin {
               case 'removeSession': db.removeSession(data.id); res.end('{"ok":true}'); break
               case 'addMessage': db.addMessage(data.id, data.sessionId, data.role, data.content); res.end('{"ok":true}'); break
               case 'updateMessageContent': db.updateMessageContent(data.id, data.content); res.end('{"ok":true}'); break
+              case 'getMessages': res.end(JSON.stringify(db.getMessagesBySession(data.sessionId) || [])); break
+              case 'deleteMessage': db.deleteMessage(data.id); res.end('{"ok":true}'); break
+              case 'clearMessages': db.clearMessages(data.sessionId); res.end('{"ok":true}'); break
+              case 'getTranscript': res.end(JSON.stringify(db.getTranscript(data.sessionId))); break
+              case 'saveTranscript': db.saveTranscript(data.sessionId, data.json); res.end('{"ok":true}'); break
+              case 'clearTranscript': db.clearTranscript(data.sessionId); res.end('{"ok":true}'); break
+              case 'addUsage': db.addUsage(data); res.end('{"ok":true}'); break
+              case 'getUsageBySession': res.end(JSON.stringify(db.getUsageBySession(data.sessionId))); break
+              case 'getUsageSummary': res.end(JSON.stringify(db.getUsageSummary(Number(data.since) || 0))); break
               default: res.statusCode = 404; res.end('{"error":"Unknown action"}')
             }
           } catch (err) {

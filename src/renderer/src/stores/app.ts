@@ -31,7 +31,7 @@ interface AppState {
   initialized: boolean
   loadedSessions: Set<string>
   init: () => Promise<void>
-  addProject: (name: string, paths: string[]) => void
+  addProject: (name: string, paths: string[], id?: string) => void
   removeProject: (id: string) => void
   setActiveProject: (id: string) => void
   updateProjectName: (projectId: string, name: string) => void
@@ -78,8 +78,8 @@ export const useAppStore = create<AppState>((set, get) => ({
     }
   },
 
-  addProject: (name, paths) => {
-    const id = uid()
+  addProject: (name, paths, id) => {
+    id = id || uid()
     const project: Project = { id, name, paths, sessions: [] }
     set((s) => ({ projects: [...s.projects, project], activeProjectId: id }))
     window.api.db.addProject(id, name, JSON.stringify(paths))

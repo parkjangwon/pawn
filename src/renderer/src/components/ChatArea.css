@@ -24,8 +24,18 @@
   display: flex;
 }
 
-.app.sidebar-collapsed .chat-header {
+.app:not(.platform-mac).sidebar-collapsed .chat-header {
   padding-left: 72px;
+}
+
+/* On macOS the sidebar toggle stays anchored next to the traffic lights, so
+   its position never depends on whether the sidebar is open or collapsed. */
+.app.platform-mac .close-sidebar-btn {
+  position: fixed;
+  left: 86px;
+  top: 9px;
+  z-index: 40;
+  -webkit-app-region: no-drag;
 }
 
 .chat-header-spacer {
@@ -551,6 +561,8 @@
 .model-picker {
   right: 0;
   left: auto;
+  max-height: 360px;
+  overflow-y: auto;
 }
 
 .usage-chip {

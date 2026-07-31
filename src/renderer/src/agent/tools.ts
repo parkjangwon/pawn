@@ -1,5 +1,6 @@
 import { usePermissionStore, type PermissionType } from '../stores/permission'
 import { useProviderStore } from '../stores/provider'
+import { useThemeStore } from '../stores/theme'
 import { readSkill } from './skills'
 import { getBrowserAgent, type BrowserAgent } from './browser'
 
@@ -27,7 +28,14 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   computer_screenshot: 'risky',
   computer_click: 'risky',
   computer_type: 'risky',
-  computer_keypress: 'risky'
+  computer_keypress: 'risky',
+  app_open_tab: 'safe',
+  app_close_tab: 'safe',
+  app_set_model: 'safe',
+  app_set_reasoning: 'safe',
+  app_toggle_theme: 'safe',
+  // Escalating permissions (auto -> yolo) deserves an explicit confirmation.
+  app_set_permission_mode: 'risky'
 }
 
 // Permission mode
@@ -249,6 +257,56 @@ export const TOOLS: ToolDefinition[] = [
       },
       required: ['query']
     }
+  },
+  {
+    name: 'app_open_tab',
+    description: 'Open the right panel on one of the app tool tabs: terminal, files, git, browser, diff. Use this to show the user what you are doing.',
+    parameters: {
+      type: 'object',
+      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff'], description: 'Which app tool tab to open' } },
+      required: ['tab']
+    }
+  },
+  {
+    name: 'app_close_tab',
+    description: 'Close an app tool tab in the right panel: terminal, files, git, browser, diff. Closing the browser also discards its current page.',
+    parameters: {
+      type: 'object',
+      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff'], description: 'Which app tool tab to close' } },
+      required: ['tab']
+    }
+  },
+  {
+    name: 'app_set_model',
+    description: 'Change the active model used for replies. Pass "auto" to let the router pick the best model, or a model id/label from the configured models. Takes effect from the next request.',
+    parameters: {
+      type: 'object',
+      properties: { model: { type: 'string', description: '"auto" or a configured model id/label' } },
+      required: ['model']
+    }
+  },
+  {
+    name: 'app_set_permission_mode',
+    description: 'Change how tool permissions are handled: ask (confirm each risky action), auto (auto-approve safe actions), yolo (approve everything without asking).',
+    parameters: {
+      type: 'object',
+      properties: { mode: { type: 'string', enum: ['ask', 'auto', 'yolo'], description: 'Permission mode' } },
+      required: ['mode']
+    }
+  },
+  {
+    name: 'app_set_reasoning',
+    description: 'Set the reasoning effort for reasoning-capable models: auto, low, medium or high.',
+    parameters: {
+      type: 'object',
+      properties: { effort: { type: 'string', enum: ['auto', 'low', 'medium', 'high'], description: 'Reasoning effort' } },
+      required: ['effort']
+    }
+  },
+  {
+    name: 'app_toggle_theme',
+    description: 'Switch the app between light and dark theme.',
+    parameters: { type: 'object', properties: {} }
   }
 ]
 
@@ -273,10 +331,25 @@ async function checkPermission(
     computer_screenshot: 'Take Screenshot',
     computer_click: 'Mouse Click',
     computer_type: 'Type Text',
+    computer_keypress: 'Press Key',
+    browser_navigate: 'Navigate Browser',
+    browser_snapshot: 'Read Page Elements',
+    browser_read_text: 'Read Page Text',
+    browser_screenshot: 'Take Page Screenshot',
+    browser_back: 'Browser Back',
     browser_click: 'Click in Browser',
     browser_fill: 'Type in Browser',
     browser_eval: 'Evaluate JS in Page',
-    browser_open_external: 'Open External Browser'
+    browser_open_external: 'Open External Browser',
+    load_skill: 'Load Skill',
+    search_files: 'Search Files',
+    grep_search: 'Search Text',
+    app_open_tab: 'Open App Tab',
+    app_close_tab: 'Close App Tab',
+    app_set_model: 'Change Model',
+    app_set_permission_mode: 'Change Permission Mode',
+    app_set_reasoning: 'Change Reasoning Effort',
+    app_toggle_theme: 'Toggle Theme'
   }
 
   const approved = await usePermissionStore.getState().request({
@@ -285,7 +358,9 @@ async function checkPermission(
         computer_screenshot: 'computer_use', computer_click: 'computer_use', computer_type: 'computer_use', computer_keypress: 'computer_use',
         browser_eval: 'browser', browser_click: 'browser', browser_fill: 'browser', browser_open_external: 'browser',
         shell_exec: 'shell_exec',
-        write_file: 'file_write', edit_file: 'file_write'
+        write_file: 'file_write', edit_file: 'file_write',
+        app_open_tab: 'app', app_close_tab: 'app', app_set_model: 'app',
+        app_set_permission_mode: 'app', app_set_reasoning: 'app', app_toggle_theme: 'app'
       }
       return map[callName] || 'file_read'
     })() as PermissionType,
@@ -307,16 +382,31 @@ async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: stri
   }
   const ready = await agent.ensure()
   if (ready.error) return { error: ready.error }
+  // Surface the work: open the right panel on the browser tab so the page the
+  // agent is driving is visible instead of happening off-screen.
+  try {
+    (window as any).__openRightPanelTab?.('browser')
+  } catch {
+    // No panel bridge (e.g. dev:web) — browsing still proceeds headlessly.
+  }
   return { agent }
 }
 
 // Convert a glob pattern to a RegExp and test against a filename
 function matchesGlob(name: string, pattern: string): boolean {
-  // Escape all special regex chars except * and ?
-  const regexStr = pattern
+  // Convert a glob pattern to a RegExp that understands:
+  //   **  — matches zero or more path segments (across / boundaries)
+  //   *   — matches within a single path segment (no /)
+  //   ?   — matches exactly one non-/ character
+  let regexStr = pattern
+    // Replace ** first so it does not collide with single *
+    .replace(/\*{2,}/g, '__GLOBSTAR__')
+    // Escape all special regex chars except the remaining * and ?
     .replace(/[.+^${}()|[\]\\]/g, '\\$&')
-    .replace(/\*/g, '.*')
-    .replace(/\?/g, '.')
+    // Now translate glob tokens to regex
+    .replace(/\?/g, '[^/]')
+    .replace(/\*/g, '[^/]*')
+    .replace(/__GLOBSTAR__/g, '.*')
   try {
     return new RegExp(`^${regexStr}$`, 'i').test(name)
   } catch {
@@ -564,7 +654,14 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         if (!Array.isArray(walkResult)) {
           return { toolCallId: call.id, content: (walkResult as { error: string }).error, isError: true }
         }
-        const files = walkResult.filter((f) => !f.isDirectory && matchesGlob(f.name, pattern))
+        // Match against the path relative to the search root so **/*.ts and
+        // src/**/*.css work as expected.
+        const root = rootPath.endsWith('/') ? rootPath : rootPath + '/'
+        const files = walkResult.filter((f) => {
+          if (f.isDirectory) return false
+          const rel = f.path.startsWith(root) ? f.path.slice(root.length) : f.name
+          return matchesGlob(rel, pattern)
+        })
         if (files.length === 0) return { toolCallId: call.id, content: 'No files found matching: ' + pattern }
         return { toolCallId: call.id, content: `Found ${files.length} files:\n${files.slice(0, 50).map((f) => f.path).join('\n')}` }
       }
@@ -578,8 +675,13 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         if (!Array.isArray(walkResult2)) {
           return { toolCallId: call.id, content: (walkResult2 as { error: string }).error, isError: true }
         }
+        const grepRoot2 = (grepRoot.endsWith('/') ? grepRoot : grepRoot + '/')
         const candidates = filePattern
-          ? walkResult2.filter((f) => !f.isDirectory && matchesGlob(f.name, filePattern))
+          ? walkResult2.filter((f) => {
+              if (f.isDirectory) return false
+              const rel = f.path.startsWith(grepRoot2) ? f.path.slice(grepRoot2.length) : f.name
+              return matchesGlob(rel, filePattern)
+            })
           : walkResult2.filter((f) => !f.isDirectory)
         let regex: RegExp
         try {
@@ -603,6 +705,72 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         }
         if (matches.length === 0) return { toolCallId: call.id, content: 'No matches found for: ' + query }
         return { toolCallId: call.id, content: matches.join('\n').slice(0, 3000) }
+      }
+
+      case 'app_open_tab': {
+        const tab = String(call.arguments.tab || '')
+        const valid = ['terminal', 'files', 'git', 'browser', 'diff']
+        if (!valid.includes(tab)) {
+          return { toolCallId: call.id, content: `Unknown tab "${tab}". Valid tabs: ${valid.join(', ')}`, isError: true }
+        }
+        try { (window as any).__openRightPanelTab?.(tab) } catch {}
+        return { toolCallId: call.id, content: `Opened right panel on tab: ${tab}` }
+      }
+
+      case 'app_close_tab': {
+        const tab = String(call.arguments.tab || '')
+        const valid = ['terminal', 'files', 'git', 'browser', 'diff']
+        if (!valid.includes(tab)) {
+          return { toolCallId: call.id, content: `Unknown tab "${tab}". Valid tabs: ${valid.join(', ')}`, isError: true }
+        }
+        try { (window as any).__closeRightPanelTab?.(tab) } catch {}
+        return { toolCallId: call.id, content: `Closed tab: ${tab}` }
+      }
+
+      case 'app_set_model': {
+        const requested = String(call.arguments.model ?? '').trim()
+        const { models, setActiveModel, setRoutingMode } = useProviderStore.getState()
+        if (!requested || requested === 'auto') {
+          setActiveModel(null)
+          setRoutingMode('auto')
+          return { toolCallId: call.id, content: 'Model set to auto (router picks per task)' }
+        }
+        const target = models.find((m) =>
+          m.id === requested || m.modelId === requested || m.label === requested
+        )
+        if (!target) {
+          const available = models.filter((m) => m.enabled).map((m) => m.label || m.modelId).join(', ')
+          return {
+            toolCallId: call.id,
+            content: `Unknown model "${requested}". Configured models: ${available || '(none)'}`,
+            isError: true
+          }
+        }
+        setActiveModel(target.id)
+        return { toolCallId: call.id, content: `Model set to ${target.label || target.modelId}` }
+      }
+
+      case 'app_set_permission_mode': {
+        const mode = call.arguments.mode as 'ask' | 'auto' | 'yolo'
+        if (!['ask', 'auto', 'yolo'].includes(mode)) {
+          return { toolCallId: call.id, content: `Unknown permission mode "${mode}". Valid: ask, auto, yolo`, isError: true }
+        }
+        useProviderStore.getState().setPermissionMode(mode)
+        return { toolCallId: call.id, content: `Permission mode set to ${mode}` }
+      }
+
+      case 'app_set_reasoning': {
+        const effort = call.arguments.effort as 'auto' | 'low' | 'medium' | 'high'
+        if (!['auto', 'low', 'medium', 'high'].includes(effort)) {
+          return { toolCallId: call.id, content: `Unknown reasoning effort "${effort}". Valid: auto, low, medium, high`, isError: true }
+        }
+        useProviderStore.getState().setReasoningEffort(effort)
+        return { toolCallId: call.id, content: `Reasoning effort set to ${effort}` }
+      }
+
+      case 'app_toggle_theme': {
+        useThemeStore.getState().toggle()
+        return { toolCallId: call.id, content: 'Theme toggled' }
       }
 
       default:

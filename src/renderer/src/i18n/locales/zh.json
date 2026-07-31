@@ -88,7 +88,11 @@
     "workWithoutProject": "无项目工作"
   },
   "modelPicker": {
-    "noModels": "没有可用模型"
+    "noModels": "没有可用模型",
+    "autoLabel": "自动",
+    "autoDesc": "根据任务自动选择模型",
+    "modelsLabel": "模型",
+    "reasoningLabel": "推理"
   },
   "permission": {
     "title": "权限请求",
@@ -105,7 +109,8 @@
       "file_write": "文件写入",
       "shell_exec": "Shell执行",
       "browser": "浏览器",
-      "file_read": "文件读取"
+      "file_read": "文件读取",
+      "app": "应用控制"
     }
   },
   "statusBar": {

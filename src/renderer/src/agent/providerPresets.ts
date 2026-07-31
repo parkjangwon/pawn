@@ -106,10 +106,22 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
   },
   {
     id: 'dashscope',
-    name: 'Alibaba Cloud (DashScope / Qwen)',
+    name: 'Alibaba Cloud Token Plan (OpenAI)',
     apiFormat: 'openai',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    keyHint: 'dashscope.console.aliyun.com — API-KEY 발급',
+    baseUrl: 'https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1',
+    keyHint: 'bailian.console.aliyun.com — Token Plan API-KEY 발급',
+    models: [
+      model('qwen-turbo', 'Qwen Turbo', 'low'),
+      model('qwen-plus', 'Qwen Plus', 'mid'),
+      model('qwen-max', 'Qwen Max', 'high')
+    ]
+  },
+  {
+    id: 'dashscope-anthropic',
+    name: 'Alibaba Cloud Token Plan (Anthropic)',
+    apiFormat: 'claude',
+    baseUrl: 'https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic',
+    keyHint: 'bailian.console.aliyun.com — Token Plan API-KEY 발급',
     models: [
       model('qwen-turbo', 'Qwen Turbo', 'low'),
       model('qwen-plus', 'Qwen Plus', 'mid'),

@@ -57,6 +57,10 @@ Tool use:
 - Browser automation: browser_navigate to load a page, browser_snapshot to see its
   interactive elements, then browser_click / browser_fill / browser_eval to act.
   Always snapshot after a navigation or a click that changes the page.
+- App control: you can also drive the pawn app itself — app_open_tab and
+  app_close_tab manage the right-panel tool tabs, app_set_model switches the
+  active model (or "auto"), app_set_permission_mode / app_set_reasoning adjust
+  settings, and app_toggle_theme flips the theme.
 - load_skill fetches the full text of a project skill by name. The system prompt
   lists only skill names and summaries; load the body when you actually need it.
 
@@ -769,15 +773,23 @@ async function fetchWithRetry(
   const payload = JSON.stringify(body)
   let lastError: Error | null = null
 
+  // Flag set only when the error is transient (network blip, 429, 5xx).
+  // 4xx and parse failures never retry — the same bytes fail forever.
+  let retryable = false
+
   for (let attempt = 0; attempt < 3; attempt++) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     if (attempt > 0) {
+      if (!retryable) throw lastError!
       await new Promise((r) => setTimeout(r, 700 * (1 << (attempt - 1))))
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     }
 
+    retryable = false
+
+    let response: Response
     try {
-      const response = isBrowser
+      response = isBrowser
         ? await fetch('/api/proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -785,24 +797,28 @@ async function fetchWithRetry(
             signal
           })
         : await fetch(url, { method: 'POST', headers, body: payload, signal })
-
-      if (response.ok) return response
-
-      const status = response.status
-      const text = await response.text().catch(() => '')
-      const err = new Error(`HTTP ${status}: ${text.slice(0, 300)}`)
-      if (status === 429 || status >= 500) {
-        lastError = err
-        continue
-      }
-      throw err
     } catch (err) {
+      // Only a fetch that never produced a response is a network blip worth
+      // retrying; a 4xx below is a bad request and must not be retried.
       if (err instanceof DOMException && err.name === 'AbortError') throw err
       if (signal.aborted) throw err
+      retryable = true
       lastError = err as Error
-      // A thrown non-HTTP error is a network failure; retry it.
       if (attempt === 2) throw lastError
+      continue
     }
+
+    if (response.ok) return response
+
+    const status = response.status
+    const text = await response.text().catch(() => '')
+    const err = new Error(`HTTP ${status}: ${text.slice(0, 300)}`)
+    if (status === 429 || status >= 500) {
+      retryable = true
+      lastError = err
+      continue
+    }
+    throw err
   }
 
   throw lastError ?? new Error('request failed')

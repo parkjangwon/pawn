@@ -24,83 +24,125 @@ const TOOLS: ToolDef[] = [
   { id: 'diff', icon: 'M16 18l6-6-6-6M8 6l-6 6 6 6', label: 'Diff', desc: 'Recent file changes' }
 ]
 
-const WIDTH_KEY = 'pawn-right-panel-width'
-
-function loadWidth(): number {
-  try { return parseInt(localStorage.getItem(WIDTH_KEY) || '320', 10) } catch { return 320 }
-}
+// The panel is intentionally ephemeral: every launch starts closed and empty.
+const DEFAULT_WIDTH = 320
+const HIDE_MS = 220
 
 export default function RightPanel(): React.JSX.Element | null {
-  const [openTabs, setOpenTabs] = useState<TabId[]>(() => {
-    try { return JSON.parse(localStorage.getItem('pawn-right-panel-tabs') || '[]') } catch { return [] }
-  })
-  const [activeTab, setActiveTab] = useState<TabId | null>(() => {
-    try { return (localStorage.getItem('pawn-right-panel-tab') as TabId) || null } catch { return null }
-  })
+  const [openTabs, setOpenTabs] = useState<TabId[]>([])
+  const [activeTab, setActiveTab] = useState<TabId | null>(null)
   const [showPicker, setShowPicker] = useState(false)
-  const [panelWidth, setPanelWidth] = useState(loadWidth)
-  const [visible, setVisible] = useState(() => {
-    try { return localStorage.getItem('pawn-right-panel-visible') === 'true' } catch { return false }
-  })
+  const [panelWidth, setPanelWidth] = useState(DEFAULT_WIDTH)
+  const [visible, setVisible] = useState(false)
+  const [closing, setClosing] = useState(false)
+  const [opening, setOpening] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const isResizing = useRef(false)
+  const hideTimer = useRef<number | null>(null)
+  // The Cmd+B handler below closes over the first render's state, so it must
+  // never read `openTabs` directly — mirror it in a ref instead.
+  const openTabsRef = useRef<TabId[]>(openTabs)
+  const visibleRef = useRef(visible)
+  const activeTabRef = useRef<TabId | null>(activeTab)
+  const closingRef = useRef(closing)
+  useEffect(() => { openTabsRef.current = openTabs }, [openTabs])
+  useEffect(() => { visibleRef.current = visible }, [visible])
+  useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
+  useEffect(() => { closingRef.current = closing }, [closing])
+  useEffect(() => () => { if (hideTimer.current) window.clearTimeout(hideTimer.current) }, [])
 
   const { projects, activeProjectId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const projectPath = activeProject?.paths?.[0] || ''
 
- // Apply panelWidth from state to DOM
+  // Apply panelWidth from state to DOM. The opening render starts at width 0 so
+  // the transition slides the panel in; closing animates it back out.
   useLayoutEffect(() => {
     if (!visible) return
     requestAnimationFrame(() => {
-      if (panelRef.current && !isResizing.current) {
-        panelRef.current.style.width = panelWidth + 'px'
-        panelRef.current.style.minWidth = panelWidth + 'px'
-      }
+      if (!panelRef.current || isResizing.current || closingRef.current) return
+      panelRef.current.style.width = panelWidth + 'px'
+      panelRef.current.style.minWidth = panelWidth + 'px'
+      setOpening(false)
     })
   }, [panelWidth, visible])
 
+  const cancelHide = (): void => {
+    if (hideTimer.current) {
+      window.clearTimeout(hideTimer.current)
+      hideTimer.current = null
+    }
+    setClosing(false)
+  }
+
+  const requestHide = (): void => {
+    if (closingRef.current) return
+    // Closing the panel closes the browser along with it: drop the native page
+    // so reopening the browser doesn't resurrect the last visited site.
+    if (openTabsRef.current.includes('browser')) {
+      window.api.browser?.destroy?.()
+    }
+    setClosing(true)
+    hideTimer.current = window.setTimeout(() => {
+      setVisible(false)
+      setClosing(false)
+      hideTimer.current = null
+    }, HIDE_MS)
+  }
+
   // Save visibility
   const toggleVisible = (): void => {
-    setVisible((v) => {
-      const next = !v
-      try { localStorage.setItem('pawn-right-panel-visible', String(next)) } catch {}
-      return next
-    })
+    if (closingRef.current) {
+      cancelHide()
+      return
+    }
+    if (visibleRef.current) {
+      requestHide()
+    } else {
+      setOpening(true)
+      setVisible(true)
+    }
   }
 
   // Open a tool as a tab (or switch to it if already open)
   const openTool = (id: TabId): void => {
     setOpenTabs((prev) => {
       const next = prev.includes(id) ? prev : [...prev, id]
-      localStorage.setItem('pawn-right-panel-tabs', JSON.stringify(next))
       return next
     })
     setActiveTab(id)
-    localStorage.setItem('pawn-right-panel-tab', id)
     setShowPicker(false)
   }
 
   // Switch to a tab
   const switchTab = (id: TabId): void => {
     setActiveTab(id)
-    localStorage.setItem('pawn-right-panel-tab', id)
   }
 
-  // Close a tab
+  // Close a tab (shared by the X button and the agent's app_close_tab tool).
+  // `activeTab` is read via ref so a window-registered bridge never acts on a
+  // stale first-render closure. The ref is updated synchronously so rapid
+  // successive closes (same event loop tick) still see fresh state.
+  const closeTabById = (id: TabId): void => {
+    // Closing the browser tab throws the page away; a fresh view (and a blank
+    // page) is created the next time the tab is opened.
+    if (id === 'browser') {
+      window.api.browser?.destroy?.()
+    }
+    if (!openTabsRef.current.includes(id)) return
+    const next = openTabsRef.current.filter((t) => t !== id)
+    openTabsRef.current = next
+    setOpenTabs(next)
+    if (activeTabRef.current === id) {
+      const newActive = next.length > 0 ? next[next.length - 1] : null
+      setActiveTab(newActive)
+      if (!newActive) requestHide()
+    }
+  }
+
   const closeTab = (id: TabId, e: React.MouseEvent): void => {
     e.stopPropagation()
-    setOpenTabs((prev) => {
-      const next = prev.filter((t) => t !== id)
-      localStorage.setItem('pawn-right-panel-tabs', JSON.stringify(next))
-      if (activeTab === id) {
-        const newActive = next.length > 0 ? next[next.length - 1] : null
-        setActiveTab(newActive)
-        if (newActive) localStorage.setItem('pawn-right-panel-tab', newActive)
-        else setVisible(false)
-      }
-      return next
-    })
+    closeTabById(id)
   }
 
   // Resize logic. A plain useRef + useLayoutEffect(..., []) would only ever look
@@ -121,6 +163,8 @@ export default function RightPanel(): React.JSX.Element | null {
       if (!panelRef.current) return
       node.setPointerCapture?.(e.pointerId)
       isResizing.current = true
+      // Width transitions would fight the pointer, making the drag feel springy.
+      panelRef.current.style.transition = 'none'
       document.body.style.cursor = 'col-resize'
       document.body.style.userSelect = 'none'
 
@@ -133,12 +177,12 @@ export default function RightPanel(): React.JSX.Element | null {
 
       const finish = (): void => {
         isResizing.current = false
+        if (panelRef.current) panelRef.current.style.transition = ''
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
         if (panelRef.current) {
           const finalWidth = panelRef.current.offsetWidth
           setPanelWidth(finalWidth)
-          try { localStorage.setItem(WIDTH_KEY, String(finalWidth)) } catch {}
         }
         document.removeEventListener('pointermove', handleMove)
         document.removeEventListener('pointerup', finish)
@@ -172,7 +216,33 @@ export default function RightPanel(): React.JSX.Element | null {
     return () => { delete (window as any).__toggleRightPanel }
   }, [])
 
-  if (!visible) return null
+  // Expose open-on-tab to window. Agent browser tools call this so their work
+  // happens in front of the user instead of in an off-screen view.
+  useEffect(() => {
+    (window as any).__openRightPanelTab = (id: TabId): void => {
+      if (closingRef.current) cancelHide()
+      if (visibleRef.current && activeTabRef.current === id && openTabsRef.current.includes(id)) return
+      setOpening(true)
+      setVisible(true)
+      setOpenTabs((prev) => {
+        const next = prev.includes(id) ? prev : [...prev, id]
+        return next
+      })
+      setActiveTab(id)
+      setShowPicker(false)
+    }
+    return () => { delete (window as any).__openRightPanelTab }
+  }, [])
+
+  // Expose close-tab to window so the agent can close tool tabs on request.
+  useEffect(() => {
+    (window as any).__closeRightPanelTab = (id: TabId): void => {
+      closeTabById(id)
+    }
+    return () => { delete (window as any).__closeRightPanelTab }
+  }, [])
+
+  if (!visible && !closing) return null
 
   const renderContent = (): React.JSX.Element => {
     if (openTabs.length === 0) {
@@ -211,7 +281,14 @@ export default function RightPanel(): React.JSX.Element | null {
   }
 
   return (
-    <aside ref={panelRef} className="right-panel">
+    <aside
+      ref={panelRef}
+      className={`right-panel ${closing ? 'closing' : ''}`}
+      style={{
+        width: closing || opening ? 0 : panelWidth,
+        minWidth: closing || opening ? 0 : panelWidth
+      }}
+    >
       <div className="rp-resizer" ref={attachResizer} />
 
       {/* Tab bar */}

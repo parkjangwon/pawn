@@ -56,15 +56,27 @@ export function loadConfig(): PawnConfig {
   }
 }
 
+function deepMerge(a: Record<string, unknown>, b: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = { ...a }
+  for (const key of Object.keys(b)) {
+    const av = a[key]
+    const bv = b[key]
+    // Arrays are replaced wholesale (providers, models, etc.)
+    if (av && bv && typeof av === 'object' && typeof bv === 'object' && !Array.isArray(av) && !Array.isArray(bv)) {
+      out[key] = deepMerge(av as Record<string, unknown>, bv as Record<string, unknown>)
+    } else {
+      out[key] = bv
+    }
+  }
+  return out
+}
+
 export function saveConfig(partial: PawnConfig): void {
   ensureDir()
-  // Merge with existing config instead of overwriting
+  // Recursively merge: settings, and any future nested keys, merge safely.
+  // Arrays (providers, models) are always passed in full and replace wholesale.
   const existing = loadConfig()
-  const merged: PawnConfig = {
-    ...existing,
-    ...partial,
-    settings: { ...existing.settings, ...partial.settings }
-  }
+  const merged = deepMerge(existing as Record<string, unknown>, partial as Record<string, unknown>) as PawnConfig
   const raw = stringify(merged as Record<string, unknown>)
   writeFileSync(CONFIG_PATH, raw, 'utf-8')
 }
