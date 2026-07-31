@@ -1,0 +1,253 @@
+import { useTranslation } from 'react-i18next'
+import TriggerMenu, { type TriggerItem } from './TriggerMenu'
+import { useProviderStore } from '../stores/provider'
+import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
+import type { Project } from '../stores/app'
+
+interface ComposerProps {
+  activeSession: boolean
+  activeSessionId: string | null
+  input: string
+  onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
+  onKeyDown: (e: React.KeyboardEvent) => void
+  onSend: () => void
+  textareaRef: React.RefObject<HTMLTextAreaElement | null>
+  trigger: { type: '/' | '@'; start: number; query: string } | null
+  triggerItems: TriggerItem[]
+  menuIndex: number
+  onMenuIndexChange: (i: number) => void
+  filesLoading: boolean
+  onSelect: (item: TriggerItem) => void
+  projects: Project[]
+  activeProject: Project | undefined
+  activeProjectId: string | null
+  onSelectProject: (id: string) => void
+  gitBranch: string | null
+  showProjectPicker: boolean
+  setShowProjectPicker: (v: boolean) => void
+  showPermPicker: boolean
+  setShowPermPicker: (v: boolean) => void
+  showModelPicker: boolean
+  setShowModelPicker: (v: boolean) => void
+  showUsagePopover: boolean
+  setShowUsagePopover: (v: boolean) => void
+  projectPickerRef: React.RefObject<HTMLDivElement | null>
+  permPickerRef: React.RefObject<HTMLDivElement | null>
+  modelPickerRef: React.RefObject<HTMLDivElement | null>
+  usageRef: React.RefObject<HTMLDivElement | null>
+  isStreaming: boolean
+  onStop: () => void
+}
+
+export default function Composer(props: ComposerProps): React.JSX.Element {
+  const { t } = useTranslation()
+  const {
+    models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode,
+    reasoningEffort, setReasoningEffort, routingMode, setRoutingMode
+  } = useProviderStore()
+  const usageTotals = useUsageStore((s) => (props.activeSessionId ? s.bySession[props.activeSessionId] : undefined))
+  const lastRoute = useUsageStore((s) => (props.activeSessionId ? s.lastRoute[props.activeSessionId] : undefined))
+  const sessionDiags = useUsageStore((s) => (props.activeSessionId ? s.diagnostics[props.activeSessionId] : undefined))
+  const currentModel = models.find((m) => m.id === activeModelId) || models.find((m) => m.enabled)
+  const currentModelLabel = currentModel?.label || currentModel?.modelId || t('modelPicker.noModel')
+  const permLabels: Record<string, string> = { ask: t('permission.ask'), auto: t('permission.auto'), yolo: t('permission.yolo') }
+  const permDescs: Record<string, string> = { ask: t('permission.askDesc'), auto: t('permission.autoDesc'), yolo: t('permission.yoloDesc') }
+  const reasoningLabels: Record<string, string> = {
+    auto: t('modelPicker.reasoningAuto'), low: t('modelPicker.reasoningLow'),
+    medium: t('modelPicker.reasoningMedium'), high: t('modelPicker.reasoningHigh')
+  }
+  const reasoningDescs: Record<string, string> = {
+    auto: t('modelPicker.reasoningAutoDesc'), low: t('modelPicker.reasoningLowDesc'),
+    medium: t('modelPicker.reasoningMediumDesc'), high: t('modelPicker.reasoningHighDesc')
+  }
+  const triggerOpen = props.trigger !== null
+  const { trigger, triggerItems, menuIndex, onMenuIndexChange, filesLoading, onSelect } = props
+  const { input, onChange, onKeyDown, onSend, textareaRef, activeSession, projects, activeProject, activeProjectId, onSelectProject, gitBranch } = props
+  const { showProjectPicker, setShowProjectPicker, showPermPicker, setShowPermPicker, showModelPicker, setShowModelPicker, showUsagePopover, setShowUsagePopover } = props
+  const { projectPickerRef, permPickerRef, modelPickerRef, usageRef, isStreaming, onStop } = props
+  return (
+      <div className="chat-input-wrapper">
+       <div className="chat-input-container">
+          <TriggerMenu
+            open={triggerOpen}
+            trigger={trigger?.type ?? null}
+            items={triggerItems}
+            selectedIndex={Math.min(menuIndex, Math.max(triggerItems.length - 1, 0))}
+            loading={trigger?.type === '@' && filesLoading}
+            emptyText={trigger?.type === '@' ? t('chat.mention.noResults') : t('chat.slash.noResults')}
+            title={trigger?.type === '@' ? t('chat.mention.title') : t('chat.slash.title')}
+            onSelect={onSelect}
+            onHover={onMenuIndexChange}
+          />
+          {/* Context chips bar */}
+          {activeSession && (
+            <div className="context-bar">
+              <div className="context-chip-wrapper" ref={projectPickerRef}>
+                <button className="context-chip project-chip" onClick={() => { setShowProjectPicker(!showProjectPicker); setShowPermPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }} title={t('contextBar.switchProject')}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                  <span>{activeProject?.name || t('contextBar.noProject')}</span>
+                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                </button>
+                {showProjectPicker && (
+                  <div className="project-picker">
+                    <div className="picker-list">
+                      {projects.filter((p) => p.id !== '__general__').map((p) => (
+                        <button
+                          key={p.id}
+                          className={`picker-item ${p.id === activeProjectId ? 'active' : ''}`}
+                          onClick={() => onSelectProject(p.id)}
+                        >
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                          <span>{p.name}</span>
+                          {p.paths?.[0] && <span className="picker-path">{p.paths[0].split('/').pop()}</span>}
+                          {p.id === activeProjectId && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="picker-footer">
+                      <button className="picker-item" onClick={() => { onSelectProject('__general__') }}>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        <span>{t('contextBar.workWithoutProject')}</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {gitBranch && (
+                <span className="context-chip branch-chip">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></svg>
+                  <span>{gitBranch}</span>
+                </span>
+              )}
+            </div>
+          )}
+
+          {/* Text input */}
+          <div className="chat-input-box">
+            <textarea
+              ref={textareaRef}
+              value={input}
+              onChange={onChange}
+              onKeyDown={onKeyDown}
+              placeholder={t('chat.placeholder')}
+              rows={1}
+            />
+            <div className="input-actions">
+              {/* Left: permission mode */}
+              <div className="input-actions-left">
+                <div className="context-chip-wrapper" ref={permPickerRef}>
+                  <button className={`perm-chip perm-${permissionMode}`} onClick={() => { setShowPermPicker(!showPermPicker); setShowProjectPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                    <span>{permLabels[permissionMode]}</span>
+                  </button>
+                  {showPermPicker && (
+                    <div className="project-picker perm-picker">
+                      {(['ask', 'auto', 'yolo'] as const).map((mode) => (
+                        <button key={mode} className={`picker-item ${permissionMode === mode ? 'active' : ''}`} onClick={() => { setPermissionMode(mode); setShowPermPicker(false) }}>
+                          <span className="picker-item-label">{permLabels[mode]}</span>
+                          <span className="picker-item-desc">{permDescs[mode]}</span>
+                          {permissionMode === mode && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Right: model + send */}
+              <div className="input-actions-right">
+                {usageTotals && usageTotals.calls > 0 && (
+                  <div className="context-chip-wrapper" ref={usageRef}>
+                    <button
+                      className="context-chip usage-chip"
+                      onClick={() => { setShowUsagePopover(!showUsagePopover); setShowProjectPicker(false); setShowPermPicker(false); setShowModelPicker(false) }}
+                      title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : undefined}
+                    >
+                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                      <span>{formatCost(usageTotals.cost)}</span>
+                      {usageTotals.cacheHitRate > 0.01 && (
+                        <span className="usage-chip-cache">· {Math.round(usageTotals.cacheHitRate * 100)}% {t('contextBar.cached')}</span>
+                      )}
+                    </button>
+                    {showUsagePopover && (
+                      <div className="project-picker usage-popover">
+                        <div className="picker-item-label">{t('contextBar.usageTitle')}</div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageInput')}</span><span>{formatTokens(usageTotals.inputTokens)}</span></div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageOutput')}</span><span>{formatTokens(usageTotals.outputTokens)}</span></div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheRead')}</span><span>{formatTokens(usageTotals.cacheReadTokens)}</span></div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheWrite')}</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheHitRate')}</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
+                        <div className="usage-popover-row total"><span>{t('contextBar.usageTotalCost')}</span><span>{formatCost(usageTotals.cost)}</span></div>
+                       {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
+                        {sessionDiags && sessionDiags.length > 0 && (
+                          <div className="usage-diagnostics">
+                            {sessionDiags.slice(-4).map((d: CacheDiagnostic, i: number) => (
+                              <div key={i} className={`usage-diagnostic ${d.level}`}>
+                                <span className="diagnostic-icon">{d.level === 'warn' ? '⚠' : '✓'}</span>
+                                <span>{d.message}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                     </div>
+                    )}
+                  </div>
+                )}
+                <div className="context-chip-wrapper" ref={modelPickerRef}>
+                  <button className="context-chip model-chip-btn" onClick={() => { setShowModelPicker(!showModelPicker); setShowProjectPicker(false); setShowPermPicker(false); setShowUsagePopover(false) }}>
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                    <span>{routingMode === 'auto' ? t('modelPicker.autoLabel') : currentModelLabel}</span>
+                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                  </button>
+                  {showModelPicker && (
+                    <div className="project-picker model-picker">
+                      <button className={`picker-item ${routingMode === 'auto' ? 'active' : ''}`} onClick={() => { setActiveModel(null); setRoutingMode('auto'); setShowModelPicker(false) }}>
+                        <span className="picker-item-label">{t('modelPicker.autoLabel')}</span>
+                        <span className="picker-item-desc">{t('modelPicker.autoDesc')}</span>
+                        {routingMode === 'auto' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                      </button>
+                      {providers.filter((p) => p.enabled).map((provider) => (
+                        <div key={provider.id} className="picker-group">
+                          <div className="picker-group-label">{provider.name}</div>
+                          {models.filter((m) => m.providerId === provider.id && m.enabled).map((m) => (
+                            <button key={m.id} className={`picker-item ${m.id === activeModelId ? 'active' : ''}`} onClick={() => { setActiveModel(m.id); setShowModelPicker(false) }}>
+                              <span>{m.label || m.modelId}</span>
+                              {m.id === activeModelId && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                            </button>
+                          ))}
+                        </div>
+                      ))}
+                      {models.filter((m) => m.enabled).length === 0 && (
+                        <div className="picker-empty">{t('modelPicker.noModels')}</div>
+                      )}
+                      <div className="picker-group">
+                        <div className="picker-group-label">{t('modelPicker.reasoningLabel')}</div>
+                        {(['auto', 'low', 'medium', 'high'] as const).map((e) => (
+                          <button key={e} className={`picker-item ${reasoningEffort === e ? 'active' : ''}`} onClick={() => { setReasoningEffort(e); setShowModelPicker(false) }}>
+                            <span className="picker-item-label">{reasoningLabels[e]}</span>
+                            <span className="picker-item-desc">{reasoningDescs[e]}</span>
+                            {reasoningEffort === e && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {isStreaming ? (
+                  <button className="stop-btn" onClick={onStop} title={t('chat.stop')}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                  </button>
+                ) : (
+                  <button className="send-btn" onClick={onSend} disabled={!input.trim()}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  )
+}

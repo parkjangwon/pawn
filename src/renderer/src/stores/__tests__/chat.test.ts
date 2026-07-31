@@ -1,8 +1,9 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
+import { truncateToolResult } from '../chat'
 import {
-  truncateToolResult, withConversationCacheAnchors, supportsReasoningEffort, injectClaudePreamble
-} from '../chat'
+  withConversationCacheAnchors, supportsReasoningEffort, injectClaudePreamble
+} from '../../agent/llm'
 
 const blocks = (text: string): Array<Record<string, unknown>> => [{ type: 'text', text }]
 
