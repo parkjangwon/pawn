@@ -598,6 +598,35 @@
   align-items: center;
   justify-content: center;
   width: 28px;
+}
+
+/* Cache diagnostics — explains *why* the cache hit rate is what it is. */
+.usage-diagnostics {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.usage-diagnostic {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  font-size: var(--font-xs);
+  line-height: 1.4;
+}
+
+.usage-diagnostic .diagnostic-icon {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+
+.usage-diagnostic.warn,
+.usage-diagnostic.info {
+  color: var(--text-muted);
   height: 28px;
   border: none;
   border-radius: var(--radius-sm);

@@ -18,7 +18,7 @@
   padding: 0 var(--space-md) var(--space-md) var(--space-md);
   padding-top: 50px;
   overflow-y: auto;
-  -webkit-app-region: no-drag;
+  -webkit-app-region: drag;
 }
 
 .settings-back {
@@ -32,9 +32,10 @@
   background: none;
   color: var(--text-muted);
   font-size: var(--font-md);
-  cursor: pointer;
-  transition: color 0.15s;
-  width: fit-content;
+ cursor: pointer;
+ transition: color 0.15s;
+ width: fit-content;
+  -webkit-app-region: no-drag;
 }
 
 .settings-back:hover {
@@ -72,9 +73,10 @@
   background: none;
   color: var(--text-secondary);
   font-size: var(--font-md);
-  cursor: pointer;
-  text-align: left;
-  transition: all 0.1s;
+ cursor: pointer;
+ text-align: left;
+ transition: all 0.1s;
+  -webkit-app-region: no-drag;
 }
 
 .settings-nav-item:hover {

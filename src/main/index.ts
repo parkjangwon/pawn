@@ -522,17 +522,36 @@ function registerBrowserIpc(): void {
       var FILTER = ${f};
       var SEL = 'a[href],button,input:not([type="hidden"]),textarea,select,summary,[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="menuitem"],[contenteditable=""],[contenteditable="true"]';
       var nodes = Array.prototype.slice.call(document.querySelectorAll(SEL));
-      var out = [], n = 0;
-      for (var i = 0; i < nodes.length; i++) {
-        var el = nodes[i];
-        var rect = el.getBoundingClientRect();
-        if (rect.width === 0 && rect.height === 0) continue;
-        var st = window.getComputedStyle(el);
-        if (st.visibility === 'hidden' || st.display === 'none') continue;
-        if (el.disabled === true) continue;
-        n++;
-        var ref = 'e' + n;
-        el.setAttribute('data-pawn-ref', ref);
+      var out = [], used = {};
+     for (var i = 0; i < nodes.length; i++) {
+       var el = nodes[i];
+       var rect = el.getBoundingClientRect();
+       if (rect.width === 0 && rect.height === 0) continue;
+       var st = window.getComputedStyle(el);
+       if (st.visibility === 'hidden' || st.display === 'none') continue;
+       if (el.disabled === true) continue;
+        // Deterministic ref: hash the element's stable attributes so the same
+        // element gets the same ref across snapshots. Sequential numbering (e1,
+        // e2, …) invalidated every ref when a single element was inserted or
+        // removed, which broke cache prefixes in the transcript.
+        var sigParts = [
+          el.tagName.toLowerCase(),
+          el.getAttribute('role') || '',
+          el.getAttribute('name') || '',
+          el.getAttribute('id') || '',
+          el.tagName === 'A' ? (el.getAttribute('href') || '') : '',
+          (el.getAttribute('aria-label') || el.getAttribute('title') || '').replace(/\\s+/g, ' ').trim().slice(0, 80)
+        ].join('|');
+        var hash = 0;
+        for (var j = 0; j < sigParts.length; j++) {
+          hash = ((hash << 5) - hash + sigParts.charCodeAt(j)) | 0;
+        }
+        var base = 'e' + Math.abs(hash);
+        var ref = base;
+        var suf = 1;
+        while (used[ref]) { ref = base + '_' + suf; suf++; }
+        used[ref] = true;
+       el.setAttribute('data-pawn-ref', ref);
         var label = el.getAttribute('aria-label') || el.getAttribute('title') || '';
         if (!label && el.labels && el.labels[0]) label = el.labels[0].innerText || '';
         var text = (el.innerText || label || '').replace(/\\s+/g, ' ').trim().slice(0, 90);
