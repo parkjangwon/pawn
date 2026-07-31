@@ -18,14 +18,14 @@ export default function StatusBar(): React.JSX.Element {
       <div className="status-left">
         <span className={`status-dot ${isStreaming ? 'streaming' : enabledProviders.length > 0 ? 'connected' : 'disconnected'}`} />
         <span className="status-text">
-          {isStreaming ? '{t("statusBar.working")}' : enabledProviders.length > 0 ? '{t("statusBar.ready")}' : '{t("statusBar.noProvider")}'}
+          {isStreaming ? t('statusBar.working') : enabledProviders.length > 0 ? t('statusBar.ready') : t('statusBar.noProvider')}
         </span>
       </div>
       <div className="status-right">
-        {currentModel && (
+        {routingMode !== 'auto' && currentModel && (
           <span className="status-model">{currentModel.label || currentModel.modelId}</span>
         )}
-        <span className="status-mode">{routingMode === 'auto' ? '{t("statusBar.auto")}' : '{t("statusBar.manual")}'}</span>
+        <span className="status-mode">{routingMode === 'auto' ? t('statusBar.auto') : t('statusBar.manual')}</span>
       </div>
     </div>
   )

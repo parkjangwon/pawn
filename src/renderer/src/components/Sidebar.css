@@ -49,20 +49,21 @@
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
-  min-height: 36px;
-  padding: 8px var(--space-md);
-  border: 1px solid var(--border-color);
+  min-height: 32px;
+  padding: 5px var(--space-sm);
+  border: none;
   border-radius: 6px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: transparent;
+  color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.15s, color 0.15s;
   box-sizing: border-box;
 }
 
 .sidebar-action-btn:hover {
   background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .sidebar-action-btn svg {

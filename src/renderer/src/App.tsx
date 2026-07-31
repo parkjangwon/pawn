@@ -72,7 +72,7 @@ export default function App(): React.JSX.Element {
   }, [showSettings, showCommandPalette, sidebarOpen, activeProjectId, addSession])
 
   return (
-    <div className={`app ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'}`}>
+    <div className={`app ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'} ${window.api?.platform === 'darwin' ? 'platform-mac' : ''}`}>
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={closeSidebar} />
       )}

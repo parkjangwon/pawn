@@ -88,7 +88,11 @@
     "workWithoutProject": "プロジェクトなしで作業"
   },
   "modelPicker": {
-    "noModels": "利用可能なモデルがありません"
+    "noModels": "利用可能なモデルがありません",
+    "autoLabel": "自動",
+    "autoDesc": "タスクに応じてモデルを自動選択",
+    "modelsLabel": "モデル",
+    "reasoningLabel": "推論"
   },
   "permission": {
     "title": "権限リクエスト",
@@ -105,7 +109,8 @@
       "file_write": "ファイル書き込み",
       "shell_exec": "シェル実行",
       "browser": "ブラウザ",
-      "file_read": "ファイル読み取り"
+      "file_read": "ファイル読み取り",
+      "app": "アプリ操作"
     }
   },
   "statusBar": {

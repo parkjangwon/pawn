@@ -88,7 +88,11 @@
     "workWithoutProject": "Work without a project"
   },
   "modelPicker": {
-    "noModels": "No models available"
+    "noModels": "No models available",
+    "autoLabel": "Auto",
+    "autoDesc": "Pick the model automatically based on the task",
+    "modelsLabel": "Models",
+    "reasoningLabel": "Reasoning"
   },
   "permission": {
     "title": "Permission Request",
@@ -105,7 +109,8 @@
       "file_write": "File Write",
       "shell_exec": "Shell Execution",
       "browser": "Browser",
-      "file_read": "File Read"
+      "file_read": "File Read",
+      "app": "App Control"
     }
   },
   "statusBar": {

@@ -21,10 +21,9 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>(() => useProviderStore.getState().defaultSendMode)
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
-  const [showReasoningPicker, setShowReasoningPicker] = useState(false)
   const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, clearMessages } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming } = useChatStore()
-  const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort } = useProviderStore()
+  const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
   const usageTotals = useUsageStore((s) => (activeSessionId ? s.bySession[activeSessionId] : undefined))
   const lastRoute = useUsageStore((s) => (activeSessionId ? s.lastRoute[activeSessionId] : undefined))
@@ -32,6 +31,10 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [showUsagePopover, setShowUsagePopover] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const projectPickerRef = useRef<HTMLDivElement>(null)
+  const permPickerRef = useRef<HTMLDivElement>(null)
+  const modelPickerRef = useRef<HTMLDivElement>(null)
+  const usageRef = useRef<HTMLDivElement>(null)
   const [showProjectPicker, setShowProjectPicker] = useState(false)
   const [gitBranch, setGitBranch] = useState<string | null>(null)
   const [trigger, setTrigger] = useState<{ type: '/' | '@'; start: number; query: string } | null>(null)
@@ -65,9 +68,27 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   }, [effectivePath])
 
   // Current model label
+  // Scroll to bottom on new messages AND on content updates (streaming).
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length, isStreaming])
+  }, [messages.length, isStreaming, messages[messages.length - 1]?.content])
+
+  // Close any open dropdown when the user presses outside of it.
+  const anyDropdownOpen = showProjectPicker || showPermPicker || showModelPicker || showUsagePopover
+  useEffect(() => {
+    if (!anyDropdownOpen) return
+    const onMouseDown = (e: MouseEvent): void => {
+      const target = e.target as Node
+      const refs = [projectPickerRef, permPickerRef, modelPickerRef, usageRef]
+      if (refs.some((r) => r.current && r.current.contains(target))) return
+      setShowProjectPicker(false)
+      setShowPermPicker(false)
+      setShowModelPicker(false)
+      setShowUsagePopover(false)
+    }
+    document.addEventListener('mousedown', onMouseDown)
+    return () => document.removeEventListener('mousedown', onMouseDown)
+  }, [anyDropdownOpen])
 
   const handleExport = (): void => {
     if (!activeSession || messages.length === 0) return
@@ -103,7 +124,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
           let pid = activeProjectId
           if (!pid) {
             let g = projects.find((p) => p.id === '__general__')
-            if (!g) { addProject('General', []); g = useAppStore.getState().projects.find((p) => p.id === '__general__') }
+            if (!g) { addProject('General', [], '__general__'); g = useAppStore.getState().projects.find((p) => p.id === '__general__') }
             pid = g?.id || useAppStore.getState().activeProjectId || ''
           }
           if (pid) addSession(pid)
@@ -231,11 +252,11 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
       // Find or create general project
       let general = projects.find((p) => p.id === '__general__')
       if (!general) {
-        addProject('General', [])
+        addProject('General', [], '__general__')
         // addProject sets activeProjectId, get it from store after state update
         // We need to use the store directly since state hasn't updated yet
         const store = useAppStore.getState()
-        general = store.projects.find((p) => p.id === '__general__') || store.projects[store.projects.length - 1]
+        general = store.projects.find((p) => p.id === '__general__')
         projectId = general?.id || store.activeProjectId || ''
       } else {
         projectId = general.id
@@ -407,8 +428,8 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
           {/* Context chips bar */}
           {activeSession && (
             <div className="context-bar">
-              <div className="context-chip-wrapper">
-                <button className="context-chip project-chip" onClick={() => setShowProjectPicker(!showProjectPicker)} title="Switch project">
+              <div className="context-chip-wrapper" ref={projectPickerRef}>
+                <button className="context-chip project-chip" onClick={() => { setShowProjectPicker(!showProjectPicker); setShowPermPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }} title="Switch project">
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
                   <span>{activeProject?.name || 'No project'}</span>
                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
@@ -460,8 +481,8 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
             <div className="input-actions">
               {/* Left: permission mode */}
               <div className="input-actions-left">
-                <div className="context-chip-wrapper">
-                  <button className={`perm-chip perm-${permissionMode}`} onClick={() => { setShowPermPicker(!showPermPicker); setShowModelPicker(false) }}>
+                <div className="context-chip-wrapper" ref={permPickerRef}>
+                  <button className={`perm-chip perm-${permissionMode}`} onClick={() => { setShowPermPicker(!showPermPicker); setShowProjectPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                     <span>{permLabels[permissionMode]}</span>
                   </button>
@@ -489,10 +510,10 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
                   </button>
                 )}
                 {usageTotals && usageTotals.calls > 0 && (
-                  <div className="context-chip-wrapper">
+                  <div className="context-chip-wrapper" ref={usageRef}>
                     <button
                       className="context-chip usage-chip"
-                      onClick={() => setShowUsagePopover(!showUsagePopover)}
+                      onClick={() => { setShowUsagePopover(!showUsagePopover); setShowProjectPicker(false); setShowPermPicker(false); setShowModelPicker(false) }}
                       title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : undefined}
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
@@ -525,31 +546,19 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
                     )}
                   </div>
                 )}
-                <div className="context-chip-wrapper">
-                  <button className="context-chip model-chip-btn" onClick={() => { setShowReasoningPicker(!showReasoningPicker); setShowModelPicker(false); setShowPermPicker(false) }}>
+                <div className="context-chip-wrapper" ref={modelPickerRef}>
+                  <button className="context-chip model-chip-btn" onClick={() => { setShowModelPicker(!showModelPicker); setShowProjectPicker(false); setShowPermPicker(false); setShowUsagePopover(false) }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-                    <span>{reasoningLabels[reasoningEffort]}</span>
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
-                  </button>
-                  {showReasoningPicker && (
-                    <div className="project-picker">
-                      {(['auto', 'low', 'medium', 'high'] as const).map((e) => (
-                        <button key={e} className={`picker-item ${reasoningEffort === e ? 'active' : ''}`} onClick={() => { setReasoningEffort(e); setShowReasoningPicker(false) }}>
-                          <span className="picker-item-label">{reasoningLabels[e]}</span>
-                          <span className="picker-item-desc">{reasoningDescs[e]}</span>
-                          {reasoningEffort === e && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                <div className="context-chip-wrapper">
-                  <button className="context-chip model-chip-btn" onClick={() => { setShowModelPicker(!showModelPicker); setShowPermPicker(false) }}>
-                    <span>{currentModelLabel}</span>
+                    <span>{routingMode === 'auto' ? t('modelPicker.autoLabel') : currentModelLabel}</span>
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                   </button>
                   {showModelPicker && (
                     <div className="project-picker model-picker">
+                      <button className={`picker-item ${routingMode === 'auto' ? 'active' : ''}`} onClick={() => { setActiveModel(null); setRoutingMode('auto'); setShowModelPicker(false) }}>
+                        <span className="picker-item-label">{t('modelPicker.autoLabel')}</span>
+                        <span className="picker-item-desc">{t('modelPicker.autoDesc')}</span>
+                        {routingMode === 'auto' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                      </button>
                       {providers.filter((p) => p.enabled).map((provider) => (
                         <div key={provider.id} className="picker-group">
                           <div className="picker-group-label">{provider.name}</div>
@@ -562,8 +571,18 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
                         </div>
                       ))}
                       {models.filter((m) => m.enabled).length === 0 && (
-                        <div className="picker-empty">No models configured</div>
+                        <div className="picker-empty">{t('modelPicker.noModels')}</div>
                       )}
+                      <div className="picker-group">
+                        <div className="picker-group-label">{t('modelPicker.reasoningLabel')}</div>
+                        {(['auto', 'low', 'medium', 'high'] as const).map((e) => (
+                          <button key={e} className={`picker-item ${reasoningEffort === e ? 'active' : ''}`} onClick={() => { setReasoningEffort(e); setShowModelPicker(false) }}>
+                            <span className="picker-item-label">{reasoningLabels[e]}</span>
+                            <span className="picker-item-desc">{reasoningDescs[e]}</span>
+                            {reasoningEffort === e && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

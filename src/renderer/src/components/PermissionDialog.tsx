@@ -15,7 +15,8 @@ export default function PermissionDialog(): React.JSX.Element | null {
     file_write: t('permission.types.file_write'),
     file_read: t('permission.types.file_read'),
     shell_exec: t('permission.types.shell_exec'),
-    browser: t('permission.types.browser')
+    browser: t('permission.types.browser'),
+    app: t('permission.types.app')
   }
 
   return (

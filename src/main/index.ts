@@ -22,7 +22,12 @@ function createWindow(): void {
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
     trafficLightPosition: { x: 16, y: 18 },
     webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
+      // electron-vite v6 emits the preload as index.mjs when package.json has
+      // "type": "module"; older versions emit index.js. Load whichever exists
+      // so a stale path never silently disables window.api.
+      preload: (existsSync(join(__dirname, '../preload/index.mjs'))
+        ? join(__dirname, '../preload/index.mjs')
+        : join(__dirname, '../preload/index.js')),
       sandbox: false
     }
   })
@@ -106,6 +111,9 @@ function registerIpc(): void {
     }
     try {
       walk(rootPath, 0)
+      // Sort by path for deterministic output — filesystem order varies
+      // between runs and causes unnecessary cache-prefix drift.
+      results.sort((a, b) => a.path.localeCompare(b.path))
       return results
     } catch (err) {
       return { error: String(err) }
@@ -442,6 +450,7 @@ function registerBrowserIpc(): void {
       }
       browserView = null
       browserVisible = false
+      browserLogs.length = 0
       return { ok: true }
     } catch (err) {
       return { error: String(err) }
