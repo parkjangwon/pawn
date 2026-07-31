@@ -101,6 +101,7 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Open a tool as a tab (or switch to it if already open)
   const openTool = (id: TabId): void => {
+    setVisible(true)
     setOpenTabs((prev) => {
       const next = prev.includes(id) ? prev : [...prev, id]
       return next
@@ -191,7 +192,7 @@ export default function RightPanel(): React.JSX.Element | null {
 
     node.addEventListener('pointerdown', startResize)
     resizerCleanup.current = () => node.removeEventListener('pointerdown', startResize)
-  }, [])
+  }, [toggleVisible])
 
   // Expose toggle to window
   useEffect(() => {
@@ -237,8 +238,6 @@ export default function RightPanel(): React.JSX.Element | null {
     return () => { delete (window as any).__closeRightPanelTab }
   }, [])
 
-  if (!visible && !closing) return null
-
   const renderContent = (): React.JSX.Element => {
     if (openTabs.length === 0) {
       return (
@@ -279,6 +278,7 @@ export default function RightPanel(): React.JSX.Element | null {
       ref={panelRef}
       className={`right-panel ${closing ? 'closing' : ''}`}
       style={{
+        display: visible || closing ? undefined : 'none',
         width: closing || opening ? 0 : panelWidth,
         minWidth: closing || opening ? 0 : panelWidth
       }}

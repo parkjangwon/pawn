@@ -112,6 +112,18 @@ const api = {
     addUsage: (row: unknown) => ipcRenderer.invoke('db:addUsage', row),
     getUsageBySession: (sessionId: string) => ipcRenderer.invoke('db:getUsageBySession', sessionId),
     getUsageSummary: (since: number) => ipcRenderer.invoke('db:getUsageSummary', since)
+  },
+
+  terminal: {
+    create: (id: string, cols: number, rows: number, cwd?: string) => ipcRenderer.invoke('terminal:create', id, cols, rows, cwd),
+    write: (id: string, data: string) => ipcRenderer.send('terminal:write', id, data),
+    resize: (id: string, cols: number, rows: number) => ipcRenderer.send('terminal:resize', id, cols, rows),
+    dispose: (id: string) => ipcRenderer.send('terminal:dispose', id),
+    onData: (callback: (id: string, data: string) => void) => {
+      const handler = (_event: unknown, id: string, data: string) => callback(id, data)
+      ipcRenderer.on('terminal:data', handler)
+      return () => { ipcRenderer.removeListener('terminal:data', handler) }
+    }
   }
 }
 

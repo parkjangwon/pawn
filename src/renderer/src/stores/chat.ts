@@ -386,8 +386,8 @@ async function agentLoop(
           id: toolMsgId,
           role: 'system',
           content: `[Tool: ${tc.name}] ${raw.isError ? 'ERROR' : 'OK'}\n${truncated.slice(0, 500)}${
-            raw.diffData
-              ? `\n<<<DIFF:${raw.diffData.filename}>>>\n--- old\n${raw.diffData.oldText.slice(0, 300)}\n+++ new\n${raw.diffData.newText.slice(0, 300)}\n<<<END>>>`
+          raw.diffData
+              ? `\n<<<DIFF:${raw.diffData.filename}>>>\n--- old\n${raw.diffData.oldText.slice(0, 300)}\n+++ new\n${raw.diffData.newText.slice(0, 300)}\n<<<END>>>\n__DIFF__:${JSON.stringify({ filename: raw.diffData.filename, oldText: raw.diffData.oldText.slice(0, 200), newText: raw.diffData.newText.slice(0, 200) })}`
               : ''
           }`,
           createdAt: Date.now()

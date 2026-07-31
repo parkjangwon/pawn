@@ -22,6 +22,7 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
     let cancelled = false
 
     const createTerminal = (): void => {
+      let eApi: any, eDispose: any
       if (cancelled || termRef.current) return
 
       const term = new Terminal({
@@ -75,15 +76,25 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
             wsRef.current.send(JSON.stringify({ type: 'input', data }))
         })
       } else {
-        const api = (window as any).api
+        eApi = (window as any).api
         const d = fit.proposeDimensions()
-        api.terminal.create(TERMINAL_ID, d?.cols || 80, d?.rows || 24, projectPath || undefined)
-        api.terminal.onData((_id: string, data: string) => { term.write(data) })
-        term.onData((data) => { api.terminal.write(TERMINAL_ID, data) })
+        eDispose = eApi.terminal.onData((_id: string, data: string) => { term.write(data) })
+        eApi.terminal.create(TERMINAL_ID, d?.cols || 80, d?.rows || 24, projectPath || undefined)
+        term.onData((data) => { eApi.terminal.write(TERMINAL_ID, data) })
+
+        ro.disconnect()
+        const ro2 = new ResizeObserver((): void => {
+          try { fit.fit() } catch {}
+          const d2 = fit.proposeDimensions()
+          if (d2) eApi.terminal.resize(TERMINAL_ID, d2.cols, d2.rows)
+        })
+        ro2.observe(el)
       }
 
       cleanupRef.current = () => {
         ro.disconnect()
+        eDispose?.()
+        eApi?.terminal.dispose(TERMINAL_ID)
         wsRef.current?.close()
         term.dispose()
         termRef.current = null
