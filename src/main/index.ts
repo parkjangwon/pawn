@@ -6,12 +6,14 @@ import { spawn, type IPty } from 'node-pty'
 import { exec, execFile } from 'child_process'
 import { promisify } from 'util'
 import { loadConfig, saveConfig } from './config'
+import { clampDim, pickShell } from './terminal'
 import * as db from './db'
 
 const execAsync = promisify(exec)
 const execFileAsync = promisify(execFile)
 
 let mainWindow: BrowserWindow | null = null
+const terminals = new Map<string, IPty>()
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -319,6 +321,9 @@ function registerIpc(): void {
 
   // --- Browser (Embedded) ---
   registerBrowserIpc()
+
+  // --- Terminal (PTY) ---
+  registerTerminalIpc()
 }
 
 // The embedded browser runs in its own session partition. The app's own CSP is
@@ -674,6 +679,77 @@ function registerBrowserIpc(): void {
   })
 }
 
+function registerTerminalIpc(): void {
+  function isTrustedSender(event: { sender: Electron.WebContents }): boolean {
+    return mainWindow !== null && event.sender === mainWindow.webContents
+  }
+
+  function getPtyOrReply(event: Electron.IpcMainEvent, id: string): IPty | undefined {
+    const pty = terminals.get(id)
+    if (!pty) event.reply('terminal:data', id, '\r\nTerminal session not found\r\n')
+    return pty
+  }
+
+  ipcMain.handle('terminal:create', (event, id, cols, rows, cwd) => {
+    if (!isTrustedSender(event) || typeof id !== 'string') return { ok: false, error: 'Invalid request' }
+    const cwdStr = typeof cwd === 'string' && cwd.length > 0 ? cwd : process.cwd()
+    if (!existsSync(cwdStr)) return { ok: false, error: `Directory not found: ${cwdStr}` }
+
+    const existing = terminals.get(id)
+    if (existing) {
+      try { existing.kill() } catch {}
+      terminals.delete(id)
+    }
+
+    const shell = pickShell()
+    let pty: IPty
+    try {
+      pty = spawn(shell.file, shell.args, {
+        name: 'xterm-256color',
+        cols: clampDim(cols, 80),
+        rows: clampDim(rows, 24),
+        cwd: cwdStr,
+        env: { ...process.env, TERM: 'xterm-256color' }
+      })
+    } catch (err) {
+      return { ok: false, error: String(err) }
+    }
+
+    terminals.set(id, pty)
+    pty.onData((data) => {
+      for (const win of BrowserWindow.getAllWindows()) {
+        if (win.isDestroyed()) continue
+        try { win.webContents.send('terminal:data', id, data) } catch {}
+      }
+    })
+    pty.onExit(() => { terminals.delete(id) })
+    return { ok: true }
+  })
+
+  ipcMain.on('terminal:write', (event, id, data) => {
+    if (!isTrustedSender(event) || typeof id !== 'string' || typeof data !== 'string') return
+    const pty = getPtyOrReply(event, id)
+    if (!pty) return
+    try { pty.write(data.slice(0, 1024 * 1024)) } catch {}
+  })
+
+  ipcMain.on('terminal:resize', (event, id, cols, rows) => {
+    if (!isTrustedSender(event) || typeof id !== 'string') return
+    const pty = getPtyOrReply(event, id)
+    if (!pty) return
+    try { pty.resize(clampDim(cols, 80), clampDim(rows, 24)) } catch {}
+  })
+
+  ipcMain.on('terminal:dispose', (event, id) => {
+    if (!isTrustedSender(event) || typeof id !== 'string') return
+    const pty = terminals.get(id)
+    if (pty) {
+      try { pty.kill() } catch {}
+      terminals.delete(id)
+    }
+  })
+}
+
 app.whenReady().then(() => {
   // CSP for security
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
@@ -700,6 +776,14 @@ app.whenReady().then(() => {
   })
 
   registerIpc()
+
+  app.on('will-quit', () => {
+    terminals.forEach((pty) => {
+      try { pty.kill() } catch {}
+    })
+    terminals.clear()
+  })
+
   createWindow()
 
   app.on('activate', () => {
@@ -710,40 +794,3 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
-  const terminals = new Map<string, IPty>()
-
-  function getPtyOrReply(event: Electron.IpcMainEvent, id: string): IPty | undefined {
-    const pty = terminals.get(id)
-    if (!pty) event.reply('terminal:data', id, '\r\nTerminal session not found\r\n')
-    return pty
-  }
-
-  ipcMain.handle('terminal:create', async (_, id, cols, rows, cwd) => {
-    const shell = process.env.SHELL || '/bin/zsh'
-    const pty = spawn(shell, [], {
-      name: 'xterm-256color', cols, rows,
-      cwd: cwd || process.cwd(),
-      env: { ...process.env, TERM: 'xterm-256color' }
-    })
-    terminals.set(id, pty)
-    pty.onData((data) => {
-      BrowserWindow.getAllWindows().forEach((win) => {
-        try { win.webContents.send('terminal:data', id, data) } catch {}
-      })
-    })
-    pty.onExit(() => { terminals.delete(id) })
-    return { ok: true }
-  })
-
-  ipcMain.on('terminal:write', (event, id, data) => {
-    getPtyOrReply(event, id)?.write(data)
-  })
-
-  ipcMain.on('terminal:resize', (event, id, cols, rows) => {
-    getPtyOrReply(event, id)?.resize(cols, rows)
-  })
-
-  ipcMain.on('terminal:dispose', (_event, id) => {
-    terminals.get(id)?.kill()
-    terminals.delete(id)
-  })

@@ -393,7 +393,7 @@ async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: stri
 }
 
 // Convert a glob pattern to a RegExp and test against a filename
-function matchesGlob(name: string, pattern: string): boolean {
+export function matchesGlob(name: string, pattern: string): boolean {
   // Convert a glob pattern to a RegExp that understands:
   //   **  — matches zero or more path segments (across / boundaries)
   //   *   — matches within a single path segment (no /)

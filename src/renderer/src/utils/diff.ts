@@ -13,6 +13,7 @@ export interface DiffResult {
 
 // Simple line-based diff using LCS (Longest Common Subsequence)
 export function computeDiff(oldText: string, newText: string): DiffResult {
+  if (oldText === '' && newText === '') return { lines: [], added: 0, removed: 0 }
   const oldLines = oldText.split('\n')
   const newLines = newText.split('\n')
 

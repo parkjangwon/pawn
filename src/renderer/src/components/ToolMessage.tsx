@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import './ToolMessage.css'
 import DiffView from './DiffView'
+import { parseDiffMarker, stripDiffMarker } from '../utils/diffMarker'
 
 interface ToolMessageProps {
   content: string
@@ -12,13 +13,12 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
   const [collapsed, setCollapsed] = useState(true)
   const [showAll, setShowAll] = useState(false)
 
-  // Parse tool name and result
-  // Peel off an inline <<<DIFF:...>>> marker so we can render a DiffView
-  const diffMatch = content.match(/<<<DIFF:(.+)>>>\n--- old\n([\s\S]*?)\n\+\+\+ new\n([\s\S]*?)<<<END>>>/)
-  const diffFilename = diffMatch?.[1] || ''
-  const diffOld = diffMatch?.[2] || ''
-  const diffNew = diffMatch?.[3] || ''
-  const displayContentBase = diffMatch ? content.replace(diffMatch[0], '').trim() : content
+  // A __DIFF__: JSON marker (or the legacy block) carries the diff for DiffView.
+  const diff = parseDiffMarker(content)
+  const diffFilename = diff?.filename || ''
+  const diffOld = diff?.oldText || ''
+  const diffNew = diff?.newText || ''
+  const displayContentBase = stripDiffMarker(content)
 
   const firstLine = content.split('\n')[0] || ''
   const toolMatch = firstLine.match(/\[Tool: (\w+)\] (\w+)/)
