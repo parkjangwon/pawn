@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import ProjectEditDialog from './ProjectEditDialog'
@@ -30,12 +30,11 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
   } = useAppStore()
 
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
-  const [renamingSession, setRenamingSession] = useState<string | null>(null)
-  const [renamingProject, setRenamingProject] = useState<string | null>(null)
-  const [renameValue, setRenameValue] = useState('')
+  const [recentExpanded, setRecentExpanded] = useState(false)
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
+  useEffect(() => { try { const s = localStorage.getItem('pawn-pinned-sessions'); if (s) setPinnedSessions(new Set(JSON.parse(s))) } catch {} }, [])
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'project' | 'session'; id: string; projectId?: string; name: string } | null>(null)
 
   // Ensure general project exists
@@ -104,30 +103,9 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
       const next = new Set(prev)
       if (next.has(sessionId)) next.delete(sessionId)
       else next.add(sessionId)
+      try { localStorage.setItem('pawn-pinned-sessions', JSON.stringify([...next])) } catch {}
       return next
     })
-  }
-
-  const startRenameSession = (e: React.MouseEvent, sessionId: string, currentTitle: string): void => {
-    e.stopPropagation()
-    setRenamingSession(sessionId)
-    setRenameValue(currentTitle)
-  }
-
-  const commitRenameSession = (projectId: string, sessionId: string): void => {
-    if (renameValue.trim()) updateSessionTitle(projectId, sessionId, renameValue.trim())
-    setRenamingSession(null)
-  }
-
-  const startRenameProject = (e: React.MouseEvent, projectId: string, currentName: string): void => {
-    e.stopPropagation()
-    setRenamingProject(projectId)
-    setRenameValue(currentName)
-  }
-
-  const commitRenameProject = (projectId: string): void => {
-    if (renameValue.trim()) updateProjectName(projectId, renameValue.trim())
-    setRenamingProject(null)
   }
 
   // Pinned sessions across all projects
@@ -163,10 +141,10 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
         {/* 1. Pinned */}
         {pinnedItems.length > 0 && (
           <div className="sidebar-section">
-            <div className="section-label">Pinned</div>
+            <div className="section-label">{t('sidebar.pinned')}</div>
             {pinnedItems.map((session) => (
               <div key={session.id} className={`sidebar-item ${session.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSession(session.id); setActiveProject(session.projectId) }}>
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" onClick={(e) => togglePin(e, session.id)} style={{ cursor: 'pointer' }}><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
                 <span className="item-title">{session.title}</span>
               </div>
             ))}
@@ -182,17 +160,16 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
             </button>
           </div>
           {userProjects.map((project) => {
-            const isExpanded = expandedProjects.has(project.id) || project.id === activeProjectId
+            // Folding is user-controlled: clicking the header toggles the set.
+            // Tying it to activeProjectId here would make the active project
+            // impossible to collapse.
+            const isExpanded = expandedProjects.has(project.id)
             return (
               <div key={project.id} className="tree-project">
                 <div className={`tree-project-header ${project.id === activeProjectId ? 'active' : ''}`} onClick={() => toggleProject(project.id)}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${isExpanded ? 'expanded' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="tree-folder-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-                  {renamingProject === project.id ? (
-                    <input className="rename-input" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={() => commitRenameProject(project.id)} onKeyDown={(e) => { if (e.key === 'Enter') commitRenameProject(project.id); if (e.key === 'Escape') setRenamingProject(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
-                  ) : (
-                    <span className="tree-project-name" onDoubleClick={(e) => startRenameProject(e, project.id, project.name)}>{project.name}</span>
-                  )}
+                  <span className="tree-project-name">{project.name}</span>
                   <div className="tree-project-actions">
                     <button className="tree-action-btn" onClick={(e) => { e.stopPropagation(); addSession(project.id); if (!isExpanded) toggleProject(project.id) }} title={t('sidebar.newSession')}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
@@ -207,16 +184,12 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
                     {project.sessions.map((session) => (
                       <div key={session.id} className={`tree-session ${session.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSession(session.id); setActiveProject(project.id) }}>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                        {renamingSession === session.id ? (
-                          <input className="rename-input" value={renameValue} onChange={(e) => setRenameValue(e.target.value)} onBlur={() => commitRenameSession(project.id, session.id)} onKeyDown={(e) => { if (e.key === 'Enter') commitRenameSession(project.id, session.id); if (e.key === 'Escape') setRenamingSession(null) }} autoFocus onClick={(e) => e.stopPropagation()} />
-                        ) : (
-                          <span className="tree-session-title" onDoubleClick={(e) => startRenameSession(e, session.id, session.title)}>{session.title}</span>
-                        )}
+                        <span className="tree-session-title">{session.title}</span>
                         <div className="tree-session-actions">
                           <button className="tree-action-btn pin" onClick={(e) => togglePin(e, session.id)} title={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill={pinnedSessions.has(session.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
                           </button>
-                          <button className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, project.id, session.id)} title="Delete">
+                          <button className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, project.id, session.id)} title={t('common.delete')}>
                             <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                           </button>
                         </div>
@@ -234,8 +207,11 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
         {/* 3. Recent */}
         {recentSessions.length > 0 && (
           <div className="sidebar-section">
-            <div className="section-label">Recent</div>
-            {recentSessions.map((session) => (
+            <button className="section-header recent-header" onClick={() => setRecentExpanded((v) => !v)}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${recentExpanded ? 'expanded' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>
+              <span className="section-label">{t('sidebar.recent')}</span>
+            </button>
+            {recentExpanded && recentSessions.map((session) => (
               <div key={session.id} className={`sidebar-item ${session.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSession(session.id); setActiveProject(session.projectId) }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                 <span className="item-title">{session.title}</span>

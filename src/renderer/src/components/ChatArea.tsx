@@ -7,6 +7,7 @@ import { useThemeStore } from '../stores/theme'
 import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
 import MarkdownRenderer from './MarkdownRenderer'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
+import ProjectEditDialog from './ProjectEditDialog'
 import { loadProjectContext, type LoadedSkill } from '../agent/skills'
 import './ChatArea.css'
 
@@ -21,7 +22,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>(() => useProviderStore.getState().defaultSendMode)
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
-  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, clearMessages } = useAppStore()
+  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, clearMessages, updateProjectName } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming } = useChatStore()
   const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
@@ -42,6 +43,9 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [fileIndex, setFileIndex] = useState<Array<{ name: string; path: string; rel: string }>>([])
   const [filesLoading, setFilesLoading] = useState(false)
   const [skills, setSkills] = useState<LoadedSkill[]>([])
+  const [showProjectMenu, setShowProjectMenu] = useState(false)
+  const [showProjectEdit, setShowProjectEdit] = useState(false)
+  const projectMenuRef = useRef<HTMLDivElement>(null)
   const pendingCursor = useRef<number | null>(null)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
@@ -51,13 +55,19 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
 
   // Current model info
   const currentModel = models.find((m) => m.id === activeModelId) || models.find((m) => m.enabled)
-  const currentModelLabel = currentModel?.label || currentModel?.modelId || 'No model'
+  const currentModelLabel = currentModel?.label || currentModel?.modelId || t('modelPicker.noModel')
   const currentProviderName = providers.find((p) => p.id === currentModel?.providerId)?.name || ''
 
-  const permLabels: Record<string, string> = { ask: '승인 요청', auto: '자동 승인', yolo: '전체 권한' }
-  const permDescs: Record<string, string> = { ask: '외부 파일 수정 전 확인', auto: '위험한 것만 확인', yolo: '모든 작업 자동 실행' }
-  const reasoningLabels: Record<string, string> = { auto: '추론 자동', low: '추론 낮음', medium: '추론 중간', high: '추론 높음' }
-  const reasoningDescs: Record<string, string> = { auto: '작업에 따라 자동 선택', low: '빠른 응답', medium: '균형', high: '깊은 사고' }
+  const permLabels: Record<string, string> = { ask: t('permission.ask'), auto: t('permission.auto'), yolo: t('permission.yolo') }
+  const permDescs: Record<string, string> = { ask: t('permission.askDesc'), auto: t('permission.autoDesc'), yolo: t('permission.yoloDesc') }
+  const reasoningLabels: Record<string, string> = {
+    auto: t('modelPicker.reasoningAuto'), low: t('modelPicker.reasoningLow'),
+    medium: t('modelPicker.reasoningMedium'), high: t('modelPicker.reasoningHigh')
+  }
+  const reasoningDescs: Record<string, string> = {
+    auto: t('modelPicker.reasoningAutoDesc'), low: t('modelPicker.reasoningLowDesc'),
+    medium: t('modelPicker.reasoningMediumDesc'), high: t('modelPicker.reasoningHighDesc')
+  }
 
   // Detect git branch
   useEffect(() => {
@@ -155,13 +165,15 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
         icon: ic(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>),
         action: () => handleExport()
       },
-      ...skills.map((s) => {
+      ...skills
+        .filter((s) => !['new', 'clear', 'model', 'theme', 'settings', 'export'].includes(s.name.toLowerCase()))
+        .map((s) => {
         const firstLine = (s.content.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('---') && !l.startsWith('#')) || s.source.split('/').pop() || '').slice(0, 60)
         return {
           id: `skill:${s.name}`,
           label: s.name,
           description: firstLine,
-          hint: 'skill',
+          hint: s.kind === 'command' || s.kind === 'plugin' || s.kind === 'agent' ? s.kind : 'skill',
           insert: `/${s.name} `,
           icon: ic(<><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" /><path d="M19 14l.7 1.9L21.5 17l-1.8.7L19 19.5l-.7-1.8L16.5 17l1.8-.7z" /></>)
         }
@@ -203,8 +215,8 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   useEffect(() => { setFileIndex([]) }, [effectivePath])
 
   useEffect(() => {
-    if (!effectivePath) { setSkills([]); return }
-    loadProjectContext(effectivePath).then((c) => setSkills(c.skills)).catch(() => setSkills([]))
+    // User-level (~/.claude) skills and commands load even without a project.
+    loadProjectContext(effectivePath || undefined).then((c) => setSkills(c.skills)).catch(() => setSkills([]))
   }, [effectivePath])
 
   function handleSelect(item: TriggerItem): void {
@@ -240,6 +252,16 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
       }
     }
   }, [input])
+
+  // Close project menu on outside click
+  useEffect(() => {
+    if (!showProjectMenu) return
+    const handler = (e: MouseEvent) => {
+      if (projectMenuRef.current && !projectMenuRef.current.contains(e.target as Node)) setShowProjectMenu(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [showProjectMenu])
 
   const handleSend = async (): Promise<void> => {
     if (!input.trim()) return
@@ -345,14 +367,19 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   return (
     <main className="chat-area">
       <div className="chat-header">
-        <button className="sidebar-toggle-btn close-sidebar-btn" onClick={onToggleSidebar} aria-label="Open sidebar">
+        <button className="sidebar-toggle-btn close-sidebar-btn" onClick={onToggleSidebar} aria-label={t('contextBar.openSidebar')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <line x1="9" y1="3" x2="9" y2="21" />
           </svg>
         </button>
+        {activeProject && (
+          <div className="chat-header-project">
+            <span className="chat-header-project-name">{activeProject.name}</span>
+          </div>
+        )}
         <div className="chat-header-spacer" />
-        <button className="sidebar-toggle-btn right-panel-toggle" onClick={() => (window as any).__toggleRightPanel?.()} aria-label="Toggle right panel">
+        <button className="sidebar-toggle-btn right-panel-toggle" onClick={() => (window as any).__toggleRightPanel?.()} aria-label={t('contextBar.toggleRightPanel')}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
             <line x1="15" y1="3" x2="15" y2="21" />
@@ -429,9 +456,9 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
           {activeSession && (
             <div className="context-bar">
               <div className="context-chip-wrapper" ref={projectPickerRef}>
-                <button className="context-chip project-chip" onClick={() => { setShowProjectPicker(!showProjectPicker); setShowPermPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }} title="Switch project">
+                <button className="context-chip project-chip" onClick={() => { setShowProjectPicker(!showProjectPicker); setShowPermPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }} title={t('contextBar.switchProject')}>
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-                  <span>{activeProject?.name || 'No project'}</span>
+                  <span>{activeProject?.name || t('contextBar.noProject')}</span>
                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                 </button>
                 {showProjectPicker && (
@@ -453,7 +480,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
                     <div className="picker-footer">
                       <button className="picker-item" onClick={() => { handleSelectProject('__general__') }}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
-                        <span>프로젝트 없이 작업하기</span>
+                        <span>{t('contextBar.workWithoutProject')}</span>
                       </button>
                     </div>
                   </div>
@@ -502,13 +529,6 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
 
               {/* Right: model + send */}
               <div className="input-actions-right">
-                {messages.length > 0 && (
-                  <button className="input-action-btn" onClick={handleExport} title="Export">
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" />
-                    </svg>
-                  </button>
-                )}
                 {usageTotals && usageTotals.calls > 0 && (
                   <div className="context-chip-wrapper" ref={usageRef}>
                     <button
@@ -519,18 +539,18 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                       <span>{formatCost(usageTotals.cost)}</span>
                       {usageTotals.cacheHitRate > 0.01 && (
-                        <span className="usage-chip-cache">· {Math.round(usageTotals.cacheHitRate * 100)}% cached</span>
+                        <span className="usage-chip-cache">· {Math.round(usageTotals.cacheHitRate * 100)}% {t('contextBar.cached')}</span>
                       )}
                     </button>
                     {showUsagePopover && (
                       <div className="project-picker usage-popover">
-                        <div className="picker-item-label">이번 세션 사용량</div>
-                        <div className="usage-popover-row"><span>입력</span><span>{formatTokens(usageTotals.inputTokens)}</span></div>
-                        <div className="usage-popover-row"><span>출력</span><span>{formatTokens(usageTotals.outputTokens)}</span></div>
-                        <div className="usage-popover-row"><span>캐시 읽기</span><span>{formatTokens(usageTotals.cacheReadTokens)}</span></div>
-                        <div className="usage-popover-row"><span>캐시 기록</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
-                        <div className="usage-popover-row"><span>캐시 적중률</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
-                        <div className="usage-popover-row total"><span>총 비용</span><span>{formatCost(usageTotals.cost)}</span></div>
+                        <div className="picker-item-label">{t('contextBar.usageTitle')}</div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageInput')}</span><span>{formatTokens(usageTotals.inputTokens)}</span></div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageOutput')}</span><span>{formatTokens(usageTotals.outputTokens)}</span></div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheRead')}</span><span>{formatTokens(usageTotals.cacheReadTokens)}</span></div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheWrite')}</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
+                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheHitRate')}</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
+                        <div className="usage-popover-row total"><span>{t('contextBar.usageTotalCost')}</span><span>{formatCost(usageTotals.cost)}</span></div>
                        {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
                         {sessionDiags && sessionDiags.length > 0 && (
                           <div className="usage-diagnostics">
@@ -587,7 +607,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
                   )}
                 </div>
                 {isStreaming ? (
-                  <button className="stop-btn" onClick={stopStreaming} title="Stop">
+                  <button className="stop-btn" onClick={stopStreaming} title={t('chat.stop')}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
                   </button>
                 ) : (
@@ -602,6 +622,9 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
           </div>
         </div>
       </div>
+      {showProjectEdit && activeProjectId && (
+        <ProjectEditDialog projectId={activeProjectId} onClose={() => setShowProjectEdit(false)} />
+      )}
     </main>
   )
 }

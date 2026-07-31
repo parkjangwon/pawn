@@ -85,14 +85,33 @@
   "contextBar": {
     "switchProject": "切换项目",
     "noProject": "未选择项目",
-    "workWithoutProject": "无项目工作"
+    "workWithoutProject": "无项目工作",
+    "usageTotalCost": "总费用",
+    "toggleRightPanel": "切换右侧面板",
+    "usageCacheHitRate": "缓存命中率",
+    "openSidebar": "打开侧边栏",
+    "usageCacheWrite": "缓存写入",
+    "usageOutput": "输出",
+    "usageInput": "输入",
+    "cached": "已缓存",
+    "usageCacheRead": "缓存读取",
+    "usageTitle": "本次会话用量"
   },
   "modelPicker": {
     "noModels": "没有可用模型",
     "autoLabel": "自动",
     "autoDesc": "根据任务自动选择模型",
     "modelsLabel": "模型",
-    "reasoningLabel": "推理"
+    "reasoningLabel": "推理",
+    "reasoningLow": "推理低",
+    "reasoningLowDesc": "快速响应",
+    "reasoningAuto": "推理自动",
+    "reasoningMedium": "推理中",
+    "noModel": "无模型",
+    "reasoningAutoDesc": "根据任务自动选择",
+    "reasoningHighDesc": "深度思考",
+    "reasoningMediumDesc": "均衡",
+    "reasoningHigh": "推理高"
   },
   "permission": {
     "title": "权限请求",
@@ -160,7 +179,10 @@
       "oauth": "OAuth",
       "namePlaceholder": "我的提供商",
       "baseUrlPlaceholder": "https://api.example.com",
-      "apiKeyPlaceholder": "sk-..."
+      "apiKeyPlaceholder": "sk-...",
+      "addWithModels": "添加（包含{{count}}个模型）",
+      "presetDesc": "知名提供商 — 粘贴API密钥即可使用",
+      "pasteApiKey": "粘贴API密钥"
     },
     "modelSection": {
       "title": "模型",
@@ -175,7 +197,15 @@
       "tier": "层级",
       "tierLow": "低",
       "tierMid": "中",
-      "tierHigh": "高"
+      "tierHigh": "高",
+      "contextWindow": "上下文窗口（令牌，可选）",
+      "pricingDesc": "价格（美元/100万令牌）— 用于路由成本计算和缓存节省显示。不知道可留空。",
+      "pricingFormat": " · ${{input}}/${{output}}（每100万输入/输出）",
+      "priceOutput": "输出价格",
+      "priceCacheWrite": "缓存写入",
+      "priceCacheRead": "缓存读取",
+      "pricingUnknown": " · 价格未知 — 成本跟踪已禁用",
+      "priceInput": "输入价格"
     },
     "agentSection": {
       "title": "代理",
@@ -237,7 +267,50 @@
     "changes": "变更",
     "local": "本地",
     "branch": "分支",
-    "project": "项目"
+    "project": "项目",
+    "git": {
+      "noRepo": "没有Git仓库",
+      "noChanges": "无更改"
+    },
+    "openTool": "打开工具",
+    "toolDescs": {
+      "terminal": "本地Shell访问",
+      "files": "浏览项目文件",
+      "git": "版本控制",
+      "browser": "网页浏览器",
+      "diff": "最近的文件更改"
+    },
+    "addTool": "添加工具",
+    "selectTool": "选择工具",
+    "browser": {
+      "enterUrl": "输入URL...",
+      "back": "后退",
+      "forward": "前进",
+      "refresh": "刷新",
+      "reload": "重新加载",
+      "go": "前往",
+      "console": "控制台（页面日志）",
+      "devtools": "打开开发者工具",
+      "retry": "重试",
+      "noConsole": "暂无控制台消息",
+      "clear": "清空",
+      "proxyMode": "代理模式（绕过X-Frame-Options）",
+      "enableProxy": "启用代理模式",
+      "emptyHint": "输入URL，或让代理在此浏览",
+      "emptyHintWeb": "在上方输入URL开始浏览（代理自动化需要桌面应用）"
+    },
+    "diff": {
+      "title": "最近更改",
+      "empty": "没有最近的文件更改"
+    },
+    "tools": {
+      "terminal": "终端",
+      "files": "文件",
+      "git": "Git",
+      "browser": "浏览器",
+      "diff": "Diff"
+    },
+    "allToolsOpen": "所有工具都已打开"
   },
   "commandPalette": {
     "placeholder": "输入命令...",

@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import TerminalView from './TerminalView'
 import FilesView from './FilesView'
@@ -9,26 +10,20 @@ import './RightPanel.css'
 
 type TabId = 'terminal' | 'files' | 'git' | 'browser' | 'diff'
 
-interface ToolDef {
-  id: TabId
-  icon: string
-  label: string
-  desc: string
+const TOOL_ICONS: Record<TabId, string> = {
+  terminal: 'M4 17l6-6-6-6m8 14h8',
+  files: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
+  git: 'M22 12h-4l-3 9L9 3l-3 9H2',
+  browser: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9',
+  diff: 'M16 18l6-6-6-6M8 6l-6 6 6 6'
 }
-
-const TOOLS: ToolDef[] = [
-  { id: 'terminal', icon: 'M4 17l6-6-6-6m8 14h8', label: 'Terminal', desc: 'Local shell access' },
-  { id: 'files', icon: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z', label: 'Files', desc: 'Browse project files' },
-  { id: 'git', icon: 'M22 12h-4l-3 9L9 3l-3 9H2', label: 'Git', desc: 'Version control' },
-  { id: 'browser', icon: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9', label: 'Browser', desc: 'Web browser' },
-  { id: 'diff', icon: 'M16 18l6-6-6-6M8 6l-6 6 6 6', label: 'Diff', desc: 'Recent file changes' }
-]
 
 // The panel is intentionally ephemeral: every launch starts closed and empty.
 const DEFAULT_WIDTH = 320
 const HIDE_MS = 220
 
 export default function RightPanel(): React.JSX.Element | null {
+  const { t } = useTranslation()
   const [openTabs, setOpenTabs] = useState<TabId[]>([])
   const [activeTab, setActiveTab] = useState<TabId | null>(null)
   const [showPicker, setShowPicker] = useState(false)
@@ -198,22 +193,22 @@ export default function RightPanel(): React.JSX.Element | null {
     resizerCleanup.current = () => node.removeEventListener('pointerdown', startResize)
   }, [])
 
-  // Cmd+B toggle
+  // Expose toggle to window
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'b') {
+    (window as any).__toggleRightPanel = toggleVisible
+    return () => { delete (window as any).__toggleRightPanel }
+  }, [])
+
+  // Option+Cmd/Ctrl+B toggles the right panel
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.altKey && (e.metaKey || e.ctrlKey) && e.key === 'b') {
         e.preventDefault()
         toggleVisible()
       }
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [])
-
-  // Expose toggle to window
-  useEffect(() => {
-    (window as any).__toggleRightPanel = toggleVisible
-    return () => { delete (window as any).__toggleRightPanel }
   }, [])
 
   // Expose open-on-tab to window. Agent browser tools call this so their work
@@ -248,17 +243,17 @@ export default function RightPanel(): React.JSX.Element | null {
     if (openTabs.length === 0) {
       return (
         <div className="rp-tool-picker">
-          <h3 className="rp-picker-title">Open a tool</h3>
-          {TOOLS.map((tool) => (
-            <button key={tool.id} className="rp-tool-item" onClick={() => openTool(tool.id)}>
+          <h3 className="rp-picker-title">{t('rightPanel.openTool')}</h3>
+          {(Object.keys(TOOL_ICONS) as TabId[]).map((id) => (
+            <button key={id} className="rp-tool-item" onClick={() => openTool(id)}>
               <div className="rp-tool-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d={tool.icon} />
+                  <path d={TOOL_ICONS[id]} />
                 </svg>
               </div>
               <div className="rp-tool-info">
-                <span className="rp-tool-label">{tool.label}</span>
-                <span className="rp-tool-desc">{tool.desc}</span>
+                <span className="rp-tool-label">{t(`rightPanel.tools.${id}`)}</span>
+                <span className="rp-tool-desc">{t(`rightPanel.toolDescs.${id}`)}</span>
               </div>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -269,14 +264,13 @@ export default function RightPanel(): React.JSX.Element | null {
       )
     }
 
-    const tool = TOOLS.find((t) => t.id === activeTab)
     switch (activeTab) {
       case 'terminal': return <TerminalView projectPath={projectPath} />
       case 'files': return <FilesView projectPath={projectPath} />
       case 'git': return <GitView projectPath={projectPath} />
       case 'browser': return <BrowserView />
       case 'diff': return <DiffListView />
-      default: return <div className="rp-empty">Select a tool</div>
+      default: return <div className="rp-empty">{t('rightPanel.selectTool')}</div>
     }
   }
 
@@ -294,19 +288,17 @@ export default function RightPanel(): React.JSX.Element | null {
       {/* Tab bar */}
       <div className="rp-tabs">
         {openTabs.map((id) => {
-          const tool = TOOLS.find((t) => t.id === id)
-          if (!tool) return null
           return (
             <button
               key={id}
               className={`rp-tab ${activeTab === id ? 'active' : ''}`}
               onClick={() => switchTab(id)}
-              title={tool.label}
+              title={t(`rightPanel.tools.${id}`)}
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d={tool.icon} />
+                <path d={TOOL_ICONS[id]} />
               </svg>
-              {activeTab === id && <span className="rp-tab-label">{tool.label}</span>}
+              {activeTab === id && <span className="rp-tab-label">{t(`rightPanel.tools.${id}`)}</span>}
               <span className="rp-tab-close-btn" onClick={(e) => closeTab(id, e)}>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -320,7 +312,7 @@ export default function RightPanel(): React.JSX.Element | null {
         <button
           className={`rp-tab rp-tab-add ${showPicker ? 'active' : ''}`}
           onClick={() => setShowPicker(!showPicker)}
-          title="Add tool"
+          title={t('rightPanel.addTool')}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
@@ -333,16 +325,16 @@ export default function RightPanel(): React.JSX.Element | null {
       {/* Tool picker dropdown */}
       {showPicker && (
         <div className="rp-picker-dropdown">
-          {TOOLS.filter((t) => !openTabs.includes(t.id)).map((tool) => (
-            <button key={tool.id} className="rp-picker-item" onClick={() => openTool(tool.id)}>
+          {(Object.keys(TOOL_ICONS) as TabId[]).filter((id) => !openTabs.includes(id)).map((id) => (
+            <button key={id} className="rp-picker-item" onClick={() => openTool(id)}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d={tool.icon} />
+                <path d={TOOL_ICONS[id]} />
               </svg>
-              <span>{tool.label}</span>
+              <span>{t(`rightPanel.tools.${id}`)}</span>
             </button>
           ))}
-          {TOOLS.filter((t) => !openTabs.includes(t.id)).length === 0 && (
-            <div className="rp-picker-empty">All tools are open</div>
+          {(Object.keys(TOOL_ICONS) as TabId[]).filter((id) => !openTabs.includes(id)).length === 0 && (
+            <div className="rp-picker-empty">{t('rightPanel.allToolsOpen')}</div>
           )}
         </div>
       )}

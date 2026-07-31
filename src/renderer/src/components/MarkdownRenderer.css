@@ -1,6 +1,6 @@
 .markdown-body {
   font-size: var(--font-lg);
-  line-height: 1.2;
+  line-height: 1.25;
   color: var(--text-primary);
   word-break: break-word;
 }

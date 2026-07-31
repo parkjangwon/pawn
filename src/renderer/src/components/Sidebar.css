@@ -31,7 +31,7 @@
 }
 
 .sidebar-logo {
-  font-size: 16px;
+  font-size: var(--font-md);
   font-weight: 700;
   color: var(--text-primary);
   letter-spacing: -0.4px;
@@ -83,7 +83,7 @@
 }
 
 .section-label {
-  font-size: 10px;
+  font-size: var(--font-md);
   font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -100,6 +100,25 @@
 
 .section-header .section-label {
   padding: 0;
+}
+
+/* Recent section header is a button — strip the default button chrome so it
+   looks like a plain foldable section label instead of a bordered box. */
+.section-header.recent-header {
+  width: 100%;
+  border: none;
+  background: none;
+  cursor: pointer;
+  text-align: left;
+  justify-content: flex-start;
+  gap: 4px;
+  color: inherit;
+  padding: var(--space-sm) var(--space-xs) var(--space-xs);
+  -webkit-app-region: no-drag;
+}
+
+.section-header.recent-header:hover .section-label {
+  color: var(--text-secondary);
 }
 
 .section-add-btn {
@@ -269,7 +288,7 @@
   padding: 5px var(--space-sm);
   border-radius: 6px;
   cursor: pointer;
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   color: var(--text-muted);
   transition: all 0.12s ease;
 }
@@ -308,7 +327,7 @@
 
 .tree-empty {
   padding: var(--space-xs) var(--space-sm);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   color: var(--text-muted);
   font-style: italic;
 }
@@ -321,7 +340,7 @@
   border-radius: 3px;
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   outline: none;
   min-width: 0;
 }
@@ -329,7 +348,7 @@
 /* Empty state */
 .empty-hint {
   padding: var(--space-md) var(--space-sm);
-  font-size: var(--font-sm);
+  font-size: var(--font-md);
   color: var(--text-muted);
   text-align: center;
 }

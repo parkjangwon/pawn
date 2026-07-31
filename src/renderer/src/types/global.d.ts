@@ -13,6 +13,7 @@ declare global {
         mkdir: (path: string) => Promise<{ ok?: boolean; error?: string }>
         delete: (path: string) => Promise<{ ok?: boolean; error?: string }>
         exists: (path: string) => Promise<boolean>
+        homeDir: () => Promise<string | null>
         walk: (path: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }>
       }
       shell: {

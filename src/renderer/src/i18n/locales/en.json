@@ -85,14 +85,33 @@
   "contextBar": {
     "switchProject": "Switch Project",
     "noProject": "No project selected",
-    "workWithoutProject": "Work without a project"
+    "workWithoutProject": "Work without a project",
+    "usageTotalCost": "Total cost",
+    "toggleRightPanel": "Toggle right panel",
+    "usageCacheHitRate": "Cache hit rate",
+    "openSidebar": "Open sidebar",
+    "usageCacheWrite": "Cache write",
+    "usageOutput": "Output",
+    "usageInput": "Input",
+    "cached": "cached",
+    "usageCacheRead": "Cache read",
+    "usageTitle": "This session usage"
   },
   "modelPicker": {
     "noModels": "No models available",
     "autoLabel": "Auto",
     "autoDesc": "Pick the model automatically based on the task",
     "modelsLabel": "Models",
-    "reasoningLabel": "Reasoning"
+    "reasoningLabel": "Reasoning",
+    "reasoningLow": "Reasoning low",
+    "reasoningLowDesc": "Faster responses",
+    "reasoningAuto": "Reasoning auto",
+    "reasoningMedium": "Reasoning medium",
+    "noModel": "No model",
+    "reasoningAutoDesc": "Pick automatically based on the task",
+    "reasoningHighDesc": "Deeper thinking",
+    "reasoningMediumDesc": "Balanced",
+    "reasoningHigh": "Reasoning high"
   },
   "permission": {
     "title": "Permission Request",
@@ -160,7 +179,10 @@
       "oauth": "OAuth",
       "namePlaceholder": "My Provider",
       "baseUrlPlaceholder": "https://api.example.com",
-      "apiKeyPlaceholder": "sk-..."
+      "apiKeyPlaceholder": "sk-...",
+      "addWithModels": "Add (includes {{count}} models)",
+      "presetDesc": "Well-known providers — paste an API key and go",
+      "pasteApiKey": "Paste your API key"
     },
     "modelSection": {
       "title": "Models",
@@ -175,7 +197,15 @@
       "tier": "Tier",
       "tierLow": "Low",
       "tierMid": "Mid",
-      "tierHigh": "High"
+      "tierHigh": "High",
+      "contextWindow": "Context window (tokens, optional)",
+      "pricingDesc": "Pricing (USD / 1M tokens) — used for router cost math and cache savings. Leave blank if unknown.",
+      "pricingFormat": " · ${{input}}/${{output}} per 1M (in/out)",
+      "priceOutput": "Output price",
+      "priceCacheWrite": "Cache write",
+      "priceCacheRead": "Cache read",
+      "pricingUnknown": " · pricing unknown — cost tracking disabled",
+      "priceInput": "Input price"
     },
     "agentSection": {
       "title": "Agent",
@@ -237,7 +267,50 @@
     "changes": "Changes",
     "local": "Local",
     "branch": "Branch",
-    "project": "Project"
+    "project": "Project",
+    "git": {
+      "noRepo": "No git repository",
+      "noChanges": "No changes"
+    },
+    "openTool": "Open a tool",
+    "toolDescs": {
+      "terminal": "Local shell access",
+      "files": "Browse project files",
+      "git": "Version control",
+      "browser": "Web browser",
+      "diff": "Recent file changes"
+    },
+    "addTool": "Add tool",
+    "selectTool": "Select a tool",
+    "browser": {
+      "enterUrl": "Enter URL...",
+      "back": "Back",
+      "forward": "Forward",
+      "refresh": "Refresh",
+      "reload": "Reload",
+      "go": "Go",
+      "console": "Console (page logs)",
+      "devtools": "Open DevTools",
+      "retry": "Retry",
+      "noConsole": "No console messages yet",
+      "clear": "Clear",
+      "proxyMode": "Proxy mode (bypass X-Frame-Options)",
+      "enableProxy": "Enable proxy mode",
+      "emptyHint": "Enter a URL, or let the agent navigate here",
+      "emptyHintWeb": "Enter a URL above to start browsing (agent automation requires the desktop app)"
+    },
+    "diff": {
+      "title": "Recent Changes",
+      "empty": "No recent file changes"
+    },
+    "tools": {
+      "terminal": "Terminal",
+      "files": "Files",
+      "git": "Git",
+      "browser": "Browser",
+      "diff": "Diff"
+    },
+    "allToolsOpen": "All tools are open"
   },
   "commandPalette": {
     "placeholder": "Type a command...",

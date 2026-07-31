@@ -1,6 +1,8 @@
+import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 
 export default function DiffListView(): React.JSX.Element {
+  const { t } = useTranslation()
   const { projects, activeProjectId, activeSessionId } = useAppStore()
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
@@ -14,10 +16,10 @@ export default function DiffListView(): React.JSX.Element {
     return (
       <div className="rp-diff">
         <div className="rp-diff-header">
-          Recent Changes
+          {t('rightPanel.diff.title')}
         </div>
         <div className="rp-diff-list">
-          <div className="rp-diff-empty">No recent file changes</div>
+          <div className="rp-diff-empty">{t('rightPanel.diff.empty')}</div>
         </div>
       </div>
     )

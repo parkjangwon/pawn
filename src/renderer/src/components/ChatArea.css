@@ -44,7 +44,7 @@
 
 /* Align right panel toggle to the right edge */
 .right-panel-toggle {
-  /* positioned by flex spacer above */
+  -webkit-app-region: no-drag;
 }
 
 .sidebar-toggle-btn {
@@ -60,6 +60,7 @@
   cursor: pointer;
   transition: all 0.12s ease;
   flex-shrink: 0;
+  -webkit-app-region: no-drag;
 }
 
 .sidebar-toggle-btn:hover {
@@ -93,6 +94,86 @@
 }
 
 .mobile-title {
+
+/* --- Project header in chat --- */
+.chat-header-project {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  flex-wrap: nowrap;
+}
+
+.chat-header-project-name {
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 28px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
+}
+
+.project-menu-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.project-menu-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  -webkit-app-region: no-drag;
+}
+
+.project-menu-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.project-menu-dropdown {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 180px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  overflow: hidden;
+  z-index: 60;
+  padding: 4px;
+}
+
+.project-menu-dropdown .picker-item {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 8px 12px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 13px;
+  text-align: left;
+}
+
+.project-menu-dropdown .picker-item:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
   font-size: var(--font-xl);
   font-weight: 700;
   color: var(--text-primary);
