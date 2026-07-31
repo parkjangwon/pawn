@@ -2,6 +2,7 @@ import { app, BrowserWindow, WebContentsView, shell, ipcMain, dialog, Notificati
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
+import { spawn, type IPty } from 'node-pty'
 import { exec, execFile } from 'child_process'
 import { promisify } from 'util'
 import { loadConfig, saveConfig } from './config'
@@ -709,3 +710,40 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
+  const terminals = new Map<string, IPty>()
+
+  function getPtyOrReply(event: Electron.IpcMainEvent, id: string): IPty | undefined {
+    const pty = terminals.get(id)
+    if (!pty) event.reply('terminal:data', id, '\r\nTerminal session not found\r\n')
+    return pty
+  }
+
+  ipcMain.handle('terminal:create', async (_, id, cols, rows, cwd) => {
+    const shell = process.env.SHELL || '/bin/zsh'
+    const pty = spawn(shell, [], {
+      name: 'xterm-256color', cols, rows,
+      cwd: cwd || process.cwd(),
+      env: { ...process.env, TERM: 'xterm-256color' }
+    })
+    terminals.set(id, pty)
+    pty.onData((data) => {
+      BrowserWindow.getAllWindows().forEach((win) => {
+        try { win.webContents.send('terminal:data', id, data) } catch {}
+      })
+    })
+    pty.onExit(() => { terminals.delete(id) })
+    return { ok: true }
+  })
+
+  ipcMain.on('terminal:write', (event, id, data) => {
+    getPtyOrReply(event, id)?.write(data)
+  })
+
+  ipcMain.on('terminal:resize', (event, id, cols, rows) => {
+    getPtyOrReply(event, id)?.resize(cols, rows)
+  })
+
+  ipcMain.on('terminal:dispose', (_event, id) => {
+    terminals.get(id)?.kill()
+    terminals.delete(id)
+  })

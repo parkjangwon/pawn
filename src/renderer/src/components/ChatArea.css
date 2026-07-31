@@ -24,7 +24,7 @@
   display: flex;
 }
 
-.app:not(.platform-mac).sidebar-collapsed .chat-header {
+.app.sidebar-collapsed .chat-header {
   padding-left: 72px;
 }
 

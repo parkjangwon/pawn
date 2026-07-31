@@ -112,6 +112,13 @@ declare global {
           cost: number
         }>>
       }
+      terminal: {
+        create: (id: string, cols: number, rows: number, cwd?: string) => Promise<{ ok?: boolean }>
+        write: (id: string, data: string) => void
+        resize: (id: string, cols: number, rows: number) => void
+        dispose: (id: string) => void
+        onData: (callback: (id: string, data: string) => void) => () => void
+      }
     }
   }
 }
