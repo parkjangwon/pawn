@@ -26,12 +26,23 @@ export interface UsageTotals extends CallUsage {
   cacheHitRate: number
 }
 
+export type CacheDiagnosticLevel = 'info' | 'warn'
+
+export interface CacheDiagnostic {
+  level: CacheDiagnosticLevel
+  message: string
+  at: number
+}
+
 interface UsageState {
   /** Per-session running totals for the current app run. */
   bySession: Record<string, UsageTotals>
   lastRoute: Record<string, { label: string; reason: string }>
+  /** Per-session cache diagnostics — helps the user understand why costs vary. */
+  diagnostics: Record<string, CacheDiagnostic[]>
   record: (sessionId: string, model: ModelEntry, usage: CallUsage) => void
   noteRoute: (sessionId: string, label: string, reason: string) => void
+  noteDiagnostic: (sessionId: string, level: CacheDiagnosticLevel, message: string) => void
   reset: (sessionId: string) => void
   totalsFor: (sessionId: string) => UsageTotals
 }
@@ -67,6 +78,7 @@ export function computeUncachedCost(model: ModelEntry, u: CallUsage): number {
 export const useUsageStore = create<UsageState>((set, get) => ({
   bySession: {},
   lastRoute: {},
+  diagnostics: {},
 
   record: (sessionId, model, usage) => {
     const cost = computeCost(model, usage)
@@ -83,7 +95,27 @@ export const useUsageStore = create<UsageState>((set, get) => ({
       }
       const prompt = next.inputTokens + next.cacheReadTokens + next.cacheWriteTokens
       next.cacheHitRate = prompt > 0 ? next.cacheReadTokens / prompt : 0
-      return { bySession: { ...s.bySession, [sessionId]: next } }
+
+      // Generate a diagnostic based on this call's cache performance so the
+      // user can see *why* a session is cheap or expensive.
+      const diags: CacheDiagnostic[] = []
+      const callPrompt = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens
+      if (callPrompt > 0) {
+        if (usage.cacheReadTokens === 0 && usage.cacheWriteTokens === 0) {
+          diags.push({ level: 'warn', message: '캐시 미스 — 접두사가 변경됐거나 캐시가 만료됐습니다.', at: Date.now() })
+        } else if (usage.cacheWriteTokens > usage.inputTokens && usage.cacheReadTokens === 0) {
+          diags.push({ level: 'info', message: '캐시 프라이밍 — 새 접두사를 기록하는 중입니다.', at: Date.now() })
+        } else if (usage.cacheReadTokens > callPrompt * 0.8) {
+          diags.push({ level: 'info', message: '캐시 적중 양호 — 입력의 대부분이 캐시에서 제공됐습니다.', at: Date.now() })
+        }
+      }
+      const prevDiags = s.diagnostics[sessionId] || []
+      const allDiags = [...prevDiags, ...diags].slice(-20)
+
+      return {
+        bySession: { ...s.bySession, [sessionId]: next },
+        diagnostics: { ...s.diagnostics, [sessionId]: allDiags }
+      }
     })
 
     window.api.db
@@ -106,15 +138,28 @@ export const useUsageStore = create<UsageState>((set, get) => ({
   noteRoute: (sessionId, label, reason) =>
     set((s) => ({ lastRoute: { ...s.lastRoute, [sessionId]: { label, reason } } })),
 
+  noteDiagnostic: (sessionId, level, message) =>
+    set((s) => {
+      const prev = s.diagnostics[sessionId] || []
+      const all = [...prev, { level, message, at: Date.now() }].slice(-20)
+      return { diagnostics: { ...s.diagnostics, [sessionId]: all } }
+    }),
+
   reset: (sessionId) =>
     set((s) => {
       const next = { ...s.bySession }
       delete next[sessionId]
-      return { bySession: next }
+      const nextDiags = { ...s.diagnostics }
+      delete nextDiags[sessionId]
+      return { bySession: next, diagnostics: nextDiags }
     }),
 
   totalsFor: (sessionId) => get().bySession[sessionId] || EMPTY
 }))
+
+export function diagnosticsFor(sessionId: string): CacheDiagnostic[] {
+  return useUsageStore.getState().diagnostics[sessionId] || []
+}
 
 export function formatCost(cost: number): string {
   if (cost === 0) return '$0'

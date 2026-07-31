@@ -37,9 +37,13 @@ export const TRANSCRIPT_VERSION = 2
 
 export interface StoredTranscript {
   version: number
-  entries: TranscriptEntry[]
-  /** Model key (`providerId:modelId`) whose cache the current prefix is warm for. */
-  warmFor?: string
+ entries: TranscriptEntry[]
+ /** Model key (`providerId:modelId`) whose cache the current prefix is warm for. */
+ warmFor?: string
+  /** Epoch ms of the last API call. Ephemeral cache expires after ~5 min, so a
+   *  stale timestamp means the warm prefix is gone and the router must not
+   *  assume a cache hit on the next request. */
+  lastActivity?: number
 }
 
 /** Rough token estimate. Deliberately cheap — only used for compaction thresholds. */
@@ -77,28 +81,54 @@ export function compactTranscript(entries: TranscriptEntry[], keepEntries = 30):
   const older = entries.slice(0, cut)
   const recent = entries.slice(cut)
 
-  const asks: string[] = []
-  const toolNames = new Map<string, number>()
-  const files = new Set<string>()
-  for (const e of older) {
-    if (e.role === 'user') asks.push(e.content.slice(0, 300))
-    if (e.role === 'summary') asks.unshift(e.content)
-    if (e.role === 'assistant') {
-      for (const tc of e.toolCalls || []) {
-        toolNames.set(tc.name, (toolNames.get(tc.name) || 0) + 1)
-        const p = tc.arguments.path || tc.arguments.file_path
-        if (typeof p === 'string') files.add(p)
+ const asks: string[] = []
+ const toolNames = new Map<string, number>()
+ const files = new Set<string>()
+  const preservedResults: string[] = []
+  const MAX_PRESERVED_CHARS = 3000
+ for (const e of older) {
+   if (e.role === 'user') asks.push(e.content.slice(0, 300))
+   if (e.role === 'summary') asks.unshift(e.content)
+   if (e.role === 'assistant') {
+     for (const tc of e.toolCalls || []) {
+       toolNames.set(tc.name, (toolNames.get(tc.name) || 0) + 1)
+       const p = tc.arguments.path || tc.arguments.file_path
+       if (typeof p === 'string') files.add(p)
+     }
+   }
+    if (e.role === 'tool') {
+      // Preserve errors and small outputs so the model retains continuity after
+      // compaction. Dropping every tool result (the old behaviour) left the
+      // model unable to recall a file it already read or a command it already ran.
+      if (e.isError) {
+        preservedResults.push(`[${e.name} ERROR] ${e.content.slice(0, 300)}`)
+      } else if (e.content.length <= 500) {
+        preservedResults.push(`[${e.name}] ${e.content}`)
+      } else if (e.name === 'read_file' || e.name === 'list_dir' || e.name === 'grep_search' || e.name === 'search_files') {
+        preservedResults.push(`[${e.name}] ${e.content.slice(0, 200)}...`)
       }
     }
-  }
+ }
 
   const parts = ['--- Earlier conversation (compacted) ---']
   if (asks.length) parts.push('User asked:\n' + asks.map((a) => `- ${a}`).join('\n'))
   if (toolNames.size) {
     parts.push('Tools used: ' + Array.from(toolNames.entries()).map(([n, c]) => `${n}x${c}`).join(', '))
   }
-  if (files.size) parts.push('Files touched:\n' + Array.from(files).slice(0, 40).map((f) => `- ${f}`).join('\n'))
-  parts.push('Re-read any file above before editing it; its contents are no longer in context.')
+ if (files.size) parts.push('Files touched:\n' + Array.from(files).slice(0, 40).map((f) => `- ${f}`).join('\n'))
+  // Cap preserved results so the summary doesn't balloon past the point of being
+  // cheaper than keeping the raw entries.
+  let usedChars = 0
+  const keptResults: string[] = []
+  for (const r of preservedResults) {
+    if (usedChars + r.length > MAX_PRESERVED_CHARS) break
+    keptResults.push(r)
+    usedChars += r.length
+  }
+  if (keptResults.length > 0) {
+    parts.push('Key results from earlier:\n' + keptResults.map((r) => `- ${r}`).join('\n'))
+  }
+ parts.push('Re-read any file above before editing it; its contents are no longer in context.')
 
   return [{ role: 'summary', content: parts.join('\n\n') }, ...recent]
 }

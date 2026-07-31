@@ -4,7 +4,7 @@ import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
-import { useUsageStore, formatCost, formatTokens } from '../stores/usage'
+import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
 import MarkdownRenderer from './MarkdownRenderer'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
 import { loadProjectContext, type LoadedSkill } from '../agent/skills'
@@ -28,6 +28,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const { toggle: toggleTheme } = useThemeStore()
   const usageTotals = useUsageStore((s) => (activeSessionId ? s.bySession[activeSessionId] : undefined))
   const lastRoute = useUsageStore((s) => (activeSessionId ? s.lastRoute[activeSessionId] : undefined))
+  const sessionDiags = useUsageStore((s) => (activeSessionId ? s.diagnostics[activeSessionId] : undefined))
   const [showUsagePopover, setShowUsagePopover] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
@@ -509,8 +510,18 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
                         <div className="usage-popover-row"><span>캐시 기록</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
                         <div className="usage-popover-row"><span>캐시 적중률</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
                         <div className="usage-popover-row total"><span>총 비용</span><span>{formatCost(usageTotals.cost)}</span></div>
-                        {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
-                      </div>
+                       {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
+                        {sessionDiags && sessionDiags.length > 0 && (
+                          <div className="usage-diagnostics">
+                            {sessionDiags.slice(-4).map((d: CacheDiagnostic, i: number) => (
+                              <div key={i} className={`usage-diagnostic ${d.level}`}>
+                                <span className="diagnostic-icon">{d.level === 'warn' ? '⚠' : '✓'}</span>
+                                <span>{d.message}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                     </div>
                     )}
                   </div>
                 )}

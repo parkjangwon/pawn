@@ -5,7 +5,7 @@ import { useUsageStore, type CallUsage } from './usage'
 import { executeTool, toolsToOpenAI, toolsToClaude, TOOL_SAFETY, type ToolCall, type ToolResult } from '../agent/tools'
 import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
 import {
-  route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute,
+  route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute, clearSessionRoute,
   noteProviderFailure, noteProviderSuccess,
   type RouteDecision
 } from '../agent/router'
@@ -23,6 +23,9 @@ const MAX_ROUTE_ATTEMPTS = 3
 /** Compact once the replayed transcript passes this share of the model's context. */
 const COMPACT_AT_RATIO = 0.6
 const DEFAULT_CONTEXT_WINDOW = 128_000
+/** Anthropic ephemeral cache TTL is ~5 min. After that the warm prefix is gone
+ *  and the router must not assume a cache hit on the resumed session. */
+const CACHE_STALE_MS = 5 * 60 * 1000
 
 interface QueueItem {
   projectId: string
@@ -137,10 +140,17 @@ async function loadTranscript(projectId: string, sessionId: string): Promise<Tra
   try {
     const raw = await window.api.db.getTranscript(sessionId)
     if (raw) {
-      const parsed = JSON.parse(raw) as StoredTranscript
-      if (parsed && Array.isArray(parsed.entries) && parsed.version === TRANSCRIPT_VERSION) {
-        return parsed.entries
-      }
+     const parsed = JSON.parse(raw) as StoredTranscript
+     if (parsed && Array.isArray(parsed.entries) && parsed.version === TRANSCRIPT_VERSION) {
+        // Cold start: if the last API call was more than CACHE_STALE_MS ago, the
+        // ephemeral cache prefix is gone. Clear the sticky route so the router
+        // doesn't assume a warm prefix and misjudge downgrade economics.
+       if (parsed.lastActivity && Date.now() - parsed.lastActivity > CACHE_STALE_MS) {
+         clearSessionRoute(sessionId)
+          useUsageStore.getState().noteDiagnostic(sessionId, 'warn', '콜드 스타트 — 캐시가 만료돼 다시 기록해야 합니다.')
+       }
+       return parsed.entries
+     }
     }
   } catch {
     // Corrupt or absent — fall through to reconstruction.
@@ -167,7 +177,7 @@ async function loadTranscript(projectId: string, sessionId: string): Promise<Tra
 }
 
 function persistTranscript(sessionId: string, entries: TranscriptEntry[], warmFor: string): void {
-  const payload: StoredTranscript = { version: TRANSCRIPT_VERSION, entries, warmFor }
+  const payload: StoredTranscript = { version: TRANSCRIPT_VERSION, entries, warmFor, lastActivity: Date.now() }
   window.api.db.saveTranscript(sessionId, JSON.stringify(payload)).catch(() => {
     // Losing a transcript write costs a cache re-prime, never correctness.
   })
@@ -202,24 +212,26 @@ async function agentLoop(
     // System prompt as ordered layers. Caching is a prefix match, so the most
     // stable content comes first and per-turn content only ever appends at the
     // tail of `messages` — never into the system block.
-    //   layer 0: base prompt        — identical everywhere, shared cache
-    //   layer 1: cwd + project ctx  — stable for the life of the session
-    const systemLayers: string[] = [SYSTEM_PROMPT]
-    let contextLayer = ''
-    if (cwd) {
-      contextLayer += `--- Working Directory ---\n${cwd}\nResolve relative paths against this directory unless told otherwise.`
-    }
-    if (projectPath) {
-      try {
-        const block = buildProjectContextBlock(await loadProjectContext(projectPath))
-        if (block) contextLayer += (contextLayer ? '\n\n' : '') + block
-      } catch {
-        // Missing CLAUDE.md / skills is normal; keep the base layer.
-      }
-    }
-    if (contextLayer) systemLayers.push(contextLayer)
+   //   layer 0: base prompt        — identical everywhere, shared cache
+    //   preamble : cwd + project ctx — injected into messages, not the system block,
+    //   so the system cache prefix is shared across all projects and sessions.
+   const systemLayers: string[] = [SYSTEM_PROMPT]
+    let projectPreamble = ''
+   if (cwd) {
+      projectPreamble += `--- Working Directory ---\n${cwd}\nResolve relative paths against this directory unless told otherwise.`
+   }
+   if (projectPath) {
+     try {
+       const block = buildProjectContextBlock(await loadProjectContext(projectPath))
+        if (block) projectPreamble += (projectPreamble ? '\n\n' : '') + block
+     } catch {
+       // Missing CLAUDE.md / skills is normal; keep the base layer.
+     }
+   }
+    // systemLayers stays [SYSTEM_PROMPT] only — project context is passed as
+    // preamble to callLLM, where it is injected into the messages array.
 
-    let entries = await loadTranscript(projectId, sessionId)
+   let entries = await loadTranscript(projectId, sessionId)
     entries.push({ role: 'user', content: userContent })
 
     const complexity = estimateComplexity(userContent)
@@ -236,10 +248,11 @@ async function agentLoop(
       // exactly one cache re-prime — unlike a sliding window, which would silently
       // re-prime on every single request.
       const contextWindow = lastDecision?.model.contextWindow || DEFAULT_CONTEXT_WINDOW
-      if (estimateTokens(entries) > contextWindow * COMPACT_AT_RATIO) {
-        entries = compactTranscript(entries)
-        persistTranscript(sessionId, entries, lastDecision?.key || '')
-      }
+     if (estimateTokens(entries) > contextWindow * COMPACT_AT_RATIO) {
+       entries = compactTranscript(entries)
+       persistTranscript(sessionId, entries, lastDecision?.key || '')
+        useUsageStore.getState().noteDiagnostic(sessionId, 'info', '컨텍스트 압축 실행 — 캐시를 다시 기록합니다.')
+     }
 
       const escalate = shouldEscalate({ consecutiveToolErrors, round, emptyResponses })
       const excluded = new Set<string>()
@@ -265,9 +278,9 @@ async function agentLoop(
         })
 
         try {
-          result = await callLLM({
-            decision, entries, systemLayers, sessionId, projectId, assistantMsgId, signal
-          })
+         result = await callLLM({
+            decision, entries, systemLayers, projectPreamble, sessionId, projectId, assistantMsgId, signal
+         })
           noteProviderSuccess(decision.provider.id)
           setSessionRoute(sessionId, decision.key, decision.tier, estimateTokens(entries))
           useUsageStore.getState().noteRoute(
@@ -430,17 +443,29 @@ function truncateToolResult(result: { content: string }, maxLen = 2000): string 
 function withConversationCacheAnchors(
   messages: Array<Record<string, unknown>>
 ): Array<Record<string, unknown>> {
-  if (messages.length === 0) return messages
-  const out = messages.map((m) => ({ ...m }))
+ if (messages.length === 0) return messages
+ const out = messages.map((m) => ({ ...m }))
 
   const anchors: number[] = [out.length - 1]
+  let prevUser = -1
   // The previous anchor is the last user-role message before the tail — in a tool
   // loop that is exactly the tool_result group this request's predecessor ended on.
   for (let i = out.length - 2; i >= 0; i--) {
-    if (out[i].role === 'user') { anchors.push(i); break }
+    if (out[i].role === 'user') { prevUser = i; break }
+  }
+  if (prevUser >= 0) {
+    anchors.push(prevUser)
+  } else if (out.length > 1) {
+    // Short conversation with no previous user message — the 4th breakpoint
+    // would otherwise be wasted. Anchor the first message so its stable prefix
+    // (preamble + first user turn) is cached for future turns.
+    anchors.push(0)
   }
 
+  const seen = new Set<number>()
   for (const idx of anchors) {
+    if (seen.has(idx)) continue
+    seen.add(idx)
     const msg = out[idx]
     if (!Array.isArray(msg.content)) continue
     const blocks = (msg.content as Array<Record<string, unknown>>).slice()
@@ -460,19 +485,42 @@ function supportsReasoningEffort(modelId: string): boolean {
   return /(^|\/)(o[1-4](-|$)|gpt-5|deepseek-reasoner|qwq)/i.test(modelId)
 }
 
+/**
+ * Inject the project preamble (cwd, CLAUDE.md, skills) into a Claude-format
+ * messages array. The preamble is merged into the first user message's content
+ * blocks when possible to avoid creating consecutive user messages, which some
+ * API gateways reject. When there is no leading user message, a standalone one
+ * is prepended.
+ */
+function injectClaudePreamble(
+  messages: Array<Record<string, unknown>>,
+  preamble: string
+): Array<Record<string, unknown>> {
+  if (!preamble || messages.length === 0) return messages
+  const first = messages[0]
+  if (first.role === 'user' && Array.isArray(first.content)) {
+    return [
+      { ...first, content: [{ type: 'text', text: preamble }, ...first.content as unknown[]] },
+      ...messages.slice(1)
+    ]
+  }
+  return [{ role: 'user', content: [{ type: 'text', text: preamble }] }, ...messages]
+}
+
 // --- LLM call ---------------------------------------------------------------
 
 interface LlmResult {
   text: string
   toolCalls: ToolCall[]
   thinking: TranscriptThinking[]
-  usage: CallUsage
+ usage: CallUsage
 }
 
 interface LlmRequest {
   decision: RouteDecision
   entries: TranscriptEntry[]
   systemLayers: string[]
+  projectPreamble: string
   sessionId: string
   projectId: string
   assistantMsgId: string
@@ -480,7 +528,7 @@ interface LlmRequest {
 }
 
 async function callLLM(req: LlmRequest): Promise<LlmResult> {
-  const { decision, systemLayers, sessionId, projectId, assistantMsgId, signal } = req
+  const { decision, systemLayers, projectPreamble, sessionId, projectId, assistantMsgId, signal } = req
   const { provider, model } = decision
   const { reasoningEffort } = useProviderStore.getState()
   const isBrowser = window.api?.platform === 'browser'
@@ -510,7 +558,7 @@ async function callLLM(req: LlmRequest): Promise<LlmResult> {
           : { type: 'text', text }
       ),
       tools: toolsToClaude(),
-      messages: withConversationCacheAnchors(toClaudeMessages(sendable))
+      messages: withConversationCacheAnchors(injectClaudePreamble(toClaudeMessages(sendable), projectPreamble))
     }
   } else {
     url = `${provider.baseUrl}/chat/completions`
@@ -530,7 +578,11 @@ async function callLLM(req: LlmRequest): Promise<LlmResult> {
         : {}),
       // A single deterministic system block: layers joined in fixed order, no
       // per-turn values, so the prefix matches byte for byte across turns.
-      messages: [{ role: 'system', content: systemLayers.join('\n\n') }, ...toOpenAIMessages(sendable)]
+      messages: [
+        { role: 'system', content: systemLayers.join('\n\n') },
+        ...(projectPreamble ? [{ role: 'system', content: projectPreamble }] : []),
+        ...toOpenAIMessages(sendable)
+      ]
     }
   }
 
