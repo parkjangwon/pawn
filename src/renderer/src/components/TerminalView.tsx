@@ -23,6 +23,7 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
 
     const createTerminal = (): void => {
       let eApi: any, eDispose: any
+      let ro2: ResizeObserver | null = null
       if (cancelled || termRef.current) return
 
       const term = new Terminal({
@@ -78,21 +79,33 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
       } else {
         eApi = (window as any).api
         const d = fit.proposeDimensions()
-        eDispose = eApi.terminal.onData((_id: string, data: string) => { term.write(data) })
-        eApi.terminal.create(TERMINAL_ID, d?.cols || 80, d?.rows || 24, projectPath || undefined)
+        eDispose = eApi.terminal.onData((id: string, data: string) => {
+          if (id === TERMINAL_ID && termRef.current) term.write(data)
+        })
         term.onData((data) => { eApi.terminal.write(TERMINAL_ID, data) })
 
         ro.disconnect()
-        const ro2 = new ResizeObserver((): void => {
+        ro2 = new ResizeObserver((): void => {
           try { fit.fit() } catch {}
           const d2 = fit.proposeDimensions()
           if (d2) eApi.terminal.resize(TERMINAL_ID, d2.cols, d2.rows)
         })
         ro2.observe(el)
+
+        eApi.terminal.create(TERMINAL_ID, d?.cols || 80, d?.rows || 24, projectPath || undefined)
+          .then((res: { ok?: boolean; error?: string }) => {
+            if (!cancelled && res && res.ok === false) {
+              term.write(`\r\n${res.error || 'Failed to start terminal'}\r\n`)
+            }
+          })
+          .catch((err: unknown) => {
+            if (!cancelled) term.write(`\r\nFailed to start terminal: ${String(err)}\r\n`)
+          })
       }
 
       cleanupRef.current = () => {
         ro.disconnect()
+        ro2?.disconnect()
         eDispose?.()
         eApi?.terminal.dispose(TERMINAL_ID)
         wsRef.current?.close()

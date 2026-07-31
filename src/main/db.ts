@@ -17,6 +17,11 @@ export function getDb(): Database.Database {
   return db
 }
 
+export function closeDb(): void {
+  db?.close()
+  db = null
+}
+
 function initSchema(db: Database.Database): void {
   db.exec(`
     CREATE TABLE IF NOT EXISTS projects (

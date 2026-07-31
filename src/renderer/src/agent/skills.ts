@@ -150,11 +150,12 @@ export async function loadProjectContext(projectPath?: string): Promise<ProjectC
 
   // Project scope wins over user scope on name collisions (it loads last).
   const seen = new Set<string>()
-  ctx.skills = ctx.skills.filter((s) => {
-    if (seen.has(s.name)) return false
-    seen.add(s.name)
+  ctx.skills = [...ctx.skills].reverse().filter((s) => {
+    const key = s.name.toLowerCase()
+    if (seen.has(key)) return false
+    seen.add(key)
     return true
-  })
+  }).reverse()
 
   ctxCache.set(key, { at: Date.now(), ctx })
   return ctx

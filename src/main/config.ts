@@ -37,19 +37,20 @@ export interface PawnConfig {
   models?: ModelConfig[]
 }
 
-function ensureDir(): void {
-  if (!existsSync(PAWN_DIR)) {
-    mkdirSync(PAWN_DIR, { recursive: true })
+function ensureDir(dir: string): void {
+  if (!existsSync(dir)) {
+    mkdirSync(dir, { recursive: true })
   }
 }
 
-export function loadConfig(): PawnConfig {
-  ensureDir()
-  if (!existsSync(CONFIG_PATH)) {
+export function loadConfig(dir = PAWN_DIR): PawnConfig {
+  ensureDir(dir)
+  const configPath = join(dir, 'config.toml')
+  if (!existsSync(configPath)) {
     return { settings: {}, providers: [], models: [] }
   }
   try {
-    const raw = readFileSync(CONFIG_PATH, 'utf-8')
+    const raw = readFileSync(configPath, 'utf-8')
     return parse(raw) as PawnConfig
   } catch {
     return { settings: {}, providers: [], models: [] }
@@ -71,14 +72,14 @@ function deepMerge(a: Record<string, unknown>, b: Record<string, unknown>): Reco
   return out
 }
 
-export function saveConfig(partial: PawnConfig): void {
-  ensureDir()
+export function saveConfig(partial: PawnConfig, dir = PAWN_DIR): void {
+  ensureDir(dir)
   // Recursively merge: settings, and any future nested keys, merge safely.
   // Arrays (providers, models) are always passed in full and replace wholesale.
-  const existing = loadConfig()
+  const existing = loadConfig(dir)
   const merged = deepMerge(existing as Record<string, unknown>, partial as Record<string, unknown>) as PawnConfig
   const raw = stringify(merged as Record<string, unknown>)
-  writeFileSync(CONFIG_PATH, raw, 'utf-8')
+  writeFileSync(join(dir, 'config.toml'), raw, 'utf-8')
 }
 
 export function getConfigPath(): string {

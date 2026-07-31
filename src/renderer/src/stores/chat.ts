@@ -14,6 +14,7 @@ import {
   TRANSCRIPT_VERSION,
   type TranscriptEntry, type TranscriptThinking, type StoredTranscript
 } from '../agent/transcript'
+import { formatToolMessageContent } from '../agent/toolMessage'
 
 export type SendMode = 'queue' | 'steer'
 
@@ -385,11 +386,7 @@ async function agentLoop(
         useAppStore.getState().addMessage(projectId, sessionId, {
           id: toolMsgId,
           role: 'system',
-          content: `[Tool: ${tc.name}] ${raw.isError ? 'ERROR' : 'OK'}\n${truncated.slice(0, 500)}${
-          raw.diffData
-              ? `\n<<<DIFF:${raw.diffData.filename}>>>\n--- old\n${raw.diffData.oldText.slice(0, 300)}\n+++ new\n${raw.diffData.newText.slice(0, 300)}\n<<<END>>>\n__DIFF__:${JSON.stringify({ filename: raw.diffData.filename, oldText: raw.diffData.oldText.slice(0, 200), newText: raw.diffData.newText.slice(0, 200) })}`
-              : ''
-          }`,
+          content: formatToolMessageContent(tc.name, raw.isError === true, truncated, raw.diffData),
           createdAt: Date.now()
         })
 
@@ -426,7 +423,7 @@ async function agentLoop(
   }
 }
 
-function truncateToolResult(result: { content: string }, maxLen = 2000): string {
+export function truncateToolResult(result: { content: string }, maxLen = 2000): string {
   if (result.content.length <= maxLen) return result.content
   return result.content.slice(0, maxLen) + `\n...(truncated ${result.content.length - maxLen} chars)`
 }
@@ -444,7 +441,7 @@ function truncateToolResult(result: { content: string }, maxLen = 2000): string 
  * only pays off next turn, while the previous turn's anchor is the one that
  * actually *reads*. With a single anchor every turn writes and never reads.
  */
-function withConversationCacheAnchors(
+export function withConversationCacheAnchors(
   messages: Array<Record<string, unknown>>
 ): Array<Record<string, unknown>> {
  if (messages.length === 0) return messages
@@ -485,7 +482,7 @@ function withConversationCacheAnchors(
  * gateways reject unknown parameters outright, which would break every provider
  * that is not OpenAI itself.
  */
-function supportsReasoningEffort(modelId: string): boolean {
+export function supportsReasoningEffort(modelId: string): boolean {
   return /(^|\/)(o[1-4](-|$)|gpt-5|deepseek-reasoner|qwq)/i.test(modelId)
 }
 
@@ -496,7 +493,7 @@ function supportsReasoningEffort(modelId: string): boolean {
  * API gateways reject. When there is no leading user message, a standalone one
  * is prepended.
  */
-function injectClaudePreamble(
+export function injectClaudePreamble(
   messages: Array<Record<string, unknown>>,
   preamble: string
 ): Array<Record<string, unknown>> {
@@ -520,7 +517,7 @@ interface LlmResult {
  usage: CallUsage
 }
 
-interface LlmRequest {
+export interface LlmRequest {
   decision: RouteDecision
   entries: TranscriptEntry[]
   systemLayers: string[]
@@ -531,7 +528,7 @@ interface LlmRequest {
   signal: AbortSignal
 }
 
-async function callLLM(req: LlmRequest): Promise<LlmResult> {
+export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const { decision, systemLayers, projectPreamble, sessionId, projectId, assistantMsgId, signal } = req
   const { provider, model } = decision
   const { reasoningEffort } = useProviderStore.getState()

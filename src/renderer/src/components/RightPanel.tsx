@@ -62,15 +62,15 @@ export default function RightPanel(): React.JSX.Element | null {
     })
   }, [panelWidth, visible])
 
-  const cancelHide = (): void => {
+  const cancelHide = useCallback((): void => {
     if (hideTimer.current) {
       window.clearTimeout(hideTimer.current)
       hideTimer.current = null
     }
     setClosing(false)
-  }
+  }, [])
 
-  const requestHide = (): void => {
+  const requestHide = useCallback((): void => {
     if (closingRef.current) return
     // Closing the panel closes the browser along with it: drop the native page
     // so reopening the browser doesn't resurrect the last visited site.
@@ -83,10 +83,10 @@ export default function RightPanel(): React.JSX.Element | null {
       setClosing(false)
       hideTimer.current = null
     }, HIDE_MS)
-  }
+  }, [])
 
   // Save visibility
-  const toggleVisible = (): void => {
+  const toggleVisible = useCallback((): void => {
     if (closingRef.current) {
       cancelHide()
       return
@@ -97,10 +97,11 @@ export default function RightPanel(): React.JSX.Element | null {
       setOpening(true)
       setVisible(true)
     }
-  }
+  }, [cancelHide, requestHide])
 
   // Open a tool as a tab (or switch to it if already open)
   const openTool = (id: TabId): void => {
+    setOpening(true)
     setVisible(true)
     setOpenTabs((prev) => {
       const next = prev.includes(id) ? prev : [...prev, id]

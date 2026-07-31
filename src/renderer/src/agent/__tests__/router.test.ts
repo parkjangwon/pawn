@@ -1,0 +1,233 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useProviderStore } from '../../stores/provider'
+import type { ModelEntry, ModelTier, Provider } from '../../types/provider'
+import {
+  route, estimateComplexity, estimateRoundCost, estimateRePrimeCost, routeKey,
+  noteProviderFailure, noteProviderSuccess, isProviderAvailable, providerCooldownRemaining,
+  shouldEscalate, setSessionRoute, clearSessionRoute
+} from '../router'
+import type { TranscriptEntry } from '../transcript'
+
+function provider(id: string, name = id): Provider {
+  return { id, name, apiFormat: 'openai', authMethod: 'api-key', baseUrl: 'https://api.example.com/v1', enabled: true }
+}
+
+function model(providerId: string, modelId: string, tier: ModelTier, opts: Partial<ModelEntry> = {}): ModelEntry {
+  return { id: `${providerId}:${modelId}`, providerId, modelId, label: modelId, tier, enabled: true, ...opts }
+}
+
+const pricing = (input: number, output: number, cacheRead: number, cacheWrite: number) =>
+  ({ input, output, cacheRead, cacheWrite })
+
+beforeEach(() => {
+  useProviderStore.setState({
+    providers: [],
+    models: [],
+    routingMode: 'auto',
+    activeModelId: null
+  })
+})
+
+describe('estimateComplexity', () => {
+  it('classifies empty and short plain messages as simple', () => {
+    expect(estimateComplexity('')).toBe('simple')
+    expect(estimateComplexity('   ')).toBe('simple')
+    expect(estimateComplexity('hello')).toBe('simple')
+    expect(estimateComplexity('yes, do it')).toBe('simple')
+  })
+
+  it('flags code fences and long messages', () => {
+    expect(estimateComplexity('fix this ```code```')).toBe('medium')
+    expect(estimateComplexity('x'.repeat(200))).toBe('medium')
+    expect(estimateComplexity('x'.repeat(500))).toBe('medium')
+  })
+
+  it('recognizes refactor/design keywords in Korean', () => {
+    expect(estimateComplexity('이 코드를 리팩토링해줘')).toBe('medium')
+    expect(estimateComplexity('그리고 나서 전체 구조를 분석해줘')).toBe('complex')
+  })
+
+  it('classifies long messages with heavy keywords as complex', () => {
+    expect(estimateComplexity('x'.repeat(500) + ' 리팩토링')).toBe('complex')
+  })
+
+  it('ignores inline file blocks when measuring length', () => {
+    const msg = '<file path="a.ts">' + 'x'.repeat(500) + '</file>\n간단히 요약해줘'
+    expect(estimateComplexity(msg)).not.toBe('complex')
+  })
+})
+
+describe('cost model', () => {
+  const m = model('p', 'gpt-x', 'mid', { pricing: pricing(10, 20, 1, 5) })
+
+  it('computes round cost with warm cache ratio', () => {
+    const cost = estimateRoundCost(m, 100_000, 1000, 0.9)
+    expect(cost).toBeCloseTo((90_000 * 1 + 10_000 * 10 + 1000 * 20) / 1_000_000)
+  })
+
+  it('returns null when pricing is unknown', () => {
+    expect(estimateRoundCost(model('p', 'unknown-model', 'low'), 1000, 100, 0)).toBeNull()
+  })
+
+  it('computes re-prime cost from cacheWrite', () => {
+    expect(estimateRePrimeCost(m, 100_000)).toBeCloseTo((100_000 * 5) / 1_000_000)
+  })
+})
+
+describe('provider health', () => {
+  it('puts a provider on escalating cooldown after failures', () => {
+    noteProviderFailure('health-a')
+    expect(isProviderAvailable('health-a')).toBe(false)
+    expect(providerCooldownRemaining('health-a')).toBeGreaterThan(0)
+
+    noteProviderFailure('health-a')
+    expect(providerCooldownRemaining('health-a')).toBeGreaterThan(5000)
+
+    noteProviderSuccess('health-a')
+    expect(isProviderAvailable('health-a')).toBe(true)
+    expect(providerCooldownRemaining('health-a')).toBe(0)
+  })
+})
+
+describe('shouldEscalate', () => {
+  it('escalates on empty responses, repeated tool errors, or long loops', () => {
+    expect(shouldEscalate({ consecutiveToolErrors: 0, round: 0, emptyResponses: 0 })).toBe(0)
+    expect(shouldEscalate({ consecutiveToolErrors: 0, round: 0, emptyResponses: 2 })).toBe(2)
+    expect(shouldEscalate({ consecutiveToolErrors: 3, round: 0, emptyResponses: 0 })).toBe(1)
+    expect(shouldEscalate({ consecutiveToolErrors: 0, round: 12, emptyResponses: 0 })).toBe(1)
+  })
+})
+
+describe('route', () => {
+  const entries: TranscriptEntry[] = []
+
+  it('returns null when nothing is configured', () => {
+    expect(route({ sessionId: 's', entries, complexity: 'simple' })).toBeNull()
+  })
+
+  it('picks the tier matching the complexity in auto mode', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'low-model', 'low', { pricing: pricing(1, 2, 0.1, 1) }),
+        model('p', 'mid-model', 'mid', { pricing: pricing(2, 4, 0.2, 2) }),
+        model('p', 'high-model', 'high', { pricing: pricing(4, 8, 0.4, 4) })
+      ]
+    })
+    expect(route({ sessionId: 's', entries, complexity: 'simple' })?.tier).toBe('low')
+    expect(route({ sessionId: 's', entries, complexity: 'medium' })?.tier).toBe('mid')
+    expect(route({ sessionId: 's', entries, complexity: 'complex' })?.tier).toBe('high')
+  })
+
+  it('honours a manual pin', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'low-model', 'low'),
+        model('p', 'pinned-model', 'high')
+      ],
+      routingMode: 'manual',
+      activeModelId: 'p:pinned-model'
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple' })
+    expect(d?.model.modelId).toBe('pinned-model')
+    expect(d?.reason).toBe('manual pin')
+  })
+
+  it('skips excluded models and falls back to an adjacent tier', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'low-a', 'low', { pricing: pricing(1, 2, 0.1, 1) }),
+        model('p', 'low-b', 'low', { pricing: pricing(1, 2, 0.1, 1) }),
+        model('p', 'mid-a', 'mid', { pricing: pricing(2, 4, 0.2, 2) })
+      ]
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple', exclude: new Set(['p:low-a']) })
+    expect(d?.model.modelId).toBe('low-b')
+  })
+
+  it('escalates the target tier on demand', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'low-model', 'low'),
+        model('p', 'high-model', 'high')
+      ]
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple', escalate: 2 })
+    expect(d?.tier).toBe('high')
+  })
+
+  it('prefers a healthy provider over one on cooldown', () => {
+    noteProviderFailure('cool-p')
+    useProviderStore.setState({
+      providers: [provider('cool-p'), provider('warm-p')],
+      models: [
+        model('cool-p', 'cool-model', 'low'),
+        model('warm-p', 'warm-model', 'low')
+      ]
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple' })
+    expect(d?.provider.id).toBe('warm-p')
+  })
+
+  it('keeps a warm high-tier session instead of downgrading mid-turn', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'low-model', 'low'),
+        model('p', 'high-model', 'high')
+      ]
+    })
+    setSessionRoute('sticky-session', 'p:high-model', 'high', 1000)
+    const d = route({ sessionId: 'sticky-session', entries, complexity: 'simple', newTurn: false })
+    expect(d?.model.modelId).toBe('high-model')
+    expect(d?.reason).toContain('sticky')
+  })
+
+  it('downgrades at a user-turn boundary when savings repay the re-prime', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'low-model', 'low', { pricing: pricing(5, 20, 0.5, 5) }),
+        model('p', 'high-model', 'high', { pricing: pricing(100, 200, 10, 100) })
+      ]
+    })
+    setSessionRoute('downgrade-session', 'p:high-model', 'high', 1000)
+    const bigPrompt = { role: 'user' as const, content: 'x'.repeat(200_000) }
+    const d = route({
+      sessionId: 'downgrade-session',
+      entries: [bigPrompt],
+      complexity: 'simple',
+      newTurn: true
+    })
+    expect(d?.tier).toBe('low')
+    expect(d?.reason).toContain('downgrade')
+  })
+
+  it('falls back to the excluded model when nothing else is usable', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [model('p', 'only-model', 'low')]
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple', exclude: new Set(['p:only-model']) })
+    expect(d?.model.modelId).toBe('only-model')
+  })
+
+  it('builds stable route keys from provider and model ids', () => {
+    expect(routeKey(model('prov', 'model-x', 'low'))).toBe('prov:model-x')
+  })
+
+  it('never picks disabled providers or models', () => {
+    useProviderStore.setState({
+      providers: [{ ...provider('off-p'), enabled: false }, provider('on-p')],
+      models: [
+        model('off-p', 'off-model', 'low'),
+        model('on-p', 'on-model', 'low')
+      ]
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple' })
+    expect(d?.provider.id).toBe('on-p')
+  })
+})

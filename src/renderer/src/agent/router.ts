@@ -118,9 +118,14 @@ export function estimateComplexity(message: string): Complexity {
 
   if (/```/.test(withoutBlocks)) score++
   if (/\.(ts|tsx|js|jsx|py|go|rs|java|rb|c|cpp|css|html|json|ya?ml|sql)\b/i.test(withoutBlocks)) score++
-  if (/\b(then|after that|먼저|그리고 나서|다음에|step\s*\d)\b/i.test(withoutBlocks)) score++
-  if (/\b(refactor|architect|migrate|debug|investigate|optimi[sz]e|design|리팩토링|설계|분석|디버깅|최적화)\b/i.test(withoutBlocks)) score += 2
-  if (/\b(across|codebase|all files|every|entire|전체|모든)\b/i.test(withoutBlocks)) score++
+  if (/\b(then|after that|step\s*\d)\b/i.test(withoutBlocks)) score++
+  // Korean has no ASCII word boundaries, so CJK keywords must match as plain
+  // substrings rather than inside a \b group (which silently never fires).
+  if (/먼저|그리고 나서|다음에/.test(withoutBlocks)) score++
+  if (/\b(refactor|architect|migrate|debug|investigate|optimi[sz]e|design)\b/i.test(withoutBlocks)) score += 2
+  if (/리팩토링|설계|분석|디버깅|최적화/.test(withoutBlocks)) score += 2
+  if (/\b(across|codebase|all files|every|entire)\b/i.test(withoutBlocks)) score++
+  if (/전체|모든/.test(withoutBlocks)) score++
 
   // Strong "this is trivial" signals win outright — greetings, yes/no, restatements.
   if (len < 40 && !/```/.test(withoutBlocks) && score <= 1) return 'simple'
