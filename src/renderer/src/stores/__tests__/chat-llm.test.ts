@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { callLLM, type LlmRequest } from '../chat'
+import { callLLM, type LlmRequest } from '../../agent/llm'
 import { useAppStore } from '../app'
 import type { Provider, ModelEntry } from '../../types/provider'
 
