@@ -639,7 +639,6 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
       }
 
       case 'load_skill': {
-        if (!projectPath) return { toolCallId: call.id, content: 'No project path set; skills come from the project directory.', isError: true }
         const name = call.arguments.name as string
         const content = await readSkill(projectPath, name)
         if (!content) return { toolCallId: call.id, content: `No skill named "${name}". Check the Available Skills list.`, isError: true }

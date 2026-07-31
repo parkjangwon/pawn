@@ -16,6 +16,7 @@ const api = {
     mkdir: (path: string) => ipcRenderer.invoke('fs:mkdir', path),
     delete: (path: string) => ipcRenderer.invoke('fs:delete', path),
     exists: (path: string) => ipcRenderer.invoke('fs:exists', path),
+    homeDir: () => ipcRenderer.invoke('fs:homeDir'),
     walk: (path: string) => ipcRenderer.invoke('fs:walk', path)
   },
 

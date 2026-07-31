@@ -40,6 +40,7 @@ if (typeof window !== 'undefined' && !window.api) {
       exists: async (path: string) => {
         return await fsPost('exists', { path }) as boolean
       },
+      homeDir: async () => null,
       walk: async (path: string) => {
         return await fsPost('walk', { path }) as Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }
       }

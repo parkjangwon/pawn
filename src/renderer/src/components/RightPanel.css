@@ -368,6 +368,7 @@
 .rp-git-header {
   display: flex;
   align-items: center;
+  position: relative;
   justify-content: space-between;
   padding: 6px 10px;
   flex-shrink: 0;
@@ -896,4 +897,83 @@
 }
 .rp-content {
   padding-left: 12px;
+}
+.rp-git-branch-list {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  z-index: 20;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.rp-git-branch-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.rp-git-branch-item:hover { background: var(--bg-hover); }
+.rp-git-branch-item.active { color: var(--text-primary); font-weight: 500; }
+
+.rp-git-actions {
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px;
+  border-top: 1px solid var(--border-color);
+}
+
+.rp-git-commit-input {
+  flex: 1;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+}
+
+.rp-git-btn {
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.rp-git-btn:hover { background: var(--bg-hover); }
+.rp-git-btn:disabled { opacity: 0.4; cursor: default; }
+
+.rp-git-history { border-top: 1px solid var(--border-color); }
+.rp-git-history-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.rp-git-history-list { padding: 0 10px 6px; }
+.rp-git-history-item {
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, monospace;
+  color: var(--text-muted);
+  padding: 2px 0;
 }

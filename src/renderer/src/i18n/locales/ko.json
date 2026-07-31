@@ -85,14 +85,33 @@
   "contextBar": {
     "switchProject": "프로젝트 전환",
     "noProject": "선택된 프로젝트 없음",
-    "workWithoutProject": "프로젝트 없이 작업하기"
+    "workWithoutProject": "프로젝트 없이 작업하기",
+    "usageTotalCost": "총 비용",
+    "toggleRightPanel": "우측 패널 전환",
+    "usageCacheHitRate": "캐시 적중률",
+    "openSidebar": "사이드바 열기",
+    "usageCacheWrite": "캐시 기록",
+    "usageOutput": "출력",
+    "usageInput": "입력",
+    "cached": "캐시됨",
+    "usageCacheRead": "캐시 읽기",
+    "usageTitle": "이번 세션 사용량"
   },
   "modelPicker": {
     "noModels": "사용 가능한 모델이 없습니다",
     "autoLabel": "자동",
     "autoDesc": "컨텍스트에 따라 모델 자동 선택",
     "modelsLabel": "모델",
-    "reasoningLabel": "추론"
+    "reasoningLabel": "추론",
+    "reasoningLow": "추론 낮음",
+    "reasoningLowDesc": "빠른 응답",
+    "reasoningAuto": "추론 자동",
+    "reasoningMedium": "추론 중간",
+    "noModel": "모델 없음",
+    "reasoningAutoDesc": "작업에 따라 자동 선택",
+    "reasoningHighDesc": "깊은 사고",
+    "reasoningMediumDesc": "균형",
+    "reasoningHigh": "추론 높음"
   },
   "permission": {
     "title": "권한 요청",
@@ -160,7 +179,10 @@
       "oauth": "OAuth",
       "namePlaceholder": "내 프로바이더",
       "baseUrlPlaceholder": "https://api.example.com",
-      "apiKeyPlaceholder": "sk-..."
+      "apiKeyPlaceholder": "sk-...",
+      "addWithModels": "추가 ({{count}}개 모델 포함)",
+      "presetDesc": "잘 알려진 프로바이더 — API 키만 입력하면 바로 사용",
+      "pasteApiKey": "API 키를 붙여넣으세요"
     },
     "modelSection": {
       "title": "모델",
@@ -175,7 +197,15 @@
       "tier": "티어",
       "tierLow": "낮음",
       "tierMid": "중간",
-      "tierHigh": "높음"
+      "tierHigh": "높음",
+      "contextWindow": "컨텍스트 윈도우 (토큰, 선택)",
+      "pricingDesc": "가격 (USD / 1M 토큰) — 라우터의 비용 계산과 캐시 절감 표시에 사용됨. 모르면 비워두세요.",
+      "pricingFormat": " · ${{input}}/${{output}} (1M 입력/출력)",
+      "priceOutput": "출력가",
+      "priceCacheWrite": "캐시 기록",
+      "priceCacheRead": "캐시 읽기",
+      "pricingUnknown": " · 가격 미설정 — 비용 추적 비활성화",
+      "priceInput": "입력가"
     },
     "agentSection": {
       "title": "에이전트",
@@ -237,7 +267,50 @@
     "changes": "변경사항",
     "local": "로컬",
     "branch": "브랜치",
-    "project": "프로젝트"
+    "project": "프로젝트",
+    "git": {
+      "noRepo": "Git 저장소가 없습니다",
+      "noChanges": "변경사항 없음"
+    },
+    "openTool": "도구 열기",
+    "toolDescs": {
+      "terminal": "로컬 셸 접근",
+      "files": "프로젝트 파일 탐색",
+      "git": "버전 관리",
+      "browser": "웹 브라우저",
+      "diff": "최근 파일 변경"
+    },
+    "addTool": "도구 추가",
+    "selectTool": "도구 선택",
+    "browser": {
+      "enterUrl": "URL 입력...",
+      "back": "뒤로",
+      "forward": "앞으로",
+      "refresh": "새로고침",
+      "reload": "새로고침",
+      "go": "이동",
+      "console": "콘솔 (페이지 로그)",
+      "devtools": "개발자 도구 열기",
+      "retry": "다시 시도",
+      "noConsole": "아직 콘솔 메시지가 없습니다",
+      "clear": "지우기",
+      "proxyMode": "프록시 모드 (X-Frame-Options 우회)",
+      "enableProxy": "프록시 모드 사용",
+      "emptyHint": "URL을 입력하거나 에이전트가 여기서 탐색하게 하세요",
+      "emptyHintWeb": "위 URL 입력창에서 브라우징을 시작하세요 (에이전트 자동화는 데스크톱 앱 필요)"
+    },
+    "diff": {
+      "title": "최근 변경사항",
+      "empty": "최근 파일 변경이 없습니다"
+    },
+    "tools": {
+      "terminal": "터미널",
+      "files": "파일",
+      "git": "Git",
+      "browser": "브라우저",
+      "diff": "Diff"
+    },
+    "allToolsOpen": "모든 도구가 열려 있습니다"
   },
   "commandPalette": {
     "placeholder": "명령어 입력...",

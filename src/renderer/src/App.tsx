@@ -59,17 +59,22 @@ export default function App(): React.JSX.Element {
         if (activeProjectId) addSession(activeProjectId)
       }
 
+      // Cmd/Ctrl + B = toggle the left sidebar
+      if (mod && !e.altKey && e.key === 'b') {
+        e.preventDefault()
+        toggleSidebar()
+      }
+
       // Escape = close modals
       if (e.key === 'Escape') {
         if (showCommandPalette) setShowCommandPalette(false)
         if (showSettings) setShowSettings(false)
-        if (sidebarOpen) setSidebarOpen(false)
       }
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [showSettings, showCommandPalette, sidebarOpen, activeProjectId, addSession])
+  }, [showSettings, showCommandPalette, activeProjectId, addSession, toggleSidebar])
 
   return (
     <div className={`app ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'} ${window.api?.platform === 'darwin' ? 'platform-mac' : ''}`}>

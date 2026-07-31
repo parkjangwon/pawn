@@ -151,6 +151,14 @@ function registerIpc(): void {
     return existsSync(filePath)
   })
 
+  ipcMain.handle('fs:homeDir', async () => {
+    try {
+      return app.getPath('home')
+    } catch {
+      return null
+    }
+  })
+
   // Shell / Terminal
   ipcMain.handle('shell:exec', async (_, command: string, cwd?: string) => {
     try {
