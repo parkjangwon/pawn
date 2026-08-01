@@ -1,81 +1,81 @@
 # Pawn
 
+[한국어 버전 (Korean Version)](./README.ko.md)
+
 AI Coding Agent GUI — Code, Browse, Automate.
 
 A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI, OpenCode's BYOK, and Claude Desktop's browser use. No harness, no lock-in — bring your own keys, install your own plugins, build your own agent.
 
 ## Philosophy
 
-- **No harness** — pure canvas. Users install plugins/skills they need.
-- **BYOK** — register any OpenAI or Claude compatible API endpoint.
-- **Auto mode** — multi-model routing based on task complexity.
+- **No harness** — Pure canvas. Users install plugins/skills they need.
+- **BYOK** — Register any OpenAI or Claude compatible API endpoint.
+- **Auto mode** — Multi-model routing based on task complexity and cache optimization.
 - **Open source** — MIT licensed, fully customizable.
-- **Claude Code compatible** — loads `CLAUDE.md`, `.claude/skills/`, `.claude/rules/`, and `.agent/` directories.
+- **Claude Code compatible** — Loads `CLAUDE.md`, `.claude/skills/`, `.claude/rules/`, and `.agent/` directories.
 
 ## Features
 
-### Core Agent
-- Tool-calling agent loop (up to 25 rounds per turn)
-- File system: read, write, edit, list, delete
-- Shell command execution
-- Computer Use: screenshot, click, type, keypress
-- Browser Use: open URLs
-- Permission system with user approval dialogs
-- Queue / Steering send modes
+### Core Agent & Tools
+- Tool-calling agent loop (up to 25 rounds per turn).
+- **File System**: Read, write, edit, list, and delete files safely.
+- **Shell execution**: Run CLI tools locally (supports background tasks and standard sandbox modes).
+- **Computer Use**: Screenshot, click, type, and keypress integration.
+- **Browser Use**: Open URLs and automate web interactions.
+- Permission system with granular user approval dialogs.
+- Queue / Steering send modes.
 
-### Providers & Models
-- OpenAI API format (GPT-4o, o1, etc.)
-- Claude API format (Claude 3.5, 4, etc.)
-- Custom endpoints (any OpenAI-compatible API)
-- API Key or OAuth authentication
-- Auto mode: model routing by task complexity (low/mid/high tiers)
-- Prompt cache optimization (Claude `cache_control`, OpenAI stable prefix)
+### Providers & Smart Routing
+- OpenAI API format (GPT-4o, o1, etc.) and Claude API format (Claude 3.5 Sonnet, etc.).
+- Custom endpoints (any OpenAI-compatible API).
+- API Key or OAuth authentication.
+- **Smart Model Router**:
+  - **Complexity Heuristics**: Automatically classifies task complexity (`simple` | `medium` | `complex`) locally based on input size, keywords, and instructions.
+  - **Cache-Aware Routing**: Evaluates the cost of cache writes versus per-token savings before switching models to maximize prompt caching performance.
+  - **Automatic Escalation**: Automatically escalates to stronger model tiers when detecting consecutive tool failures or empty model responses.
+  - **Failover & Cooldown**: Automatically puts failing providers on a transient cooldown (5s to 120s) to keep the agent responsive.
 
-### UI
-- ChatGPT-style layout (sidebar + chat area)
-- Light / Dark theme (in Settings > Appearance)
-- Responsive: desktop, tablet, mobile
-- Markdown rendering with syntax highlighting
-- Code blocks with copy button
-- Streaming responses with cursor animation
-- Auto-scroll on new messages
-- i18n: English, Korean, Japanese, Chinese
+### Local Database & Persistence
+- Powered by **SQLite** (`better-sqlite3` with WAL journal mode) for lightweight, robust local storage.
+- **Schemas**:
+  - `projects` & `sessions`: Multi-project workspace support.
+  - `messages`: Visible chat history.
+  - `transcripts`: Byte-stable provider-neutral conversation cache to optimize API prompt caching.
+  - `usage`: Tracks detailed usage tokens (input, output, cache-read, cache-write) and estimated costs.
+  - `routines`: Recurring scheduled automation routines.
 
-### Projects & Sessions
-- Project = local folder path
-- Multiple sessions per project
-- Persistent state (localStorage)
-- Native folder selection dialog (Electron)
-
-### Automation
-- Scheduling system (interval-based tasks)
-- OS native notifications
-- Cron-style automation via IPC
+### UI / UX
+- ChatGPT-style layout (sidebar + chat area).
+- Light / Dark theme (configurable in Settings > Appearance).
+- Responsive layout: Optimized for desktop, tablet, and mobile displays.
+- Rich Markdown rendering with syntax highlighting and code block copy utilities.
+- Streaming responses with cursor animation.
+- Auto-scroll on new messages.
+- Internationalization (i18n): English, Korean, Japanese, and Chinese.
 
 ### Extensibility
-- Claude Code skill format (`.claude/skills/*/SKILL.md`)
-- Codex-compatible `.agent/` directory
-- `CLAUDE.md` / `CLAUDE.local.md` project context
-- `.claude/rules/*.md` rule files
-- Plugin marketplace (planned)
+- Claude Code skill format (`.claude/skills/*/SKILL.md`).
+- Codex-compatible `.agent/` directory.
+- `CLAUDE.md` / `CLAUDE.local.md` project context.
+- `.claude/rules/*.md` rule files.
 
 ### Security
-- Context isolation + contextBridge (no nodeIntegration)
-- Content Security Policy headers
-- Permission requests for sensitive operations
-- No `rehype-raw` in markdown (XSS prevention)
-- Sandbox support (configurable)
+- Context isolation + contextBridge (no nodeIntegration in the renderer).
+- Content Security Policy (CSP) headers.
+- Interactive permission requests for sensitive local operations.
+- Sandbox support (configurable).
 
 ## Tech Stack
 
-- **Electron** — desktop shell
+- **Electron** — Desktop shell
 - **React 19** — UI framework
-- **TypeScript** — type safety
-- **Vite** (via electron-vite) — build tooling
-- **Zustand** — state management with persistence
-- **i18next** — internationalization
-- **react-markdown** + **rehype-highlight** — markdown rendering
-- **highlight.js** — code syntax highlighting
+- **TypeScript** — Type safety
+- **Vite** (via electron-vite) — Build tooling
+- **Zustand** — State management with persistence
+- **i18next** — Internationalization
+- **SQLite (better-sqlite3)** — Local database
+- **react-markdown** + **rehype-highlight** — Markdown rendering
+- **highlight.js** — Code syntax highlighting
 
 ## Development
 
@@ -114,53 +114,22 @@ npm run dist:linux  # Linux (.AppImage, .deb)
 npm run pack
 ```
 
-Output goes to `release/` directory.
+Output goes to the `release/` directory.
 
 ## Project Structure
 
 ```
 src/
-├── main/              # Electron main process (IPC, CSP, window management)
+├── main/              # Electron main process (IPC, DB, CSP, window management)
 ├── preload/           # Context bridge (secure API exposure)
 └── renderer/          # React app
     └── src/
-        ├── agent/     # Agent loop, tools, skills, routing
-        ├── components/ # UI components
+        ├── agent/     # Agent loop, tools, smart routing, transcripts
+        ├── components/# UI components
         ├── i18n/      # Translations (en, ko, ja, zh)
         ├── stores/    # Zustand stores (app, chat, provider, theme, permission)
         ├── styles/    # Global CSS with theme variables
         └── types/     # TypeScript definitions
-```
-
-## Architecture
-
-```
-┌─────────────────────────────────────────────┐
-│  Renderer (React)                           │
-│  ┌─────────┐  ┌──────────┐  ┌───────────┐  │
-│  │ Sidebar │  │ ChatArea │  │ Settings  │  │
-│  └────┬────┘  └────┬─────  └─────┬─────┘  │
-│       │             │              │         │
-│  ┌────┴─────────────┴──────────────┴─────┐  │
-│  │         Zustand Stores               │  │
-│  │  app | chat | provider | permission  │  │
-│  └────────────────┬─────────────────────┘  │
-│                   │                         │
-│  ┌────────────────┴─────────────────────┐  │
-│  │         Agent Loop                   │  │
-│  │  LLM call → tool parse → execute →   │  │
-│  │  feed result → repeat until done     │  │
-│  └────────────────┬─────────────────────┘  │
-└───────────────────┼─────────────────────────┘
-                    │ contextBridge (IPC)
-┌───────────────────┼─────────────────────────┐
-│  Main Process     │                         │
-│  ┌────────────────┴─────────────────────┐  │
-│  │  IPC Handlers                        │  │
-│  │  fs | shell | computer | browser |   │  │
-│  │  notification | schedule | dialog    │  │
-│  └──────────────────────────────────────┘  │
-└─────────────────────────────────────────────┘
 ```
 
 ## License
