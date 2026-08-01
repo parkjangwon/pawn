@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { useKeybinding } from '../stores/keybindings'
 import TerminalView from './TerminalView'
 import FilesView from './FilesView'
 import GitView from './GitView'
@@ -9,6 +10,8 @@ import DiffListView from './DiffListView'
 import './RightPanel.css'
 
 type TabId = 'terminal' | 'files' | 'git' | 'browser' | 'diff'
+
+const NOOP = (): void => {}
 
 const TOOL_ICONS: Record<TabId, string> = {
   terminal: 'M4 17l6-6-6-6m8 14h8',
@@ -201,20 +204,11 @@ export default function RightPanel(): React.JSX.Element | null {
     return () => { delete (window as any).__toggleRightPanel }
   }, [])
 
-  // Option+Cmd/Ctrl+B toggles the right panel
-  useEffect(() => {
-    const handler = (e: KeyboardEvent): void => {
-      // e.code stays stable across IME layouts where e.key can be a Hangul
-      // character; e.key is kept as a fallback for non-QWERTY hardware.
-      const isB = e.key === 'b' || e.key === 'B' || e.code === 'KeyB'
-      if (e.altKey && (e.metaKey || e.ctrlKey) && isB && !e.isComposing) {
-        e.preventDefault()
-        toggleVisible()
-      }
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [])
+  // In Electron the main process owns shortcut dispatch (before-input-event
+  // forwarding covers every focused webContents), so the renderer only handles
+  // keys in dev:web where there is no main process.
+  const isBrowserMode = window.api?.platform === 'browser'
+  useKeybinding('toggle-right-panel', isBrowserMode ? toggleVisible : NOOP)
 
   // The embedded browser (a separate WebContentsView) steals keyboard focus;
   // the main process forwards the toggle there through app:shortcut.

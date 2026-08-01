@@ -37,7 +37,8 @@
     "pin": "Pin",
     "unpin": "Unpin",
     "rename": "Rename",
-    "newChat": "New chat"
+    "newChat": "New chat",
+    "running": "Running"
   },
   "chat": {
     "placeholder": "Send a message...",
@@ -151,7 +152,9 @@
     "groups": {
       "general": "General",
       "coding": "Coding",
-      "integration": "Integration"
+      "integration": "Integration",
+      "automation": "Automation",
+      "system": "System"
     },
     "appearanceSection": {
       "title": "Appearance",
@@ -241,6 +244,66 @@
       "configFileDesc": "View and edit the raw configuration file",
       "database": "Database",
       "databaseDesc": "Manage the local database"
+    },
+    "routines": "Routines",
+    "system": "System",
+    "routineSection": {
+      "title": "Routines",
+      "desc": "Recurring tasks that run in the background while the app is open.",
+      "addTitle": "New routine",
+      "addDesc": "The prompt runs automatically in a dedicated session.",
+      "namePlaceholder": "Name (e.g. Morning standup)",
+      "promptPlaceholder": "What should the agent do?",
+      "add": "Add routine",
+      "empty": "No routines yet. Create one above.",
+      "running": "Running",
+      "runNow": "Run now",
+      "never": "Never",
+      "nextRun": "Next:",
+      "lastRun": "Last:",
+      "lastResult": "Last result:",
+      "everyMinutes": "Every {{minutes}} min",
+      "dailyAt": "Daily at {{time}}",
+      "weeklyAt": "Weekly {{weekday}} at {{time}}",
+      "type": {
+        "interval": "Interval",
+        "daily": "Daily",
+        "weekly": "Weekly"
+      },
+      "weekdays": {
+        "0": "Sunday",
+        "1": "Monday",
+        "2": "Tuesday",
+        "3": "Wednesday",
+        "4": "Thursday",
+        "5": "Friday",
+        "6": "Saturday"
+      }
+    },
+    "systemSection": {
+      "title": "System",
+      "desc": "Power and OS-level behavior.",
+      "sleepPrevention": "Sleep prevention",
+      "sleepPreventionDesc": "Keep the system awake while the app runs. Display mode also prevents the screen from turning off.",
+      "sleepOff": "Off",
+      "sleepSystem": "Prevent sleep",
+      "sleepDisplay": "Prevent sleep + screen"
+    },
+    "shortcuts": "Shortcuts",
+    "shortcutSection": {
+      "title": "Shortcuts",
+      "desc": "Rebind keyboard shortcuts. Click Change, then press the new combination.",
+      "recording": "Press new shortcut… (Esc to cancel)",
+      "conflict": "Conflicts with {{other}}",
+      "none": "Not set",
+      "change": "Change",
+      "cancel": "Cancel",
+      "reset": "Reset",
+      "toggle-right-panel": "Toggle right panel",
+      "toggle-sidebar": "Toggle sidebar",
+      "open-command-palette": "Open command palette",
+      "open-settings": "Open settings",
+      "new-session": "New session"
     }
   },
   "projectEdit": {
@@ -310,7 +373,8 @@
       "browser": "Browser",
       "diff": "Diff"
     },
-    "allToolsOpen": "All tools are open"
+    "allToolsOpen": "All tools are open",
+    "terminalRestart": "Restart terminal"
   },
   "commandPalette": {
     "placeholder": "Type a command...",
@@ -331,7 +395,11 @@
       "stopStreaming": "Stop Streaming",
       "stopStreamingDesc": "Stop the current response stream",
       "openSettings": "Open Settings",
-      "openSettingsDesc": "Open the application settings"
+      "openSettingsDesc": "Open the application settings",
+      "toggleRightPanel": "Toggle right panel",
+      "toggleRightPanelDesc": "Show or hide the tools panel",
+      "toggleSidebar": "Toggle sidebar",
+      "toggleSidebarDesc": "Show or hide the project sidebar"
     }
   },
   "fileTree": {
@@ -361,6 +429,7 @@
   },
   "theme": {
     "light": "Light",
-    "dark": "Dark"
+    "dark": "Dark",
+    "system": "System"
   }
 }

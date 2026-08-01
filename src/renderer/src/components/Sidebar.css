@@ -184,6 +184,42 @@
   white-space: nowrap;
 }
 
+.session-running {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #ff8a3d;
+  flex-shrink: 0;
+  animation: session-running-pulse 1.1s ease-in-out infinite;
+}
+
+@keyframes session-running-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.4; transform: scale(0.72); }
+}
+
+.session-count {
+  flex-shrink: 0;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--bg-hover);
+  color: var(--text-muted);
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.session-preview {
+  max-width: 96px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 11px;
+  flex-shrink: 1;
+}
+
 /* Project tree */
 .tree-project {
   margin-bottom: 2px;

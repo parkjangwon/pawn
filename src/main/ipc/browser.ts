@@ -1,6 +1,7 @@
 import { ipcMain, WebContentsView } from 'electron'
 import { handleTrusted } from './trust'
 import { getMainWindow } from '../window'
+import { injectAICursor, cursorShow } from '../browserCursor'
 
 // The embedded browser runs in its own session partition. The app's own CSP is
 // installed on `session.defaultSession`; sharing it would apply `default-src
@@ -52,20 +53,6 @@ function ensureBrowserView(): WebContentsView {
 
   const wc = browserView.webContents
   wc.setUserAgent(BROWSER_USER_AGENT)
-  // While the embedded page has focus, keyboard events never reach the main
-  // window's renderer, so app shortcuts would silently die. Forward the
-  // right-panel toggle (Option+Cmd/Ctrl+B) to the main window instead.
-  wc.on('before-input-event', (event, input) => {
-    if (
-      input.type === 'keyDown' &&
-      input.alt &&
-      (input.meta || input.control) &&
-      input.key.toLowerCase() === 'b'
-    ) {
-      event.preventDefault()
-      getMainWindow()?.webContents.send('app:shortcut', 'toggle-right-panel')
-    }
-  })
   // Popups navigate the same view instead of spawning windows the agent cannot see.
   wc.setWindowOpenHandler(({ url }) => {
     wc.loadURL(url).catch(() => {})
@@ -80,6 +67,7 @@ function ensureBrowserView(): WebContentsView {
   wc.on('did-stop-loading', () => emitBrowserEvent({ type: 'loaded', ...browserState() }))
   wc.on('did-navigate', () => { browserLogs.length = 0; emitBrowserEvent({ type: 'navigated', ...browserState() }) })
   wc.on('did-navigate-in-page', () => emitBrowserEvent({ type: 'navigated', ...browserState() }))
+  wc.on('did-finish-load', () => injectAICursor(wc))
   wc.on('page-title-updated', () => emitBrowserEvent({ type: 'title', ...browserState() }))
   wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
     if (!isMainFrame || code === -3) return // -3 is a user/script-initiated abort
@@ -185,19 +173,25 @@ export function registerBrowserIpc(): void {
 
   handleTrusted('browser:navigate', async (_, rawUrl: string) => {
     const view = ensureBrowserView()
+    const wc = view.webContents
     let url = String(rawUrl || '').trim()
     if (!url) return { error: 'Empty URL' }
     if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url
+    cursorShow(wc, 140, 24, 'loading')
 
     try {
-      await view.webContents.loadURL(url)
+      await wc.loadURL(url)
     } catch (err) {
       const msg = String(err)
       // ERR_ABORTED fires on redirects and on pages that navigate during load;
       // the page is usually fine, so report the resulting URL rather than failing.
-      if (!msg.includes('ERR_ABORTED')) return { error: `Failed to load ${url}: ${msg}` }
+      if (!msg.includes('ERR_ABORTED')) {
+        cursorShow(wc, 140, 24, 'move')
+        return { error: `Failed to load ${url}: ${msg}` }
+      }
     }
-    return { url: view.webContents.getURL(), title: view.webContents.getTitle() }
+    injectAICursor(wc)
+    return { url: wc.getURL(), title: wc.getTitle() }
   })
 
   handleTrusted('browser:back', async () => {
@@ -208,6 +202,7 @@ export function registerBrowserIpc(): void {
     if (!nav || !nav.canGoBack()) return { error: 'No previous page in history' }
     nav.goBack()
     await new Promise((r) => setTimeout(r, 400))
+    injectAICursor(wc)
     return { url: wc.getURL() }
   })
 
@@ -298,8 +293,21 @@ export function registerBrowserIpc(): void {
       try { el.scrollIntoView({ block: 'center', inline: 'center' }) } catch (e) {}
       if (el.focus) { try { el.focus() } catch (e) {} }
       var label = (el.getAttribute('aria-label') || el.innerText || el.value || el.tagName).toString().replace(/\\s+/g,' ').trim().slice(0, 60);
-      el.click();
-      return { message: 'Clicked ' + JSON.stringify(label) + '. Take a new snapshot if the page changed.' };
+      var r = el.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      return new Promise(function (resolve) {
+        var doClick = function () {
+          el.click();
+          resolve({ message: 'Clicked ' + JSON.stringify(label) + '. Take a new snapshot if the page changed.' });
+        };
+        if (window.__pawnCursor) {
+          // Wait for the glide to finish before pressing the target.
+          var move = window.__pawnCursor.show(cx, cy, 'click') || 0;
+          setTimeout(doClick, move + 90);
+        } else {
+          doClick();
+        }
+      });
     })()`)
   })
 
@@ -326,12 +334,23 @@ export function registerBrowserIpc(): void {
       } else {
         return { error: 'Element is not editable' };
       }
-      if (${doSubmit}) {
-        el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-        if (el.form && el.form.requestSubmit) { try { el.form.requestSubmit() } catch (e) {} }
+      var r = el.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      var done = function () {
+        if (${doSubmit}) {
+          el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+          el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
+          if (el.form && el.form.requestSubmit) { try { el.form.requestSubmit() } catch (e) {} }
+        }
+        return { message: 'Filled ' + (el.getAttribute('name') || el.getAttribute('placeholder') || el.tagName) + (${doSubmit} ? ' and submitted' : '') };
+      };
+      if (window.__pawnCursor) {
+        return new Promise(function (resolve) {
+          var move = window.__pawnCursor.show(cx, cy, 'type') || 0;
+          setTimeout(function () { resolve(done()) }, Math.min(900, move + 140 + value.length * 5));
+        });
       }
-      return { message: 'Filled ' + (el.getAttribute('name') || el.getAttribute('placeholder') || el.tagName) + (${doSubmit} ? ' and submitted' : '') };
+      return done();
     })()`)
   })
 
@@ -342,7 +361,12 @@ export function registerBrowserIpc(): void {
       var root = document.body;
       if (s) { try { root = document.querySelector(s) } catch (e) { root = null } }
       if (!root) return { error: 'No element matched selector ' + s };
+      var r = root.getBoundingClientRect();
+      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
       var text = (root.innerText || '').replace(/\\n{3,}/g, '\\n\\n').trim();
+      if (window.__pawnCursor) {
+        window.__pawnCursor.show(cx, cy, 'move');
+      }
       return { text: text.slice(0, 12000), truncated: text.length > 12000 };
     })()`)
   })

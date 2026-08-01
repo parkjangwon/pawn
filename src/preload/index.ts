@@ -130,6 +130,29 @@ const api = {
     const handler = (_event: unknown, name: string) => callback(name)
     ipcRenderer.on('app:shortcut', handler)
     return () => { ipcRenderer.removeListener('app:shortcut', handler) }
+  },
+
+  routine: {
+    list: () => ipcRenderer.invoke('routine:list'),
+    add: (input: unknown) => ipcRenderer.invoke('routine:add', input),
+    update: (id: string, patch: unknown) => ipcRenderer.invoke('routine:update', id, patch),
+    setEnabled: (id: string, enabled: boolean) => ipcRenderer.invoke('routine:setEnabled', id, enabled),
+    remove: (id: string) => ipcRenderer.invoke('routine:remove', id),
+    recordResult: (id: string, result: string) => ipcRenderer.invoke('routine:recordResult', id, result),
+    onFire: (callback: (routine: unknown) => void) => {
+      const handler = (_event: unknown, routine: unknown) => callback(routine)
+      ipcRenderer.on('routine:fire', handler)
+      return () => { ipcRenderer.removeListener('routine:fire', handler) }
+    }
+  },
+
+  power: {
+    setSleepPrevention: (mode: string) => ipcRenderer.invoke('power:setSleepPrevention', mode)
+  },
+
+  keybindings: {
+    set: (id: string, combo: string) => ipcRenderer.invoke('keybindings:set', id, combo),
+    setPaused: (paused: boolean) => ipcRenderer.invoke('keybindings:setPaused', paused)
   }
 }
 

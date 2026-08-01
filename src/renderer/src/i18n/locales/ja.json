@@ -37,7 +37,8 @@
     "pin": "ピン留め",
     "unpin": "ピン留め解除",
     "rename": "名前を変更",
-    "newChat": "新規チャット"
+    "newChat": "新規チャット",
+    "running": "実行中"
   },
   "chat": {
     "placeholder": "メッセージを入力...",
@@ -151,7 +152,9 @@
     "groups": {
       "general": "一般",
       "coding": "コーディング",
-      "integration": "統合"
+      "integration": "統合",
+      "automation": "自動化",
+      "system": "システム"
     },
     "appearanceSection": {
       "title": "外観",
@@ -241,6 +244,66 @@
       "configFileDesc": "生の設定ファイルを表示・編集",
       "database": "データベース",
       "databaseDesc": "ローカルデータベースを管理"
+    },
+    "routines": "ルーティン",
+    "system": "システム",
+    "routineSection": {
+      "title": "ルーティン",
+      "desc": "アプリ起動中にバックグラウンドで繰り返し実行されるタスクです。",
+      "addTitle": "新しいルーティン",
+      "addDesc": "専用セッションでプロンプトが自動実行されます。",
+      "namePlaceholder": "名前（例: 朝のスタンドアップ）",
+      "promptPlaceholder": "エージェントに何をさせますか？",
+      "add": "ルーティンを追加",
+      "empty": "ルーティンはまだありません。上から作成してください。",
+      "running": "実行中",
+      "runNow": "今すぐ実行",
+      "never": "なし",
+      "nextRun": "次回:",
+      "lastRun": "最終:",
+      "lastResult": "最終結果:",
+      "everyMinutes": "{{minutes}}分ごと",
+      "dailyAt": "毎日 {{time}}",
+      "weeklyAt": "毎週{{weekday}} {{time}}",
+      "type": {
+        "interval": "間隔",
+        "daily": "毎日",
+        "weekly": "毎週"
+      },
+      "weekdays": {
+        "0": "日曜日",
+        "1": "月曜日",
+        "2": "火曜日",
+        "3": "水曜日",
+        "4": "木曜日",
+        "5": "金曜日",
+        "6": "土曜日"
+      }
+    },
+    "systemSection": {
+      "title": "システム",
+      "desc": "電源とOSの動作設定です。",
+      "sleepPrevention": "スリープ防止",
+      "sleepPreventionDesc": "アプリ実行中にシステムのスリープを防ぎます。画面モードはディスプレイの電源オフも防ぎます。",
+      "sleepOff": "オフ",
+      "sleepSystem": "スリープ防止",
+      "sleepDisplay": "スリープ+画面防止"
+    },
+    "shortcuts": "ショートカット",
+    "shortcutSection": {
+      "title": "ショートカット",
+      "desc": "キーボードショートカットを再割り当てできます。変更を押して新しい組み合わせを入力してください。",
+      "recording": "新しいショートカットを押してください…（Escでキャンセル）",
+      "conflict": "{{other}}と競合",
+      "none": "未設定",
+      "change": "変更",
+      "cancel": "キャンセル",
+      "reset": "リセット",
+      "toggle-right-panel": "右パネルの切り替え",
+      "toggle-sidebar": "サイドバーの切り替え",
+      "open-command-palette": "コマンドパレットを開く",
+      "open-settings": "設定を開く",
+      "new-session": "新規セッション"
     }
   },
   "projectEdit": {
@@ -310,7 +373,8 @@
       "browser": "ブラウザ",
       "diff": "Diff"
     },
-    "allToolsOpen": "すべてのツールが開いています"
+    "allToolsOpen": "すべてのツールが開いています",
+    "terminalRestart": "ターミナルを再起動"
   },
   "commandPalette": {
     "placeholder": "コマンドを入力...",
@@ -331,7 +395,11 @@
       "stopStreaming": "ストリーミング停止",
       "stopStreamingDesc": "現在の応答ストリームを停止",
       "openSettings": "設定を開く",
-      "openSettingsDesc": "アプリケーション設定を開く"
+      "openSettingsDesc": "アプリケーション設定を開く",
+      "toggleRightPanel": "右パネルを切り替え",
+      "toggleRightPanelDesc": "ツールパネルの表示/非表示",
+      "toggleSidebar": "サイドバーを切り替え",
+      "toggleSidebarDesc": "プロジェクトサイドバーの表示/非表示"
     }
   },
   "fileTree": {
@@ -361,6 +429,7 @@
   },
   "theme": {
     "light": "ライト",
-    "dark": "ダーク"
+    "dark": "ダーク",
+    "system": "システム"
   }
 }

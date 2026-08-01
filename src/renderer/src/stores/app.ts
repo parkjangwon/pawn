@@ -36,7 +36,7 @@ interface AppState {
   setActiveProject: (id: string) => void
   updateProjectName: (projectId: string, name: string) => void
   updateProjectPaths: (projectId: string, paths: string[]) => void
-  addSession: (projectId: string, title?: string) => void
+  addSession: (projectId: string, title?: string, opts?: { focus?: boolean }) => string
   removeSession: (projectId: string, sessionId: string) => void
   setActiveSession: (id: string) => void
   loadMessages: (projectId: string, sessionId: string) => Promise<void>
@@ -109,18 +109,23 @@ export const useAppStore = create<AppState>((set, get) => ({
     window.api.db.updateProjectPaths(projectId, JSON.stringify(paths))
   },
 
-  addSession: (projectId, title) => {
+  addSession: (projectId, title, opts) => {
     const id = uid()
     const session: Session = { id, title: title || 'New Session', path: '', createdAt: Date.now(), messages: [] }
+    const focus = opts?.focus !== false
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId ? { ...p, sessions: [...p.sessions, session] } : p
       ),
-      activeSessionId: id,
+      // Focus the new session unless the caller explicitly opted out (e.g. a
+      // background routine that must not yank the user's view away).
+      activeProjectId: focus ? projectId : s.activeProjectId,
+      activeSessionId: focus ? id : s.activeSessionId,
       // New sessions start as already "loaded" since they have no messages in DB yet
       loadedSessions: new Set([...s.loadedSessions, id])
     }))
     window.api.db.addSession(id, projectId, session.title, '')
+    return id
   },
 
   removeSession: (projectId, sessionId) => {

@@ -37,6 +37,8 @@ interface QueueItem {
 
 interface ChatState {
   isStreaming: boolean
+  /** Session currently producing tokens; lets the UI mark it as running. */
+  streamingSessionId: string | null
   queue: QueueItem[]
   sendMessage: (projectId: string, sessionId: string, content: string, mode: SendMode) => void
   stopStreaming: () => void
@@ -48,6 +50,7 @@ let abortController: AbortController | null = null
 
 export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
+  streamingSessionId: null,
   queue: [],
 
   sendMessage: (projectId, sessionId, content, mode) => {
@@ -70,13 +73,13 @@ export const useChatStore = create<ChatState>((set, get) => ({
     pushUserBubble(projectId, sessionId, content)
     autoTitle(projectId, sessionId, content)
 
-    set({ isStreaming: true })
+    set({ isStreaming: true, streamingSessionId: sessionId })
     void agentLoop(projectId, sessionId, content, set, get)
   },
 
   stopStreaming: () => {
     abortController?.abort()
-    set({ isStreaming: false })
+    set({ isStreaming: false, streamingSessionId: null })
   }
 }))
 
@@ -188,7 +191,7 @@ async function agentLoop(
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
     systemError(projectId, sessionId, 'No provider or model configured. Open Settings → Providers, then Settings → Models.')
-    set(() => ({ isStreaming: false }))
+    set(() => ({ isStreaming: false, streamingSessionId: null }))
     processQueue(set, get)
     return
   }
@@ -423,7 +426,7 @@ async function agentLoop(
     }
   } finally {
     const aborted = signal.aborted
-    set(() => ({ isStreaming: false }))
+    set(() => ({ isStreaming: false, streamingSessionId: null }))
     abortController = null
     if (!aborted) {
       window.api.notification.send('pawn', 'Task complete')
@@ -455,7 +458,7 @@ function processQueue(
       return
     }
     autoTitle(next.projectId, next.sessionId, next.content)
-    set(() => ({ isStreaming: true }))
+    set(() => ({ isStreaming: true, streamingSessionId: next.sessionId }))
     void agentLoop(next.projectId, next.sessionId, next.content, set, get)
   }, 50)
 }

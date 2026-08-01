@@ -15,7 +15,8 @@ import {
   addSession, getSessionsByProject, updateSessionTitle, updateSessionPath, removeSession,
   addMessage, getMessagesBySession, updateMessageContent, deleteMessage, clearMessages,
   saveTranscript, getTranscript, clearTranscript,
-  addUsage, getUsageBySession, getUsageSummary, loadFullState
+  addUsage, getUsageBySession, getUsageSummary, loadFullState,
+  addRoutine, getAllRoutines, updateRoutine, removeRoutine, setRoutineRunState
 } from '../db'
 
 beforeAll(() => {
@@ -157,5 +158,48 @@ describe('loadFullState', () => {
     for (const expected of ['projects', 'sessions', 'messages', 'transcripts', 'usage']) {
       expect(names).toContain(expected)
     }
+  })
+})
+
+describe('routines', () => {
+  it('creates, updates, toggles and removes routines', () => {
+    addRoutine({
+      id: 'r1', name: 'Morning', schedule: '{"type":"daily","hour":9,"minute":0}',
+      prompt: 'Summarize the inbox', projectId: '', sessionId: '', nextRunAt: 1000
+    })
+    const rows = getAllRoutines()
+    expect(rows).toHaveLength(1)
+    expect(rows[0].name).toBe('Morning')
+    expect(rows[0].enabled).toBe(true)
+    expect(rows[0].schedule).toContain('daily')
+
+    updateRoutine('r1', { name: 'Evening', enabled: false, nextRunAt: 2000 })
+    const updated = getAllRoutines()[0]
+    expect(updated.name).toBe('Evening')
+    expect(updated.enabled).toBe(false)
+    expect(updated.nextRunAt).toBe(2000)
+
+    setRoutineRunState('r1', 3000, 2500, 'done')
+    const ran = getAllRoutines()[0]
+    expect(ran.nextRunAt).toBe(3000)
+    expect(ran.lastRunAt).toBe(2500)
+    expect(ran.lastResult).toBe('done')
+
+    removeRoutine('r1')
+    expect(getAllRoutines()).toHaveLength(0)
+  })
+
+  it('keeps partial updates intact', () => {
+    addRoutine({
+      id: 'r2', name: 'N', schedule: '{"type":"interval","minutes":60}',
+      prompt: 'P', projectId: 'proj', sessionId: 's', nextRunAt: 100
+    })
+    updateRoutine('r2', { prompt: 'P2' })
+    const row = getAllRoutines()[0]
+    expect(row.name).toBe('N')
+    expect(row.projectId).toBe('proj')
+    expect(row.sessionId).toBe('s')
+    expect(row.prompt).toBe('P2')
+    removeRoutine('r2')
   })
 })

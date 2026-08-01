@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
-import { useThemeStore } from '../stores/theme'
+import { useEffectiveTheme } from '../stores/theme'
 import FileBrowser from './FileBrowser'
 import './ProjectEditDialog.css'
 
@@ -13,7 +13,7 @@ interface ProjectEditDialogProps {
 
 export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDialogProps): React.JSX.Element {
   const { t } = useTranslation()
-  const theme = useThemeStore((s) => s.theme)
+  const theme = useEffectiveTheme()
   const { projects, addProject, updateProjectName, updateProjectPaths } = useAppStore()
   const existing = projectId ? projects.find((p) => p.id === projectId) : null
 

@@ -1,7 +1,10 @@
 import { useState, useCallback, useEffect } from 'react'
-import { useThemeStore } from './stores/theme'
+import { useEffectiveTheme, useThemeStore } from './stores/theme'
 import { useAppStore } from './stores/app'
 import { useProviderStore } from './stores/provider'
+import { usePrefsStore } from './stores/prefs'
+import { useRoutineStore } from './stores/routine'
+import { useKeybindingsStore, useKeybinding } from './stores/keybindings'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
 import Settings from './components/Settings'
@@ -10,7 +13,7 @@ import CommandPalette from './components/CommandPalette'
 import RightPanel from './components/RightPanel'
 
 export default function App(): React.JSX.Element {
-  const theme = useThemeStore((s) => s.theme)
+  const theme = useEffectiveTheme()
   const [showSettings, setShowSettings] = useState(false)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
@@ -22,6 +25,9 @@ export default function App(): React.JSX.Element {
     useThemeStore.getState().init()
     useAppStore.getState().init()
     useProviderStore.getState().init()
+    void usePrefsStore.getState().init()
+    void useRoutineStore.getState().init()
+    void useKeybindingsStore.getState().init()
   }, [])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
@@ -35,37 +41,29 @@ export default function App(): React.JSX.Element {
 
   const { projects, activeProjectId, addSession } = useAppStore()
 
-  // Keyboard shortcuts
+  // In Electron the main process forwards shortcuts from whichever webContents
+  // has focus; renderer-side handlers are only for dev:web (no main process).
+  const isBrowserMode = window.api?.platform === 'browser'
+
+  // Bindable keyboard shortcuts.
+  useKeybinding('open-command-palette', useCallback(() => { if (isBrowserMode) setShowCommandPalette(true) }, [isBrowserMode]))
+  useKeybinding('open-settings', useCallback(() => { if (isBrowserMode) setShowSettings((v) => !v) }, [isBrowserMode]))
+  useKeybinding('new-session', useCallback(() => { if (isBrowserMode && activeProjectId) addSession(activeProjectId) }, [isBrowserMode, activeProjectId, addSession]))
+  useKeybinding('toggle-sidebar', useCallback(() => { if (isBrowserMode) toggleSidebar() }, [isBrowserMode, toggleSidebar]))
+
+  // Electron: main-process forwarding dispatches every bound action here.
+  useEffect(() => {
+    return window.api?.onAppShortcut?.((id) => {
+      if (id === 'toggle-sidebar') toggleSidebar()
+      else if (id === 'open-command-palette') setShowCommandPalette(true)
+      else if (id === 'open-settings') setShowSettings((v) => !v)
+      else if (id === 'new-session') { if (activeProjectId) addSession(activeProjectId) }
+    })
+  }, [toggleSidebar, activeProjectId, addSession])
+
+  // Escape closes modals.
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      const mod = e.metaKey || e.ctrlKey
-
-      // Cmd/Ctrl + K = Command Palette
-      if (mod && e.key === 'k') {
-        e.preventDefault()
-        setShowCommandPalette(true)
-        return
-      }
-
-      // Cmd/Ctrl + , = Settings
-      if (mod && e.key === ',') {
-        e.preventDefault()
-        setShowSettings((v) => !v)
-      }
-
-      // Cmd/Ctrl + N = New session
-      if (mod && e.key === 'n') {
-        e.preventDefault()
-        if (activeProjectId) addSession(activeProjectId)
-      }
-
-      // Cmd/Ctrl + B = toggle the left sidebar
-      if (mod && !e.altKey && e.key === 'b') {
-        e.preventDefault()
-        toggleSidebar()
-      }
-
-      // Escape = close modals
       if (e.key === 'Escape') {
         if (showCommandPalette) setShowCommandPalette(false)
         if (showSettings) setShowSettings(false)
@@ -74,7 +72,13 @@ export default function App(): React.JSX.Element {
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [showSettings, showCommandPalette, activeProjectId, addSession, toggleSidebar])
+  }, [showSettings, showCommandPalette])
+
+  // Bridge for the command palette (and anything else that needs it).
+  useEffect(() => {
+    (window as any).__toggleSidebar = toggleSidebar
+    return () => { delete (window as any).__toggleSidebar }
+  }, [toggleSidebar])
 
   return (
     <div className={`app ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'} ${window.api?.platform === 'darwin' ? 'platform-mac' : ''}`}>

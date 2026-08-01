@@ -37,6 +37,9 @@ describe('RightPanel', () => {
   })
 
   it('toggles with the Option+Cmd+B shortcut', () => {
+    // Renderer-side key handling only applies in dev:web; Electron forwards
+    // through the main process instead.
+    ;(window as any).api.platform = 'browser'
     const { container } = render(<RightPanel />)
     expect(container.querySelector('aside')?.getAttribute('style')).toContain('display: none')
 
@@ -45,6 +48,15 @@ describe('RightPanel', () => {
 
     fireEvent.keyDown(window, { key: 'b', altKey: true, metaKey: true })
     expect(container.querySelector('aside')?.className).toContain('closing')
+  })
+
+  it('does not double-toggle in Electron, where the main process owns the shortcut', () => {
+    ;(window as any).api.platform = 'darwin'
+    const { container } = render(<RightPanel />)
+    expect(container.querySelector('aside')?.getAttribute('style')).toContain('display: none')
+
+    fireEvent.keyDown(window, { key: 'b', altKey: true, metaKey: true })
+    expect(container.querySelector('aside')?.getAttribute('style')).toContain('display: none')
   })
 
   it('exposes the toggle bridge on window', () => {
@@ -77,6 +89,7 @@ describe('RightPanel', () => {
   })
 
   it('keeps a hidden terminal tab mounted until the tab is closed', () => {
+    ;(window as any).api.platform = 'browser'
     const { container } = render(<RightPanel />)
     fireEvent.click(screen.getByText('rightPanel.tools.terminal'))
     expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()

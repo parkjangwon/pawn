@@ -69,10 +69,25 @@ function initSchema(db: Database.Database): void {
       created_at INTEGER NOT NULL DEFAULT (unixepoch())
     );
 
+    CREATE TABLE IF NOT EXISTS routines (
+      id TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      schedule TEXT NOT NULL,
+      prompt TEXT NOT NULL,
+      project_id TEXT DEFAULT '',
+      session_id TEXT DEFAULT '',
+      enabled INTEGER NOT NULL DEFAULT 1,
+      next_run_at INTEGER NOT NULL DEFAULT 0,
+      last_run_at INTEGER NOT NULL DEFAULT 0,
+      last_result TEXT DEFAULT '',
+      created_at INTEGER NOT NULL DEFAULT (unixepoch())
+    );
+
     CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id);
     CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
     CREATE INDEX IF NOT EXISTS idx_usage_session ON usage(session_id);
     CREATE INDEX IF NOT EXISTS idx_usage_created ON usage(created_at);
+    CREATE INDEX IF NOT EXISTS idx_routines_enabled ON routines(enabled);
   `)
 }
 
@@ -243,4 +258,109 @@ export function loadFullState(): {
     sessions: getSessionsByProject(p.id)
   }))
   return { projects: result }
+}
+
+// --- Routines (recurring tasks) ---
+
+export interface RoutineRow {
+  id: string
+  name: string
+  schedule: string
+  prompt: string
+  projectId: string
+  sessionId: string
+  enabled: boolean
+  nextRunAt: number
+  lastRunAt: number
+  lastResult: string
+  createdAt: number
+}
+
+function mapRoutine(row: Record<string, unknown>): RoutineRow {
+  return {
+    id: row.id as string,
+    name: row.name as string,
+    schedule: row.schedule as string,
+    prompt: row.prompt as string,
+    projectId: row.projectId as string,
+    sessionId: row.sessionId as string,
+    enabled: (row.enabled as number) === 1,
+    nextRunAt: row.nextRunAt as number,
+    lastRunAt: row.lastRunAt as number,
+    lastResult: row.lastResult as string,
+    createdAt: row.createdAt as number
+  }
+}
+
+export function getAllRoutines(): RoutineRow[] {
+  return (
+    getDb()
+      .prepare(
+        `SELECT id, name, schedule, prompt, project_id as projectId, session_id as sessionId,
+                enabled, next_run_at as nextRunAt, last_run_at as lastRunAt,
+                last_result as lastResult, created_at as createdAt
+         FROM routines ORDER BY created_at`
+      )
+      .all() as Record<string, unknown>[]
+  ).map(mapRoutine)
+}
+
+export function addRoutine(row: {
+  id: string
+  name: string
+  schedule: string
+  prompt: string
+  projectId: string
+  sessionId: string
+  nextRunAt: number
+}): void {
+  getDb()
+    .prepare(
+      `INSERT INTO routines (id, name, schedule, prompt, project_id, session_id, next_run_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)`
+    )
+    .run(row.id, row.name, row.schedule, row.prompt, row.projectId, row.sessionId, row.nextRunAt)
+}
+
+export function updateRoutine(
+  id: string,
+  patch: Partial<{
+    name: string
+    schedule: string
+    prompt: string
+    projectId: string
+    sessionId: string
+    enabled: boolean
+    nextRunAt: number
+  }>
+): void {
+  const d = getDb()
+  const current = d.prepare('SELECT * FROM routines WHERE id = ?').get(id) as Record<string, unknown> | undefined
+  if (!current) return
+  d.prepare(
+    `UPDATE routines SET
+       name = ?, schedule = ?, prompt = ?, project_id = ?, session_id = ?,
+       enabled = ?, next_run_at = ?
+     WHERE id = ?`
+  ).run(
+    patch.name ?? (current.name as string),
+    patch.schedule ?? (current.schedule as string),
+    patch.prompt ?? (current.prompt as string),
+    patch.projectId ?? (current.project_id as string),
+    patch.sessionId ?? (current.session_id as string),
+    patch.enabled === undefined ? (current.enabled as number) : patch.enabled ? 1 : 0,
+    patch.nextRunAt ?? (current.next_run_at as number),
+    id
+  )
+}
+
+export function removeRoutine(id: string): void {
+  getDb().prepare('DELETE FROM routines WHERE id = ?').run(id)
+}
+
+/** Advance the run state after a routine fires or completes. */
+export function setRoutineRunState(id: string, nextRunAt: number, lastRunAt: number, lastResult: string): void {
+  getDb()
+    .prepare('UPDATE routines SET next_run_at = ?, last_run_at = ?, last_result = ? WHERE id = ?')
+    .run(nextRunAt, lastRunAt, lastResult, id)
 }

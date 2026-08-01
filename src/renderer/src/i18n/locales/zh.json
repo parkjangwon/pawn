@@ -37,7 +37,8 @@
     "pin": "置顶",
     "unpin": "取消置顶",
     "rename": "重命名",
-    "newChat": "新对话"
+    "newChat": "新对话",
+    "running": "运行中"
   },
   "chat": {
     "placeholder": "输入消息...",
@@ -151,7 +152,9 @@
     "groups": {
       "general": "通用",
       "coding": "编码",
-      "integration": "集成"
+      "integration": "集成",
+      "automation": "自动化",
+      "system": "系统"
     },
     "appearanceSection": {
       "title": "外观",
@@ -241,6 +244,66 @@
       "configFileDesc": "查看和编辑原始配置文件",
       "database": "数据库",
       "databaseDesc": "管理本地数据库"
+    },
+    "routines": "定时任务",
+    "system": "系统",
+    "routineSection": {
+      "title": "定时任务",
+      "desc": "应用打开时在后台定期执行的任务。",
+      "addTitle": "新建任务",
+      "addDesc": "提示词会在专用会话中自动运行。",
+      "namePlaceholder": "名称（例如：晨会）",
+      "promptPlaceholder": "希望代理做什么？",
+      "add": "添加任务",
+      "empty": "还没有定时任务。在上方创建一个。",
+      "running": "运行中",
+      "runNow": "立即运行",
+      "never": "从未",
+      "nextRun": "下次:",
+      "lastRun": "上次:",
+      "lastResult": "上次结果:",
+      "everyMinutes": "每{{minutes}}分钟",
+      "dailyAt": "每天 {{time}}",
+      "weeklyAt": "每周{{weekday}} {{time}}",
+      "type": {
+        "interval": "间隔",
+        "daily": "每天",
+        "weekly": "每周"
+      },
+      "weekdays": {
+        "0": "周日",
+        "1": "周一",
+        "2": "周二",
+        "3": "周三",
+        "4": "周四",
+        "5": "周五",
+        "6": "周六"
+      }
+    },
+    "systemSection": {
+      "title": "系统",
+      "desc": "电源与系统行为设置。",
+      "sleepPrevention": "防休眠",
+      "sleepPreventionDesc": "应用运行时防止系统休眠。屏幕模式还会阻止显示器关闭。",
+      "sleepOff": "关闭",
+      "sleepSystem": "防止休眠",
+      "sleepDisplay": "防休眠+屏幕"
+    },
+    "shortcuts": "快捷键",
+    "shortcutSection": {
+      "title": "快捷键",
+      "desc": "可重新绑定键盘快捷键。点击更改，然后按下新的组合键。",
+      "recording": "按下新快捷键…（Esc 取消）",
+      "conflict": "与{{other}}冲突",
+      "none": "未设置",
+      "change": "更改",
+      "cancel": "取消",
+      "reset": "重置",
+      "toggle-right-panel": "切换右侧面板",
+      "toggle-sidebar": "切换侧边栏",
+      "open-command-palette": "打开命令面板",
+      "open-settings": "打开设置",
+      "new-session": "新建会话"
     }
   },
   "projectEdit": {
@@ -310,7 +373,8 @@
       "browser": "浏览器",
       "diff": "Diff"
     },
-    "allToolsOpen": "所有工具都已打开"
+    "allToolsOpen": "所有工具都已打开",
+    "terminalRestart": "重启终端"
   },
   "commandPalette": {
     "placeholder": "输入命令...",
@@ -331,7 +395,11 @@
       "stopStreaming": "停止流式传输",
       "stopStreamingDesc": "停止当前的响应流",
       "openSettings": "打开设置",
-      "openSettingsDesc": "打开应用设置"
+      "openSettingsDesc": "打开应用设置",
+      "toggleRightPanel": "切换右侧面板",
+      "toggleRightPanelDesc": "显示或隐藏工具面板",
+      "toggleSidebar": "切换侧边栏",
+      "toggleSidebarDesc": "显示或隐藏项目侧边栏"
     }
   },
   "fileTree": {
@@ -361,6 +429,7 @@
   },
   "theme": {
     "light": "浅色",
-    "dark": "深色"
+    "dark": "深色",
+    "system": "跟随系统"
   }
 }
