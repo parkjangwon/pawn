@@ -6,40 +6,60 @@
   z-index: 500;
 }
 
+.settings-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 520;
+  height: var(--app-header-height);
+  min-height: var(--app-header-height);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--space-md);
+  padding-left: calc(var(--sidebar-width) + var(--space-md));
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-primary);
+}
+
+.settings-header-left {
+  display: flex;
+  align-items: center;
+}
+
+.settings-header-back {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0;
+  cursor: pointer;
+  -webkit-app-region: no-drag;
+}
+
+.settings-header-back:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
 /* Settings sidebar */
 .settings-sidebar {
-  width: 240px;
-  min-width: 240px;
+  width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
   height: 100%;
-  border-right: 1px solid var(--border-color);
+  border-right: none;
   background: var(--bg-sidebar);
   display: flex;
   flex-direction: column;
   padding: 0 var(--space-md) var(--space-md) var(--space-md);
-  padding-top: 50px;
+  padding-top: calc(var(--app-header-height) + 8px);
   overflow-y: auto;
   -webkit-app-region: drag;
-}
-
-.settings-back {
-  display: flex;
-  align-items: center;
-  gap: var(--space-sm);
-  padding: 8px 0;
-  margin: 0 0 var(--space-md) 8px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-muted);
-  font-size: var(--font-md);
- cursor: pointer;
- transition: color 0.15s;
- width: fit-content;
-  -webkit-app-region: no-drag;
-}
-
-.settings-back:hover {
-  color: var(--text-primary);
 }
 
 .settings-nav {
@@ -56,7 +76,7 @@
 .settings-search-input {
   width: 100%;
   padding: 8px 10px;
-  border: 1px solid var(--border-color);
+  border: 1px solid transparent;
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-primary);
@@ -124,7 +144,7 @@
   flex: 1;
   height: 100%;
   overflow-y: auto;
-  padding: var(--space-xl) 48px;
+  padding: calc(var(--app-header-height) + var(--space-xl)) 48px var(--space-xl);
   max-width: 800px;
 }
 
@@ -595,6 +615,11 @@
 }
 
 @media (max-width: 768px) {
+  .settings-header {
+    padding-left: var(--space-md);
+    padding-right: var(--space-md);
+  }
+
   .settings-sidebar {
     width: 200px;
     min-width: 200px;
