@@ -65,9 +65,28 @@ export function setForwardingPaused(paused: boolean): void {
   forwardingPaused = paused
 }
 
+/** Physical-key code for a combo key. On macOS, Option can change the reported
+ *  `key` character (e.g. Option+B reports '∫'), so matching also has to check
+ *  the physical `code` (KeyB) or Option-modified shortcuts never fire. */
+function keyCodeFor(key: string): string | null {
+  if (/^[a-zA-Z]$/.test(key)) return `Key${key.toUpperCase()}`
+  if (/^[0-9]$/.test(key)) return `Digit${key}`
+  const named: Record<string, string> = {
+    ',': 'Comma', '.': 'Period', '/': 'Slash', ';': 'Semicolon', "'": 'Quote',
+    '[': 'BracketLeft', ']': 'BracketRight', '`': 'Backquote', '-': 'Minus',
+    '=': 'Equal', '\\': 'Backslash',
+    'Enter': 'Enter', 'Tab': 'Tab', ' ': 'Space', 'Space': 'Space',
+    'Escape': 'Escape', 'Backspace': 'Backspace', 'Delete': 'Delete',
+    'Home': 'Home', 'End': 'End', 'PageUp': 'PageUp', 'PageDown': 'PageDown',
+    'ArrowUp': 'ArrowUp', 'ArrowDown': 'ArrowDown',
+    'ArrowLeft': 'ArrowLeft', 'ArrowRight': 'ArrowRight'
+  }
+  return named[key] ?? null
+}
+
 export function matchesKeybinding(
   id: string,
-  input: { key: string; alt: boolean; control: boolean; meta: boolean; shift: boolean }
+  input: { key: string; code: string; alt: boolean; control: boolean; meta: boolean; shift: boolean }
 ): boolean {
   const combo = parseCombo(bindings.get(id) || '')
   if (!combo) return false
@@ -81,7 +100,7 @@ export function matchesKeybinding(
     modsMatch &&
     input.alt === combo.alt &&
     input.shift === combo.shift &&
-    input.key.toLowerCase() === combo.key.toLowerCase()
+    (input.key.toLowerCase() === combo.key.toLowerCase() || input.code === keyCodeFor(combo.key))
   )
 }
 

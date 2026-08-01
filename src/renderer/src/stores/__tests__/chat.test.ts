@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { truncateToolResult } from '../chat'
+import { truncateToolResult, toolCallSignature, ToolLoopCounter } from '../chat'
 import {
   withConversationCacheAnchors, supportsReasoningEffort, injectClaudePreamble
 } from '../../agent/llm'
 
 const blocks = (text: string): Array<Record<string, unknown>> => [{ type: 'text', text }]
+const call = (name: string, arguments_: Record<string, unknown>) => ({ id: `${name}-id`, name, arguments: arguments_ })
 
 describe('truncateToolResult', () => {
   it('keeps short results untouched', () => {
@@ -16,6 +17,59 @@ describe('truncateToolResult', () => {
     const out = truncateToolResult({ content: 'x'.repeat(2000) }, 100)
     expect(out.length).toBeLessThan(2000)
     expect(out).toContain('...(truncated 1900 chars)')
+  })
+})
+
+describe('toolCallSignature', () => {
+  it('is insensitive to call order', () => {
+    const a = [call('read_file', { path: '/a' }), call('list_dir', { path: '/b' })]
+    const b = [call('list_dir', { path: '/b' }), call('read_file', { path: '/a' })]
+    expect(toolCallSignature(a)).toBe(toolCallSignature(b))
+  })
+
+  it('is insensitive to argument key order', () => {
+    const a = call('write_file', { path: '/a', content: 'x' })
+    const b = call('write_file', { content: 'x', path: '/a' })
+    expect(toolCallSignature([a])).toBe(toolCallSignature([b]))
+  })
+
+  it('differs when arguments differ', () => {
+    const a = call('read_file', { path: '/a' })
+    const b = call('read_file', { path: '/b' })
+    expect(toolCallSignature([a])).not.toBe(toolCallSignature([b]))
+  })
+})
+
+describe('ToolLoopCounter', () => {
+  it('ignores rounds without tool calls', () => {
+    const counter = new ToolLoopCounter(3)
+    expect(counter.record([])).toBe(false)
+    expect(counter.record([])).toBe(false)
+  })
+
+  it('fires after the limit of consecutive identical calls', () => {
+    const counter = new ToolLoopCounter(3)
+    const calls = [call('read_file', { path: '/a' })]
+    expect(counter.record(calls)).toBe(false)
+    expect(counter.record(calls)).toBe(false)
+    expect(counter.record(calls)).toBe(true)
+  })
+
+  it('resets when the calls change', () => {
+    const counter = new ToolLoopCounter(3)
+    expect(counter.record([call('read_file', { path: '/a' })])).toBe(false)
+    expect(counter.record([call('read_file', { path: '/a' })])).toBe(false)
+    expect(counter.record([call('read_file', { path: '/b' })])).toBe(false)
+    expect(counter.record([call('read_file', { path: '/b' })])).toBe(false)
+    expect(counter.record([call('read_file', { path: '/b' })])).toBe(true)
+  })
+
+  it('resets when a round has no tool calls', () => {
+    const counter = new ToolLoopCounter(2)
+    expect(counter.record([call('read_file', { path: '/a' })])).toBe(false)
+    expect(counter.record([])).toBe(false)
+    expect(counter.record([call('read_file', { path: '/a' })])).toBe(false)
+    expect(counter.record([call('read_file', { path: '/a' })])).toBe(true)
   })
 })
 

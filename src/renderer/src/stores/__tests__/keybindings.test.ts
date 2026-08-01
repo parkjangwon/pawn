@@ -97,4 +97,14 @@ describe('useKeybinding', () => {
     })
     expect(handler).toHaveBeenCalledTimes(2)
   })
+
+  it('matches by physical code when Option changes the key character', () => {
+    const handler = vi.fn()
+    renderHook(() => useKeybinding('toggle-right-panel', handler))
+
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '∫', code: 'KeyB', altKey: true, metaKey: true }))
+    })
+    expect(handler).toHaveBeenCalledTimes(1)
+  })
 })
