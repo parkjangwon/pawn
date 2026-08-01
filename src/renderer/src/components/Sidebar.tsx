@@ -12,11 +12,13 @@ interface SidebarProps {
   onOpenSettings: () => void
   onToggle: () => void
   open?: boolean
+  mainView: 'chat' | 'automations'
+  onMainViewChange: (view: 'chat' | 'automations') => void
 }
 
 const GENERAL_PROJECT_ID = '__general__'
 
-export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps): React.JSX.Element {
+export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMainViewChange }: SidebarProps): React.JSX.Element {
   const { t } = useTranslation()
   const {
     projects,
@@ -70,11 +72,13 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
   }
 
   const handleNewSession = (): void => {
+    onMainViewChange('chat')
     const targetProjectId = activeProjectId || ensureGeneral()
     addSession(targetProjectId)
   }
 
   const toggleProject = (id: string): void => {
+    onMainViewChange('chat')
     setExpandedProjects((prev) => {
       const next = new Set(prev)
       if (next.has(id)) next.delete(id)
@@ -181,6 +185,16 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
           <span>{t('sidebar.newChat')}</span>
         </button>
+        <button
+          className={`sidebar-action-btn ${mainView === 'automations' ? 'active' : ''}`}
+          onClick={() => onMainViewChange('automations')}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <polyline points="12 6 12 12 16 14" />
+          </svg>
+          <span>{t('sidebar.automations')}</span>
+        </button>
       </div>
 
       <div className="sidebar-scroll">
@@ -189,7 +203,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
           <div className="sidebar-section">
             <div className="section-label">{t('sidebar.pinned')}</div>
             {pinnedItems.map((session) => (
-              <div key={session.id} className={`sidebar-item ${session.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSession(session.id); setActiveProject(session.projectId) }}>
+              <div key={session.id} className={`sidebar-item ${mainView === 'chat' && session.id === activeSessionId ? 'active' : ''}`} onClick={() => { onMainViewChange('chat'); setActiveSession(session.id); setActiveProject(session.projectId) }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" onClick={(e) => togglePin(e, session.id)} style={{ cursor: 'pointer' }}><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
                 <span className="item-title">{session.title}</span>
                 {renderSessionMeta(sessionMeta(session), true)}
@@ -213,7 +227,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
             const isExpanded = expandedProjects.has(project.id)
             return (
               <div key={project.id} className="tree-project">
-                <div className={`tree-project-header ${project.id === activeProjectId ? 'active' : ''}`} onClick={() => toggleProject(project.id)}>
+                <div className={`tree-project-header ${mainView === 'chat' && project.id === activeProjectId ? 'active' : ''}`} onClick={() => toggleProject(project.id)}>
                   <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${isExpanded ? 'expanded' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>
                   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="tree-folder-icon"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
                   <span className="tree-project-name">{project.name}</span>
@@ -229,7 +243,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
                 {isExpanded && (
                   <div className="tree-sessions">
                     {project.sessions.map((session) => (
-                      <div key={session.id} className={`tree-session ${session.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSession(session.id); setActiveProject(project.id) }}>
+                      <div key={session.id} className={`tree-session ${mainView === 'chat' && session.id === activeSessionId ? 'active' : ''}`} onClick={() => { onMainViewChange('chat'); setActiveSession(session.id); setActiveProject(project.id) }}>
                         <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
                         <span className="tree-session-title">{session.title}</span>
                         {renderSessionMeta(sessionMeta(session), false)}
@@ -260,7 +274,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open }: SidebarProps
               <span className="section-label">{t('sidebar.recent')}</span>
             </button>
             {recentExpanded && recentSessions.map((session) => (
-              <div key={session.id} className={`sidebar-item ${session.id === activeSessionId ? 'active' : ''}`} onClick={() => { setActiveSession(session.id); setActiveProject(session.projectId) }}>
+              <div key={session.id} className={`sidebar-item ${mainView === 'chat' && session.id === activeSessionId ? 'active' : ''}`} onClick={() => { onMainViewChange('chat'); setActiveSession(session.id); setActiveProject(session.projectId) }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                 <span className="item-title">{session.title}</span>
                 {renderSessionMeta(sessionMeta(session), true)}

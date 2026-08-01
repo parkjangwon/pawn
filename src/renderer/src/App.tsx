@@ -7,6 +7,7 @@ import { useRoutineStore } from './stores/routine'
 import { useKeybindingsStore, useKeybinding } from './stores/keybindings'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
+import AutomationView from './components/AutomationView'
 import Settings from './components/Settings'
 import PermissionDialog from './components/PermissionDialog'
 import CommandPalette from './components/CommandPalette'
@@ -16,6 +17,7 @@ export default function App(): React.JSX.Element {
   const theme = useEffectiveTheme()
   const [showSettings, setShowSettings] = useState(false)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
+  const [mainView, setMainView] = useState<'chat' | 'automations'>('chat')
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('pawn-sidebar-open') !== 'false' } catch { return true }
   })
@@ -85,9 +87,19 @@ export default function App(): React.JSX.Element {
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={closeSidebar} />
       )}
-      <Sidebar onOpenSettings={() => setShowSettings(true)} onToggle={toggleSidebar} open={sidebarOpen} />
+      <Sidebar
+        onOpenSettings={() => setShowSettings(true)}
+        onToggle={toggleSidebar}
+        open={sidebarOpen}
+        mainView={mainView}
+        onMainViewChange={setMainView}
+      />
       <div className="main-column">
-        <ChatArea onToggleSidebar={toggleSidebar} onOpenSettings={() => setShowSettings(true)} />
+        {mainView === 'chat' ? (
+          <ChatArea onToggleSidebar={toggleSidebar} onOpenSettings={() => setShowSettings(true)} />
+        ) : (
+          <AutomationView onToggleSidebar={toggleSidebar} />
+        )}
       </div>
       <RightPanel />
       {showSettings && <Settings onClose={() => setShowSettings(false)} />}

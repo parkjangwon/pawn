@@ -310,7 +310,7 @@ export default function RightPanel(): React.JSX.Element | null {
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d={TOOL_ICONS[id]} />
               </svg>
-              {activeTab === id && <span className="rp-tab-label">{t(`rightPanel.tools.${id}`)}</span>}
+              <span className="rp-tab-label">{t(`rightPanel.tools.${id}`)}</span>
               <span className="rp-tab-close-btn" onClick={(e) => closeTab(id, e)}>
                 <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                   <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />

@@ -38,6 +38,7 @@
     "unpin": "고정 해제",
     "rename": "이름 바꾸기",
     "newChat": "새 작업",
+    "automations": "자동화",
     "running": "실행 중"
   },
   "chat": {
@@ -83,6 +84,40 @@
       "noResults": "일치하는 파일이 없습니다"
     }
   },
+  "automation": {
+    "title": "자동화",
+    "new": "새 자동화",
+    "start": "자동화 시작",
+    "emptyTitle": "자동화 설정",
+    "emptyDesc": "원하는 주기로 반복 작업을 자동으로 처리해 보세요.",
+    "listDesc": "등록한 자동화를 검토하고, 실행하거나 켜고 끌 수 있습니다.",
+    "name": "이름",
+    "namePlaceholder": "이슈 트리아지",
+    "trigger": "트리거",
+    "daily": "매일",
+    "weekly": "매주",
+    "interval": "간격",
+    "manual": "수동",
+    "hour": "시",
+    "minute": "분",
+    "minutes": "간격(분)",
+    "weekday": "요일",
+    "project": "프로젝트",
+    "noProject": "프로젝트 없음",
+    "projectHint": "프로젝트를 지정하지 않으면 일반 대화로 실행됩니다.",
+    "prompt": "프롬프트",
+    "promptPlaceholder": "최신 이슈를 검토하고 우선순위를 제안해줘.",
+    "runNow": "지금 실행",
+    "footerHint": "저장한 뒤 지금 실행으로 바로 테스트할 수 있습니다.",
+    "examples": {
+      "issueTriage": "이슈 트리아지",
+      "issueTriageDesc": "최신 이슈를 검토하고 우선순위/담당자를 제안합니다.",
+      "changelog": "체인지로그 초안",
+      "changelogDesc": "이번 주 머지된 PR을 릴리스 노트 초안으로 요약합니다.",
+      "repoAudit": "리포지토리 점검",
+      "repoAuditDesc": "열린 PR을 점검하고 위험 변경을 식별합니다."
+    }
+  },
   "contextBar": {
     "switchProject": "프로젝트 전환",
     "noProject": "선택된 프로젝트 없음",
@@ -96,7 +131,10 @@
     "usageInput": "입력",
     "cached": "캐시됨",
     "usageCacheRead": "캐시 읽기",
-    "usageTitle": "이번 세션 사용량"
+    "usageTitle": "이번 세션 사용량",
+    "noSession": "세션 없음",
+    "statusIdle": "대기",
+    "statusRunning": "실행 중"
   },
   "modelPicker": {
     "noModels": "사용 가능한 모델이 없습니다",
@@ -143,6 +181,7 @@
   "settings": {
     "title": "설정",
     "backToApp": "앱으로 돌아가기",
+    "searchPlaceholder": "설정 검색...",
     "appearance": "외관",
     "providers": "프로바이더",
     "models": "모델",
@@ -225,6 +264,33 @@
     "pluginSection": {
       "title": "플러그인",
       "desc": "플러그인 및 통합 관리",
+      "contextTitle": "Claude 호환 컨텍스트",
+      "contextApplied": "컨텍스트 블록 {{blocks}}개 주입 · 활성 스킬 {{enabled}}/{{total}}",
+      "detected": "감지됨",
+      "missing": "없음",
+      "noProjectPath": "활성 프로젝트 경로 없음",
+      "sources": {
+        "project-claude": "프로젝트 CLAUDE.md",
+        "project-rules": ".claude/rules 마크다운 파일",
+        "project-plugins": ".claude/plugins 디렉터리",
+        "user-claude": "~/.claude/CLAUDE.md",
+        "user-skills": "~/.claude/skills 디렉터리"
+      },
+      "scopeLabel": "스킬 범위",
+      "scope": {
+        "all": "전체",
+        "project": "이 프로젝트",
+        "device": "이 기기",
+        "builtin": "내장형"
+      },
+      "searchPlaceholder": "스킬 검색...",
+      "emptySkills": "표시할 스킬이 없습니다",
+      "kind": {
+        "skill": "스킬",
+        "command": "명령",
+        "agent": "에이전트",
+        "plugin": "플러그인"
+      },
       "claudeSkills": "Claude 스킬",
       "claudeSkillsDesc": "Claude 스킬 디렉토리 경로",
       "claudeMd": "CLAUDE.md",

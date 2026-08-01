@@ -38,6 +38,7 @@
     "unpin": "ピン留め解除",
     "rename": "名前を変更",
     "newChat": "新規チャット",
+    "automations": "自動化",
     "running": "実行中"
   },
   "chat": {
@@ -83,6 +84,40 @@
       "noResults": "一致するファイルがありません"
     }
   },
+  "automation": {
+    "title": "自動化",
+    "new": "新規自動化",
+    "start": "自動化を開始",
+    "emptyTitle": "自動化を設定",
+    "emptyDesc": "好きな周期で繰り返しの作業を自動化しましょう。",
+    "listDesc": "登録した自動化を確認し、実行や有効/無効を管理できます。",
+    "name": "名前",
+    "namePlaceholder": "課題のトリアージ",
+    "trigger": "トリガー",
+    "daily": "毎日",
+    "weekly": "毎週",
+    "interval": "間隔",
+    "manual": "手動",
+    "hour": "時",
+    "minute": "分",
+    "minutes": "間隔（分）",
+    "weekday": "曜日",
+    "project": "プロジェクト",
+    "noProject": "プロジェクトなし",
+    "projectHint": "プロジェクトを指定しない場合、通常のチャットとして実行されます。",
+    "prompt": "プロンプト",
+    "promptPlaceholder": "最新の課題を確認して優先順位を提案して。",
+    "runNow": "今すぐ実行",
+    "footerHint": "保存後、「今すぐ実行」でその場でテストできます。",
+    "examples": {
+      "issueTriage": "課題のトリアージ",
+      "issueTriageDesc": "最新の課題を確認し、優先順位と担当者を提案します。",
+      "changelog": "変更履歴のドラフト",
+      "changelogDesc": "今週マージされたPRをリリースノートの下書きにまとめます。",
+      "repoAudit": "リポジトリ監査",
+      "repoAuditDesc": "オープン中のPRを点検し、リスクのある変更を洗い出します。"
+    }
+  },
   "contextBar": {
     "switchProject": "プロジェクトを切り替え",
     "noProject": "プロジェクトが選択されていません",
@@ -96,7 +131,10 @@
     "usageInput": "入力",
     "cached": "キャッシュ済み",
     "usageCacheRead": "キャッシュ読み込み",
-    "usageTitle": "このセッションの使用量"
+    "usageTitle": "このセッションの使用量",
+    "noSession": "セッションなし",
+    "statusIdle": "待機中",
+    "statusRunning": "実行中"
   },
   "modelPicker": {
     "noModels": "利用可能なモデルがありません",
@@ -143,6 +181,7 @@
   "settings": {
     "title": "設定",
     "backToApp": "アプリに戻る",
+    "searchPlaceholder": "設定を検索...",
     "appearance": "外観",
     "providers": "プロバイダー",
     "models": "モデル",
@@ -225,6 +264,33 @@
     "pluginSection": {
       "title": "プラグイン",
       "desc": "プラグインと統合を管理",
+      "contextTitle": "Claude互換コンテキスト",
+      "contextApplied": "コンテキストブロック {{blocks}} 件を注入 · 有効スキル {{enabled}}/{{total}}",
+      "detected": "検出済み",
+      "missing": "なし",
+      "noProjectPath": "有効なプロジェクトパスがありません",
+      "sources": {
+        "project-claude": "プロジェクト CLAUDE.md",
+        "project-rules": ".claude/rules のMarkdownファイル",
+        "project-plugins": ".claude/plugins ディレクトリ",
+        "user-claude": "~/.claude/CLAUDE.md",
+        "user-skills": "~/.claude/skills ディレクトリ"
+      },
+      "scopeLabel": "スキル範囲",
+      "scope": {
+        "all": "すべて",
+        "project": "このプロジェクト",
+        "device": "このデバイス",
+        "builtin": "内蔵系"
+      },
+      "searchPlaceholder": "スキルを検索...",
+      "emptySkills": "表示できるスキルがありません",
+      "kind": {
+        "skill": "スキル",
+        "command": "コマンド",
+        "agent": "エージェント",
+        "plugin": "プラグイン"
+      },
       "claudeSkills": "Claudeスキル",
       "claudeSkillsDesc": "Claudeスキルディレクトリのパス",
       "claudeMd": "CLAUDE.md",

@@ -14,6 +14,7 @@ import { formatToolMessageContent } from '../agent/toolMessage'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
 import type { ModelTier } from '../types/provider'
+import { filterEnabledSkills } from '../utils/skillVisibility'
 
 export type SendMode = 'queue' | 'steer'
 
@@ -259,7 +260,8 @@ async function agentLoop(
    }
    if (projectPath) {
      try {
-       const block = buildProjectContextBlock(await loadProjectContext(projectPath))
+       const ctx = await loadProjectContext(projectPath)
+       const block = buildProjectContextBlock({ ...ctx, skills: filterEnabledSkills(ctx.skills) })
         if (block) projectPreamble += (projectPreamble ? '\n\n' : '') + block
      } catch {
        // Missing CLAUDE.md / skills is normal; keep the base layer.

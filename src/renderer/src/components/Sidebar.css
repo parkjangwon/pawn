@@ -66,6 +66,11 @@
   color: var(--text-primary);
 }
 
+.sidebar-action-btn.active {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
 .sidebar-action-btn svg {
   flex-shrink: 0;
 }
