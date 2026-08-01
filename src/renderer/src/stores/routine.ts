@@ -9,7 +9,7 @@ interface RoutineState {
   runningIds: Set<string>
   init: () => Promise<void>
   refresh: () => Promise<void>
-  add: (input: { name: string; prompt: string; schedule: RoutineSchedule }) => Promise<{ ok?: boolean; error?: string }>
+  add: (input: { name: string; prompt: string; schedule: RoutineSchedule; projectId?: string; sessionId?: string }) => Promise<{ ok?: boolean; error?: string }>
   update: (id: string, patch: Partial<Pick<Routine, 'name' | 'schedule' | 'prompt' | 'projectId' | 'sessionId'>>) => Promise<void>
   toggle: (id: string, enabled: boolean) => Promise<void>
   remove: (id: string) => Promise<void>
@@ -118,7 +118,9 @@ export const useRoutineStore = create<RoutineState>((set, get) => ({
       id: uid('routine-'),
       name: input.name.trim(),
       prompt: input.prompt.trim(),
-      schedule
+      schedule,
+      projectId: input.projectId,
+      sessionId: input.sessionId
     })
     await get().refresh()
     return res || { ok: true }

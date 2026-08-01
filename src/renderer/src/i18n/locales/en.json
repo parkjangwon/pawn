@@ -38,6 +38,7 @@
     "unpin": "Unpin",
     "rename": "Rename",
     "newChat": "New chat",
+    "automations": "Automations",
     "running": "Running"
   },
   "chat": {
@@ -83,6 +84,40 @@
       "noResults": "No matching files"
     }
   },
+  "automation": {
+    "title": "Automations",
+    "new": "New automation",
+    "start": "Start automating",
+    "emptyTitle": "Set up automations",
+    "emptyDesc": "Use agents to handle recurring work on a cadence you choose.",
+    "listDesc": "Review, run, and toggle recurring tasks.",
+    "name": "Name",
+    "namePlaceholder": "Issue triage",
+    "trigger": "Trigger",
+    "daily": "Daily",
+    "weekly": "Weekly",
+    "interval": "Interval",
+    "manual": "Manual",
+    "hour": "Hour",
+    "minute": "Minute",
+    "minutes": "Interval (min)",
+    "weekday": "Weekday",
+    "project": "Project",
+    "noProject": "No project",
+    "projectHint": "Without a project, this automation runs as a general chat.",
+    "prompt": "Prompt",
+    "promptPlaceholder": "Review latest issues and propose priorities.",
+    "runNow": "Run now",
+    "footerHint": "Save it, then use Run now to test it right away.",
+    "examples": {
+      "issueTriage": "Issue triage",
+      "issueTriageDesc": "Review latest issues and propose priorities and owners.",
+      "changelog": "Changelog draft",
+      "changelogDesc": "Summarize merged PRs this week into release-note draft.",
+      "repoAudit": "Repo audit",
+      "repoAuditDesc": "Audit open PRs and identify blockers or risky changes."
+    }
+  },
   "contextBar": {
     "switchProject": "Switch Project",
     "noProject": "No project selected",
@@ -96,7 +131,10 @@
     "usageInput": "Input",
     "cached": "cached",
     "usageCacheRead": "Cache read",
-    "usageTitle": "This session usage"
+    "usageTitle": "This session usage",
+    "noSession": "No session",
+    "statusIdle": "Idle",
+    "statusRunning": "Running"
   },
   "modelPicker": {
     "noModels": "No models available",
@@ -143,6 +181,7 @@
   "settings": {
     "title": "Settings",
     "backToApp": "Back to App",
+    "searchPlaceholder": "Search settings...",
     "appearance": "Appearance",
     "providers": "Providers",
     "models": "Models",
@@ -225,6 +264,33 @@
     "pluginSection": {
       "title": "Plugins",
       "desc": "Manage plugins and integrations",
+      "contextTitle": "Claude-compatible context",
+      "contextApplied": "Injected {{blocks}} context block(s) · Enabled skills {{enabled}}/{{total}}",
+      "detected": "Detected",
+      "missing": "Missing",
+      "noProjectPath": "No active project path",
+      "sources": {
+        "project-claude": "Project CLAUDE.md",
+        "project-rules": ".claude/rules markdown files",
+        "project-plugins": ".claude/plugins directories",
+        "user-claude": "~/.claude/CLAUDE.md",
+        "user-skills": "~/.claude/skills directories"
+      },
+      "scopeLabel": "Skill scope",
+      "scope": {
+        "all": "All",
+        "project": "This project",
+        "device": "On this device",
+        "builtin": "Built-in style"
+      },
+      "searchPlaceholder": "Search skills...",
+      "emptySkills": "No skills found",
+      "kind": {
+        "skill": "Skill",
+        "command": "Command",
+        "agent": "Agent",
+        "plugin": "Plugin"
+      },
       "claudeSkills": "Claude Skills",
       "claudeSkillsDesc": "Path to Claude skills directory",
       "claudeMd": "CLAUDE.md",

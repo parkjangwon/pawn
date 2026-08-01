@@ -11,6 +11,7 @@ import ChatHeader from './ChatHeader'
 import WelcomeScreen from './WelcomeScreen'
 import MessageList from './MessageList'
 import Composer from './Composer'
+import { filterEnabledSkills } from '../utils/skillVisibility'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -199,7 +200,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
 
   useEffect(() => {
     // User-level (~/.claude) skills and commands load even without a project.
-    loadProjectContext(effectivePath || undefined).then((c) => setSkills(c.skills)).catch(() => setSkills([]))
+    loadProjectContext(effectivePath || undefined).then((c) => setSkills(filterEnabledSkills(c.skills))).catch(() => setSkills([]))
   }, [effectivePath])
 
   function handleSelect(item: TriggerItem): void {

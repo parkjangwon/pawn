@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
-import { usePermissionStore } from '../stores/permission'
 import { useRoutineStore } from '../stores/routine'
 import { usePrefsStore } from '../stores/prefs'
+import { useAppStore } from '../stores/app'
 import {
   KEYBINDING_IDS, DEFAULT_KEYBINDINGS, comboToString, formatCombo,
   useKeybindingsStore, type KeyBindingId
@@ -12,9 +12,20 @@ import {
 import { guessPricing } from '../types/provider'
 import type { ApiFormat, AuthMethod, ModelPricing, Provider } from '../types/provider'
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
+import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
+import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
 import './Settings.css'
 
 type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'routines' | 'system' | 'shortcuts' | 'data'
+type SettingsSkillScope = 'all' | 'project' | 'device' | 'builtin'
+type SourceSignalId = 'project-claude' | 'project-rules' | 'project-plugins' | 'user-claude' | 'user-skills'
+
+interface SourceSignal {
+  id: SourceSignalId
+  path: string
+  detected: boolean
+  details?: string
+}
 
 interface SettingsProps {
   onClose: () => void
@@ -26,7 +37,6 @@ const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon:
   { id: 'models', labelKey: 'settings.models', groupKey: 'settings.groups.general', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
   { id: 'agent', labelKey: 'settings.agent', groupKey: 'settings.groups.coding', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { id: 'plugins', labelKey: 'settings.plugins', groupKey: 'settings.groups.integration', icon: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' },
-  { id: 'routines', labelKey: 'settings.routines', groupKey: 'settings.groups.automation', icon: 'M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z' },
   { id: 'system', labelKey: 'settings.system', groupKey: 'settings.groups.system', icon: 'M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z' },
   { id: 'shortcuts', labelKey: 'settings.shortcuts', groupKey: 'settings.groups.system', icon: 'M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM7 8h10M7 12h4' },
   { id: 'data', labelKey: 'settings.data', groupKey: 'settings.groups.general', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
@@ -46,6 +56,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   } = useProviderStore()
 
   const [activeSection, setActiveSection] = useState<SettingsSection>('appearance')
+  const [searchQuery, setSearchQuery] = useState('')
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [presetPicking, setPresetPicking] = useState<ProviderPreset | null>(null)
   const [presetKey, setPresetKey] = useState('')
@@ -61,6 +72,17 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
     name: '', prompt: '', type: 'interval' as 'interval' | 'daily' | 'weekly',
     minutes: 30, time: '09:00', weekday: 1
   })
+  const [homeDir, setHomeDir] = useState<string>('')
+  const [loadedSkills, setLoadedSkills] = useState<LoadedSkill[]>([])
+  const [skillsLoading, setSkillsLoading] = useState(false)
+  const [skillScope, setSkillScope] = useState<SettingsSkillScope>('all')
+  const [skillSearch, setSkillSearch] = useState('')
+  const [disabledSkills, setDisabledSkills] = useState<Set<string>>(new Set())
+  const [contextSignals, setContextSignals] = useState<SourceSignal[]>([])
+  const [contextAdditionCount, setContextAdditionCount] = useState(0)
+  const { projects, activeProjectId } = useAppStore()
+  const activeProject = projects.find((p) => p.id === activeProjectId)
+  const projectPath = activeProject?.paths?.[0] || ''
 
   // Auto-fill pricing/tier from the known-model table as soon as the id is
   // recognizable, so the router has a cost model without the user looking up rates.
@@ -155,7 +177,6 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   }
 
   const languages = [{ code: 'en', label: 'English' }, { code: 'ko', label: '한국어' }, { code: 'ja', label: '日本語' }, { code: 'zh', label: '中文' }]
-  const groups = [...new Set(SECTIONS.map((s) => s.groupKey))]
 
   const handleAddRoutine = async (): Promise<void> => {
     if (!routineForm.name.trim() || !routineForm.prompt.trim()) return
@@ -214,6 +235,149 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
     ) || null
   }
 
+  useEffect(() => {
+    window.api.fs.homeDir().then((home) => {
+      if (typeof home === 'string') setHomeDir(home)
+    }).catch(() => {})
+    setDisabledSkills(loadDisabledSkillNames())
+  }, [])
+
+  const fileExists = async (path: string): Promise<boolean> => {
+    const r = await window.api.fs.readFile(path)
+    return typeof r === 'string'
+  }
+
+  const countMarkdownFiles = async (path: string): Promise<number> => {
+    const entries = await window.api.fs.listDir(path)
+    if (!Array.isArray(entries)) return 0
+    return entries.filter((e) => !e.isDirectory && e.name.toLowerCase().endsWith('.md')).length
+  }
+
+  const countSubdirs = async (path: string): Promise<number> => {
+    const entries = await window.api.fs.listDir(path)
+    if (!Array.isArray(entries)) return 0
+    return entries.filter((e) => e.isDirectory).length
+  }
+
+  const detectContextSignals = async (): Promise<SourceSignal[]> => {
+    const root = projectPath ? (projectPath.endsWith('/') ? projectPath : `${projectPath}/`) : ''
+    const userRoot = homeDir ? `${homeDir}/.claude/` : ''
+    const rows: SourceSignal[] = []
+
+    if (root) {
+      const claudePath = `${root}CLAUDE.md`
+      const rulesPath = `${root}.claude/rules`
+      const pluginsPath = `${root}.claude/plugins`
+      const [hasClaude, rulesCount, pluginsCount] = await Promise.all([
+        fileExists(claudePath),
+        countMarkdownFiles(rulesPath),
+        countSubdirs(pluginsPath)
+      ])
+      rows.push({ id: 'project-claude', path: claudePath, detected: hasClaude })
+      rows.push({ id: 'project-rules', path: rulesPath, detected: rulesCount > 0, details: rulesCount > 0 ? `${rulesCount}` : undefined })
+      rows.push({ id: 'project-plugins', path: pluginsPath, detected: pluginsCount > 0, details: pluginsCount > 0 ? `${pluginsCount}` : undefined })
+    } else {
+      rows.push({ id: 'project-claude', path: '', detected: false })
+      rows.push({ id: 'project-rules', path: '', detected: false })
+      rows.push({ id: 'project-plugins', path: '', detected: false })
+    }
+
+    if (userRoot) {
+      const userClaudePath = `${userRoot}CLAUDE.md`
+      const userSkillsPath = `${userRoot}skills`
+      const [hasUserClaude, userSkillCount] = await Promise.all([
+        fileExists(userClaudePath),
+        countSubdirs(userSkillsPath)
+      ])
+      rows.push({ id: 'user-claude', path: userClaudePath, detected: hasUserClaude })
+      rows.push({ id: 'user-skills', path: userSkillsPath, detected: userSkillCount > 0, details: userSkillCount > 0 ? `${userSkillCount}` : undefined })
+    } else {
+      rows.push({ id: 'user-claude', path: '', detected: false })
+      rows.push({ id: 'user-skills', path: '', detected: false })
+    }
+    return rows
+  }
+
+  useEffect(() => {
+    if (activeSection !== 'plugins') return
+    setSkillsLoading(true)
+    Promise.all([
+      loadProjectContext(projectPath || undefined),
+      detectContextSignals()
+    ])
+      .then(([ctx, signals]) => {
+        setLoadedSkills(ctx.skills)
+        setContextAdditionCount(ctx.systemAdditions.length)
+        setContextSignals(signals)
+      })
+      .catch(() => {
+        setLoadedSkills([])
+        setContextAdditionCount(0)
+        setContextSignals([])
+      })
+      .finally(() => setSkillsLoading(false))
+  }, [activeSection, projectPath, homeDir])
+
+  const filteredSections = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return SECTIONS
+    return SECTIONS.filter((s) => {
+      const label = t(s.labelKey).toLowerCase()
+      const group = t(s.groupKey).toLowerCase()
+      return label.includes(q) || group.includes(q)
+    })
+  }, [searchQuery, t, i18n.language])
+
+  const filteredGroups = useMemo(() => [...new Set(filteredSections.map((s) => s.groupKey))], [filteredSections])
+
+  const visibleSkills = useMemo(() => {
+    const base = loadedSkills.filter((skill) => {
+      if (skillScope === 'all') return true
+      if (skillScope === 'project') {
+        const normalized = projectPath.endsWith('/') ? projectPath : `${projectPath}/`
+        return Boolean(projectPath) && skill.source.startsWith(normalized)
+      }
+      if (skillScope === 'device') {
+        const normalized = homeDir.endsWith('/') ? homeDir : `${homeDir}/`
+        return Boolean(homeDir) && skill.source.startsWith(normalized)
+      }
+      const normalizedProject = projectPath ? (projectPath.endsWith('/') ? projectPath : `${projectPath}/`) : ''
+      const normalizedHome = homeDir ? (homeDir.endsWith('/') ? homeDir : `${homeDir}/`) : ''
+      const inProject = normalizedProject ? skill.source.startsWith(normalizedProject) : false
+      const inHome = normalizedHome ? skill.source.startsWith(normalizedHome) : false
+      return !inProject && !inHome
+    })
+    const query = skillSearch.trim().toLowerCase()
+    if (!query) return base
+    return base.filter((skill) => {
+      const summary = skillSummary(skill).toLowerCase()
+      return skill.name.toLowerCase().includes(query)
+        || skill.kind.toLowerCase().includes(query)
+        || skill.source.toLowerCase().includes(query)
+        || summary.includes(query)
+    })
+  }, [loadedSkills, skillScope, skillSearch, projectPath, homeDir])
+
+  const scopeCounts = useMemo(() => {
+    const normalizedProject = projectPath ? (projectPath.endsWith('/') ? projectPath : `${projectPath}/`) : ''
+    const normalizedHome = homeDir ? (homeDir.endsWith('/') ? homeDir : `${homeDir}/`) : ''
+    const all = loadedSkills.length
+    const project = loadedSkills.filter((s) => normalizedProject && s.source.startsWith(normalizedProject)).length
+    const device = loadedSkills.filter((s) => normalizedHome && s.source.startsWith(normalizedHome)).length
+    const builtin = Math.max(0, all - project - device)
+    return { all, project, device, builtin }
+  }, [loadedSkills, projectPath, homeDir])
+
+  const enabledSkillCount = useMemo(
+    () => loadedSkills.filter((s) => isSkillEnabled(s.name, disabledSkills)).length,
+    [loadedSkills, disabledSkills]
+  )
+
+  const toggleSkill = (skillName: string): void => {
+    const nextEnabled = !isSkillEnabled(skillName, disabledSkills)
+    setDisabledSkills(setSkillEnabled(skillName, nextEnabled))
+  }
+
   return (
     <div className="settings-page">
       <div className="settings-sidebar">
@@ -221,11 +385,19 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
           <span>{t('settings.backToApp')}</span>
         </button>
+        <div className="settings-search-wrap">
+          <input
+            className="settings-search-input"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t('settings.searchPlaceholder')}
+          />
+        </div>
         <div className="settings-nav">
-          {groups.map((group) => (
+          {filteredGroups.map((group) => (
             <div key={group} className="settings-nav-group">
               <div className="settings-nav-label">{t(group)}</div>
-              {SECTIONS.filter((s) => s.groupKey === group).map((section) => (
+              {filteredSections.filter((s) => s.groupKey === group).map((section) => (
                 <button key={section.id} className={`settings-nav-item ${activeSection === section.id ? 'active' : ''}`} onClick={() => setActiveSection(section.id)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={section.icon} /></svg>
                   <span>{t(section.labelKey)}</span>
@@ -233,6 +405,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
               ))}
             </div>
           ))}
+          {filteredSections.length === 0 && <div className="settings-empty">{t('common.noResults')}</div>}
         </div>
       </div>
 
@@ -397,9 +570,74 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
             <h2>{t('settings.pluginSection.title')}</h2>
             <p className="settings-desc">{t('settings.pluginSection.desc')}</p>
             <div className="settings-card">
-              <div className="settings-row"><div className="settings-row-info"><span className="settings-row-label">{t('settings.pluginSection.claudeSkills')}</span><span className="settings-row-desc">{t('settings.pluginSection.claudeSkillsDesc')}</span></div><span className="settings-badge">{t('settings.pluginSection.auto')}</span></div>
-              <div className="settings-row"><div className="settings-row-info"><span className="settings-row-label">{t('settings.pluginSection.claudeMd')}</span><span className="settings-row-desc">{t('settings.pluginSection.claudeMdDesc')}</span></div><span className="settings-badge">자동</span></div>
-              <div className="settings-row"><div className="settings-row-info"><span className="settings-row-label">{t('settings.pluginSection.agentDir')}</span><span className="settings-row-desc">{t('settings.pluginSection.agentDirDesc')}</span></div><span className="settings-badge">자동</span></div>
+              <div className="plugin-context-head">
+                <span className="settings-row-label">{t('settings.pluginSection.contextTitle')}</span>
+                <span className="settings-row-desc">
+                  {t('settings.pluginSection.contextApplied', {
+                    blocks: contextAdditionCount,
+                    enabled: enabledSkillCount,
+                    total: loadedSkills.length
+                  })}
+                </span>
+              </div>
+              <div className="plugin-context-list">
+                {contextSignals.map((signal) => (
+                  <div key={signal.id} className="plugin-context-item">
+                    <div className="plugin-context-main">
+                      <span className="plugin-context-label">{t(`settings.pluginSection.sources.${signal.id}`)}</span>
+                      <span className="plugin-context-path">{signal.path || t('settings.pluginSection.noProjectPath')}</span>
+                    </div>
+                    <span className={`plugin-context-status ${signal.detected ? 'ok' : 'off'}`}>
+                      {signal.detected ? t('settings.pluginSection.detected') : t('settings.pluginSection.missing')}
+                      {signal.details ? ` (${signal.details})` : ''}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <div className="plugin-toolbar">
+                <div className="plugin-scope-toggle" role="tablist" aria-label={t('settings.pluginSection.scopeLabel')}>
+                  {(['all', 'project', 'device', 'builtin'] as SettingsSkillScope[]).map((scope) => (
+                    <button
+                      key={scope}
+                      role="tab"
+                      aria-selected={skillScope === scope}
+                      className={`plugin-scope-btn ${skillScope === scope ? 'active' : ''}`}
+                      onClick={() => setSkillScope(scope)}
+                    >
+                      {t(`settings.pluginSection.scope.${scope}`)} ({scopeCounts[scope]})
+                    </button>
+                  ))}
+                </div>
+                <input
+                  className="plugin-search-input"
+                  value={skillSearch}
+                  onChange={(e) => setSkillSearch(e.target.value)}
+                  placeholder={t('settings.pluginSection.searchPlaceholder')}
+                />
+              </div>
+              {skillsLoading && <div className="settings-empty">{t('common.loading')}</div>}
+              {!skillsLoading && visibleSkills.length === 0 && <div className="settings-empty">{t('settings.pluginSection.emptySkills')}</div>}
+              {!skillsLoading && visibleSkills.map((skill) => {
+                const enabled = isSkillEnabled(skill.name, disabledSkills)
+                return (
+                  <div key={`${skill.kind}:${skill.source}`} className="settings-row">
+                    <div className="settings-row-info">
+                      <span className="settings-row-label">
+                        {skill.name}
+                        <span className="plugin-kind">{t(`settings.pluginSection.kind.${skill.kind}`)}</span>
+                      </span>
+                      <span className="settings-row-desc">{skillSummary(skill) || skill.source}</span>
+                      <span className="plugin-source">{skill.source}</span>
+                    </div>
+                    <div className="settings-row-actions">
+                      <label className="toggle-switch">
+                        <input type="checkbox" checked={enabled} onChange={() => toggleSkill(skill.name)} />
+                        <span className="toggle-slider" />
+                      </label>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

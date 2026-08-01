@@ -82,6 +82,10 @@
 .rp-tab-label {
   font-size: 11px;
   font-weight: 500;
+  max-width: 92px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rp-tabs-spacer {
