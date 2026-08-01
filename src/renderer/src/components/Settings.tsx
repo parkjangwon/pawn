@@ -14,11 +14,16 @@ import type { ApiFormat, AuthMethod, ModelPricing, Provider } from '../types/pro
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
+import ConfirmDialog from './ConfirmDialog'
 import './Settings.css'
 
 type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'routines' | 'system' | 'shortcuts' | 'data'
 type SettingsSkillScope = 'all' | 'project' | 'device' | 'builtin'
 type SourceSignalId = 'project-claude' | 'project-rules' | 'project-plugins' | 'user-claude' | 'user-skills'
+type SettingsDeleteTarget =
+  | { type: 'provider'; id: string; name: string }
+  | { type: 'model'; id: string; name: string }
+  | { type: 'routine'; id: string; name: string }
 
 interface SourceSignal {
   id: SourceSignalId
@@ -80,6 +85,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   const [disabledSkills, setDisabledSkills] = useState<Set<string>>(new Set())
   const [contextSignals, setContextSignals] = useState<SourceSignal[]>([])
   const [contextAdditionCount, setContextAdditionCount] = useState(0)
+  const [confirmDelete, setConfirmDelete] = useState<SettingsDeleteTarget | null>(null)
   const { projects, activeProjectId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const projectPath = activeProject?.paths?.[0] || ''
@@ -378,13 +384,28 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
     setDisabledSkills(setSkillEnabled(skillName, nextEnabled))
   }
 
+  const handleConfirmDelete = async (): Promise<void> => {
+    if (!confirmDelete) return
+    if (confirmDelete.type === 'provider') {
+      removeProvider(confirmDelete.id)
+    } else if (confirmDelete.type === 'model') {
+      removeModel(confirmDelete.id)
+    } else {
+      await removeRoutine(confirmDelete.id)
+    }
+    setConfirmDelete(null)
+  }
+
   return (
     <div className="settings-page">
+      <div className="settings-header">
+        <div className="settings-header-left">
+          <button className="settings-header-back" onClick={onClose} aria-label={t('settings.backToApp')} title={t('settings.backToApp')}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
+        </div>
+      </div>
       <div className="settings-sidebar">
-        <button className="settings-back" onClick={onClose}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
-          <span>{t('settings.backToApp')}</span>
-        </button>
         <div className="settings-search-wrap">
           <input
             className="settings-search-input"
@@ -438,7 +459,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
                   <div className="settings-row-actions">
                     <button className={`test-btn ${testResult[p.id] === 'OK' ? 'ok' : testResult[p.id] ? 'fail' : ''}`} onClick={() => handleTestProvider(p.id)} disabled={testingId === p.id}>{testingId === p.id ? '...' : testResult[p.id] || 'Test'}</button>
                     <label className="toggle-switch"><input type="checkbox" checked={p.enabled} onChange={(e) => updateProvider(p.id, { enabled: e.target.checked })} /><span className="toggle-slider" /></label>
-                    <button className="delete-btn" onClick={() => removeProvider(p.id)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
+                    <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'provider', id: p.id, name: p.name })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
                   </div>
                 </div>
               ))}
@@ -513,7 +534,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
                         : t('settings.modelSection.pricingUnknown')}
                     </span>
                   </div>
-                  <button className="delete-btn" onClick={() => removeModel(m.id)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
+                  <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'model', id: m.id, name: m.label || m.modelId })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
                 </div>
               ))}
               {models.length === 0 && <div className="settings-empty">{t('settings.modelSection.empty')}</div>}
@@ -691,7 +712,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
                   <div className="settings-row-actions">
                     <button className="test-btn" disabled={runningIds.has(r.id)} onClick={() => void runNow(r.id)}>{t('settings.routineSection.runNow')}</button>
                     <label className="toggle-switch"><input type="checkbox" checked={r.enabled} onChange={(e) => void toggleRoutine(r.id, e.target.checked)} /><span className="toggle-slider" /></label>
-                    <button className="delete-btn" onClick={() => void removeRoutine(r.id)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
+                    <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'routine', id: r.id, name: r.name })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
                   </div>
                 </div>
               ))}
@@ -771,6 +792,22 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
           </div>
         )}
       </div>
+      {confirmDelete && (
+        <ConfirmDialog
+          title={`${confirmDelete.name} ${t('common.delete')}`}
+          message={
+            confirmDelete.type === 'provider'
+              ? t('confirmDialog.deleteProviderConfirm')
+              : confirmDelete.type === 'model'
+                ? t('confirmDialog.deleteModelConfirm')
+                : t('confirmDialog.deleteRoutineConfirm')
+          }
+          confirmLabel={t('confirmDialog.confirm')}
+          cancelLabel={t('confirmDialog.cancel')}
+          onConfirm={() => { void handleConfirmDelete() }}
+          onCancel={() => setConfirmDelete(null)}
+        />
+      )}
     </div>
   )
 }
