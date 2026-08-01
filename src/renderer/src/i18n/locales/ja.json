@@ -382,7 +382,20 @@
   },
   "confirmDialog": {
     "confirm": "確認",
-    "cancel": "キャンセル"
+    "cancel": "キャンセル",
+    "deleteAutomationConfirm": "このオートメーションを削除しますか？この操作は元に戻せません。",
+    "deleteProviderConfirm": "このプロバイダーを削除しますか？紐づくモデルが動作しなくなる可能性があります。",
+    "deleteModelConfirm": "このモデルを削除しますか？この操作は元に戻せません。",
+    "deleteRoutineConfirm": "このルーティンを削除しますか？この操作は元に戻せません。",
+    "clearSessionConfirm": "このセッションのメッセージをすべて削除しますか？この操作は元に戻せません。"
+  },
+  "chatHeader": {
+    "running": "実行中",
+    "open": "Open",
+    "openIn": "Open in",
+    "run": "Run",
+    "noScripts": "No scripts found",
+    "noApps": "No supported apps found"
   },
   "fileBrowser": {
     "title": "フォルダを選択",

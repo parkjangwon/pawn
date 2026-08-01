@@ -40,6 +40,10 @@ declare global {
       shell: {
         exec: (command: string, cwd?: string) => Promise<{ stdout: string; stderr: string; exitCode: number }>
       }
+      workspace: {
+        openIn: (path: string, app: string) => Promise<{ ok?: boolean; error?: string }>
+        runScript: (cwd: string, script: string, packageManager?: string) => Promise<{ ok?: boolean; error?: string }>
+      }
       computer: {
         screenshot: () => Promise<{ dataUrl?: string; error?: string }>
         click: (x: number, y: number) => Promise<{ ok?: boolean; error?: string }>

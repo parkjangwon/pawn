@@ -15,6 +15,8 @@ export interface Message {
   role: 'user' | 'assistant' | 'system'
   content: string
   createdAt: number
+  /** Display label of the model that produced this message (auto mode only). */
+  modelLabel?: string
 }
 
 export interface Project {
@@ -42,6 +44,7 @@ interface AppState {
   loadMessages: (projectId: string, sessionId: string) => Promise<void>
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
+  updateMessageModel: (projectId: string, sessionId: string, messageId: string, modelLabel: string) => void
   removeMessage: (projectId: string, sessionId: string, messageId: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
   clearMessages: (projectId: string, sessionId: string) => void
@@ -197,6 +200,16 @@ export const useAppStore = create<AppState>((set, get) => ({
       )
     }))
     window.api.db.updateMessageContent(messageId, content)
+  },
+
+  updateMessageModel: (projectId, sessionId, messageId, modelLabel) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, messages: ss.messages.map((m) => m.id === messageId ? { ...m, modelLabel } : m) } : ss) }
+          : p
+      )
+    }))
   },
 
   removeMessage: (projectId, sessionId, messageId) => {

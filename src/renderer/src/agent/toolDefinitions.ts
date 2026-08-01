@@ -233,6 +233,31 @@ export const TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'app_list_automations',
+    description: 'List configured automations (routines) in the app so you can review names, schedules, enabled status, and ids before changing them.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
+    name: 'app_create_automation',
+    description: 'Create a new automation (routine) in the app without writing SQL. Use this when users ask to set up recurring work.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: { type: 'string', description: 'Automation name shown in the UI' },
+        prompt: { type: 'string', description: 'Prompt the agent will run when this automation fires' },
+        scheduleType: { type: 'string', enum: ['manual', 'interval', 'daily', 'weekly'], description: 'When the automation should run' },
+        intervalMinutes: { type: 'number', description: 'For scheduleType=interval. Minutes between runs (>=1)' },
+        hour: { type: 'number', description: 'For daily/weekly schedules. 0-23' },
+        minute: { type: 'number', description: 'For daily/weekly schedules. 0-59' },
+        weekday: { type: 'number', description: 'For weekly schedule. 0=Sun..6=Sat' },
+        projectId: { type: 'string', description: 'Optional target project id. Empty means general/no project.' },
+        sessionId: { type: 'string', description: 'Optional existing session id to bind.' },
+        enabled: { type: 'boolean', description: 'Optional. Defaults to true unless scheduleType is manual.' }
+      },
+      required: ['name', 'prompt', 'scheduleType']
+    }
+  },
+  {
     name: 'app_set_model',
     description: 'Change the active model used for replies. Pass "auto" to let the router pick the best model, or a model id/label from the configured models. Takes effect from the next request.',
     parameters: {

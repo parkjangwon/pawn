@@ -27,6 +27,8 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   computer_keypress: 'risky',
   app_open_tab: 'safe',
   app_close_tab: 'safe',
+  app_list_automations: 'safe',
+  app_create_automation: 'risky',
   app_set_model: 'safe',
   app_set_reasoning: 'safe',
   app_toggle_theme: 'safe',
@@ -71,6 +73,8 @@ export async function checkPermission(
     grep_search: 'Search Text',
     app_open_tab: 'Open App Tab',
     app_close_tab: 'Close App Tab',
+    app_list_automations: 'List Automations',
+    app_create_automation: 'Create Automation',
     app_set_model: 'Change Model',
     app_set_permission_mode: 'Change Permission Mode',
     app_set_reasoning: 'Change Reasoning Effort',
@@ -84,7 +88,7 @@ export async function checkPermission(
         browser_eval: 'browser', browser_click: 'browser', browser_fill: 'browser', browser_open_external: 'browser',
         shell_exec: 'shell_exec',
         write_file: 'file_write', edit_file: 'file_write',
-        app_open_tab: 'app', app_close_tab: 'app', app_set_model: 'app',
+        app_open_tab: 'app', app_close_tab: 'app', app_list_automations: 'app', app_create_automation: 'app', app_set_model: 'app',
         app_set_permission_mode: 'app', app_set_reasoning: 'app', app_toggle_theme: 'app'
       }
       return map[callName] || 'file_read'

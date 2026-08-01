@@ -14,6 +14,11 @@ const fsMock = {
 }
 
 const shellMock = { exec: vi.fn() }
+const routineMock = {
+  list: vi.fn(),
+  add: vi.fn(),
+  setEnabled: vi.fn()
+}
 const browserApi = {
   ensure: vi.fn(),
   navigate: vi.fn(),
@@ -33,6 +38,9 @@ beforeEach(() => {
   usePermissionStore.setState({ pending: [] })
   for (const fn of Object.values(fsMock)) fn.mockReset()
   shellMock.exec.mockReset()
+  routineMock.list.mockReset()
+  routineMock.add.mockReset()
+  routineMock.setEnabled.mockReset()
 })
 
 const call = (name: string, args: Record<string, unknown> = {}, id = 'call-1'): ToolCall => ({ id, name, arguments: args })
@@ -278,7 +286,8 @@ describe('app tools', () => {
     ;(window as any).__closeRightPanelTab = vi.fn()
     ;(window as any).api = {
       config: { save: vi.fn().mockResolvedValue({}), load: vi.fn() },
-      fs: fsMock
+      fs: fsMock,
+      routine: routineMock
     }
   })
 
@@ -332,6 +341,55 @@ describe('app tools', () => {
 
     const bad = await executeTool(call('app_set_reasoning', { effort: 'insane' }))
     expect(bad.isError).toBe(true)
+  })
+
+  it('lists automations through app API', async () => {
+    routineMock.list.mockResolvedValue([
+      {
+        id: 'r1',
+        name: 'Daily report',
+        schedule: JSON.stringify({ type: 'daily', hour: 9, minute: 0 }),
+        prompt: 'write report',
+        projectId: '',
+        sessionId: '',
+        enabled: true,
+        nextRunAt: 0,
+        lastRunAt: 0,
+        lastResult: '',
+        createdAt: 0
+      }
+    ])
+    const result = await executeTool(call('app_list_automations', {}))
+    expect(result.content).toContain('Automations (1)')
+    expect(result.content).toContain('Daily report')
+  })
+
+  it('creates automations without SQL and supports manual mode', async () => {
+    routineMock.add.mockResolvedValue({ ok: true })
+    routineMock.setEnabled.mockResolvedValue({ ok: true })
+
+    const daily = await executeTool(call('app_create_automation', {
+      name: 'Issue triage',
+      prompt: 'Review latest issues',
+      scheduleType: 'daily',
+      hour: 10,
+      minute: 15
+    }))
+    expect(daily.isError).not.toBe(true)
+    expect(routineMock.add).toHaveBeenCalledTimes(1)
+    expect(routineMock.setEnabled).not.toHaveBeenCalled()
+
+    const addArg = routineMock.add.mock.calls[0][0]
+    const parsed = JSON.parse(addArg.schedule)
+    expect(parsed).toMatchObject({ type: 'daily', hour: 10, minute: 15 })
+
+    const manual = await executeTool(call('app_create_automation', {
+      name: 'Manual audit',
+      prompt: 'Audit open PRs',
+      scheduleType: 'manual'
+    }))
+    expect(manual.isError).not.toBe(true)
+    expect(routineMock.setEnabled).toHaveBeenCalledTimes(1)
   })
 
   it('reports unknown tools', async () => {

@@ -382,7 +382,20 @@
   },
   "confirmDialog": {
     "confirm": "Confirm",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "deleteAutomationConfirm": "Delete this automation? This action cannot be undone.",
+    "deleteProviderConfirm": "Delete this provider? Models linked to it may stop working.",
+    "deleteModelConfirm": "Delete this model? This action cannot be undone.",
+    "deleteRoutineConfirm": "Delete this routine? This action cannot be undone.",
+    "clearSessionConfirm": "Clear all messages in this session? This action cannot be undone."
+  },
+  "chatHeader": {
+    "running": "Running",
+    "open": "Open",
+    "openIn": "Open in",
+    "run": "Run",
+    "noScripts": "No scripts found",
+    "noApps": "No supported apps found"
   },
   "fileBrowser": {
     "title": "Select Folder",

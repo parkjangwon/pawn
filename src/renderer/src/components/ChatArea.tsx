@@ -11,6 +11,7 @@ import ChatHeader from './ChatHeader'
 import WelcomeScreen from './WelcomeScreen'
 import MessageList from './MessageList'
 import Composer from './Composer'
+import ConfirmDialog from './ConfirmDialog'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import './ChatArea.css'
 
@@ -45,6 +46,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [skills, setSkills] = useState<LoadedSkill[]>([])
   const [showProjectMenu, setShowProjectMenu] = useState(false)
   const [showProjectEdit, setShowProjectEdit] = useState(false)
+  const [showClearConfirm, setShowClearConfirm] = useState(false)
   const projectMenuRef = useRef<HTMLDivElement>(null)
   const pendingCursor = useRef<number | null>(null)
 
@@ -127,7 +129,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
       {
         id: 'clear', label: t('chat.slash.clear'), description: t('chat.slash.clearDesc'),
         icon: ic(<><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></>),
-        action: () => { if (activeProjectId && activeSessionId) clearMessages(activeProjectId, activeSessionId) }
+        action: () => { if (activeProjectId && activeSessionId) setShowClearConfirm(true) }
       },
       {
         id: 'model', label: t('chat.slash.model'), description: t('chat.slash.modelDesc'),
@@ -350,7 +352,12 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
 
   return (
     <main className="chat-area">
-      <ChatHeader onToggleSidebar={onToggleSidebar} />
+      <ChatHeader
+        onToggleSidebar={onToggleSidebar}
+        projectName={activeProject?.name}
+        gitBranch={gitBranch}
+        projectPath={effectivePath}
+      />
       {!activeSession || messages.length === 0 ? (
         <WelcomeScreen
           activeProject={activeProject}
@@ -396,6 +403,19 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
       />
       {showProjectEdit && activeProjectId && (
         <ProjectEditDialog projectId={activeProjectId} onClose={() => setShowProjectEdit(false)} />
+      )}
+      {showClearConfirm && (
+        <ConfirmDialog
+          title={t('chat.slash.clear')}
+          message={t('confirmDialog.clearSessionConfirm')}
+          confirmLabel={t('confirmDialog.confirm')}
+          cancelLabel={t('confirmDialog.cancel')}
+          onConfirm={() => {
+            if (activeProjectId && activeSessionId) clearMessages(activeProjectId, activeSessionId)
+            setShowClearConfirm(false)
+          }}
+          onCancel={() => setShowClearConfirm(false)}
+        />
       )}
     </main>
   )

@@ -22,6 +22,9 @@ export default function MessageList({ messages, isStreaming, endRef }: MessageLi
                   msg.content
                 )}
               </div>
+              {msg.role === 'assistant' && msg.modelLabel && (
+                <div className="message-model-label">{msg.modelLabel}</div>
+              )}
             </div>
           ))}
           {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (

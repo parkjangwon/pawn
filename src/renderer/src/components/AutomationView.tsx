@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRoutineStore } from '../stores/routine'
 import { useAppStore } from '../stores/app'
+import ConfirmDialog from './ConfirmDialog'
 import './AutomationView.css'
 
 type TriggerType = 'interval' | 'daily' | 'weekly'
@@ -23,9 +24,10 @@ interface DraftState {
 
 export default function AutomationView({ onToggleSidebar }: AutomationViewProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
-  const { routines, add, toggle, remove, runNow, runningIds } = useRoutineStore()
+  const { routines, add, toggle, remove, runNow, runningIds, refresh } = useRoutineStore()
   const { projects, activeProjectId } = useAppStore()
   const [showCreate, setShowCreate] = useState(false)
+  const [confirmDeleteRoutine, setConfirmDeleteRoutine] = useState<{ id: string; name: string } | null>(null)
   const [draft, setDraft] = useState<DraftState>({
     name: '', trigger: 'daily', hour: '09', minute: '00', weekday: '1', intervalMin: '30', prompt: '', projectId: activeProjectId || ''
   })
@@ -91,6 +93,10 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
     setShowCreate(false)
   }
 
+  useEffect(() => {
+    void refresh()
+  }, [refresh])
+
   const exampleCards = useMemo(
     () => [
       { title: t('automation.examples.issueTriage'), desc: t('automation.examples.issueTriageDesc'), badge: t('automation.daily'), trigger: 'daily' as TriggerType },
@@ -153,7 +159,7 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
                     <input type="checkbox" checked={routine.enabled} onChange={(e) => void toggle(routine.id, e.target.checked)} />
                     <span className="toggle-slider" />
                   </label>
-                  <button className="delete-btn" onClick={() => void remove(routine.id)}>
+                  <button className="delete-btn" onClick={() => setConfirmDeleteRoutine({ id: routine.id, name: routine.name })}>
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>
@@ -260,6 +266,17 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
             </div>
           </div>
         </div>
+      )}
+
+      {confirmDeleteRoutine && (
+        <ConfirmDialog
+          title={`${confirmDeleteRoutine.name} ${t('common.delete')}`}
+          message={t('confirmDialog.deleteAutomationConfirm')}
+          confirmLabel={t('confirmDialog.confirm')}
+          cancelLabel={t('confirmDialog.cancel')}
+          onConfirm={() => { void remove(confirmDeleteRoutine.id); setConfirmDeleteRoutine(null) }}
+          onCancel={() => setConfirmDeleteRoutine(null)}
+        />
       )}
     </main>
   )
