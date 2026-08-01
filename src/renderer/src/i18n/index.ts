@@ -14,7 +14,7 @@ i18n.use(initReactI18next).init({
     ja: { translation: ja },
     zh: { translation: zh }
   },
-  lng: savedLang || navigator.language.split('-')[0] || 'en',
+  lng: savedLang || 'en',
   fallbackLng: 'en',
   interpolation: { escapeValue: false }
 })

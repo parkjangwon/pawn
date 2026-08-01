@@ -455,3 +455,34 @@
     padding: var(--space-lg) var(--space-md);
   }
 }
+
+/* Stack the settings nav above the content on narrow windows. */
+@media (max-width: 720px) {
+  .settings-page {
+    flex-direction: column;
+  }
+  .settings-sidebar {
+    width: 100%;
+    min-width: 0;
+    height: auto;
+    max-height: 34vh;
+    padding-top: 44px;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+  }
+  .settings-nav {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+  .settings-nav-group {
+    display: contents;
+  }
+  .settings-nav-label {
+    display: none;
+  }
+  .settings-content {
+    height: auto;
+    overflow-y: visible;
+  }
+}

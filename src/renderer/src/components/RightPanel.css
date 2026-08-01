@@ -752,10 +752,15 @@
   display: flex;
 }
 
-/* Hide on small screens */
+/* On narrow windows the panel overlays the chat instead of being hidden. */
 @media (max-width: 1024px) {
   .right-panel {
-    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    box-shadow: -10px 0 28px rgba(0, 0, 0, 0.22);
   }
 }
 
@@ -828,10 +833,15 @@
   font-size: 12px;
 }
 
-/* Hide on small screens */
+/* On narrow windows the panel overlays the chat instead of being hidden. */
 @media (max-width: 1024px) {
   .right-panel {
-    display: none;
+    position: fixed;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    box-shadow: -10px 0 28px rgba(0, 0, 0, 0.22);
   }
 }
 
@@ -980,4 +990,33 @@
 .rp-diff-expanded {
   padding: 0 8px 8px;
   border-bottom: 1px solid var(--border-color);
+}
+
+/* Terminal restart */
+.terminal-restart-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 5;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: rgba(30, 30, 30, 0.75);
+  color: #ccc;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.rp-content:hover .terminal-restart-btn {
+  opacity: 1;
+}
+
+.terminal-restart-btn:hover {
+  background: rgba(70, 70, 70, 0.9);
+  color: #fff;
 }

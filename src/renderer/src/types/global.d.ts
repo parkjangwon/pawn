@@ -1,6 +1,27 @@
 export {}
 
 declare global {
+  type RoutineSchedule =
+    | { type: 'interval'; minutes: number }
+    | { type: 'daily'; hour: number; minute: number }
+    | { type: 'weekly'; weekday: number; hour: number; minute: number }
+
+  interface Routine {
+    id: string
+    name: string
+    schedule: string
+    prompt: string
+    projectId: string
+    sessionId: string
+    enabled: boolean
+    nextRunAt: number
+    lastRunAt: number
+    lastResult: string
+    createdAt: number
+  }
+}
+
+declare global {
   interface Window {
     api: {
       platform: string
@@ -120,6 +141,22 @@ declare global {
         onData: (callback: (id: string, data: string) => void) => () => void
       }
       onAppShortcut: (callback: (name: string) => void) => () => void
+      routine: {
+        list: () => Promise<Routine[]>
+        add: (input: { id: string; name: string; schedule: string; prompt: string; projectId?: string; sessionId?: string }) => Promise<{ ok?: boolean; error?: string; routine?: Routine }>
+        update: (id: string, patch: Partial<Pick<Routine, 'name' | 'schedule' | 'prompt' | 'projectId' | 'sessionId'>>) => Promise<{ ok?: boolean }>
+        setEnabled: (id: string, enabled: boolean) => Promise<{ ok?: boolean }>
+        remove: (id: string) => Promise<{ ok?: boolean }>
+        recordResult: (id: string, result: string) => Promise<{ ok?: boolean }>
+        onFire: (callback: (routine: Routine) => void) => () => void
+      }
+      power: {
+        setSleepPrevention: (mode: 'off' | 'sleep' | 'display') => Promise<{ ok?: boolean }>
+      }
+      keybindings: {
+        set: (id: string, combo: string) => Promise<{ ok?: boolean }>
+        setPaused: (paused: boolean) => Promise<{ ok?: boolean }>
+      }
     }
   }
 }

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useThemeStore } from '../stores/theme'
+import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import './CommandPalette.css'
 
 interface Command {
@@ -29,6 +30,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
   const { projects, setActiveProject, addSession } = useAppStore()
   const { stopStreaming, isStreaming } = useChatStore()
   const { toggle: toggleTheme } = useThemeStore()
+  const keybindings = useKeybindingsStore((s) => s.bindings)
 
   // Build commands list
   const commands: Command[] = [
@@ -36,7 +38,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
       id: 'new-session',
       label: t('commandPalette.commands.newSession'),
       description: t('commandPalette.commands.newSessionDesc'),
-      shortcut: '⌘N',
+      shortcut: formatCombo(keybindings['new-session']),
       action: () => {
         const activeId = useAppStore.getState().activeProjectId
         if (activeId) addSession(activeId)
@@ -63,8 +65,24 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
       id: 'open-settings',
       label: t('commandPalette.commands.openSettings'),
       description: t('commandPalette.commands.openSettingsDesc'),
-      shortcut: '⌘,',
+      shortcut: formatCombo(keybindings['open-settings']),
       action: () => { onOpenSettings(); onClose() },
+      group: 'Actions'
+    },
+    {
+      id: 'toggle-right-panel',
+      label: t('commandPalette.commands.toggleRightPanel'),
+      description: t('commandPalette.commands.toggleRightPanelDesc'),
+      shortcut: formatCombo(keybindings['toggle-right-panel']),
+      action: () => { (window as any).__toggleRightPanel?.(); onClose() },
+      group: 'Actions'
+    },
+    {
+      id: 'toggle-sidebar',
+      label: t('commandPalette.commands.toggleSidebar'),
+      description: t('commandPalette.commands.toggleSidebarDesc'),
+      shortcut: formatCombo(keybindings['toggle-sidebar']),
+      action: () => { (window as any).__toggleSidebar?.(); onClose() },
       group: 'Actions'
     },
     ...projects.flatMap((p) => [

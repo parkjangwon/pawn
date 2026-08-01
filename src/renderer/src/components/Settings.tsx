@@ -1,14 +1,20 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
 import { usePermissionStore } from '../stores/permission'
+import { useRoutineStore } from '../stores/routine'
+import { usePrefsStore } from '../stores/prefs'
+import {
+  KEYBINDING_IDS, DEFAULT_KEYBINDINGS, comboToString, formatCombo,
+  useKeybindingsStore, type KeyBindingId
+} from '../stores/keybindings'
 import { guessPricing } from '../types/provider'
 import type { ApiFormat, AuthMethod, ModelPricing, Provider } from '../types/provider'
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
 import './Settings.css'
 
-type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'data'
+type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'routines' | 'system' | 'shortcuts' | 'data'
 
 interface SettingsProps {
   onClose: () => void
@@ -20,12 +26,19 @@ const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon:
   { id: 'models', labelKey: 'settings.models', groupKey: 'settings.groups.general', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
   { id: 'agent', labelKey: 'settings.agent', groupKey: 'settings.groups.coding', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { id: 'plugins', labelKey: 'settings.plugins', groupKey: 'settings.groups.integration', icon: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' },
+  { id: 'routines', labelKey: 'settings.routines', groupKey: 'settings.groups.automation', icon: 'M12 6v6l4 2m5-2a9 9 0 11-18 0 9 9 0 0118 0z' },
+  { id: 'system', labelKey: 'settings.system', groupKey: 'settings.groups.system', icon: 'M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z' },
+  { id: 'shortcuts', labelKey: 'settings.shortcuts', groupKey: 'settings.groups.system', icon: 'M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM7 8h10M7 12h4' },
   { id: 'data', labelKey: 'settings.data', groupKey: 'settings.groups.general', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
 ]
 
 export default function Settings({ onClose }: SettingsProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const { theme, set } = useThemeStore()
+  const { routines, runningIds, add: addRoutine, toggle: toggleRoutine, remove: removeRoutine, runNow } = useRoutineStore()
+  const { sleepPrevention, setSleepPrevention } = usePrefsStore()
+  const { bindings: keybindings, setBinding: setKeybinding, reset: resetKeybinding } = useKeybindingsStore()
+  const [recording, setRecording] = useState<KeyBindingId | null>(null)
   const {
     providers, models, routingMode, defaultSendMode, permissionMode,
     addProvider, removeProvider, updateProvider,
@@ -43,6 +56,10 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   const [modelForm, setModelForm] = useState({
     providerId: '', modelId: '', label: '', tier: 'mid' as 'low' | 'mid' | 'high',
     input: '', output: '', cacheRead: '', cacheWrite: '', contextWindow: ''
+  })
+  const [routineForm, setRoutineForm] = useState({
+    name: '', prompt: '', type: 'interval' as 'interval' | 'daily' | 'weekly',
+    minutes: 30, time: '09:00', weekday: 1
   })
 
   // Auto-fill pricing/tier from the known-model table as soon as the id is
@@ -140,6 +157,63 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   const languages = [{ code: 'en', label: 'English' }, { code: 'ko', label: '한국어' }, { code: 'ja', label: '日本語' }, { code: 'zh', label: '中文' }]
   const groups = [...new Set(SECTIONS.map((s) => s.groupKey))]
 
+  const handleAddRoutine = async (): Promise<void> => {
+    if (!routineForm.name.trim() || !routineForm.prompt.trim()) return
+    const [hour, minute] = routineForm.time.split(':').map(Number)
+    const schedule: RoutineSchedule = routineForm.type === 'interval'
+      ? { type: 'interval', minutes: Math.max(1, Number(routineForm.minutes) || 30) }
+      : routineForm.type === 'daily'
+        ? { type: 'daily', hour, minute }
+        : { type: 'weekly', weekday: routineForm.weekday, hour, minute }
+    await addRoutine({ name: routineForm.name, prompt: routineForm.prompt, schedule })
+    setRoutineForm({ name: '', prompt: '', type: 'interval', minutes: 30, time: '09:00', weekday: 1 })
+  }
+
+  const routineScheduleLabel = (scheduleJson: string): string => {
+    try {
+      const s = JSON.parse(scheduleJson) as RoutineSchedule
+      if (s.type === 'interval') return t('settings.routineSection.everyMinutes', { minutes: s.minutes })
+      const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`
+      if (s.type === 'daily') return t('settings.routineSection.dailyAt', { time })
+      return t('settings.routineSection.weeklyAt', { weekday: t(`settings.routineSection.weekdays.${s.weekday}`), time })
+    } catch {
+      return ''
+    }
+  }
+
+  const formatRunTime = (ms: number): string => {
+    if (!ms) return t('settings.routineSection.never')
+    return new Date(ms).toLocaleString(i18n.language)
+  }
+
+  // Capture the next key combination while a shortcut row is recording.
+  useEffect(() => {
+    if (!recording) return
+    // Stop main-process forwarding so the pressed keys reach the recorder.
+    void window.api.keybindings?.setPaused?.(true)
+    const onKey = (e: KeyboardEvent): void => {
+      e.preventDefault()
+      e.stopPropagation()
+      if (e.key === 'Escape') { setRecording(null); return }
+      if (['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) return
+      setKeybinding(recording, comboToString({ alt: e.altKey, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey, key: e.key }))
+      setRecording(null)
+    }
+    window.addEventListener('keydown', onKey, true)
+    return () => {
+      window.removeEventListener('keydown', onKey, true)
+      void window.api.keybindings?.setPaused?.(false)
+    }
+  }, [recording, setKeybinding])
+
+  const shortcutLabel = (id: KeyBindingId): string => t(`settings.shortcutSection.${id}`)
+  const comboConflict = (id: KeyBindingId): KeyBindingId | null => {
+    const combo = keybindings[id]
+    return KEYBINDING_IDS.find(
+      (other) => other !== id && keybindings[other] === combo && combo !== DEFAULT_KEYBINDINGS[id]
+    ) || null
+  }
+
   return (
     <div className="settings-page">
       <div className="settings-sidebar">
@@ -170,7 +244,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
             <div className="settings-card">
               <div className="settings-row">
                 <div className="settings-row-info"><span className="settings-row-label">{t('settings.appearanceSection.theme')}</span><span className="settings-row-desc">{t('settings.appearanceSection.themeDesc')}</span></div>
-                <div className="theme-toggle"><button className={theme === 'light' ? 'active' : ''} onClick={() => set('light')}>{t('theme.light')}</button><button className={theme === 'dark' ? 'active' : ''} onClick={() => set('dark')}>{t('theme.dark')}</button></div>
+                <div className="theme-toggle"><button className={theme === 'light' ? 'active' : ''} onClick={() => set('light')}>{t('theme.light')}</button><button className={theme === 'dark' ? 'active' : ''} onClick={() => set('dark')}>{t('theme.dark')}</button><button className={theme === 'system' ? 'active' : ''} onClick={() => set('system')}>{t('theme.system')}</button></div>
               </div>
               <div className="settings-row">
                 <div className="settings-row-info"><span className="settings-row-label">{t('settings.appearanceSection.language')}</span><span className="settings-row-desc">{t('settings.appearanceSection.languageDesc')}</span></div>
@@ -326,6 +400,114 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
               <div className="settings-row"><div className="settings-row-info"><span className="settings-row-label">{t('settings.pluginSection.claudeSkills')}</span><span className="settings-row-desc">{t('settings.pluginSection.claudeSkillsDesc')}</span></div><span className="settings-badge">{t('settings.pluginSection.auto')}</span></div>
               <div className="settings-row"><div className="settings-row-info"><span className="settings-row-label">{t('settings.pluginSection.claudeMd')}</span><span className="settings-row-desc">{t('settings.pluginSection.claudeMdDesc')}</span></div><span className="settings-badge">자동</span></div>
               <div className="settings-row"><div className="settings-row-info"><span className="settings-row-label">{t('settings.pluginSection.agentDir')}</span><span className="settings-row-desc">{t('settings.pluginSection.agentDirDesc')}</span></div><span className="settings-badge">자동</span></div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'routines' && (
+          <div className="settings-section">
+            <h2>{t('settings.routineSection.title')}</h2>
+            <p className="settings-desc">{t('settings.routineSection.desc')}</p>
+            <div className="settings-card">
+              <div className="settings-row">
+                <div className="settings-row-info"><span className="settings-row-label">{t('settings.routineSection.addTitle')}</span><span className="settings-row-desc">{t('settings.routineSection.addDesc')}</span></div>
+              </div>
+              <div className="add-form">
+                <input placeholder={t('settings.routineSection.namePlaceholder')} value={routineForm.name} onChange={(e) => setRoutineForm((f) => ({ ...f, name: e.target.value }))} />
+                <input placeholder={t('settings.routineSection.promptPlaceholder')} value={routineForm.prompt} onChange={(e) => setRoutineForm((f) => ({ ...f, prompt: e.target.value }))} />
+                <select value={routineForm.type} onChange={(e) => setRoutineForm((f) => ({ ...f, type: e.target.value as 'interval' | 'daily' | 'weekly' }))}>
+                  <option value="interval">{t('settings.routineSection.type.interval')}</option>
+                  <option value="daily">{t('settings.routineSection.type.daily')}</option>
+                  <option value="weekly">{t('settings.routineSection.type.weekly')}</option>
+                </select>
+                {routineForm.type === 'interval' && (
+                  <input type="number" min={1} value={routineForm.minutes} onChange={(e) => setRoutineForm((f) => ({ ...f, minutes: Number(e.target.value) }))} />
+                )}
+                {routineForm.type !== 'interval' && (
+                  <>
+                    {routineForm.type === 'weekly' && (
+                      <select value={routineForm.weekday} onChange={(e) => setRoutineForm((f) => ({ ...f, weekday: Number(e.target.value) }))}>
+                        {[0, 1, 2, 3, 4, 5, 6].map((w) => (
+                          <option key={w} value={w}>{t(`settings.routineSection.weekdays.${w}`)}</option>
+                        ))}
+                      </select>
+                    )}
+                    <input type="time" value={routineForm.time} onChange={(e) => setRoutineForm((f) => ({ ...f, time: e.target.value }))} />
+                  </>
+                )}
+              </div>
+              <div className="form-actions">
+                <button className="btn-primary" disabled={!routineForm.name.trim() || !routineForm.prompt.trim()} onClick={() => void handleAddRoutine()}>{t('settings.routineSection.add')}</button>
+              </div>
+            </div>
+            <div className="settings-card">
+              {routines.length === 0 && <div className="settings-empty">{t('settings.routineSection.empty')}</div>}
+              {routines.map((r) => (
+                <div key={r.id} className="settings-row routine-row">
+                  <div className="settings-row-info">
+                    <span className="settings-row-label">{r.name}{runningIds.has(r.id) && <span className="settings-badge"> {t('settings.routineSection.running')}</span>}</span>
+                    <span className="settings-row-desc">{routineScheduleLabel(r.schedule)} · {t('settings.routineSection.nextRun')} {formatRunTime(r.nextRunAt)} · {t('settings.routineSection.lastRun')} {formatRunTime(r.lastRunAt)}</span>
+                    <span className="settings-row-desc">{r.prompt}</span>
+                    {r.lastResult && <span className="settings-row-desc">{t('settings.routineSection.lastResult')} {r.lastResult.slice(0, 140)}</span>}
+                  </div>
+                  <div className="settings-row-actions">
+                    <button className="test-btn" disabled={runningIds.has(r.id)} onClick={() => void runNow(r.id)}>{t('settings.routineSection.runNow')}</button>
+                    <label className="toggle-switch"><input type="checkbox" checked={r.enabled} onChange={(e) => void toggleRoutine(r.id, e.target.checked)} /><span className="toggle-slider" /></label>
+                    <button className="delete-btn" onClick={() => void removeRoutine(r.id)}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'system' && (
+          <div className="settings-section">
+            <h2>{t('settings.systemSection.title')}</h2>
+            <p className="settings-desc">{t('settings.systemSection.desc')}</p>
+            <div className="settings-card">
+              <div className="settings-row">
+                <div className="settings-row-info"><span className="settings-row-label">{t('settings.systemSection.sleepPrevention')}</span><span className="settings-row-desc">{t('settings.systemSection.sleepPreventionDesc')}</span></div>
+                <div className="theme-toggle">
+                  <button className={sleepPrevention === 'off' ? 'active' : ''} onClick={() => setSleepPrevention('off')}>{t('settings.systemSection.sleepOff')}</button>
+                  <button className={sleepPrevention === 'sleep' ? 'active' : ''} onClick={() => setSleepPrevention('sleep')}>{t('settings.systemSection.sleepSystem')}</button>
+                  <button className={sleepPrevention === 'display' ? 'active' : ''} onClick={() => setSleepPrevention('display')}>{t('settings.systemSection.sleepDisplay')}</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeSection === 'shortcuts' && (
+          <div className="settings-section">
+            <h2>{t('settings.shortcutSection.title')}</h2>
+            <p className="settings-desc">{t('settings.shortcutSection.desc')}</p>
+            <div className="settings-card">
+              {KEYBINDING_IDS.map((id) => {
+                const conflict = comboConflict(id)
+                return (
+                  <div key={id} className="settings-row">
+                    <div className="settings-row-info">
+                      <span className="settings-row-label">{shortcutLabel(id)}</span>
+                      <span className="settings-row-desc">
+                        {recording === id
+                          ? t('settings.shortcutSection.recording')
+                          : conflict
+                            ? t('settings.shortcutSection.conflict', { other: shortcutLabel(conflict) })
+                            : keybindings[id] ? formatCombo(keybindings[id]) : t('settings.shortcutSection.none')}
+                      </span>
+                    </div>
+                    <div className="settings-row-actions">
+                      <button className={`test-btn ${recording === id ? 'ok' : ''}`} onClick={() => setRecording(recording === id ? null : id)}>
+                        {recording === id ? t('settings.shortcutSection.cancel') : t('settings.shortcutSection.change')}
+                      </button>
+                      <button className="test-btn" onClick={() => resetKeybinding(id)} disabled={keybindings[id] === DEFAULT_KEYBINDINGS[id]}>
+                        {t('settings.shortcutSection.reset')}
+                      </button>
+                    </div>
+                  </div>
+                )
+              })}
             </div>
           </div>
         )}

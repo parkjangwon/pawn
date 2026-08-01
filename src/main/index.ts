@@ -3,6 +3,12 @@ import { is } from '@electron-toolkit/utils'
 import { registerAllIpc } from './ipc'
 import { createMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
+import { startRoutineServices, stopRoutineServices } from './ipc/routine'
+import { initKeybindings, registerShortcutForwarding } from './ipc/keybindings'
+
+// Must be registered before any webContents is created so every view
+// (main window, embedded browser, DevTools) forwards shortcuts to the app.
+registerShortcutForwarding()
 
 app.whenReady().then(() => {
   // CSP for security
@@ -30,9 +36,12 @@ app.whenReady().then(() => {
   })
 
   registerAllIpc()
+  initKeybindings()
+  startRoutineServices()
 
   app.on('will-quit', () => {
     killAllTerminals()
+    stopRoutineServices()
   })
 
   createMainWindow()

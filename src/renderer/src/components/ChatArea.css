@@ -352,6 +352,17 @@
 }
 
 .context-chip {
+  max-width: 180px;
+  overflow: hidden;
+}
+
+.context-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.context-chip {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -522,6 +533,8 @@
   align-items: center;
   justify-content: space-between;
   padding-top: var(--space-xs);
+  flex-wrap: wrap;
+  row-gap: 6px;
 }
 
 .input-actions-left {
@@ -534,6 +547,9 @@
   display: flex;
   align-items: center;
   gap: var(--space-sm);
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  min-width: 0;
 }
 
 /* Permission chip */
@@ -802,4 +818,20 @@
   .welcome-actions {
     grid-template-columns: 1fr;
   }
+}
+
+/* Keep chip rows from blowing out narrow composers */
+.perm-chip,
+.usage-chip,
+.model-chip-btn {
+  max-width: 190px;
+  overflow: hidden;
+}
+
+.perm-chip span,
+.usage-chip span,
+.model-chip-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
