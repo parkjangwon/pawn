@@ -9,8 +9,7 @@ import {
   KEYBINDING_IDS, DEFAULT_KEYBINDINGS, comboToString, formatCombo,
   useKeybindingsStore, type KeyBindingId
 } from '../stores/keybindings'
-import { guessPricing } from '../types/provider'
-import type { ApiFormat, AuthMethod, ModelPricing, Provider } from '../types/provider'
+import { guessPricing, type ApiFormat, type ModelPricing, type Provider } from '../types/provider'
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
@@ -61,14 +60,18 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   } = useProviderStore()
 
   const [activeSection, setActiveSection] = useState<SettingsSection>('appearance')
-  const [searchQuery, setSearchQuery] = useState('')
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [presetPicking, setPresetPicking] = useState<ProviderPreset | null>(null)
   const [presetKey, setPresetKey] = useState('')
   const [showAddModel, setShowAddModel] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<Record<string, string>>({})
-  const [form, setForm] = useState({ name: '', apiFormat: 'openai' as ApiFormat, authMethod: 'api-key' as AuthMethod, baseUrl: '', apiKey: '' })
+  const [form, setForm] = useState({
+    name: '',
+    apiFormat: 'openai' as ApiFormat,
+    baseUrl: '',
+    apiKey: ''
+  })
   const [modelForm, setModelForm] = useState({
     providerId: '', modelId: '', label: '', tier: 'mid' as 'low' | 'mid' | 'high',
     input: '', output: '', cacheRead: '', cacheWrite: '', contextWindow: ''
@@ -90,8 +93,6 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const projectPath = activeProject?.paths?.[0] || ''
 
-  // Auto-fill pricing/tier from the known-model table as soon as the id is
-  // recognizable, so the router has a cost model without the user looking up rates.
   const applyModelIdGuess = (modelId: string): void => {
     const guess = guessPricing(modelId)
     setModelForm((f) => ({
@@ -110,8 +111,12 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
     if (!preset.localNoKey && !apiKey.trim()) return
     const before = useProviderStore.getState().providers.length
     addProvider({
-      id: '', name: preset.name, apiFormat: preset.apiFormat, authMethod: 'api-key',
-      baseUrl: preset.baseUrl, apiKey: apiKey.trim() || undefined, enabled: true
+      id: '',
+      name: preset.name,
+      apiFormat: preset.apiFormat,
+      baseUrl: preset.baseUrl,
+      apiKey: apiKey.trim() || undefined,
+      enabled: true
     })
     const after = useProviderStore.getState().providers
     const created: Provider | undefined = after.length > before ? after[after.length - 1] : undefined
@@ -131,8 +136,20 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
 
   const handleAddProvider = (): void => {
     if (!form.name.trim() || !form.baseUrl.trim()) return
-    addProvider({ id: '', name: form.name.trim(), apiFormat: form.apiFormat, authMethod: form.authMethod, baseUrl: form.baseUrl.trim(), apiKey: form.authMethod === 'api-key' ? form.apiKey : undefined, enabled: true })
-    setForm({ name: '', apiFormat: 'openai', authMethod: 'api-key', baseUrl: '', apiKey: '' })
+    addProvider({
+      id: '',
+      name: form.name.trim(),
+      apiFormat: form.apiFormat,
+      baseUrl: form.baseUrl.trim(),
+      apiKey: form.apiKey.trim() || undefined,
+      enabled: true
+    })
+    setForm({
+      name: '',
+      apiFormat: 'openai',
+      baseUrl: '',
+      apiKey: ''
+    })
     setShowAddProvider(false)
   }
 
@@ -169,8 +186,9 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
     try {
       const url = p.apiFormat === 'claude' ? `${p.baseUrl}/messages` : `${p.baseUrl}/chat/completions`
       const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (p.apiFormat === 'claude') { headers['x-api-key'] = p.apiKey || ''; headers['anthropic-version'] = '2023-06-01' }
-      else { headers['Authorization'] = `Bearer ${p.apiKey || ''}` }
+      const token = p.apiKey || ''
+      if (p.apiFormat === 'claude') { headers['x-api-key'] = token; headers['anthropic-version'] = '2023-06-01' }
+      else { headers['Authorization'] = `Bearer ${token}` }
       const body = p.apiFormat === 'claude' ? { model: 'claude-3-haiku-20240307', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] } : { model: 'gpt-4o-mini', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] }
       const isBrowser = window.api?.platform === 'browser'
       let response: Response
@@ -324,17 +342,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
       .finally(() => setSkillsLoading(false))
   }, [activeSection, projectPath, homeDir])
 
-  const filteredSections = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase()
-    if (!q) return SECTIONS
-    return SECTIONS.filter((s) => {
-      const label = t(s.labelKey).toLowerCase()
-      const group = t(s.groupKey).toLowerCase()
-      return label.includes(q) || group.includes(q)
-    })
-  }, [searchQuery, t, i18n.language])
-
-  const filteredGroups = useMemo(() => [...new Set(filteredSections.map((s) => s.groupKey))], [filteredSections])
+  const groups = useMemo(() => [...new Set(SECTIONS.map((s) => s.groupKey))], [])
 
   const visibleSkills = useMemo(() => {
     const base = loadedSkills.filter((skill) => {
@@ -406,19 +414,11 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
         </div>
       </div>
       <div className="settings-sidebar">
-        <div className="settings-search-wrap">
-          <input
-            className="settings-search-input"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder={t('settings.searchPlaceholder')}
-          />
-        </div>
         <div className="settings-nav">
-          {filteredGroups.map((group) => (
+          {groups.map((group) => (
             <div key={group} className="settings-nav-group">
               <div className="settings-nav-label">{t(group)}</div>
-              {filteredSections.filter((s) => s.groupKey === group).map((section) => (
+              {SECTIONS.filter((s) => s.groupKey === group).map((section) => (
                 <button key={section.id} className={`settings-nav-item ${activeSection === section.id ? 'active' : ''}`} onClick={() => setActiveSection(section.id)}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={section.icon} /></svg>
                   <span>{t(section.labelKey)}</span>
@@ -426,7 +426,6 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
               ))}
             </div>
           ))}
-          {filteredSections.length === 0 && <div className="settings-empty">{t('common.noResults')}</div>}
         </div>
       </div>
 
@@ -455,9 +454,14 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
             <div className="settings-card">
               {providers.map((p) => (
                 <div key={p.id} className="settings-row provider-row">
-                  <div className="settings-row-info"><span className="settings-row-label">{p.name}</span><span className="settings-row-desc">{p.apiFormat} / {p.baseUrl}</span></div>
+                  <div className="settings-row-info">
+                    <span className="settings-row-label">{p.name}</span>
+                    <span className="settings-row-desc">
+                      {p.apiFormat} / {p.baseUrl}
+                    </span>
+                  </div>
                   <div className="settings-row-actions">
-                    <button className={`test-btn ${testResult[p.id] === 'OK' ? 'ok' : testResult[p.id] ? 'fail' : ''}`} onClick={() => handleTestProvider(p.id)} disabled={testingId === p.id}>{testingId === p.id ? '...' : testResult[p.id] || 'Test'}</button>
+                    <button className={`test-btn ${testResult[p.id] === 'OK' ? 'ok' : testResult[p.id]?.startsWith('FAIL') ? 'fail' : ''}`} onClick={() => handleTestProvider(p.id)} disabled={testingId === p.id}>{testingId === p.id ? '...' : testResult[p.id] || 'Test'}</button>
                     <label className="toggle-switch"><input type="checkbox" checked={p.enabled} onChange={(e) => updateProvider(p.id, { enabled: e.target.checked })} /><span className="toggle-slider" /></label>
                     <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'provider', id: p.id, name: p.name })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
                   </div>
@@ -469,11 +473,22 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
             <div className="preset-section">
               <div className="settings-row-desc preset-section-label">{t('settings.providerSection.presetDesc')}</div>
               <div className="preset-grid">
-                {PROVIDER_PRESETS.map((preset) => (
-                  <button key={preset.id} className="preset-chip" onClick={() => { setPresetPicking(preset); setPresetKey('') }}>
-                    {preset.name}
-                  </button>
-                ))}
+                {PROVIDER_PRESETS.map((preset) => {
+                  const isAlreadyAdded = providers.some(
+                    (p) => p.name.toLowerCase() === preset.name.toLowerCase()
+                  )
+                  return (
+                    <button 
+                      key={preset.id} 
+                      className={`preset-chip ${isAlreadyAdded ? 'disabled' : ''}`} 
+                      onClick={() => { setPresetPicking(preset); setPresetKey('') }}
+                      disabled={isAlreadyAdded}
+                      style={isAlreadyAdded ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
+                    >
+                      {preset.name}
+                    </button>
+                  )
+                })}
               </div>
               {presetPicking && (
                 <div className="settings-card add-form preset-form">
@@ -504,13 +519,15 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
             </div>
 
             {showAddProvider ? (
-              <div className="settings-card add-form">
+              <div className="settings-card add-form" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                 <input placeholder={t('settings.providerSection.namePlaceholder')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
                 <select value={form.apiFormat} onChange={(e) => setForm({ ...form, apiFormat: e.target.value as ApiFormat })}><option value="openai">{t('settings.providerSection.openai')}</option><option value="claude">{t('settings.providerSection.claude')}</option></select>
-                <select value={form.authMethod} onChange={(e) => setForm({ ...form, authMethod: e.target.value as AuthMethod })}><option value="api-key">{t('settings.providerSection.apiKeyMethod')}</option><option value="oauth">{t('settings.providerSection.oauth')}</option></select>
                 <input placeholder={t('settings.providerSection.baseUrlPlaceholder')} value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} />
-                {form.authMethod === 'api-key' && <input type="password" placeholder={t('settings.providerSection.apiKeyPlaceholder')} value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />}
-                <div className="form-actions"><button className="btn-primary" onClick={handleAddProvider}>{t('common.save')}</button><button className="btn-cancel" onClick={() => setShowAddProvider(false)}>{t('common.cancel')}</button></div>
+                <input type="password" placeholder={t('settings.providerSection.apiKeyPlaceholder')} value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />
+                <div className="form-actions">
+                  <button className="btn-primary" onClick={handleAddProvider}>{t('common.save')}</button>
+                  <button className="btn-cancel" onClick={() => setShowAddProvider(false)}>{t('common.cancel')}</button>
+                </div>
               </div>
             ) : (
               <button className="add-btn-full" onClick={() => setShowAddProvider(true)}>{t('settings.providerSection.add')}</button>
@@ -698,24 +715,24 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
               <div className="form-actions">
                 <button className="btn-primary" disabled={!routineForm.name.trim() || !routineForm.prompt.trim()} onClick={() => void handleAddRoutine()}>{t('settings.routineSection.add')}</button>
               </div>
-            </div>
-            <div className="settings-card">
-              {routines.length === 0 && <div className="settings-empty">{t('settings.routineSection.empty')}</div>}
-              {routines.map((r) => (
-                <div key={r.id} className="settings-row routine-row">
-                  <div className="settings-row-info">
-                    <span className="settings-row-label">{r.name}{runningIds.has(r.id) && <span className="settings-badge"> {t('settings.routineSection.running')}</span>}</span>
-                    <span className="settings-row-desc">{routineScheduleLabel(r.schedule)} · {t('settings.routineSection.nextRun')} {formatRunTime(r.nextRunAt)} · {t('settings.routineSection.lastRun')} {formatRunTime(r.lastRunAt)}</span>
-                    <span className="settings-row-desc">{r.prompt}</span>
-                    {r.lastResult && <span className="settings-row-desc">{t('settings.routineSection.lastResult')} {r.lastResult.slice(0, 140)}</span>}
+              <div className="settings-card">
+                {routines.length === 0 && <div className="settings-empty">{t('settings.routineSection.empty')}</div>}
+                {routines.map((r) => (
+                  <div key={r.id} className="settings-row routine-row">
+                    <div className="settings-row-info">
+                      <span className="settings-row-label">{r.name}{runningIds.has(r.id) && <span className="settings-badge"> {t('settings.routineSection.running')}</span>}</span>
+                      <span className="settings-row-desc">{routineScheduleLabel(r.schedule)} · {t('settings.routineSection.nextRun')} {formatRunTime(r.nextRunAt)} · {t('settings.routineSection.lastRun')} {formatRunTime(r.lastRunAt)}</span>
+                      <span className="settings-row-desc">{r.prompt}</span>
+                      {r.lastResult && <span className="settings-row-desc">{t('settings.routineSection.lastResult')} {r.lastResult.slice(0, 140)}</span>}
+                    </div>
+                    <div className="settings-row-actions">
+                      <button className="test-btn" disabled={runningIds.has(r.id)} onClick={() => void runNow(r.id)}>{t('settings.routineSection.runNow')}</button>
+                      <label className="toggle-switch"><input type="checkbox" checked={r.enabled} onChange={(e) => void toggleRoutine(r.id, e.target.checked)} /><span className="toggle-slider" /></label>
+                      <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'routine', id: r.id, name: r.name })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
+                    </div>
                   </div>
-                  <div className="settings-row-actions">
-                    <button className="test-btn" disabled={runningIds.has(r.id)} onClick={() => void runNow(r.id)}>{t('settings.routineSection.runNow')}</button>
-                    <label className="toggle-switch"><input type="checkbox" checked={r.enabled} onChange={(e) => void toggleRoutine(r.id, e.target.checked)} /><span className="toggle-slider" /></label>
-                    <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'routine', id: r.id, name: r.name })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
           </div>
         )}

@@ -1,15 +1,12 @@
 export type ApiFormat = 'openai' | 'claude'
-export type AuthMethod = 'api-key' | 'oauth'
 export type ModelTier = 'low' | 'mid' | 'high'
 
 export interface Provider {
   id: string
   name: string
   apiFormat: ApiFormat
-  authMethod: AuthMethod
   baseUrl: string
   apiKey?: string
-  oauthToken?: string
   enabled: boolean
 }
 

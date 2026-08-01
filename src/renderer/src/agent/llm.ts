@@ -109,6 +109,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   let url: string
   let body: Record<string, unknown>
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const token = provider.apiKey || ''
 
   if (provider.apiFormat === 'claude') {
     const budget = reasoningEffort && reasoningEffort !== 'auto'
@@ -116,7 +117,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       : undefined
 
     url = `${provider.baseUrl}/messages`
-    headers['x-api-key'] = provider.apiKey || ''
+    headers['x-api-key'] = token
     headers['anthropic-version'] = '2023-06-01'
     body = {
       model: model.modelId,
@@ -134,7 +135,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     }
   } else {
     url = `${provider.baseUrl}/chat/completions`
-    headers['Authorization'] = `Bearer ${provider.apiKey || ''}`
+    headers['Authorization'] = `Bearer ${token}`
     body = {
       model: model.modelId,
       stream: true,

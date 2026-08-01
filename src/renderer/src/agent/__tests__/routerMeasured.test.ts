@@ -9,7 +9,7 @@ beforeEach(() => {
   ;(window as any).api = { db: { getUsageSummary: getUsageSummaryMock } }
   getUsageSummaryMock.mockReset()
   useProviderStore.setState({
-    providers: [{ id: 'p1', name: 'P', apiFormat: 'openai', authMethod: 'api-key', baseUrl: 'https://x', enabled: true }],
+    providers: [{ id: 'p1', name: 'P', apiFormat: 'openai', baseUrl: 'https://x', enabled: true }],
     models: [
       { id: 'p1:m-a', providerId: 'p1', modelId: 'gpt-4o', label: 'A', tier: 'low', enabled: true, pricing: { input: 10, output: 20, cacheRead: 1, cacheWrite: 5 } },
       { id: 'p1:m-b', providerId: 'p1', modelId: 'gpt-4o-mini', label: 'B', tier: 'low', enabled: true, pricing: { input: 1, output: 2, cacheRead: 0.1, cacheWrite: 0.5 } }
