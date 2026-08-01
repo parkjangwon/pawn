@@ -22,7 +22,8 @@ const TOOL_ICONS: Record<TabId, string> = {
 }
 
 // The panel is intentionally ephemeral: every launch starts closed and empty.
-const DEFAULT_WIDTH = 320
+// Open at half the window width; the user can drag the resizer afterwards.
+const DEFAULT_WIDTH = Math.round(window.innerWidth * 0.5)
 const HIDE_MS = 220
 
 export default function RightPanel(): React.JSX.Element | null {
@@ -36,6 +37,7 @@ export default function RightPanel(): React.JSX.Element | null {
   const [opening, setOpening] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
   const isResizing = useRef(false)
+  const customizedWidth = useRef(false)
   const hideTimer = useRef<number | null>(null)
   // The Cmd+B handler below closes over the first render's state, so it must
   // never read `openTabs` directly — mirror it in a ref instead.
@@ -97,6 +99,9 @@ export default function RightPanel(): React.JSX.Element | null {
     if (visibleRef.current) {
       requestHide()
     } else {
+      // Keep the "first open" width in sync with the current window size until
+      // the user actually drags the resizer.
+      if (!customizedWidth.current) setPanelWidth(Math.round(window.innerWidth * 0.5))
       setOpening(true)
       setVisible(true)
     }
@@ -177,6 +182,7 @@ export default function RightPanel(): React.JSX.Element | null {
 
       const finish = (): void => {
         isResizing.current = false
+        customizedWidth.current = true
         if (panelRef.current) panelRef.current.style.transition = ''
         document.body.style.cursor = ''
         document.body.style.userSelect = ''

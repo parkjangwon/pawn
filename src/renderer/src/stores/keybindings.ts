@@ -34,6 +34,25 @@ export const DEFAULT_KEYBINDINGS: Record<KeyBindingId, string> = {
 
 const MODIFIERS = new Set(['Alt', 'Control', 'Ctrl', 'Meta', 'Command', 'Shift'])
 
+/** Physical-key code for a combo key (mirrors src/main/ipc/keybindings.ts).
+ *  macOS Option can change the reported `key` character, so combos also match
+ *  on the physical code (e.g. Option+B reports '∫' with code KeyB). */
+function keyCodeFor(key: string): string | null {
+  if (/^[a-zA-Z]$/.test(key)) return `Key${key.toUpperCase()}`
+  if (/^[0-9]$/.test(key)) return `Digit${key}`
+  const named: Record<string, string> = {
+    ',': 'Comma', '.': 'Period', '/': 'Slash', ';': 'Semicolon', "'": 'Quote',
+    '[': 'BracketLeft', ']': 'BracketRight', '`': 'Backquote', '-': 'Minus',
+    '=': 'Equal', '\\': 'Backslash',
+    'Enter': 'Enter', 'Tab': 'Tab', ' ': 'Space', 'Space': 'Space',
+    'Escape': 'Escape', 'Backspace': 'Backspace', 'Delete': 'Delete',
+    'Home': 'Home', 'End': 'End', 'PageUp': 'PageUp', 'PageDown': 'PageDown',
+    'ArrowUp': 'ArrowUp', 'ArrowDown': 'ArrowDown',
+    'ArrowLeft': 'ArrowLeft', 'ArrowRight': 'ArrowRight'
+  }
+  return named[key] ?? null
+}
+
 export function parseCombo(combo: string): KeyCombo | null {
   const parts = String(combo || '').split('+').map((p) => p.trim()).filter(Boolean)
   if (parts.length === 0) return null
@@ -134,7 +153,7 @@ export function useKeybinding(id: KeyBindingId, handler: (e: KeyboardEvent) => v
         modsMatch &&
         e.altKey === parsed.alt &&
         e.shiftKey === parsed.shift &&
-        (e.key.toLowerCase() === parsed.key.toLowerCase() || e.code === parsed.key)
+        (e.key.toLowerCase() === parsed.key.toLowerCase() || e.code === keyCodeFor(parsed.key))
       ) {
         e.preventDefault()
         handler(e)

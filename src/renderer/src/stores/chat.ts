@@ -17,7 +17,10 @@ import type { ModelTier } from '../types/provider'
 
 export type SendMode = 'queue' | 'steer'
 
-const MAX_TOOL_ROUNDS = 25
+/** Hard ceiling on LLM rounds per user message; runaway agents die here. */
+const MAX_TOOL_ROUNDS = 50
+/** Consecutive identical tool-call sets before we call it a loop and stop. */
+const MAX_REPEATED_TOOL_ROUNDS = 3
 /** Model attempts per round before the turn gives up (each on a different model). */
 const MAX_ROUTE_ATTEMPTS = 3
 /** Compact once the replayed transcript passes this share of the model's context. */
@@ -179,6 +182,44 @@ function persistTranscript(sessionId: string, entries: TranscriptEntry[], warmFo
   })
 }
 
+function stableStringify(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableStringify).join(',')}]`
+  if (value !== null && typeof value === 'object') {
+    const obj = value as Record<string, unknown>
+    return `{${Object.keys(obj).sort().map((k) => `${JSON.stringify(k)}:${stableStringify(obj[k])}`).join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+/** Order- and key-order-independent fingerprint of a round's tool calls. */
+export function toolCallSignature(calls: ToolCall[]): string {
+  return calls
+    .map((c) => `${c.name}:${stableStringify(c.arguments)}`)
+    .sort()
+    .join('|')
+}
+
+/** Counts consecutive rounds whose tool calls are identical (a loop signal). */
+export class ToolLoopCounter {
+  private signature: string | null = null
+  private repeats = 0
+
+  constructor(private readonly limit: number) {}
+
+  /** Returns true once the same tool-call set has repeated `limit` consecutive rounds. */
+  record(calls: ToolCall[]): boolean {
+    const sig = calls.length > 0 ? toolCallSignature(calls) : null
+    if (sig === null) {
+      this.signature = null
+      this.repeats = 0
+      return false
+    }
+    this.repeats = sig === this.signature ? this.repeats + 1 : 1
+    this.signature = sig
+    return this.repeats >= this.limit
+  }
+}
+
 // --- Agent loop -------------------------------------------------------------
 
 async function agentLoop(
@@ -235,6 +276,7 @@ async function agentLoop(
     let emptyResponses = 0
     let round = 0
     let lastDecision: RouteDecision | null = null
+    const loopCounter = new ToolLoopCounter(MAX_REPEATED_TOOL_ROUNDS)
 
     while (round < MAX_TOOL_ROUNDS) {
       if (signal.aborted) break
@@ -363,6 +405,16 @@ async function agentLoop(
 
       if (!hasTools) {
         persistTranscript(sessionId, entries, decision.key, decision.tier)
+        break
+      }
+
+      if (loopCounter.record(result.toolCalls)) {
+        const names = [...new Set(result.toolCalls.map((tc) => tc.name))].join(', ')
+        systemError(
+          projectId,
+          sessionId,
+          `Tool loop detected: repeated the same calls (${names}) ${MAX_REPEATED_TOOL_ROUNDS} rounds without progress. Stopping.`
+        )
         break
       }
 
