@@ -20,7 +20,12 @@ A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI
 - Tool-calling agent loop (up to 25 rounds per turn).
 - **File System**: Read, write, edit, list, and delete files safely.
 - **Shell execution**: Run CLI tools locally (supports background tasks and standard sandbox modes).
-- **Computer Use**: Screenshot, click, type, and keypress integration.
+- **Computer Use**: Zero-dependency cross-platform automation:
+  - **Multimodal Eyesight**: Feeds screenshots directly to Claude & OpenAI models as image blocks.
+  - **macOS Support**: Uses `cliclick` with a robust AppleScript (`osascript`) fallback for typing and hotkeys.
+  - **Windows Support**: Zero-dependency PowerShell and `.NET Forms SendKeys` integration.
+  - **Linux Support**: Driven via `xdotool`.
+  - **High-DPI Normalization**: Normalizes logical coordinate mouse clicks using monitor scale factors.
 - **Browser Use**: Open URLs and automate web interactions.
 - Permission system with granular user approval dialogs.
 - Queue / Steering send modes.
@@ -28,7 +33,7 @@ A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI
 ### Providers & Smart Routing
 - OpenAI API format (GPT-4o, o1, etc.) and Claude API format (Claude 3.5 Sonnet, etc.).
 - Custom endpoints (any OpenAI-compatible API).
-- API Key or OAuth authentication.
+- API Key authentication.
 - **Smart Model Router**:
   - **Complexity Heuristics**: Automatically classifies task complexity (`simple` | `medium` | `complex`) locally based on input size, keywords, and instructions.
   - **Cache-Aware Routing**: Evaluates the cost of cache writes versus per-token savings before switching models to maximize prompt caching performance.
