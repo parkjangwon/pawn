@@ -15,7 +15,7 @@ vi.mock('../BrowserView', () => ({ default: () => <div>BROWSER_VIEW</div> }))
 vi.mock('../DiffListView', () => ({ default: () => <div>DIFF_LIST_VIEW</div> }))
 
 beforeEach(() => {
-  ;(window as any).api = {}
+  ;(window as any).api = { onAppShortcut: vi.fn(() => () => {}) }
   useAppStore.setState({
     projects: [{ id: 'p1', name: 'P', paths: ['/tmp/p'], sessions: [] }],
     activeProjectId: 'p1',
@@ -51,6 +51,17 @@ describe('RightPanel', () => {
     const { container } = render(<RightPanel />)
     act(() => {
       ;(window as any).__toggleRightPanel()
+    })
+    expect(container.querySelector('aside')?.getAttribute('style')).toContain('width: 0px')
+  })
+
+  it('toggles when the main process forwards the browser-focus shortcut', () => {
+    const { container } = render(<RightPanel />)
+    const callback = (window as any).api.onAppShortcut.mock.calls[0][0]
+    expect(container.querySelector('aside')?.getAttribute('style')).toContain('display: none')
+
+    act(() => {
+      callback('toggle-right-panel')
     })
     expect(container.querySelector('aside')?.getAttribute('style')).toContain('width: 0px')
   })

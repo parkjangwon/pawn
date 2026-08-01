@@ -178,9 +178,45 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const toolBuffers = new Map<number, { id: string; name: string; args: string }>()
   const thinkingBuffers = new Map<number, TranscriptThinking>()
 
+  // Throttle store updates to one per animation frame: a long stream otherwise
+  // re-renders the whole chat on every token.
+  let lastFlushed = ''
+  let pendingDisplay: string | null = null
+  let rafId: number | null = null
+
+  const applyFlush = (display: string): void => {
+    lastFlushed = display
+    useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, display)
+  }
+
   const flushText = (): void => {
     const display = reasoningText ? `${reasoningText}${fullText ? '\n\n' + fullText : ''}` : fullText
-    useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, display)
+    if (display === lastFlushed) return
+    pendingDisplay = display
+    if (rafId !== null) return
+    if (typeof requestAnimationFrame === 'function') {
+      rafId = requestAnimationFrame(() => {
+        rafId = null
+        if (pendingDisplay !== null && pendingDisplay !== lastFlushed) {
+          const next = pendingDisplay
+          pendingDisplay = null
+          applyFlush(next)
+        }
+      })
+    } else {
+      pendingDisplay = null
+      applyFlush(display)
+    }
+  }
+
+  const flushNow = (): void => {
+    if (rafId !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafId)
+    rafId = null
+    if (pendingDisplay !== null && pendingDisplay !== lastFlushed) {
+      const next = pendingDisplay
+      pendingDisplay = null
+      applyFlush(next)
+    }
   }
 
   try {
@@ -261,7 +297,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
               break
             }
             case 'error': {
-              throw new Error(parsed.error?.message || 'stream error')
+              throw markTransient(new Error(parsed.error?.message || 'stream error'), true)
             }
           }
           continue
@@ -302,6 +338,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     }
   } finally {
     reader.cancel().catch(() => {})
+    flushNow()
   }
 
   // Flush any tool buffers the stream never closed. Anthropic closes every block,
@@ -331,7 +368,15 @@ function safeParseArgs(raw: string): Record<string, unknown> {
  * network blips. A 4xx is a bad request and will fail identically forever, so it
  * propagates immediately and lets the router fail over to another model.
  */
-async function fetchWithRetry(
+/** Attach a transient flag so callers can skip cooling down a provider for
+ *  permanent failures (bad key, unknown model, malformed request). */
+export function markTransient(err: unknown, transient: boolean): Error {
+  const e = err instanceof Error ? err : new Error(String(err))
+  ;(e as Error & { transient?: boolean }).transient = transient
+  return e
+}
+
+export async function fetchWithRetry(
   url: string,
   headers: Record<string, string>,
   body: Record<string, unknown>,
@@ -371,7 +416,7 @@ async function fetchWithRetry(
       if (err instanceof DOMException && err.name === 'AbortError') throw err
       if (signal.aborted) throw err
       retryable = true
-      lastError = err as Error
+      lastError = markTransient(err, true)
       if (attempt === 2) throw lastError
       continue
     }
@@ -383,11 +428,11 @@ async function fetchWithRetry(
     const err = new Error(`HTTP ${status}: ${text.slice(0, 300)}`)
     if (status === 429 || status >= 500) {
       retryable = true
-      lastError = err
+      lastError = markTransient(err, true)
       continue
     }
-    throw err
+    throw markTransient(err, false)
   }
 
-  throw lastError ?? new Error('request failed')
+  throw lastError ?? markTransient(new Error('request failed'), true)
 }

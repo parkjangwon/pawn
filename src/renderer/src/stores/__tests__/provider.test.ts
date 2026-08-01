@@ -99,6 +99,20 @@ describe('model actions', () => {
     useProviderStore.getState().removeModel('m1')
     expect(useProviderStore.getState().models).toHaveLength(0)
   })
+
+  it('clears the active model when it is removed or disabled', () => {
+    useProviderStore.getState().addModel(model('m1', 'p1', 'gpt-4o', 'mid'))
+    useProviderStore.getState().setActiveModel('m1')
+    expect(useProviderStore.getState().activeModelId).toBe('m1')
+
+    useProviderStore.getState().updateModel('m1', { enabled: false })
+    expect(useProviderStore.getState().activeModelId).toBeNull()
+
+    useProviderStore.getState().addModel(model('m2', 'p1', 'gpt-4o-mini', 'low'))
+    useProviderStore.getState().setActiveModel('m2')
+    useProviderStore.getState().removeModel('m2')
+    expect(useProviderStore.getState().activeModelId).toBeNull()
+  })
 })
 
 describe('settings actions', () => {

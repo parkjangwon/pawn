@@ -1,4 +1,5 @@
 import { ipcMain, Notification, shell, systemPreferences } from 'electron'
+import { handleTrusted } from './trust'
 import { getMainWindow } from '../window'
 
 // Recurring timers created by the renderer; the main process owns them so they
@@ -6,33 +7,33 @@ import { getMainWindow } from '../window'
 const scheduledTasks: Map<string, NodeJS.Timeout> = new Map()
 
 export function registerMiscIpc(): void {
-  ipcMain.handle('browser:open', async (_, url: string) => {
+  handleTrusted('browser:open', async (_, url: string) => {
     await shell.openExternal(url)
     return { ok: true }
   })
 
-  ipcMain.handle('notification:send', async (_, title: string, body: string) => {
+  handleTrusted('notification:send', async (_, title: string, body: string) => {
     if (Notification.isSupported()) {
       new Notification({ title, body }).show()
     }
     return { ok: true }
   })
 
-  ipcMain.handle('permission:checkAccessibility', async () => {
+  handleTrusted('permission:checkAccessibility', async () => {
     if (process.platform === 'darwin') {
       return systemPreferences.isTrustedAccessibilityClient(false)
     }
     return true // Linux/Windows don't have the same model
   })
 
-  ipcMain.handle('permission:requestAccessibility', async () => {
+  handleTrusted('permission:requestAccessibility', async () => {
     if (process.platform === 'darwin') {
       return systemPreferences.isTrustedAccessibilityClient(true)
     }
     return true
   })
 
-  ipcMain.handle('schedule:add', async (_, id: string, intervalMs: number, payload: unknown) => {
+  handleTrusted('schedule:add', async (_, id: string, intervalMs: number, payload: unknown) => {
     if (scheduledTasks.has(id)) {
       clearInterval(scheduledTasks.get(id)!)
     }
@@ -43,7 +44,7 @@ export function registerMiscIpc(): void {
     return { ok: true }
   })
 
-  ipcMain.handle('schedule:remove', async (_, id: string) => {
+  handleTrusted('schedule:remove', async (_, id: string) => {
     const timer = scheduledTasks.get(id)
     if (timer) {
       clearInterval(timer)
@@ -52,7 +53,7 @@ export function registerMiscIpc(): void {
     return { ok: true }
   })
 
-  ipcMain.handle('schedule:list', async () => {
+  handleTrusted('schedule:list', async () => {
     return Array.from(scheduledTasks.keys())
   })
 }

@@ -230,4 +230,71 @@ describe('route', () => {
     const d = route({ sessionId: 's', entries, complexity: 'simple' })
     expect(d?.provider.id).toBe('on-p')
   })
+
+  it('skips models whose context window cannot hold the transcript', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'tiny-model', 'low', { contextWindow: 2000, pricing: pricing(1, 2, 0.1, 1) }),
+        model('p', 'big-model', 'mid', { contextWindow: 200_000, pricing: pricing(2, 4, 0.2, 2) })
+      ]
+    })
+    const bigPrompt = { role: 'user' as const, content: 'x'.repeat(10_000) }
+    const d = route({ sessionId: 's', entries: [bigPrompt], complexity: 'simple' })
+    expect(d?.model.modelId).toBe('big-model')
+    expect(d?.reason).not.toContain('context too small')
+  })
+
+  it('falls back to small-context models when nothing fits, with a note', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'tiny-model', 'low', { contextWindow: 2000, pricing: pricing(1, 2, 0.1, 1) })
+      ]
+    })
+    const bigPrompt = { role: 'user' as const, content: 'x'.repeat(10_000) }
+    const d = route({ sessionId: 's', entries: [bigPrompt], complexity: 'simple' })
+    expect(d?.model.modelId).toBe('tiny-model')
+    expect(d?.reason).toContain('context too small')
+  })
+
+  it('drops a stale sticky tier when the warm model no longer exists', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'low-model', 'low'),
+        model('p', 'high-model', 'high')
+      ]
+    })
+    // The warm key references a model that is no longer in the pool.
+    setSessionRoute('stale-session', 'p:gone-model', 'high', 5000)
+    const d = route({ sessionId: 'stale-session', entries, complexity: 'simple', newTurn: true })
+    expect(d?.tier).toBe('low')
+    expect(d?.reason).toContain('auto')
+  })
+
+  it('stays on the warm model within the same tier instead of the cheapest', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'cheap-model', 'low', { pricing: pricing(1, 2, 0.1, 1) }),
+        model('p', 'warm-model', 'low', { pricing: pricing(50, 100, 5, 50) })
+      ]
+    })
+    setSessionRoute('warm-tier-session', 'p:warm-model', 'low', 1000)
+    const d = route({ sessionId: 'warm-tier-session', entries, complexity: 'simple' })
+    expect(d?.model.modelId).toBe('warm-model')
+  })
+
+  it('picks the cheapest model when no cache is warm', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'cheap-model', 'low', { pricing: pricing(1, 2, 0.1, 1) }),
+        model('p', 'pricey-model', 'low', { pricing: pricing(50, 100, 5, 50) })
+      ]
+    })
+    const d = route({ sessionId: 'cold-session', entries, complexity: 'simple' })
+    expect(d?.model.modelId).toBe('cheap-model')
+  })
 })

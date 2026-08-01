@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { callLLM, type LlmRequest } from '../../agent/llm'
+import { callLLM, fetchWithRetry, type LlmRequest } from '../../agent/llm'
 import { useAppStore } from '../app'
 import type { Provider, ModelEntry } from '../../types/provider'
 
@@ -106,6 +106,31 @@ describe('callLLM (OpenAI stream)', () => {
     const msg = useAppStore.getState().projects[0].sessions[0].messages[0]
     expect(msg.content).toBe('one two')
   })
+
+  it('coalesces streamed updates to a single store write per frame', async () => {
+    useAppStore.setState({
+      projects: [{
+        id: 'p1', name: 'P', paths: ['/p'],
+        sessions: [{ id: 's1', title: 'S', path: '/p', createdAt: 1, messages: [{ id: 'asst-1', role: 'assistant', content: '', createdAt: 1 }] }]
+      }]
+    })
+    // A never-firing rAF: without the throttle, each delta would call
+    // updateMessageContent; with it, only the final flushNow() lands.
+    vi.stubGlobal('requestAnimationFrame', vi.fn(() => 1))
+    vi.stubGlobal('cancelAnimationFrame', vi.fn())
+
+    vi.mocked(fetch).mockResolvedValue(streamResponse([
+      'data: {"choices":[{"delta":{"content":"a"}}]}\n\n',
+      'data: {"choices":[{"delta":{"content":"b"}}]}\n\n',
+      'data: [DONE]\n\n'
+    ]))
+    await callLLM(makeRequest('openai'))
+
+    const update = (window as any).api.db.updateMessageContent as ReturnType<typeof vi.fn>
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(update.mock.calls[0][1]).toBe('ab')
+    vi.unstubAllGlobals()
+  })
 })
 
 describe('callLLM (Claude stream)', () => {
@@ -137,5 +162,30 @@ describe('callLLM (Claude stream)', () => {
       'data: {"type":"error","error":{"message":"overloaded"}}\n\n'
     ]))
     await expect(callLLM(makeRequest('claude'))).rejects.toThrow('overloaded')
+  })
+})
+
+describe('fetchWithRetry failure classification', () => {
+  it('treats 4xx as permanent and does not retry', async () => {
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValue(new Response('invalid api key', { status: 401 }))
+
+    await expect(
+      fetchWithRetry('https://api.example.com', {}, {}, false, new AbortController().signal)
+    ).rejects.toMatchObject({ transient: false })
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
+  it('retries 5xx and marks the final error as transient', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.mocked(fetch)
+    fetchMock.mockResolvedValue(new Response('overloaded', { status: 503 }))
+
+    const promise = fetchWithRetry('https://api.example.com', {}, {}, false, new AbortController().signal)
+    const assertion = expect(promise).rejects.toMatchObject({ transient: true })
+    await vi.advanceTimersByTimeAsync(5000)
+    await assertion
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    vi.useRealTimers()
   })
 })

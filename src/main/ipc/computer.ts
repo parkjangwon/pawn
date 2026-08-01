@@ -1,11 +1,12 @@
 import { desktopCapturer, ipcMain } from 'electron'
+import { handleTrusted } from './trust'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 
 const execFileAsync = promisify(execFile)
 
 export function registerComputerIpc(): void {
-  ipcMain.handle('computer:screenshot', async () => {
+  handleTrusted('computer:screenshot', async () => {
     try {
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
@@ -18,7 +19,7 @@ export function registerComputerIpc(): void {
     }
   })
 
-  ipcMain.handle('computer:click', async (_, x: number, y: number) => {
+  handleTrusted('computer:click', async (_, x: number, y: number) => {
     try {
       if (process.platform === 'darwin') {
         await execFileAsync('cliclick', [`c:${x},${y}`])
@@ -33,7 +34,7 @@ export function registerComputerIpc(): void {
     }
   })
 
-  ipcMain.handle('computer:type', async (_, text: string) => {
+  handleTrusted('computer:type', async (_, text: string) => {
     try {
       if (process.platform === 'darwin') {
         await execFileAsync('cliclick', [`t:${text}`])
@@ -48,7 +49,7 @@ export function registerComputerIpc(): void {
     }
   })
 
-  ipcMain.handle('computer:keypress', async (_, key: string) => {
+  handleTrusted('computer:keypress', async (_, key: string) => {
     try {
       if (process.platform === 'darwin') {
         await execFileAsync('cliclick', [`kp:${key}`])

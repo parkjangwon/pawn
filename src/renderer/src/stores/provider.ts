@@ -103,11 +103,21 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   },
 
   removeModel: (id) => {
-    set((s) => { const next = { ...s, models: s.models.filter((m) => m.id !== id) }; saveToBackend(next); return { models: next.models } })
+    set((s) => {
+      const next = { ...s, models: s.models.filter((m) => m.id !== id) }
+      if (s.activeModelId === id) next.activeModelId = null
+      saveToBackend(next)
+      return { models: next.models, activeModelId: next.activeModelId }
+    })
   },
 
   updateModel: (id, patch) => {
-    set((s) => { const next = { ...s, models: s.models.map((m) => (m.id === id ? { ...m, ...patch } : m)) }; saveToBackend(next); return { models: next.models } })
+    set((s) => {
+      const next = { ...s, models: s.models.map((m) => (m.id === id ? { ...m, ...patch } : m)) }
+      if (s.activeModelId === id && patch.enabled === false) next.activeModelId = null
+      saveToBackend(next)
+      return { models: next.models, activeModelId: next.activeModelId }
+    })
   },
 
   setRoutingMode: (mode) => {

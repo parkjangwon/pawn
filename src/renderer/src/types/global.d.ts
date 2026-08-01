@@ -119,6 +119,7 @@ declare global {
         dispose: (id: string) => void
         onData: (callback: (id: string, data: string) => void) => () => void
       }
+      onAppShortcut: (callback: (name: string) => void) => () => void
     }
   }
 }
