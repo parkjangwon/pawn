@@ -284,6 +284,14 @@
   padding: 0;
 }
 
+.message-model-label {
+  margin-top: var(--space-xs);
+  font-size: 11px;
+  color: var(--text-muted);
+  opacity: 0.6;
+  letter-spacing: 0.2px;
+}
+
 .message-content.streaming .cursor-blink {
   animation: blink 1s step-end infinite;
   color: var(--accent);
@@ -896,6 +904,13 @@
   cursor: pointer;
 }
 
+.chat-header-btn.chat-header-btn-icon {
+  width: 32px;
+  height: 30px;
+  padding: 0;
+  justify-content: center;
+}
+
 .chat-header-btn:hover:not(:disabled) {
   background: var(--bg-hover);
   color: var(--text-primary);
@@ -923,6 +938,8 @@
 
 .chat-header-menu-item {
   width: 100%;
+  display: flex;
+  align-items: center;
   border: none;
   background: transparent;
   text-align: left;

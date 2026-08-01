@@ -382,7 +382,20 @@
   },
   "confirmDialog": {
     "confirm": "确认",
-    "cancel": "取消"
+    "cancel": "取消",
+    "deleteAutomationConfirm": "确定要删除此自动化吗？此操作无法撤销。",
+    "deleteProviderConfirm": "确定要删除此提供商吗？其关联模型可能会不可用。",
+    "deleteModelConfirm": "确定要删除此模型吗？此操作无法撤销。",
+    "deleteRoutineConfirm": "确定要删除此例程吗？此操作无法撤销。",
+    "clearSessionConfirm": "确定要清空此会话的全部消息吗？此操作无法撤销。"
+  },
+  "chatHeader": {
+    "running": "运行中",
+    "open": "Open",
+    "openIn": "Open in",
+    "run": "Run",
+    "noScripts": "No scripts found",
+    "noApps": "No supported apps found"
   },
   "fileBrowser": {
     "title": "选择文件夹",

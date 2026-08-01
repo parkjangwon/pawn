@@ -343,6 +343,16 @@ async function agentLoop(
           )
           useUsageStore.getState().record(sessionId, decision.model, result.usage)
 
+          // Tag the message bubble with the model that produced it so the UI
+          // can show "answered by <model>" in auto mode.
+          const { routingMode } = useProviderStore.getState()
+          if (routingMode === 'auto' && currentMessageContent(projectId, sessionId, assistantMsgId).trim()) {
+            useAppStore.getState().updateMessageModel(
+              projectId, sessionId, assistantMsgId,
+              decision.model.label || decision.model.modelId
+            )
+          }
+
           // Drop the placeholder only if NOTHING was ever shown for it — an
           // empty bubble next to a tool card is just noise. Check what was
           // actually displayed, not result.text alone: a reasoning model can

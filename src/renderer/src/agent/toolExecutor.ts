@@ -2,7 +2,9 @@ import { readSkill } from './skills'
 import { getBrowserAgent, type BrowserAgent } from './browser'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
+import { useRoutineStore } from '../stores/routine'
 import { checkPermission } from './toolPermission'
+import { uid } from '../utils/uid'
 import type { ToolCall, ToolResult } from './toolDefinitions'
 
 async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: string }> {
@@ -354,6 +356,105 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         }
         try { (window as any).__closeRightPanelTab?.(tab) } catch {}
         return { toolCallId: call.id, content: `Closed tab: ${tab}` }
+      }
+
+      case 'app_list_automations': {
+        if (!api.routine) {
+          return { toolCallId: call.id, content: 'Automations are unavailable in this environment.', isError: true }
+        }
+        const rows = await api.routine.list()
+        if (!Array.isArray(rows) || rows.length === 0) {
+          return { toolCallId: call.id, content: 'No automations configured.' }
+        }
+        const lines = rows.map((r) => {
+          const scheduleLabel = (() => {
+            try {
+              const parsed = JSON.parse(r.schedule) as { type?: string; minutes?: number; hour?: number; minute?: number; weekday?: number }
+              if (parsed.type === 'interval') return `interval/${Math.max(1, Number(parsed.minutes) || 1)}m`
+              if (parsed.type === 'weekly') return `weekly/${parsed.weekday ?? 0} ${String(parsed.hour ?? 0).padStart(2, '0')}:${String(parsed.minute ?? 0).padStart(2, '0')}`
+              return `daily/${String(parsed.hour ?? 0).padStart(2, '0')}:${String(parsed.minute ?? 0).padStart(2, '0')}`
+            } catch {
+              return 'unknown'
+            }
+          })()
+          return `- ${r.name} [${r.id}] enabled=${r.enabled ? 'yes' : 'no'} schedule=${scheduleLabel}`
+        })
+        return { toolCallId: call.id, content: `Automations (${rows.length}):\n${lines.join('\n')}` }
+      }
+
+      case 'app_create_automation': {
+        if (!api.routine) {
+          return { toolCallId: call.id, content: 'Automations are unavailable in this environment.', isError: true }
+        }
+
+        const name = String(call.arguments.name ?? '').trim()
+        const prompt = String(call.arguments.prompt ?? '').trim()
+        const scheduleType = String(call.arguments.scheduleType ?? '').trim()
+        if (!name || !prompt) {
+          return { toolCallId: call.id, content: 'name and prompt are required.', isError: true }
+        }
+        if (!['manual', 'interval', 'daily', 'weekly'].includes(scheduleType)) {
+          return { toolCallId: call.id, content: 'scheduleType must be one of: manual, interval, daily, weekly.', isError: true }
+        }
+
+        const toInt = (v: unknown, fallback: number): number => {
+          const n = Number(v)
+          return Number.isFinite(n) ? Math.trunc(n) : fallback
+        }
+        const clamp = (n: number, min: number, max: number): number => Math.min(max, Math.max(min, n))
+
+        const schedule: RoutineSchedule = (() => {
+          if (scheduleType === 'interval') {
+            const minutes = Math.max(1, toInt(call.arguments.intervalMinutes, 30))
+            return { type: 'interval', minutes }
+          }
+          if (scheduleType === 'weekly') {
+            const weekday = clamp(toInt(call.arguments.weekday, 1), 0, 6)
+            const hour = clamp(toInt(call.arguments.hour, 9), 0, 23)
+            const minute = clamp(toInt(call.arguments.minute, 0), 0, 59)
+            return { type: 'weekly', weekday, hour, minute }
+          }
+          const hour = clamp(toInt(call.arguments.hour, 9), 0, 23)
+          const minute = clamp(toInt(call.arguments.minute, 0), 0, 59)
+          return { type: 'daily', hour, minute }
+        })()
+
+        const id = uid('routine-')
+        const create = await api.routine.add({
+          id,
+          name,
+          prompt,
+          schedule: JSON.stringify(schedule),
+          projectId: String(call.arguments.projectId ?? '').trim() || undefined,
+          sessionId: String(call.arguments.sessionId ?? '').trim() || undefined
+        })
+        if (create?.error) {
+          return { toolCallId: call.id, content: create.error, isError: true }
+        }
+
+        const requestedEnabled = call.arguments.enabled
+        const shouldEnable = scheduleType === 'manual'
+          ? false
+          : requestedEnabled === undefined
+            ? true
+            : Boolean(requestedEnabled)
+
+        if (!shouldEnable) {
+          await api.routine.setEnabled(id, false)
+        }
+
+        await useRoutineStore.getState().refresh()
+
+        const scheduleText = scheduleType === 'interval'
+          ? `interval/${(schedule as { type: 'interval'; minutes: number }).minutes}m`
+          : scheduleType === 'weekly'
+            ? `weekly/${(schedule as { type: 'weekly'; weekday: number; hour: number; minute: number }).weekday} ${String((schedule as { type: 'weekly'; weekday: number; hour: number; minute: number }).hour).padStart(2, '0')}:${String((schedule as { type: 'weekly'; weekday: number; hour: number; minute: number }).minute).padStart(2, '0')}`
+            : `daily/${String((schedule as { type: 'daily'; hour: number; minute: number }).hour).padStart(2, '0')}:${String((schedule as { type: 'daily'; hour: number; minute: number }).minute).padStart(2, '0')}`
+
+        return {
+          toolCallId: call.id,
+          content: `Automation created: ${name} [${id}]\nEnabled: ${shouldEnable ? 'yes' : 'no'}\nSchedule: ${scheduleText}`
+        }
       }
 
       case 'app_set_model': {

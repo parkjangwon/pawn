@@ -25,6 +25,11 @@ const api = {
     exec: (command: string, cwd?: string) => ipcRenderer.invoke('shell:exec', command, cwd)
   },
 
+  workspace: {
+    openIn: (path: string, app: string) => ipcRenderer.invoke('workspace:openIn', path, app),
+    runScript: (cwd: string, script: string, packageManager?: string) => ipcRenderer.invoke('workspace:runScript', cwd, script, packageManager || 'npm')
+  },
+
   // Computer Use
   computer: {
     screenshot: () => ipcRenderer.invoke('computer:screenshot'),

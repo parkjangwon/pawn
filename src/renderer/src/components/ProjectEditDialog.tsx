@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { useEffectiveTheme } from '../stores/theme'
 import FileBrowser from './FileBrowser'
+import ConfirmDialog from './ConfirmDialog'
 import './ProjectEditDialog.css'
 
 interface ProjectEditDialogProps {
@@ -20,6 +21,7 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
   const [name, setName] = useState(existing?.name || '')
   const [paths, setPaths] = useState<string[]>(existing?.paths || [])
   const [showFileBrowser, setShowFileBrowser] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const handleSave = (): void => {
     if (!name.trim()) return
@@ -104,7 +106,7 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
 
           <div className="ped-footer">
             {existing && (
-              <button className="ped-btn danger" onClick={() => { useAppStore.getState().removeProject(existing.id); onClose() }}>
+              <button className="ped-btn danger" onClick={() => setShowDeleteConfirm(true)}>
                 {t("projectEdit.delete")}
               </button>
             )}
@@ -117,6 +119,17 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
 
         {showFileBrowser && (
           <FileBrowser initialPath="/" onSelect={handleFolderSelected} onClose={() => setShowFileBrowser(false)} />
+        )}
+
+        {showDeleteConfirm && existing && (
+          <ConfirmDialog
+            title={`${existing.name} ${t('common.delete')}`}
+            message={t('sidebar.deleteProjectConfirm')}
+            confirmLabel={t('confirmDialog.confirm')}
+            cancelLabel={t('confirmDialog.cancel')}
+            onConfirm={() => { useAppStore.getState().removeProject(existing.id); setShowDeleteConfirm(false); onClose() }}
+            onCancel={() => setShowDeleteConfirm(false)}
+          />
         )}
       </div>
     </div>,

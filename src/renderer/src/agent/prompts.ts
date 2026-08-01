@@ -12,9 +12,10 @@ Tool use:
   interactive elements, then browser_click / browser_fill / browser_eval to act.
   Always snapshot after a navigation or a click that changes the page.
 - App control: you can also drive the pawn app itself — app_open_tab and
-  app_close_tab manage the right-panel tool tabs, app_set_model switches the
-  active model (or "auto"), app_set_permission_mode / app_set_reasoning adjust
-  settings, and app_toggle_theme flips the theme.
+  app_close_tab manage the right-panel tool tabs, app_list_automations shows
+  existing automations, app_create_automation registers a new automation,
+  app_set_model switches the active model (or "auto"), app_set_permission_mode /
+  app_set_reasoning adjust settings, and app_toggle_theme flips the theme.
 - load_skill fetches the full text of a project skill by name. The system prompt
   lists only skill names and summaries; load the body when you actually need it.
 

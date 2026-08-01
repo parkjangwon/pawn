@@ -51,6 +51,10 @@ if (typeof window !== 'undefined' && !window.api) {
         return { stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 }
       }
     },
+    workspace: {
+      openIn: async () => ({ error: 'Not available in browser mode' }),
+      runScript: async () => ({ error: 'Not available in browser mode' })
+    },
     computer: {
       screenshot: async () => ({ error: 'Not available in browser mode' }),
       click: async () => ({ error: 'Not available in browser mode' }),
