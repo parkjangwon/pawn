@@ -20,7 +20,12 @@ Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, 그리고 Claude Desktop
 - 도구 호출 에이전트 루프 지원 (사용자 턴당 최대 25회 연속 호출).
 - **파일 시스템**: 로컬 파일 읽기, 쓰기, 수정, 목록 조회, 삭제를 안전하게 수행합니다.
 - **쉘 실행**: 로컬 CLI 명령어 실행 (백그라운드 태스크 및 표준 샌드박스 모드 완벽 지원).
-- **컴퓨터 제어 (Computer Use)**: 스크린샷 촬영, 클릭, 타이핑, 키 입력 기능 제공.
+- **컴퓨터 제어 (Computer Use)**: 종속성 없는 크로스 플랫폼 자동화:
+  - **멀티모달 비주얼 인식**: 스크린샷을 Claude 및 OpenAI API 규격의 이미지 블록으로 변환하여 모델에 전송합니다.
+  - **macOS 제어**: `cliclick` 조작을 기본으로 하며, 미설치 환경 대비 AppleScript(`osascript`)를 통한 텍스트 타이핑 및 단축키 폴백(Fallback)을 지원합니다.
+  - **Windows 제어**: 외부 C++ 컴파일 모듈 설치 없이 PowerShell 및 `.NET Forms SendKeys`를 이용해 구동합니다.
+  - **Linux 제어**: `xdotool` 연동을 지원합니다.
+  - **고해상도(High-DPI) 보정**: 윈도우 스케일 팩터를 반영하여 클릭 정밀도를 보정합니다.
 - **브라우저 제어 (Browser Use)**: 특정 URL을 열고 웹 브라우저 조작을 자동화합니다.
 - 민감한 작업에 대한 세분화된 사용자 승인 권한 시스템.
 - 큐(Queue) 전송 및 조향(Steering) 전송 모드 제공.
@@ -28,7 +33,7 @@ Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, 그리고 Claude Desktop
 ### 프로바이더 및 스마트 라우팅
 - OpenAI API 규격(GPT-4o, o1 등) 및 Claude API 규격(Claude 3.5 Sonnet 등)을 기본 지원합니다.
 - 커스텀 엔드포인트 연동 기능 (모든 OpenAI 호환 API 연동 가능).
-- API Key 혹은 OAuth 인증을 제공합니다.
+- API Key 인증을 제공합니다.
 - **스마트 모델 라우터**:
   - **난이도 판단(Complexity Heuristics)**: 입력 크기, 키워드, 지시 사항 등을 바탕으로 작업의 난이도(`simple` | `medium` | `complex`)를 로컬에서 자동으로 판별합니다.
   - **캐시 인지 라우팅(Cache-Aware Routing)**: 모델을 변경할 때 발생하는 캐시 작성 비용과 토큰당 절감액을 비교 계산하여, 프롬프트 캐싱(Prompt Caching) 효율을 극대화합니다.

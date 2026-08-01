@@ -160,7 +160,7 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
       case 'computer_screenshot': {
         const result = await api.computer.screenshot()
         if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
-        return { toolCallId: call.id, content: `[Screenshot captured: ${result.dataUrl?.slice(0, 50)}...]` }
+        return { toolCallId: call.id, content: result.dataUrl || '' }
       }
 
       case 'computer_click': {

@@ -146,17 +146,12 @@ export function toClaudeMessages(entries: TranscriptEntry[]): Array<Record<strin
   const out: Array<Record<string, unknown>> = []
 
   for (const e of entries) {
-    // User content is always emitted as a block array, never a bare string.
-    // A cache anchor has to attach `cache_control` to a block, and a message
-    // whose shape flips between turns would change the serialized prefix.
     if (e.role === 'user' || e.role === 'summary') {
       out.push({ role: 'user', content: [{ type: 'text', text: e.content }] })
       continue
     }
     if (e.role === 'assistant') {
       const blocks: Array<Record<string, unknown>> = []
-      // Thinking blocks must come first and be echoed verbatim, signature
-      // included — Anthropic rejects a tool-use turn whose reasoning was stripped.
       for (const th of e.thinking || []) {
         if (th.type === 'redacted_thinking') blocks.push({ type: 'redacted_thinking', data: th.data || '' })
         else blocks.push({ type: 'thinking', thinking: th.thinking || '', signature: th.signature || '' })
@@ -169,13 +164,29 @@ export function toClaudeMessages(entries: TranscriptEntry[]): Array<Record<strin
       out.push({ role: 'assistant', content: blocks })
       continue
     }
-    // Tool results: consecutive results must be merged into ONE user message,
-    // otherwise a parallel tool call round produces N user turns and the model
-    // sees a malformed conversation.
+
+    const isImage = typeof e.content === 'string' && e.content.startsWith('data:image/')
+    let blockContent: unknown = e.content
+    if (isImage) {
+      const match = e.content.match(/^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/)
+      if (match) {
+        blockContent = [
+          {
+            type: 'image',
+            source: {
+              type: 'base64',
+              media_type: match[1],
+              data: match[2]
+            }
+          }
+        ]
+      }
+    }
+
     const block = {
       type: 'tool_result',
       tool_use_id: e.toolCallId,
-      content: e.content,
+      content: blockContent,
       is_error: e.isError === true
     }
     const prev = out[out.length - 1]
@@ -211,7 +222,22 @@ export function toOpenAIMessages(entries: TranscriptEntry[]): Array<Record<strin
       out.push(msg)
       continue
     }
-    out.push({ role: 'tool', tool_call_id: e.toolCallId, content: e.content })
+    
+    const isImage = typeof e.content === 'string' && e.content.startsWith('data:image/')
+    if (isImage) {
+      out.push({ role: 'tool', tool_call_id: e.toolCallId, content: 'Screenshot captured and attached.' })
+      out.push({
+        role: 'user',
+        content: [
+          {
+            type: 'image_url',
+            image_url: { url: e.content }
+          }
+        ]
+      })
+    } else {
+      out.push({ role: 'tool', tool_call_id: e.toolCallId, content: e.content })
+    }
   }
 
   return out
