@@ -9,7 +9,7 @@ const configMock = {
 }
 
 const provider = (id: string, name = id): Provider => ({
-  id, name, apiFormat: 'openai', authMethod: 'api-key', baseUrl: 'https://api.example.com', enabled: true
+  id, name, apiFormat: 'openai', baseUrl: 'https://api.example.com', enabled: true
 })
 
 const model = (id: string, providerId: string, modelId: string, tier: ModelEntry['tier']): ModelEntry => ({

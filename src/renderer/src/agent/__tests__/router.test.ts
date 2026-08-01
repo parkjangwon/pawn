@@ -9,7 +9,7 @@ import {
 import type { TranscriptEntry } from '../transcript'
 
 function provider(id: string, name = id): Provider {
-  return { id, name, apiFormat: 'openai', authMethod: 'api-key', baseUrl: 'https://api.example.com/v1', enabled: true }
+  return { id, name, apiFormat: 'openai', baseUrl: 'https://api.example.com/v1', enabled: true }
 }
 
 function model(providerId: string, modelId: string, tier: ModelTier, opts: Partial<ModelEntry> = {}): ModelEntry {

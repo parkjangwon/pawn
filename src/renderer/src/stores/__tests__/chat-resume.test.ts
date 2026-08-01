@@ -9,7 +9,7 @@ const getTranscriptMock = vi.fn()
 beforeEach(() => {
   ;(window as any).api = { db: { getTranscript: getTranscriptMock } }
   useProviderStore.setState({
-    providers: [{ id: 'p1', name: 'P', apiFormat: 'openai', authMethod: 'api-key', baseUrl: 'https://x', enabled: true }],
+    providers: [{ id: 'p1', name: 'P', apiFormat: 'openai', baseUrl: 'https://x', enabled: true }],
     models: [{ id: 'p1:m1', providerId: 'p1', modelId: 'm1', label: 'M1', tier: 'high', enabled: true }],
     routingMode: 'auto',
     activeModelId: null

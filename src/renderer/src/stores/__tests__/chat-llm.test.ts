@@ -5,7 +5,7 @@ import { useAppStore } from '../app'
 import type { Provider, ModelEntry } from '../../types/provider'
 
 const provider: Provider = {
-  id: 'openai', name: 'OpenAI', apiFormat: 'openai', authMethod: 'api-key',
+  id: 'openai', name: 'OpenAI', apiFormat: 'openai',
   baseUrl: 'https://api.example.com/v1', apiKey: 'sk-test', enabled: true
 }
 
