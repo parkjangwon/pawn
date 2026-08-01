@@ -196,7 +196,9 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                 <div className="context-chip-wrapper" ref={modelPickerRef}>
                   <button className="context-chip model-chip-btn" onClick={() => { setShowModelPicker(!showModelPicker); setShowProjectPicker(false); setShowPermPicker(false); setShowUsagePopover(false) }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
-                    <span>{routingMode === 'auto' ? t('modelPicker.autoLabel') : currentModelLabel}</span>
+                    <span>{routingMode === 'auto'
+                      ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel'))
+                      : currentModelLabel}</span>
                     <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                   </button>
                   {showModelPicker && (

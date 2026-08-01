@@ -17,7 +17,7 @@
  */
 
 import { useProviderStore } from '../stores/provider'
-import type { ModelEntry, ModelTier, Provider } from '../types/provider'
+import { guessPricing, type ModelEntry, type ModelPricing, type ModelTier, type Provider } from '../types/provider'
 import { estimateTokens, type TranscriptEntry } from './transcript'
 
 export type Complexity = 'simple' | 'medium' | 'complex'
@@ -72,6 +72,64 @@ export function isProviderAvailable(providerId: string): boolean {
 export function providerCooldownRemaining(providerId: string): number {
   const h = health.get(providerId)
   return h ? Math.max(0, h.cooldownUntil - Date.now()) : 0
+}
+
+// --- Measured pricing -------------------------------------------------------
+// Static rate snapshots drift. Recent usage rows give a per-model cost scale
+// factor, so auto routing tracks what the provider actually charged.
+
+const measuredScale = new Map<string, number>()
+let lastPricingRefresh = 0
+
+export async function refreshMeasuredPricing(minIntervalMs = 5 * 60_000): Promise<void> {
+  const now = Date.now()
+  if (now - lastPricingRefresh < minIntervalMs) return
+  lastPricingRefresh = now
+  try {
+    const since = Math.floor(now / 1000) - 7 * 86400
+    const rows = await window.api.db.getUsageSummary(since) as Array<{
+      modelId: string
+      providerId: string
+      calls: number
+      inputTokens: number
+      outputTokens: number
+      cacheReadTokens: number
+      cacheWriteTokens: number
+      cost: number
+    }>
+    const next = new Map<string, number>()
+    for (const r of rows) {
+      const staticP = guessPricing(r.modelId)
+      const tokens = r.inputTokens + r.outputTokens + r.cacheReadTokens + r.cacheWriteTokens
+      if (!staticP || tokens <= 0 || r.cost <= 0) continue
+      const expected =
+        (r.inputTokens * staticP.input + r.outputTokens * staticP.output +
+          r.cacheReadTokens * staticP.cacheRead + r.cacheWriteTokens * staticP.cacheWrite) / 1_000_000
+      if (expected > 0) {
+        const scale = r.cost / expected
+        // Reject absurd outliers; a sane range keeps one bad row from flipping
+        // the whole routing table.
+        if (scale > 0.1 && scale < 10) next.set(r.modelId, scale)
+      }
+    }
+    measuredScale.clear()
+    for (const [key, value] of next) measuredScale.set(key, value)
+  } catch {
+    // Keep the previous scale; routing falls back to static pricing.
+  }
+}
+
+function effectivePricing(model: ModelEntry): ModelPricing | undefined {
+  const scale = measuredScale.get(model.modelId)
+  if (scale && model.pricing) {
+    return {
+      input: model.pricing.input * scale,
+      output: model.pricing.output * scale,
+      cacheRead: model.pricing.cacheRead * scale,
+      cacheWrite: model.pricing.cacheWrite * scale
+    }
+  }
+  return model.pricing
 }
 
 // --- Session stickiness -----------------------------------------------------
@@ -148,7 +206,7 @@ export function estimateRoundCost(
   outputTokens: number,
   warmRatio: number
 ): number | null {
-  const p = model.pricing
+  const p = effectivePricing(model)
   if (!p) return null
   const cached = promptTokens * warmRatio
   const fresh = promptTokens - cached
@@ -157,7 +215,7 @@ export function estimateRoundCost(
 
 /** One-time cost of moving a session's warm prefix onto a different model. */
 export function estimateRePrimeCost(model: ModelEntry, promptTokens: number): number | null {
-  const p = model.pricing
+  const p = effectivePricing(model)
   if (!p) return null
   return (promptTokens * p.cacheWrite) / 1_000_000
 }
@@ -178,23 +236,51 @@ function candidates(): RouteTarget[] {
   return out
 }
 
-/** Rank same-tier candidates: healthy first, then cheapest, then stable by id. */
-function rank(list: RouteTarget[], promptTokens: number, warmKey: string | null): RouteTarget[] {
+interface WarmCache {
+  key: string
+  /** Share of the current prompt already sitting in this model's cache. */
+  ratio: number
+}
+
+/**
+ * Rank same-tier candidates: healthy first, then the session's warm model
+ * (cache stability beats marginal price differences), then cheapest, then
+ * stable by id.
+ */
+function rank(list: RouteTarget[], promptTokens: number, warm: WarmCache | null): RouteTarget[] {
   return list.slice().sort((a, b) => {
     const aUp = isProviderAvailable(a.provider.id) ? 0 : 1
     const bUp = isProviderAvailable(b.provider.id) ? 0 : 1
     if (aUp !== bUp) return aUp - bUp
 
+    const aWarm = warm ? routeKey(a.model) === warm.key : false
+    const bWarm = warm ? routeKey(b.model) === warm.key : false
+    if (aWarm !== bWarm) return aWarm ? -1 : 1
+
     // A model whose cache is already warm for this session gets its input priced
     // at the cache-read rate; everything else pays full freight.
-    const aCost = estimateRoundCost(a.model, promptTokens, 1000, routeKey(a.model) === warmKey ? 0.9 : 0)
-    const bCost = estimateRoundCost(b.model, promptTokens, 1000, routeKey(b.model) === warmKey ? 0.9 : 0)
+    const aCost = estimateRoundCost(a.model, promptTokens, 1000, aWarm ? warm!.ratio : 0)
+    const bCost = estimateRoundCost(b.model, promptTokens, 1000, bWarm ? warm!.ratio : 0)
     if (aCost !== null && bCost !== null && aCost !== bCost) return aCost - bCost
     if (aCost === null && bCost !== null) return 1
     if (aCost !== null && bCost === null) return -1
 
     return a.model.id.localeCompare(b.model.id)
   })
+}
+
+/** A model can carry the transcript when the estimate fits with headroom. */
+function fitsContext(model: ModelEntry, promptTokens: number): boolean {
+  if (!model.contextWindow || model.contextWindow <= 0) return true
+  return promptTokens <= model.contextWindow * 0.6
+}
+
+/** Share of the current prompt that was warm at the last successful call. */
+function warmRatio(sticky: SessionRoute, promptTokens: number): number {
+  if (promptTokens > 0 && sticky.warmTokens > 0) {
+    return Math.min(0.95, Math.max(0, sticky.warmTokens / promptTokens))
+  }
+  return 0.9
 }
 
 export interface RouteRequest {
@@ -221,10 +307,16 @@ export function route(req: RouteRequest): RouteDecision | null {
   if (all.length === 0) return null
 
   const exclude = req.exclude || new Set<string>()
-  const usable = all.filter((c) => !exclude.has(routeKey(c.model)))
-  const pool = usable.length > 0 ? usable : all
   const promptTokens = estimateTokens(req.entries)
+  // Models whose context window cannot hold the transcript are not candidates;
+  // if none fit at all, fall back to everything rather than giving up.
+  const contextFit = all.filter((c) => fitsContext(c.model, promptTokens))
+  const basePool = contextFit.length > 0 ? contextFit : all
+  const contextLimited = contextFit.length === 0
+  const usable = basePool.filter((c) => !exclude.has(routeKey(c.model)))
+  const pool = usable.length > 0 ? usable : basePool
   const sticky = sessionRoutes.get(req.sessionId)
+  const warm = sticky && !exclude.has(sticky.key) ? { key: sticky.key, ratio: warmRatio(sticky, promptTokens) } : null
 
   // --- Manual: the user pinned a model. Honour it unless it is unusable. -----
   if (routingMode === 'manual' && activeModelId) {
@@ -245,19 +337,21 @@ export function route(req: RouteRequest): RouteDecision | null {
   let reason = `auto: ${req.complexity}`
 
   if (sticky && !exclude.has(sticky.key)) {
-    const stickyIdx = TIER_ORDER.indexOf(sticky.tier)
-    if (stickyIdx > targetIdx) {
-      // The session is already on a stronger model with a warm prefix. Only step
-      // down if the remaining conversation is long enough for the savings to
-      // repay the re-prime, and only at a user-turn boundary.
-      const current = pool.find((c) => routeKey(c.model) === sticky.key)
-      const target = rank(pool.filter((c) => c.model.tier === TIER_ORDER[targetIdx]), promptTokens, sticky.key)[0]
-      const worthIt = req.newTurn === true && current && target && isDowngradeWorthIt(current.model, target.model, promptTokens)
-      if (!worthIt) {
-        targetIdx = stickyIdx
-        reason = current ? 'sticky: keeping warm cache' : reason
-      } else {
-        reason = `auto: ${req.complexity} (downgrade pays for re-prime)`
+    const current = pool.find((c) => routeKey(c.model) === sticky.key)
+    if (current) {
+      const stickyIdx = TIER_ORDER.indexOf(sticky.tier)
+      if (stickyIdx > targetIdx) {
+        // The session is already on a stronger model with a warm prefix. Only step
+        // down if the remaining conversation is long enough for the savings to
+        // repay the re-prime, and only at a user-turn boundary.
+        const target = rank(pool.filter((c) => c.model.tier === TIER_ORDER[targetIdx]), promptTokens, warm)[0]
+        const worthIt = req.newTurn === true && target && isDowngradeWorthIt(current.model, target.model, promptTokens, warm!.ratio)
+        if (!worthIt) {
+          targetIdx = stickyIdx
+          reason = 'sticky: keeping warm cache'
+        } else {
+          reason = `auto: ${req.complexity} (downgrade pays for re-prime)`
+        }
       }
     }
   }
@@ -276,19 +370,21 @@ export function route(req: RouteRequest): RouteDecision | null {
     if (targetIdx - d >= 0) order.push(TIER_ORDER[targetIdx - d])
   }
 
-  const warmKey = sticky && !exclude.has(sticky.key) ? sticky.key : null
   for (const tier of order) {
-    const tierPool = rank(pool.filter((c) => c.model.tier === tier), promptTokens, warmKey)
+    const tierPool = rank(pool.filter((c) => c.model.tier === tier), promptTokens, warm)
     const healthy = tierPool.find((c) => isProviderAvailable(c.provider.id))
     const pick = healthy || tierPool[0]
     if (!pick) continue
     const key = routeKey(pick.model)
-    const note = tier === TIER_ORDER[targetIdx] ? reason : `${reason} → fell back to ${tier}`
+    const note = (tier === TIER_ORDER[targetIdx] ? reason : `${reason} → fell back to ${tier}`) +
+      (contextLimited ? ' (context too small for smaller models)' : '')
     return { ...pick, key, tier, reason: healthy ? note : `${note} (all providers cooling down)` }
   }
 
-  const last = rank(pool, promptTokens, warmKey)[0]
-  return last ? { ...last, key: routeKey(last.model), tier: last.model.tier, reason: 'only model available' } : null
+  const last = rank(pool, promptTokens, warm)[0]
+  return last
+    ? { ...last, key: routeKey(last.model), tier: last.model.tier, reason: 'only model available' + (contextLimited ? ' (context too small)' : '') }
+    : null
 }
 
 /**
@@ -297,17 +393,20 @@ export function route(req: RouteRequest): RouteDecision | null {
  * mode oscillates between tiers and pays a re-prime on every oscillation — which
  * is exactly how naive "auto" routing ends up more expensive than a fixed model.
  */
-function isDowngradeWorthIt(from: ModelEntry, to: ModelEntry, promptTokens: number): boolean {
+function isDowngradeWorthIt(from: ModelEntry, to: ModelEntry, promptTokens: number, ratio: number): boolean {
   const EXPECTED_REMAINING_ROUNDS = 6
   const OUTPUT_PER_ROUND = 800
 
   const rePrime = estimateRePrimeCost(to, promptTokens)
-  const stayCost = estimateRoundCost(from, promptTokens, OUTPUT_PER_ROUND, 0.9)
-  const moveCost = estimateRoundCost(to, promptTokens, OUTPUT_PER_ROUND, 0.9)
-  if (rePrime === null || stayCost === null || moveCost === null) return false
+  const stayCost = estimateRoundCost(from, promptTokens, OUTPUT_PER_ROUND, ratio)
+  // The first round on the new model is cold; later rounds read the primed cache.
+  const moveCold = estimateRoundCost(to, promptTokens, OUTPUT_PER_ROUND, 0)
+  const moveWarm = estimateRoundCost(to, promptTokens, OUTPUT_PER_ROUND, ratio)
+  if (rePrime === null || stayCost === null || moveCold === null || moveWarm === null) return false
 
-  const savings = (stayCost - moveCost) * EXPECTED_REMAINING_ROUNDS
-  return savings > rePrime
+  const stayTotal = stayCost * EXPECTED_REMAINING_ROUNDS
+  const moveTotal = moveCold + moveWarm * (EXPECTED_REMAINING_ROUNDS - 1) + rePrime
+  return moveTotal < stayTotal
 }
 
 /** Should the loop escalate a tier? Based on observed trouble, not guesswork. */

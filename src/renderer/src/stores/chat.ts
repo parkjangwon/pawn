@@ -6,13 +6,14 @@ import { executeTool, TOOL_SAFETY, type ToolCall, type ToolResult } from '../age
 import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
 import {
   route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute, clearSessionRoute,
-  noteProviderFailure, noteProviderSuccess,
+  noteProviderFailure, noteProviderSuccess, refreshMeasuredPricing,
   type RouteDecision
 } from '../agent/router'
 import { compactTranscript, estimateTokens, TRANSCRIPT_VERSION, type TranscriptEntry, type StoredTranscript } from '../agent/transcript'
 import { formatToolMessageContent } from '../agent/toolMessage'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
+import type { ModelTier } from '../types/provider'
 
 export type SendMode = 'queue' | 'steer'
 
@@ -51,6 +52,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   sendMessage: (projectId, sessionId, content, mode) => {
     const state = get()
+
+    // Refresh measured pricing from recent usage (throttled inside the router)
+    // so auto routing tracks real provider rates instead of stale snapshots.
+    void refreshMeasuredPricing()
 
     if (mode === 'queue' && state.isStreaming) {
       set({ queue: [...state.queue, { projectId, sessionId, content, displayed: true }] })
@@ -115,7 +120,7 @@ function systemError(projectId: string, sessionId: string, text: string): void {
 
 // --- Transcript persistence -------------------------------------------------
 
-async function loadTranscript(projectId: string, sessionId: string): Promise<TranscriptEntry[]> {
+export async function loadTranscript(projectId: string, sessionId: string): Promise<TranscriptEntry[]> {
   try {
     const raw = await window.api.db.getTranscript(sessionId)
     if (raw) {
@@ -127,6 +132,15 @@ async function loadTranscript(projectId: string, sessionId: string): Promise<Tra
        if (parsed.lastActivity && Date.now() - parsed.lastActivity > CACHE_STALE_MS) {
          clearSessionRoute(sessionId)
           useUsageStore.getState().noteDiagnostic(sessionId, 'warn', '콜드 스타트 — 캐시가 만료돼 다시 기록해야 합니다.')
+       } else if (parsed.warmFor) {
+         // Resume the sticky route so the first call of a resumed session reuses
+         // the still-live ephemeral cache instead of paying a re-prime.
+         const warmModel = useProviderStore.getState().models.find(
+           (m) => `${m.providerId}:${m.modelId}` === parsed.warmFor
+         )
+         if (warmModel) {
+           setSessionRoute(sessionId, parsed.warmFor, parsed.warmTier || warmModel.tier, estimateTokens(parsed.entries))
+         }
        }
        return parsed.entries
      }
@@ -155,8 +169,8 @@ async function loadTranscript(projectId: string, sessionId: string): Promise<Tra
   return entries
 }
 
-function persistTranscript(sessionId: string, entries: TranscriptEntry[], warmFor: string): void {
-  const payload: StoredTranscript = { version: TRANSCRIPT_VERSION, entries, warmFor, lastActivity: Date.now() }
+function persistTranscript(sessionId: string, entries: TranscriptEntry[], warmFor: string, warmTier?: ModelTier): void {
+  const payload: StoredTranscript = { version: TRANSCRIPT_VERSION, entries, warmFor, warmTier, lastActivity: Date.now() }
   window.api.db.saveTranscript(sessionId, JSON.stringify(payload)).catch(() => {
     // Losing a transcript write costs a cache re-prime, never correctness.
   })
@@ -229,12 +243,13 @@ async function agentLoop(
       const contextWindow = lastDecision?.model.contextWindow || DEFAULT_CONTEXT_WINDOW
      if (estimateTokens(entries) > contextWindow * COMPACT_AT_RATIO) {
        entries = compactTranscript(entries)
-       persistTranscript(sessionId, entries, lastDecision?.key || '')
+       persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
         useUsageStore.getState().noteDiagnostic(sessionId, 'info', '컨텍스트 압축 실행 — 캐시를 다시 기록합니다.')
      }
 
       const escalate = shouldEscalate({ consecutiveToolErrors, round, emptyResponses })
       const excluded = new Set<string>()
+      let transientFailures = 0
       let result: LlmResult | null = null
       let decision: RouteDecision | null = null
 
@@ -245,11 +260,23 @@ async function agentLoop(
           sessionId,
           entries,
           complexity,
-          escalate,
+          // After two transient failures in a row, try a stronger tier instead
+          // of retrying the same tier a third time.
+          escalate: escalate + (transientFailures >= 2 ? 1 : 0),
           exclude: excluded,
           newTurn: round === 1
         })
         if (!decision) break
+
+        // Surface why the router picked this model (escalation, fallback,
+        // downgrade, context limits) in the usage diagnostics panel.
+        if (/escalat|fell back|downgrade|context too small/.test(decision.reason)) {
+          useUsageStore.getState().noteDiagnostic(
+            sessionId,
+            'info',
+            `라우팅: ${decision.model.label || decision.model.modelId} — ${decision.reason}`
+          )
+        }
 
         const assistantMsgId = `${Date.now()}-assistant-${round}-${attempt}`
         useAppStore.getState().addMessage(projectId, sessionId, {
@@ -296,7 +323,15 @@ async function agentLoop(
           // text around would leave a confusing duplicate next to the retry.
           useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
           const message = err instanceof Error ? err.message : String(err)
-          noteProviderFailure(decision.provider.id)
+          // Only transient failures (network, 429, 5xx, overloaded) cool the
+          // provider down; a bad key or unknown model is permanent and should
+          // not punish the provider's other models.
+          if ((err as { transient?: boolean }).transient !== false) {
+            transientFailures++
+            noteProviderFailure(decision.provider.id)
+          } else {
+            transientFailures = 0
+          }
           excluded.add(decision.key)
           result = null
           if (attempt === MAX_ROUTE_ATTEMPTS - 1) {
@@ -324,7 +359,7 @@ async function agentLoop(
       })
 
       if (!hasTools) {
-        persistTranscript(sessionId, entries, decision.key)
+        persistTranscript(sessionId, entries, decision.key, decision.tier)
         break
       }
 
@@ -374,7 +409,7 @@ async function agentLoop(
       }
 
       consecutiveToolErrors = roundErrors > 0 ? consecutiveToolErrors + 1 : 0
-      persistTranscript(sessionId, entries, decision.key)
+      persistTranscript(sessionId, entries, decision.key, decision.tier)
 
       if (signal.aborted) break
     }

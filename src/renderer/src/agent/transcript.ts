@@ -13,6 +13,8 @@
  * function, so turn N+1's prefix is exactly turn N's prefix plus an append.
  */
 
+import type { ModelTier } from '../types/provider'
+
 export interface TranscriptToolCall {
   id: string
   name: string
@@ -38,8 +40,10 @@ export const TRANSCRIPT_VERSION = 2
 export interface StoredTranscript {
   version: number
  entries: TranscriptEntry[]
- /** Model key (`providerId:modelId`) whose cache the current prefix is warm for. */
- warmFor?: string
+  /** Model key (`providerId:modelId`) whose cache the current prefix is warm for. */
+  warmFor?: string
+  /** Tier of the warm model, so a resumed session can restore the sticky route. */
+  warmTier?: ModelTier
   /** Epoch ms of the last API call. Ephemeral cache expires after ~5 min, so a
    *  stale timestamp means the warm prefix is gone and the router must not
    *  assume a cache hit on the next request. */

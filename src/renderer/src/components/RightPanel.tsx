@@ -204,7 +204,10 @@ export default function RightPanel(): React.JSX.Element | null {
   // Option+Cmd/Ctrl+B toggles the right panel
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
-      if (e.altKey && (e.metaKey || e.ctrlKey) && e.key === 'b') {
+      // e.code stays stable across IME layouts where e.key can be a Hangul
+      // character; e.key is kept as a fallback for non-QWERTY hardware.
+      const isB = e.key === 'b' || e.key === 'B' || e.code === 'KeyB'
+      if (e.altKey && (e.metaKey || e.ctrlKey) && isB && !e.isComposing) {
         e.preventDefault()
         toggleVisible()
       }
@@ -212,6 +215,14 @@ export default function RightPanel(): React.JSX.Element | null {
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [])
+
+  // The embedded browser (a separate WebContentsView) steals keyboard focus;
+  // the main process forwards the toggle there through app:shortcut.
+  useEffect(() => {
+    return window.api?.onAppShortcut?.((name) => {
+      if (name === 'toggle-right-panel') toggleVisible()
+    })
+  }, [toggleVisible])
 
   // Expose open-on-tab to window. Agent browser tools call this so their work
   // happens in front of the user instead of in an off-screen view.

@@ -1,4 +1,5 @@
 import { ipcMain, WebContentsView } from 'electron'
+import { handleTrusted } from './trust'
 import { getMainWindow } from '../window'
 
 // The embedded browser runs in its own session partition. The app's own CSP is
@@ -51,6 +52,20 @@ function ensureBrowserView(): WebContentsView {
 
   const wc = browserView.webContents
   wc.setUserAgent(BROWSER_USER_AGENT)
+  // While the embedded page has focus, keyboard events never reach the main
+  // window's renderer, so app shortcuts would silently die. Forward the
+  // right-panel toggle (Option+Cmd/Ctrl+B) to the main window instead.
+  wc.on('before-input-event', (event, input) => {
+    if (
+      input.type === 'keyDown' &&
+      input.alt &&
+      (input.meta || input.control) &&
+      input.key.toLowerCase() === 'b'
+    ) {
+      event.preventDefault()
+      getMainWindow()?.webContents.send('app:shortcut', 'toggle-right-panel')
+    }
+  })
   // Popups navigate the same view instead of spawning windows the agent cannot see.
   wc.setWindowOpenHandler(({ url }) => {
     wc.loadURL(url).catch(() => {})
@@ -115,7 +130,7 @@ function resolverExpr(ref: string, selector: string): string {
 }
 
 export function registerBrowserIpc(): void {
-  ipcMain.handle('browser:ensure', async () => {
+  handleTrusted('browser:ensure', async () => {
     try {
       ensureBrowserView()
       return { ok: true }
@@ -124,7 +139,7 @@ export function registerBrowserIpc(): void {
     }
   })
 
-  ipcMain.handle('browser:create', async () => {
+  handleTrusted('browser:create', async () => {
     try {
       ensureBrowserView()
       return { ok: true }
@@ -133,7 +148,7 @@ export function registerBrowserIpc(): void {
     }
   })
 
-  ipcMain.handle('browser:destroy', async () => {
+  handleTrusted('browser:destroy', async () => {
     try {
       const win = getMainWindow()
       if (browserView && win && !browserView.webContents.isDestroyed()) {
@@ -149,14 +164,14 @@ export function registerBrowserIpc(): void {
     }
   })
 
-  ipcMain.handle('browser:setVisible', async (_, visible: boolean) => {
+  handleTrusted('browser:setVisible', async (_, visible: boolean) => {
     if (!browserView || browserView.webContents.isDestroyed()) return { ok: true }
     browserView.setVisible(visible)
     browserVisible = visible
     return { ok: true }
   })
 
-  ipcMain.handle('browser:bounds', async (_, x: number, y: number, width: number, height: number) => {
+  handleTrusted('browser:bounds', async (_, x: number, y: number, width: number, height: number) => {
     if (!browserView || browserView.webContents.isDestroyed()) return { error: 'Browser not created' }
     browserView.setBounds({
       x: Math.round(x), y: Math.round(y),
@@ -165,10 +180,10 @@ export function registerBrowserIpc(): void {
     return { ok: true }
   })
 
-  ipcMain.handle('browser:state', async () => browserState())
-  ipcMain.handle('browser:logs', async () => browserLogs.slice(-50))
+  handleTrusted('browser:state', async () => browserState())
+  handleTrusted('browser:logs', async () => browserLogs.slice(-50))
 
-  ipcMain.handle('browser:navigate', async (_, rawUrl: string) => {
+  handleTrusted('browser:navigate', async (_, rawUrl: string) => {
     const view = ensureBrowserView()
     let url = String(rawUrl || '').trim()
     if (!url) return { error: 'Empty URL' }
@@ -185,7 +200,7 @@ export function registerBrowserIpc(): void {
     return { url: view.webContents.getURL(), title: view.webContents.getTitle() }
   })
 
-  ipcMain.handle('browser:back', async () => {
+  handleTrusted('browser:back', async () => {
     const guard = requireView()
     if ('error' in guard) return guard
     const wc = guard.view.webContents
@@ -196,14 +211,14 @@ export function registerBrowserIpc(): void {
     return { url: wc.getURL() }
   })
 
-  ipcMain.handle('browser:reload', async () => {
+  handleTrusted('browser:reload', async () => {
     const guard = requireView()
     if ('error' in guard) return guard
     guard.view.webContents.reload()
     return { ok: true }
   })
 
-  ipcMain.handle('browser:eval', async (_, code: string) => {
+  handleTrusted('browser:eval', async (_, code: string) => {
     const result = await runInPage<unknown>(`(function(){ try { return { ok: (${code}) } } catch (e) { return { err: String(e) } } })()`)
     if (result && typeof result === 'object' && 'error' in (result as object)) return result
     const wrapped = result as { ok?: unknown; err?: string }
@@ -217,7 +232,7 @@ export function registerBrowserIpc(): void {
     return { result: serialized.slice(0, 8000) }
   })
 
-  ipcMain.handle('browser:snapshot', async (_, filter: string) => {
+  handleTrusted('browser:snapshot', async (_, filter: string) => {
     const f = JSON.stringify(String(filter || '').toLowerCase())
     return runInPage(`(function(){
       var FILTER = ${f};
@@ -276,7 +291,7 @@ export function registerBrowserIpc(): void {
     })()`)
   })
 
-  ipcMain.handle('browser:click', async (_, ref: string, selector: string) => {
+  handleTrusted('browser:click', async (_, ref: string, selector: string) => {
     return runInPage(`(function(){
       var el = ${resolverExpr(ref, selector)};
       if (!el) return { error: 'No element matched. Take a fresh browser_snapshot — refs are invalidated by navigation.' };
@@ -288,7 +303,7 @@ export function registerBrowserIpc(): void {
     })()`)
   })
 
-  ipcMain.handle('browser:fill', async (_, ref: string, selector: string, value: string, submit: boolean) => {
+  handleTrusted('browser:fill', async (_, ref: string, selector: string, value: string, submit: boolean) => {
     const v = JSON.stringify(String(value ?? ''))
     const doSubmit = submit === true ? 'true' : 'false'
     return runInPage(`(function(){
@@ -320,7 +335,7 @@ export function registerBrowserIpc(): void {
     })()`)
   })
 
-  ipcMain.handle('browser:readText', async (_, selector: string) => {
+  handleTrusted('browser:readText', async (_, selector: string) => {
     const s = JSON.stringify(String(selector || ''))
     return runInPage(`(function(){
       var s = ${s};
@@ -332,7 +347,7 @@ export function registerBrowserIpc(): void {
     })()`)
   })
 
-  ipcMain.handle('browser:screenshot', async () => {
+  handleTrusted('browser:screenshot', async () => {
     const guard = requireView()
     if ('error' in guard) return guard
     try {
@@ -344,14 +359,14 @@ export function registerBrowserIpc(): void {
     }
   })
 
-  ipcMain.handle('browser:devtools', async () => {
+  handleTrusted('browser:devtools', async () => {
     const guard = requireView()
     if ('error' in guard) return guard
     guard.view.webContents.openDevTools({ mode: 'detach' })
     return { ok: true }
   })
 
-  ipcMain.handle('browser:getURL', async () => {
+  handleTrusted('browser:getURL', async () => {
     if (!browserView || browserView.webContents.isDestroyed()) return { error: 'Browser not created' }
     return { url: browserView.webContents.getURL() }
   })

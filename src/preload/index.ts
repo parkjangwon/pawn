@@ -124,6 +124,12 @@ const api = {
       ipcRenderer.on('terminal:data', handler)
       return () => { ipcRenderer.removeListener('terminal:data', handler) }
     }
+  },
+
+  onAppShortcut: (callback: (name: string) => void) => {
+    const handler = (_event: unknown, name: string) => callback(name)
+    ipcRenderer.on('app:shortcut', handler)
+    return () => { ipcRenderer.removeListener('app:shortcut', handler) }
   }
 }
 

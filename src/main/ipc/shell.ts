@@ -1,11 +1,12 @@
 import { ipcMain } from 'electron'
+import { handleTrusted } from './trust'
 import { exec } from 'child_process'
 import { promisify } from 'util'
 
 const execAsync = promisify(exec)
 
 export function registerShellIpc(): void {
-  ipcMain.handle('shell:exec', async (_, command: string, cwd?: string) => {
+  handleTrusted('shell:exec', async (_, command: string, cwd?: string) => {
     try {
       const { stdout, stderr } = await execAsync(command, {
         cwd: cwd || undefined,
