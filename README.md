@@ -14,6 +14,34 @@ A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI
 - **Open source** — MIT licensed, fully customizable.
 - **Claude Code compatible** — Loads `CLAUDE.md`, `.claude/skills/`, `.claude/rules/`, and `.agent/` directories.
 
+## Installation
+
+Download the latest release for your platform from the [Releases page](https://github.com/parkjangwon/pawn/releases/latest), or run it from your terminal:
+
+### Quick install (recommended)
+
+```bash
+npx @parkjangwon/pawn
+```
+
+This downloads the matching build for your OS and launches the installer. The installer is cached under `~/.pawn/installers/` and reused on subsequent runs. To install the command globally:
+
+```bash
+npm install -g @parkjangwon/pawn
+pawn
+```
+
+### Manual download
+
+- **macOS** — `Pawn-<version>-universal.dmg` (Apple Silicon + Intel). Open the `.dmg` and drag **Pawn** into Applications.
+  - First launch: right-click → **Open**, then confirm in the Gatekeeper dialog (the build is unsigned).
+- **Windows** — `Pawn-<version>-x64-setup.exe` (Intel/AMD) or `Pawn-<version>-arm64-setup.exe` (ARM). Double-click to run the installer.
+
+### Requirements
+
+- macOS 10.12+ or Windows 10/11
+- An OpenAI- or Claude-compatible API key (BYOK)
+
 ## Features
 
 ### Core Agent & Tools
