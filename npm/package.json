@@ -6,7 +6,7 @@
   "author": "parkjangwon",
   "repository": {
     "type": "git",
-    "url": "https://github.com/parkjangwon/pawn.git"
+    "url": "git+https://github.com/parkjangwon/pawn.git"
   },
   "homepage": "https://github.com/parkjangwon/pawn",
   "bin": {
