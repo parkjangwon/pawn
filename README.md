@@ -63,6 +63,7 @@ pawn
   - **Linux Support**: Driven via `xdotool`.
   - **High-DPI Normalization**: Normalizes logical coordinate mouse clicks using monitor scale factors.
 - **Browser Use**: Open URLs and automate web interactions.
+- **Attachments**: Attach images (sent to vision-capable models as real image blocks) and text documents; pasting a large block of text turns it into a removable chip.
 - Permission system with granular user approval dialogs.
 - Queue / Steering send modes.
 
@@ -85,19 +86,29 @@ pawn
   - `usage`: Tracks detailed usage tokens (input, output, cache-read, cache-write) and estimated costs.
   - `routines`: Recurring scheduled automation routines.
 
+### Automation
+- Recurring routines on interval / daily / weekly schedules, executed headlessly when every window is closed.
+- **Templates**: daily report, web/price monitor, RSS digest, issue triage, changelog, repo audit — one click to create.
+- **Deliverables**: every finished routine saves a markdown report to `~/.pawn/reports/<name>/` and the path is included in the completion notification.
+- **Shareable**: export and import automations as a portable JSON file.
+- **Menu bar / tray**: macOS menu bar and Windows system tray with the Pawn logo; left- or right-click opens a multilingual menu (show/hide, open, quit).
+
 ### UI / UX
 - ChatGPT-style layout (sidebar + chat area).
+- ChatGPT-style composer card: aligned toolbar, attach button, and removable attachment chips.
 - Light / Dark theme (configurable in Settings > Appearance).
 - Responsive layout: Optimized for desktop, tablet, and mobile displays.
 - Rich Markdown rendering with syntax highlighting and code block copy utilities.
 - Streaming responses with cursor animation.
 - Auto-scroll on new messages.
+- App version shown in the bottom-right corner.
 - Internationalization (i18n): English, Korean, Japanese, and Chinese.
 
 ### Extensibility
 - Claude Code skill format (`.claude/skills/*/SKILL.md`).
 - Codex-compatible `.agent/` directory.
 - OpenAI Agents user context (`~/.agents/AGENTS.md`, `~/.agents/skills/`).
+- One-shot installs: paste a GitHub URL and ask Pawn to install a skill or plugin — it clones the repo, detects the layout, and installs into the standard `~/.agents/skills` / `~/.claude/plugins` paths.
 - `CLAUDE.md` / `CLAUDE.local.md` project context.
 - `.claude/rules/*.md` rule files.
 
