@@ -36,6 +36,29 @@ describe('RightPanel', () => {
     expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()
   })
 
+  it('does not collapse an already-open panel when a tool is chosen', async () => {
+    // Reproduces the real flow: open the panel first, then pick a tool. The
+    // slide-in (`opening`) must only run when the panel is actually closed —
+    // otherwise it collapses the open panel and never recovers.
+    const { container } = render(<RightPanel />)
+    act(() => {
+      ;(window as any).__toggleRightPanel()
+    })
+    // Let the slide-in animation settle (the layout effect resets `opening`
+    // inside requestAnimationFrame).
+    await act(async () => {
+      await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()))
+    })
+    // Settled: width is panelWidth, not the opening placeholder of 0.
+    expect(container.querySelector('aside')?.getAttribute('style')).not.toContain('width: 0px')
+
+    // Choose a tool from the picker while the panel is already open.
+    fireEvent.click(screen.getByText('rightPanel.tools.terminal'))
+    expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()
+    // Regression: the panel must not collapse back to width 0.
+    expect(container.querySelector('aside')?.getAttribute('style')).not.toContain('width: 0px')
+  })
+
   it('toggles with the Option+Cmd+B shortcut', () => {
     // Renderer-side key handling only applies in dev:web; Electron forwards
     // through the main process instead.

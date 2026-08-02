@@ -485,6 +485,16 @@
     "loading": "Loading files...",
     "empty": "No files to display"
   },
+  "fileEditor": {
+    "back": "Back to files",
+    "binary": "Binary file — cannot display as text",
+    "tooLarge": "File too large to open (max {{max}})",
+    "readError": "Could not read file",
+    "wrap": "Word wrap",
+    "saving": "Saving…",
+    "saved": "Saved",
+    "linesUnit": "lines"
+  },
   "toolMessage": {
     "showFullOutput": "Show full output",
     "showLess": "Show less",

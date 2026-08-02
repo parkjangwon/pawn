@@ -485,6 +485,16 @@
     "loading": "加载文件中...",
     "empty": "没有可显示的文件"
   },
+  "fileEditor": {
+    "back": "返回文件列表",
+    "binary": "二进制文件 — 无法以文本显示",
+    "tooLarge": "文件过大，无法打开（最大 {{max}}）",
+    "readError": "无法读取文件",
+    "wrap": "自动换行",
+    "saving": "保存中…",
+    "saved": "已保存",
+    "linesUnit": "行"
+  },
   "toolMessage": {
     "showFullOutput": "显示完整输出",
     "showLess": "收起",

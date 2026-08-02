@@ -109,8 +109,14 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Open a tool as a tab (or switch to it if already open)
   const openTool = (id: TabId): void => {
-    setOpening(true)
-    setVisible(true)
+    // Only run the slide-in (width 0 -> panelWidth) when the panel is actually
+    // closed. The layout effect that resets `opening` fires on a visibility
+    // change, so setting it while already visible collapses the panel and
+    // never recovers — the tool looks hidden until the next toggle.
+    if (!visible) {
+      setOpening(true)
+      setVisible(true)
+    }
     setOpenTabs((prev) => {
       const next = prev.includes(id) ? prev : [...prev, id]
       return next
@@ -230,8 +236,11 @@ export default function RightPanel(): React.JSX.Element | null {
     (window as any).__openRightPanelTab = (id: TabId): void => {
       if (closingRef.current) cancelHide()
       if (visibleRef.current && activeTabRef.current === id && openTabsRef.current.includes(id)) return
-      setOpening(true)
-      setVisible(true)
+      // Same guard as openTool: don't collapse an already-visible panel.
+      if (!visibleRef.current) {
+        setOpening(true)
+        setVisible(true)
+      }
       setOpenTabs((prev) => {
         const next = prev.includes(id) ? prev : [...prev, id]
         return next
