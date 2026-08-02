@@ -26,6 +26,8 @@ declare global {
     api: {
       platform: string
       selectFolder: () => Promise<string | null>
+      saveFile: (defaultName: string, content: string) => Promise<string | null>
+      openFile: () => Promise<string | null>
       fs: {
         readFile: (path: string) => Promise<string | { error: string }>
         readFiles: (paths: string[]) => Promise<Array<{ path: string; content?: string; error?: string }>>

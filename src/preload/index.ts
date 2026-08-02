@@ -6,6 +6,9 @@ const api = {
 
   // Dialog
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),
+  saveFile: (defaultName: string, content: string): Promise<string | null> =>
+    ipcRenderer.invoke('dialog:saveFile', defaultName, content),
+  openFile: (): Promise<string | null> => ipcRenderer.invoke('dialog:openFile'),
 
   // File System
   fs: {

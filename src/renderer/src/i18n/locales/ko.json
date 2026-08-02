@@ -110,13 +110,29 @@
     "promptPlaceholder": "최신 이슈를 검토하고 우선순위를 제안해줘.",
     "runNow": "지금 실행",
     "footerHint": "저장한 뒤 지금 실행으로 바로 테스트할 수 있습니다.",
+    "templates": {
+      "title": "템플릿으로 시작"
+    },
+    "export": "내보내기",
+    "import": "가져오기",
+    "exportEmpty": "내보낼 자동화가 없습니다",
+    "exported": "내보냈습니다",
+    "imported": "가져왔습니다",
+    "importEmpty": "파일에 유효한 자동화가 없습니다",
+    "importFailed": "가져오기 실패 — 유효한 자동화 파일이 아닙니다",
     "examples": {
       "issueTriage": "이슈 트리아지",
       "issueTriageDesc": "최신 이슈를 검토하고 우선순위/담당자를 제안합니다.",
       "changelog": "체인지로그 초안",
       "changelogDesc": "이번 주 머지된 PR을 릴리스 노트 초안으로 요약합니다.",
       "repoAudit": "리포지토리 점검",
-      "repoAuditDesc": "열린 PR을 점검하고 위험 변경을 식별합니다."
+      "repoAuditDesc": "열린 PR을 점검하고 위험 변경을 식별합니다.",
+      "dailyReport": "일일 리포트",
+      "dailyReportDesc": "어제의 작업, 열린 할 일, 블로커, 다음 우선순위를 마크다운 리포트로 정리합니다.",
+      "webMonitor": "웹/가격 모니터",
+      "webMonitorDesc": "대상 URL을 열고 리포트 폴더의 이전 스냅샷과 비교해 바뀐 것만 보고합니다 (가격, 재고, 공지).",
+      "rssDigest": "RSS 다이제스트",
+      "rssDigestDesc": "RSS 피드 URL을 가져와 새 글을 짧은 다이제스트로 요약합니다."
     }
   },
   "contextBar": {
@@ -133,6 +149,7 @@
     "cached": "캐시됨",
     "usageCacheRead": "캐시 읽기",
     "usageTitle": "이번 세션 사용량",
+    "usageSaved": "캐시 절약",
     "noSession": "세션 없음",
     "statusIdle": "대기",
     "statusRunning": "실행 중"

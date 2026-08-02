@@ -65,6 +65,15 @@ describe('record', () => {
     expect(useUsageStore.getState().totalsFor('s2').calls).toBe(1)
   })
 
+  it('accumulates the money saved by the cache', () => {
+    const m = model({ input: 10, output: 20, cacheRead: 1, cacheWrite: 5 })
+    const usage = { inputTokens: 100, outputTokens: 50, cacheReadTokens: 300, cacheWriteTokens: 100 }
+    useUsageStore.getState().record('s1', m, usage)
+    const totals = useUsageStore.getState().totalsFor('s1')
+    expect(totals.savedCost).toBeCloseTo(computeUncachedCost(m, usage) - computeCost(m, usage))
+    expect(totals.savedCost).toBeGreaterThan(0)
+  })
+
   it('persists each call through window.api.db.addUsage', () => {
     const m = model({ input: 1, output: 2, cacheRead: 0.1, cacheWrite: 1 })
     useUsageStore.getState().record('s', m, { inputTokens: 10, outputTokens: 5, cacheReadTokens: 0, cacheWriteTokens: 0 })

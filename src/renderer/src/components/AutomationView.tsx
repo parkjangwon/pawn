@@ -28,6 +28,7 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
   const { projects, activeProjectId } = useAppStore()
   const [showCreate, setShowCreate] = useState(false)
   const [confirmDeleteRoutine, setConfirmDeleteRoutine] = useState<{ id: string; name: string } | null>(null)
+  const [importMsg, setImportMsg] = useState('')
   const [draft, setDraft] = useState<DraftState>({
     name: '', trigger: 'daily', hour: '09', minute: '00', weekday: '1', intervalMin: '30', prompt: '', projectId: activeProjectId || ''
   })
@@ -97,14 +98,54 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
     void refresh()
   }, [refresh])
 
-  const exampleCards = useMemo(
+  const templates = useMemo(
     () => [
-      { title: t('automation.examples.issueTriage'), desc: t('automation.examples.issueTriageDesc'), badge: t('automation.daily'), trigger: 'daily' as TriggerType },
-      { title: t('automation.examples.changelog'), desc: t('automation.examples.changelogDesc'), badge: t('automation.weekly'), trigger: 'weekly' as TriggerType },
-      { title: t('automation.examples.repoAudit'), desc: t('automation.examples.repoAuditDesc'), badge: t('automation.manual'), trigger: 'daily' as TriggerType }
+      { title: t('automation.examples.dailyReport'), desc: t('automation.examples.dailyReportDesc'), badge: t('automation.daily'), trigger: 'daily' as TriggerType, preset: { hour: '18', minute: '00' } },
+      { title: t('automation.examples.webMonitor'), desc: t('automation.examples.webMonitorDesc'), badge: t('automation.interval'), trigger: 'interval' as TriggerType, preset: { intervalMin: '30' } },
+      { title: t('automation.examples.rssDigest'), desc: t('automation.examples.rssDigestDesc'), badge: t('automation.daily'), trigger: 'daily' as TriggerType, preset: { hour: '07', minute: '00' } },
+      { title: t('automation.examples.issueTriage'), desc: t('automation.examples.issueTriageDesc'), badge: t('automation.daily'), trigger: 'daily' as TriggerType, preset: { hour: '09', minute: '00' } },
+      { title: t('automation.examples.changelog'), desc: t('automation.examples.changelogDesc'), badge: t('automation.weekly'), trigger: 'weekly' as TriggerType, preset: { hour: '10', minute: '00', weekday: '5' } },
+      { title: t('automation.examples.repoAudit'), desc: t('automation.examples.repoAuditDesc'), badge: t('automation.manual'), trigger: 'daily' as TriggerType, preset: { hour: '12', minute: '00' } }
     ],
     [t]
   )
+
+  const exportAutomations = async (): Promise<void> => {
+    if (routines.length === 0) {
+      setImportMsg(t('automation.exportEmpty'))
+      return
+    }
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      routines: routines.map((r) => {
+        let schedule: RoutineSchedule = { type: 'interval', minutes: 60 }
+        try { schedule = JSON.parse(r.schedule) as RoutineSchedule } catch { /* keep fallback */ }
+        return { name: r.name, prompt: r.prompt, schedule, projectId: r.projectId || undefined, sessionId: r.sessionId || undefined }
+      })
+    }
+    const saved = await window.api.saveFile('pawn-automations.json', JSON.stringify(payload, null, 2))
+    if (saved) setImportMsg(t('automation.exported'))
+  }
+
+  const importAutomations = async (): Promise<void> => {
+    const raw = await window.api.openFile()
+    if (!raw) return
+    try {
+      const parsed = JSON.parse(raw) as { routines?: Array<{ name?: string; prompt?: string; schedule?: RoutineSchedule; projectId?: string }> }
+      const list = Array.isArray(parsed.routines) ? parsed.routines : []
+      let added = 0
+      for (const item of list) {
+        if (!item || typeof item.name !== 'string' || typeof item.prompt !== 'string' || !item.schedule) continue
+        await add({ name: item.name, prompt: item.prompt, schedule: item.schedule, projectId: item.projectId || undefined })
+        added++
+      }
+      setImportMsg(added > 0 ? `${t('automation.imported')} (${added})` : t('automation.importEmpty'))
+      await refresh()
+    } catch {
+      setImportMsg(t('automation.importFailed'))
+    }
+  }
 
   return (
     <main className="automation-page">
@@ -116,6 +157,9 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
           </svg>
         </button>
         <div className="chat-header-spacer" />
+        <span className="automation-import-msg">{importMsg}</span>
+        <button className="automation-tool-btn" onClick={() => void importAutomations()} title={t('automation.import')}>{t('automation.import')}</button>
+        <button className="automation-tool-btn" onClick={() => void exportAutomations()} title={t('automation.export')}>{t('automation.export')}</button>
         <button className="btn-primary automation-header-btn" onClick={() => openCreate()}>{t('automation.new')}</button>
       </div>
 
@@ -139,6 +183,32 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
               <button className="btn-primary automation-cta" onClick={() => openCreate()}>{t('automation.start')}</button>
             </div>
           )}
+
+          <div className="automation-templates">
+            <div className="automation-page-head">
+              <h3>{t('automation.templates.title')}</h3>
+            </div>
+            <div className="automation-grid">
+              {templates.map((card) => (
+                <article
+                  key={card.title}
+                  className="automation-card example"
+                  role="button"
+                  tabIndex={0}
+                  onClick={() => openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger, ...card.preset })}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger, ...card.preset })
+                  }}
+                >
+                  <div className="automation-card-head">
+                    <h4>{card.title}</h4>
+                    <span className="settings-badge">{card.badge}</span>
+                  </div>
+                  <p className="automation-card-desc">{card.desc}</p>
+                </article>
+              ))}
+            </div>
+          </div>
 
           <div className="automation-grid">
             {routines.map((routine) => (
@@ -168,22 +238,6 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
               </article>
             ))}
 
-            {routines.length === 0 && exampleCards.map((card) => (
-              <article
-                key={card.title}
-                className="automation-card example"
-                role="button"
-                tabIndex={0}
-                onClick={() => openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger })}
-                onKeyDown={(e) => { if (e.key === 'Enter') openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger }) }}
-              >
-                <div className="automation-card-head">
-                  <h4>{card.title}</h4>
-                  <span className="settings-badge">{card.badge}</span>
-                </div>
-                <p className="automation-card-desc">{card.desc}</p>
-              </article>
-            ))}
           </div>
         </div>
       </section>

@@ -20,6 +20,24 @@ const ROUTINE_IDLE_TIMEOUT = 10 * 60 * 1000
 // StrictMode double-mounts effects in dev; the fire listener must register once.
 let routineListenerRegistered = false
 
+/** Deliverable: write the finished routine output into ~/.pawn/reports/<name>/. */
+async function saveRoutineReport(routine: Routine, result: string): Promise<string | null> {
+  try {
+    const home = await window.api.fs.homeDir()
+    if (typeof home !== 'string' || !home) return null
+    const safeName = routine.name.replace(/[^\w가-힣.-]+/g, '_').slice(0, 60) || 'routine'
+    const dir = `${home}/.pawn/reports/${safeName}`
+    await window.api.fs.mkdir(dir)
+    const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
+    const path = `${dir}/${stamp}.md`
+    const body = `# ${routine.name}\n\n- Ran: ${new Date().toISOString()}\n- Schedule: ${routine.schedule}\n\n${result}`
+    const write = await window.api.fs.writeFile(path, body)
+    return write && write.error ? null : path
+  } catch {
+    return null
+  }
+}
+
 /** Ensure the routine has a bound project/session, creating one if needed. */
 function ensureRoutineSession(routine: Routine): { projectId: string; sessionId: string } | null {
   const app = useAppStore.getState()
@@ -86,7 +104,9 @@ export async function runRoutine(routine: Routine): Promise<void> {
     const lastAssistant = [...(session?.messages || [])].reverse().find((m) => m.role === 'assistant')
     const result = lastAssistant?.content?.trim() || 'Task completed.'
     void window.api.routine?.recordResult?.(routine.id, result.slice(0, 2000))?.catch?.(() => {})
-    window.api.notification?.send?.(`Routine finished: ${routine.name}`, result.slice(0, 200))?.catch?.(() => {})
+    const reportPath = await saveRoutineReport(routine, result)
+    const note = reportPath ? `\nReport: ${reportPath}` : ''
+    window.api.notification?.send?.(`Routine finished: ${routine.name}`, (result + note).slice(0, 200))?.catch?.(() => {})
   } finally {
     useRoutineStore.setState((s) => {
       const next = new Set(s.runningIds)

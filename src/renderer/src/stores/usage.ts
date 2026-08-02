@@ -22,6 +22,8 @@ export interface UsageRecord extends CallUsage {
 export interface UsageTotals extends CallUsage {
   calls: number
   cost: number
+  /** Money the cache saved vs the same calls with no cache. */
+  savedCost: number
   /** cacheRead / (cacheRead + input) — the fraction of prompt tokens served from cache. */
   cacheHitRate: number
 }
@@ -48,7 +50,8 @@ interface UsageState {
 }
 
 const EMPTY: UsageTotals = {
-  calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0, cost: 0, cacheHitRate: 0
+  calls: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0,
+  cost: 0, savedCost: 0, cacheHitRate: 0
 }
 
 /**
@@ -82,6 +85,7 @@ export const useUsageStore = create<UsageState>((set, get) => ({
 
   record: (sessionId, model, usage) => {
     const cost = computeCost(model, usage)
+    const savedCost = Math.max(0, computeUncachedCost(model, usage) - cost)
     set((s) => {
       const prev = s.bySession[sessionId] || EMPTY
       const next: UsageTotals = {
@@ -91,6 +95,7 @@ export const useUsageStore = create<UsageState>((set, get) => ({
         cacheReadTokens: prev.cacheReadTokens + usage.cacheReadTokens,
         cacheWriteTokens: prev.cacheWriteTokens + usage.cacheWriteTokens,
         cost: prev.cost + cost,
+        savedCost: prev.savedCost + savedCost,
         cacheHitRate: 0
       }
       const prompt = next.inputTokens + next.cacheReadTokens + next.cacheWriteTokens
