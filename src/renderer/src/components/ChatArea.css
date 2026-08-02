@@ -355,9 +355,15 @@
   position: relative;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background: var(--bg-primary);
+  background: var(--bg-input);
   overflow: visible;
-  transition: border-color 0.15s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.chat-input-container:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
 /* Context bar (project, branch, model chips) */
@@ -525,7 +531,7 @@
 .chat-input-box {
   display: flex;
   flex-direction: column;
-  padding: var(--space-sm) var(--space-md) var(--space-sm);
+  padding: 0 var(--space-md) var(--space-sm);
 }
 
 .chat-input-box textarea {
@@ -553,6 +559,74 @@
   padding-top: var(--space-xs);
   flex-wrap: wrap;
   row-gap: 6px;
+}
+
+.attachment-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-bottom: 6px;
+}
+
+.attachment-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 260px;
+  padding: 3px 6px 3px 4px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-input);
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+
+.attachment-chip-thumb {
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  object-fit: cover;
+  flex-shrink: 0;
+}
+
+.attachment-chip-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 180px;
+}
+
+.attachment-chip-x {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+  flex-shrink: 0;
+}
+
+.attachment-chip-x:hover {
+  color: var(--text-primary);
+}
+
+.attach-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.attach-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .input-actions-left {

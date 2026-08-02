@@ -3,6 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
   platform: process.platform,
+  appVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
 
   // Dialog
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),
@@ -153,6 +154,12 @@ const api = {
 
   power: {
     setSleepPrevention: (mode: string) => ipcRenderer.invoke('power:setSleepPrevention', mode)
+  },
+
+  tray: {
+    getEnabled: () => ipcRenderer.invoke('tray:getEnabled'),
+    setEnabled: (enabled: boolean) => ipcRenderer.invoke('tray:setEnabled', enabled),
+    setLanguage: (lang: string) => ipcRenderer.invoke('tray:setLanguage', lang)
   },
 
   keybindings: {

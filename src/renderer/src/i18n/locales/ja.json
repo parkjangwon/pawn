@@ -50,6 +50,11 @@
     "export": "エクスポート",
     "you": "あなた",
     "assistant": "アシスタント",
+    "attach": "ファイルを添付",
+    "removeAttachment": "添付を削除",
+    "pastedText": "貼り付けたテキスト",
+    "attachedImage": "貼り付けた画像",
+    "attachedText": "添付ファイル",
     "thinking": "考え中...",
     "noProvider": "プロバイダーが設定されていません",
     "taskComplete": "タスク完了",
@@ -373,7 +378,9 @@
       "sleepPreventionDesc": "アプリ実行中にシステムのスリープを防ぎます。画面モードはディスプレイの電源オフも防ぎます。",
       "sleepOff": "オフ",
       "sleepSystem": "スリープ防止",
-      "sleepDisplay": "スリープ+画面防止"
+      "sleepDisplay": "スリープ+画面防止",
+      "trayEnabled": "メニューバーに表示",
+      "trayEnabledDesc": "システムトレイ/メニューバーにPawnアイコンを表示します（右クリックメニュー対応）"
     },
     "shortcuts": "ショートカット",
     "shortcutSection": {

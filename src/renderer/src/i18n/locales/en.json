@@ -50,6 +50,11 @@
     "export": "Export",
     "you": "You",
     "assistant": "Assistant",
+    "attach": "Attach files",
+    "removeAttachment": "Remove attachment",
+    "pastedText": "Pasted text",
+    "attachedImage": "Pasted image",
+    "attachedText": "Attached file",
     "thinking": "Thinking...",
     "noProvider": "No provider configured",
     "taskComplete": "Task complete",
@@ -373,7 +378,9 @@
       "sleepPreventionDesc": "Keep the system awake while the app runs. Display mode also prevents the screen from turning off.",
       "sleepOff": "Off",
       "sleepSystem": "Prevent sleep",
-      "sleepDisplay": "Prevent sleep + screen"
+      "sleepDisplay": "Prevent sleep + screen",
+      "trayEnabled": "Show in menu bar",
+      "trayEnabledDesc": "Keep a Pawn icon in the system tray / menu bar (right-click for menu)"
     },
     "shortcuts": "Shortcuts",
     "shortcutSection": {

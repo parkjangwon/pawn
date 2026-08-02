@@ -7,6 +7,15 @@ import zh from './locales/zh.json'
 
 const savedLang = localStorage.getItem('pawn-lang')
 
+// Keep the native tray menu in sync with the renderer's language.
+function notifyTrayLanguage(lng: string): void {
+  try {
+    window.api.tray?.setLanguage(lng)
+  } catch {
+    // Browser mode or preload unavailable — tray is desktop-only.
+  }
+}
+
 i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },
@@ -21,6 +30,9 @@ i18n.use(initReactI18next).init({
 
 i18n.on('languageChanged', (lng) => {
   localStorage.setItem('pawn-lang', lng)
+  notifyTrayLanguage(lng)
 })
+
+notifyTrayLanguage(savedLang || 'en')
 
 export default i18n

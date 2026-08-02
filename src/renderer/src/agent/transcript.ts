@@ -30,10 +30,17 @@ export interface TranscriptThinking {
 }
 
 export type TranscriptEntry =
-  | { role: 'user'; content: string }
+  | { role: 'user'; content: string; attachments?: TranscriptImageAttachment[] }
   | { role: 'assistant'; content: string; toolCalls?: TranscriptToolCall[]; thinking?: TranscriptThinking[] }
   | { role: 'tool'; toolCallId: string; name: string; content: string; isError?: boolean }
   | { role: 'summary'; content: string }
+
+/** User-attached images, sent as real vision blocks on both wire formats. */
+export interface TranscriptImageAttachment {
+  kind: 'image'
+  dataUrl: string
+  name?: string
+}
 
 export const TRANSCRIPT_VERSION = 2
 
@@ -60,6 +67,9 @@ export function estimateTokens(entries: TranscriptEntry[]): number {
       for (const th of e.thinking || []) chars += (th.thinking || th.data || '').length
     } else {
       chars += e.content.length
+      if (e.role === 'user') {
+        for (const a of e.attachments || []) chars += a.dataUrl.length
+      }
     }
   }
   return Math.ceil(chars / 3.6)
@@ -147,7 +157,18 @@ export function toClaudeMessages(entries: TranscriptEntry[]): Array<Record<strin
 
   for (const e of entries) {
     if (e.role === 'user' || e.role === 'summary') {
-      out.push({ role: 'user', content: [{ type: 'text', text: e.content }] })
+      const blocks: Array<Record<string, unknown>> = [{ type: 'text', text: e.content }]
+      if (e.role === 'user') {
+        for (const a of e.attachments || []) {
+          const match = a.dataUrl.match(/^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/)
+          if (!match) continue
+          blocks.push({
+            type: 'image',
+            source: { type: 'base64', media_type: match[1], data: match[2] }
+          })
+        }
+      }
+      out.push({ role: 'user', content: blocks })
       continue
     }
     if (e.role === 'assistant') {
@@ -205,7 +226,18 @@ export function toOpenAIMessages(entries: TranscriptEntry[]): Array<Record<strin
 
   for (const e of entries) {
     if (e.role === 'user' || e.role === 'summary') {
-      out.push({ role: 'user', content: e.content })
+      const images = e.role === 'user' ? (e.attachments || []).filter((a) => a.dataUrl.startsWith('data:image/')) : []
+      if (images.length > 0) {
+        out.push({
+          role: 'user',
+          content: [
+            { type: 'text', text: e.content },
+            ...images.map((a) => ({ type: 'image_url', image_url: { url: a.dataUrl } }))
+          ]
+        })
+      } else {
+        out.push({ role: 'user', content: e.content })
+      }
       continue
     }
     if (e.role === 'assistant') {

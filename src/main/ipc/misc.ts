@@ -1,8 +1,21 @@
-import { Notification, shell, systemPreferences } from 'electron'
+import { Notification, app, shell, systemPreferences } from 'electron'
 import { spawn } from 'child_process'
 import { handleTrusted } from './trust'
+import { setTrayEnabled, setTrayLanguage, trayEnabled } from '../tray'
 
 export function registerMiscIpc(): void {
+  handleTrusted('app:getVersion', async () => app.getVersion())
+
+  handleTrusted('tray:getEnabled', async () => trayEnabled())
+  handleTrusted('tray:setEnabled', async (_, enabled: boolean) => {
+    setTrayEnabled(enabled === true)
+    return { ok: true }
+  })
+  handleTrusted('tray:setLanguage', async (_, lang: string) => {
+    setTrayLanguage(String(lang || ''))
+    return { ok: true }
+  })
+
   handleTrusted('browser:open', async (_, url: string) => {
     await shell.openExternal(url)
     return { ok: true }

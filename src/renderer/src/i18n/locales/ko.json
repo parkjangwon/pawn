@@ -50,6 +50,11 @@
     "export": "내보내기",
     "you": "나",
     "assistant": "어시스턴트",
+    "attach": "파일 첨부",
+    "removeAttachment": "첨부 삭제",
+    "pastedText": "붙여넣은 텍스트",
+    "attachedImage": "붙여넣은 이미지",
+    "attachedText": "첨부 파일",
     "thinking": "생각 중...",
     "noProvider": "설정된 프로바이더가 없습니다",
     "taskComplete": "작업 완료",
@@ -373,7 +378,9 @@
       "sleepPreventionDesc": "앱 실행 중 시스템 절전을 방지합니다. 화면 포함 모드는 디스플레이 꺼짐도 막습니다.",
       "sleepOff": "끄기",
       "sleepSystem": "절전 방지",
-      "sleepDisplay": "절전+화면 방지"
+      "sleepDisplay": "절전+화면 방지",
+      "trayEnabled": "메뉴바에 표시",
+      "trayEnabledDesc": "시스템 트레이/메뉴바에 Pawn 아이콘을 유지합니다 (우클릭 메뉴 지원)"
     },
     "shortcuts": "단축키",
     "shortcutSection": {

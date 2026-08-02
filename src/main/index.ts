@@ -6,6 +6,7 @@ import { killAllTerminals } from './ipc/terminal'
 import { startRoutineServices, stopRoutineServices } from './ipc/routine'
 import { initKeybindings, registerShortcutForwarding } from './ipc/keybindings'
 import { closeDb } from './db'
+import { createTray, destroyTray } from './tray'
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err)
@@ -62,6 +63,7 @@ app.whenReady().then(() => {
   app.on('will-quit', () => {
     killAllTerminals()
     stopRoutineServices()
+    destroyTray()
     closeDb()
   })
 
@@ -73,6 +75,7 @@ app.whenReady().then(() => {
   }
 
   createWindow()
+  createTray()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

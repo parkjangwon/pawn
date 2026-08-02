@@ -60,6 +60,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   const { sleepPrevention, setSleepPrevention } = usePrefsStore()
   const { bindings: keybindings, setBinding: setKeybinding, reset: resetKeybinding } = useKeybindingsStore()
   const [recording, setRecording] = useState<KeyBindingId | null>(null)
+  const [trayVisible, setTrayVisible] = useState(true)
   const {
     providers, models, routingMode, defaultSendMode, permissionMode,
     addProvider, removeProvider, updateProvider,
@@ -271,6 +272,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
       if (typeof home === 'string') setHomeDir(home)
     }).catch(() => {})
     setDisabledSkills(loadDisabledSkillNames())
+    void window.api.tray?.getEnabled().then((v) => setTrayVisible(v === true)).catch(() => {})
   }, [])
 
   const fileExists = async (path: string): Promise<boolean> => {
@@ -767,6 +769,21 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
                   <button className={sleepPrevention === 'sleep' ? 'active' : ''} onClick={() => setSleepPrevention('sleep')}>{t('settings.systemSection.sleepSystem')}</button>
                   <button className={sleepPrevention === 'display' ? 'active' : ''} onClick={() => setSleepPrevention('display')}>{t('settings.systemSection.sleepDisplay')}</button>
                 </div>
+              </div>
+              <div className="settings-row">
+                <div className="settings-row-info"><span className="settings-row-label">{t('settings.systemSection.trayEnabled')}</span><span className="settings-row-desc">{t('settings.systemSection.trayEnabledDesc')}</span></div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={trayVisible}
+                    onChange={(e) => {
+                      const next = e.target.checked
+                      setTrayVisible(next)
+                      void window.api.tray?.setEnabled(next).catch(() => {})
+                    }}
+                  />
+                  <span className="toggle-slider" />
+                </label>
               </div>
             </div>
           </div>

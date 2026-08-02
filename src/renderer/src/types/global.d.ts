@@ -25,6 +25,7 @@ declare global {
   interface Window {
     api: {
       platform: string
+      appVersion: () => Promise<string>
       selectFolder: () => Promise<string | null>
       saveFile: (defaultName: string, content: string) => Promise<string | null>
       openFile: () => Promise<string | null>
@@ -156,6 +157,11 @@ declare global {
       }
       power: {
         setSleepPrevention: (mode: 'off' | 'sleep' | 'display') => Promise<{ ok?: boolean }>
+      }
+      tray: {
+        getEnabled: () => Promise<boolean>
+        setEnabled: (enabled: boolean) => Promise<{ ok?: boolean }>
+        setLanguage: (lang: string) => Promise<{ ok?: boolean }>
       }
       keybindings: {
         set: (id: string, combo: string) => Promise<{ ok?: boolean }>

@@ -6,7 +6,8 @@
   },
   "icon": "build/icon.png",
   "files": [
-    "out/**/*"
+    "out/**/*",
+    "resources/**"
   ],
   "mac": {
     "target": [

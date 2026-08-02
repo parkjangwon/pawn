@@ -118,6 +118,20 @@ describe('toClaudeMessages', () => {
       { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } }
     ])
   })
+
+  it('emits user image attachments as vision blocks after the text', () => {
+    const out = toClaudeMessages([
+      {
+        role: 'user',
+        content: 'what is this?',
+        attachments: [{ kind: 'image', dataUrl: 'data:image/png;base64,AAAA', name: 'shot.png' }]
+      }
+    ])
+    expect(out[0].content).toEqual([
+      { type: 'text', text: 'what is this?' },
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } }
+    ])
+  })
 })
 
 describe('toOpenAIMessages', () => {
@@ -150,6 +164,27 @@ describe('toOpenAIMessages', () => {
       role: 'user',
       content: [{ type: 'image_url', image_url: { url: 'data:image/jpeg;base64,BBBB' } }]
     })
+  })
+
+  it('uses a content array when a user message has image attachments', () => {
+    const out = toOpenAIMessages([
+      {
+        role: 'user',
+        content: 'look',
+        attachments: [{ kind: 'image', dataUrl: 'data:image/jpeg;base64,BBBB', name: 'x.jpg' }]
+      }
+    ])
+    expect(out[0]).toEqual({
+      role: 'user',
+      content: [
+        { type: 'text', text: 'look' },
+        { type: 'image_url', image_url: { url: 'data:image/jpeg;base64,BBBB' } }
+      ]
+    })
+  })
+
+  it('keeps plain strings for messages without attachments', () => {
+    expect(toOpenAIMessages([user('hi')])[0].content).toBe('hi')
   })
 })
 
