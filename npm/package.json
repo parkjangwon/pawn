@@ -1,0 +1,30 @@
+{
+  "name": "@parkjangwon/pawn",
+  "version": "0.1.0",
+  "description": "Installer runner for Pawn — AI Desktop Coding Agent. Downloads the right build for your OS and launches it.",
+  "license": "MIT",
+  "author": "parkjangwon",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/parkjangwon/pawn.git"
+  },
+  "homepage": "https://github.com/parkjangwon/pawn",
+  "bin": {
+    "pawn": "bin/pawn.js"
+  },
+  "files": [
+    "bin/pawn.js",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=16"
+  },
+  "keywords": [
+    "pawn",
+    "ai",
+    "coding-agent",
+    "electron",
+    "desktop",
+    "installer"
+  ]
+}

@@ -34,9 +34,8 @@ jobs:
         run: npm run build
 
       - name: Package macOS (universal dmg)
-        run: npm run dist:mac
+        run: npm run dist:mac -- --publish never
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
 
       - name: Upload macOS artifacts
@@ -68,9 +67,7 @@ jobs:
         run: npm run build
 
       - name: Package Windows (nsis x64 + arm64)
-        run: npm run dist:win
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run dist:win -- --publish never
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
