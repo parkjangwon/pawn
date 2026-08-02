@@ -177,16 +177,26 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (get().loadedSessions.has(sessionId)) return
     try {
       const raw = await window.api.db.getMessages(sessionId)
-      const messages: Message[] = Array.isArray(raw) ? (raw as Message[]) : []
+      const fetched: Message[] = Array.isArray(raw) ? (raw as Message[]) : []
       set((s) => ({
         loadedSessions: new Set([...s.loadedSessions, sessionId]),
         projects: s.projects.map((p) =>
           p.id === projectId
             ? {
                 ...p,
-                sessions: p.sessions.map((ss) =>
-                  ss.id === sessionId ? { ...ss, messages } : ss
-                )
+                sessions: p.sessions.map((ss) => {
+                  if (ss.id !== sessionId) return ss
+                  // A message may have been added locally while the fetch was
+                  // in flight (user sent a message right after opening the
+                  // session); merge by id instead of replacing.
+                  const byId = new Map(fetched.map((m) => [m.id, m]))
+                  const merged = [...fetched]
+                  for (const local of ss.messages) {
+                    if (!byId.has(local.id)) merged.push(local)
+                  }
+                  merged.sort((a, b) => a.createdAt - b.createdAt)
+                  return { ...ss, messages: merged }
+                })
               }
             : p
         )

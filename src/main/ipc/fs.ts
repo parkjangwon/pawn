@@ -13,6 +13,9 @@ const WALK_CACHE_TTL_MS = 3000
 const WALK_CACHE_MAX = 10
 // A single huge synchronous read would freeze the main process (and the UI).
 const MAX_READ_BYTES = 32 * 1024 * 1024
+// grep-style scans read up to 200 files; bound the TOTAL so a hostile repo
+// cannot make one call balloon into gigabytes of main-process memory.
+const MAX_READ_TOTAL_BYTES = 64 * 1024 * 1024
 const walkCache = new Map<string, { at: number; result: Array<{ name: string; path: string; isDirectory: boolean }> }>()
 
 function walkTree(rootPath: string): Array<{ name: string; path: string; isDirectory: boolean }> {
@@ -77,6 +80,7 @@ export function registerFsIpc(): void {
   handleTrusted('fs:readFiles', async (_, paths: unknown) => {
     if (!Array.isArray(paths)) return { error: 'Invalid paths' }
     const out: Array<{ path: string; content?: string; error?: string }> = []
+    let totalBytes = 0
     for (const p of paths.slice(0, 500)) {
       if (typeof p !== 'string') continue
       try {
@@ -85,6 +89,11 @@ export function registerFsIpc(): void {
           out.push({ path: p, error: `File too large to read safely (${s.size} bytes)` })
           continue
         }
+        if (totalBytes + s.size > MAX_READ_TOTAL_BYTES) {
+          out.push({ path: p, error: 'Total read budget exceeded — try a narrower search' })
+          continue
+        }
+        totalBytes += s.size
         out.push({ path: p, content: readFileSync(p, 'utf-8') })
       } catch (err) {
         out.push({ path: p, error: String(err) })

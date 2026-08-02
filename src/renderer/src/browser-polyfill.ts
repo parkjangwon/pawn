@@ -56,7 +56,7 @@ if (typeof window !== 'undefined' && !window.api) {
       }
     },
     shell: {
-      exec: async (command: string, cwd?: string) => {
+      exec: async (command: string, cwd?: string, timeoutMs?: number) => {
         // Shell exec not available via HTTP for security
         return { stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 }
       }

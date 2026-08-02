@@ -41,7 +41,7 @@ declare global {
         walk: (path: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }>
       }
       shell: {
-        exec: (command: string, cwd?: string) => Promise<{ stdout: string; stderr: string; exitCode: number }>
+        exec: (command: string, cwd?: string, timeoutMs?: number) => Promise<{ stdout: string; stderr: string; exitCode: number }>
       }
       workspace: {
         openIn: (path: string, app: string) => Promise<{ ok?: boolean; error?: string }>

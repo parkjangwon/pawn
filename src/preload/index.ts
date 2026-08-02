@@ -26,7 +26,8 @@ const api = {
 
   // Shell
   shell: {
-    exec: (command: string, cwd?: string) => ipcRenderer.invoke('shell:exec', command, cwd)
+    exec: (command: string, cwd?: string, timeoutMs?: number) =>
+      ipcRenderer.invoke('shell:exec', command, cwd, timeoutMs)
   },
 
   workspace: {

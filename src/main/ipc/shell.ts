@@ -6,11 +6,14 @@ import { promisify } from 'util'
 const execAsync = promisify(exec)
 
 export function registerShellIpc(): void {
-  handleTrusted('shell:exec', async (_, command: string, cwd?: string) => {
+  handleTrusted('shell:exec', async (_, command: string, cwd?: string, timeoutMs?: number) => {
     try {
       const { stdout, stderr } = await execAsync(command, {
         cwd: cwd || undefined,
-        timeout: 30000,
+        // Agent-controlled timeout: 5s..5min, default 30s.
+        timeout: Number.isFinite(Number(timeoutMs))
+          ? Math.min(300_000, Math.max(5_000, Math.floor(Number(timeoutMs))))
+          : 30_000,
         maxBuffer: 10 * 1024 * 1024
       })
       return { stdout, stderr, exitCode: 0 }

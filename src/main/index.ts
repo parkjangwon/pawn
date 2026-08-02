@@ -1,11 +1,30 @@
 import { app, BrowserWindow, session } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { registerAllIpc } from './ipc'
-import { createMainWindow } from './window'
+import { createMainWindow, getMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
 import { startRoutineServices, stopRoutineServices } from './ipc/routine'
 import { initKeybindings, registerShortcutForwarding } from './ipc/keybindings'
 import { closeDb } from './db'
+
+process.on('uncaughtException', (err) => {
+  console.error('[main] uncaughtException:', err)
+})
+process.on('unhandledRejection', (reason) => {
+  console.error('[main] unhandledRejection:', reason)
+})
+
+// Two instances would open the same SQLite database from separate processes,
+// which can corrupt the WAL; focus the existing window instead.
+if (!app.requestSingleInstanceLock()) {
+  app.quit()
+} else {
+  app.on('second-instance', () => {
+    const win = getMainWindow()
+    if (!win) return
+    if (win.isMinimized()) win.restore()
+    win.focus()
+  })
 
 // Must be registered before any webContents is created so every view
 // (main window, embedded browser, DevTools) forwards shortcuts to the app.
@@ -63,3 +82,4 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') app.quit()
 })
+}
