@@ -110,13 +110,29 @@
     "promptPlaceholder": "Review latest issues and propose priorities.",
     "runNow": "Run now",
     "footerHint": "Save it, then use Run now to test it right away.",
+    "templates": {
+      "title": "Start from a template"
+    },
+    "export": "Export",
+    "import": "Import",
+    "exportEmpty": "Nothing to export yet",
+    "exported": "Exported",
+    "imported": "Imported",
+    "importEmpty": "No valid automations in the file",
+    "importFailed": "Import failed — not a valid automation file",
     "examples": {
       "issueTriage": "Issue triage",
       "issueTriageDesc": "Review latest issues and propose priorities and owners.",
       "changelog": "Changelog draft",
       "changelogDesc": "Summarize merged PRs this week into release-note draft.",
       "repoAudit": "Repo audit",
-      "repoAuditDesc": "Audit open PRs and identify blockers or risky changes."
+      "repoAuditDesc": "Audit open PRs and identify blockers or risky changes.",
+      "dailyReport": "Daily report",
+      "dailyReportDesc": "Summarize yesterday's work, open todos, blockers, and next priorities as a markdown report.",
+      "webMonitor": "Web / price monitor",
+      "webMonitorDesc": "Open the target URL and check for changes against the previous snapshot in the reports folder; report only what changed (price, stock, notices).",
+      "rssDigest": "RSS digest",
+      "rssDigestDesc": "Fetch the RSS feed URL and summarize new posts into a short digest."
     }
   },
   "contextBar": {
@@ -133,6 +149,7 @@
     "cached": "cached",
     "usageCacheRead": "Cache read",
     "usageTitle": "This session usage",
+    "usageSaved": "Saved by cache",
     "noSession": "No session",
     "statusIdle": "Idle",
     "statusRunning": "Running"

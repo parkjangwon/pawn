@@ -178,6 +178,9 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         <div className="usage-popover-row"><span>{t('contextBar.usageCacheWrite')}</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
                         <div className="usage-popover-row"><span>{t('contextBar.usageCacheHitRate')}</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
                         <div className="usage-popover-row total"><span>{t('contextBar.usageTotalCost')}</span><span>{formatCost(usageTotals.cost)}</span></div>
+                        {usageTotals.savedCost > 0 && (
+                          <div className="usage-popover-row saved"><span>{t('contextBar.usageSaved')}</span><span>{formatCost(usageTotals.savedCost)}</span></div>
+                        )}
                        {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
                         {sessionDiags && sessionDiags.length > 0 && (
                           <div className="usage-diagnostics">

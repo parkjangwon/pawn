@@ -110,13 +110,29 @@
     "promptPlaceholder": "最新の課題を確認して優先順位を提案して。",
     "runNow": "今すぐ実行",
     "footerHint": "保存後、「今すぐ実行」でその場でテストできます。",
+    "templates": {
+      "title": "テンプレートから始める"
+    },
+    "export": "エクスポート",
+    "import": "インポート",
+    "exportEmpty": "エクスポートする自動化がありません",
+    "exported": "エクスポートしました",
+    "imported": "インポートしました",
+    "importEmpty": "ファイルに有効な自動化がありません",
+    "importFailed": "インポート失敗 — 有効な自動化ファイルではありません",
     "examples": {
       "issueTriage": "課題のトリアージ",
       "issueTriageDesc": "最新の課題を確認し、優先順位と担当者を提案します。",
       "changelog": "変更履歴のドラフト",
       "changelogDesc": "今週マージされたPRをリリースノートの下書きにまとめます。",
       "repoAudit": "リポジトリ監査",
-      "repoAuditDesc": "オープン中のPRを点検し、リスクのある変更を洗い出します。"
+      "repoAuditDesc": "オープン中のPRを点検し、リスクのある変更を洗い出します。",
+      "dailyReport": "日次レポート",
+      "dailyReportDesc": "昨日の作業、未処理のタスク、ブロッカー、次の優先事項をMarkdownレポートにまとめます。",
+      "webMonitor": "Web/価格モニター",
+      "webMonitorDesc": "対象URLを開き、レポートフォルダの前回スナップショットと比較して変更点のみ報告します（価格・在庫・お知らせ）。",
+      "rssDigest": "RSSダイジェスト",
+      "rssDigestDesc": "RSSフィードURLを取得し、新しい投稿を短いダイジェストにまとめます。"
     }
   },
   "contextBar": {
@@ -133,6 +149,7 @@
     "cached": "キャッシュ済み",
     "usageCacheRead": "キャッシュ読み込み",
     "usageTitle": "このセッションの使用量",
+    "usageSaved": "キャッシュ節約",
     "noSession": "セッションなし",
     "statusIdle": "待機中",
     "statusRunning": "実行中"

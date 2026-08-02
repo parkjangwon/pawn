@@ -712,6 +712,12 @@
   font-weight: 600;
 }
 
+.usage-popover-row.saved span:last-child {
+  color: #4caf50;
+  font-weight: 600;
+}
+
+
 .usage-popover-route {
   margin-top: 8px;
   padding-top: 8px;

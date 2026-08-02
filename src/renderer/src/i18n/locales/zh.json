@@ -110,13 +110,29 @@
     "promptPlaceholder": "查看最新的问题并提出优先级建议。",
     "runNow": "立即运行",
     "footerHint": "保存后，可通过立即运行直接测试。",
+    "templates": {
+      "title": "从模板开始"
+    },
+    "export": "导出",
+    "import": "导入",
+    "exportEmpty": "暂无可导出的自动化",
+    "exported": "已导出",
+    "imported": "已导入",
+    "importEmpty": "文件中没有有效的自动化",
+    "importFailed": "导入失败 — 不是有效的自动化文件",
     "examples": {
       "issueTriage": "问题分诊",
       "issueTriageDesc": "查看最新问题，提出优先级和负责人建议。",
       "changelog": "更新日志草稿",
       "changelogDesc": "将本周合并的 PR 汇总为发布说明草稿。",
       "repoAudit": "仓库审查",
-      "repoAuditDesc": "审查开放的 PR，识别风险变更或阻塞项。"
+      "repoAuditDesc": "审查开放的 PR，识别风险变更或阻塞项。",
+      "dailyReport": "每日报告",
+      "dailyReportDesc": "将昨天的工作、未完成任务、阻塞项和下一步优先级整理为 Markdown 报告。",
+      "webMonitor": "网页/价格监控",
+      "webMonitorDesc": "打开目标 URL，与报告文件夹中的上一快照对比，只报告变化部分（价格、库存、公告）。",
+      "rssDigest": "RSS 摘要",
+      "rssDigestDesc": "获取 RSS 订阅 URL，将新文章汇总为简短摘要。"
     }
   },
   "contextBar": {
@@ -133,6 +149,7 @@
     "cached": "已缓存",
     "usageCacheRead": "缓存读取",
     "usageTitle": "本次会话用量",
+    "usageSaved": "缓存节省",
     "noSession": "无会话",
     "statusIdle": "空闲",
     "statusRunning": "运行中"

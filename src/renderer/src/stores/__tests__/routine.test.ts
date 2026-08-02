@@ -16,6 +16,11 @@ const routineApi = {
 
 const sendMessageMock = vi.fn()
 const notifyMock = vi.fn()
+const fsMock = {
+  homeDir: vi.fn(),
+  mkdir: vi.fn(),
+  writeFile: vi.fn()
+}
 
 const makeRoutine = (overrides: Partial<Routine> = {}): Routine => ({
   id: 'r1',
@@ -36,11 +41,15 @@ beforeEach(() => {
   ;(window as any).api = {
     routine: routineApi,
     notification: { send: notifyMock },
-    db: { addProject: vi.fn().mockResolvedValue({ ok: true }), addSession: vi.fn().mockResolvedValue({ ok: true }) }
+    db: { addProject: vi.fn().mockResolvedValue({ ok: true }), addSession: vi.fn().mockResolvedValue({ ok: true }) },
+    fs: fsMock
   }
   for (const fn of Object.values(routineApi)) fn.mockReset()
   notifyMock.mockReset()
   sendMessageMock.mockReset()
+  fsMock.homeDir.mockReset().mockResolvedValue('/home/user')
+  fsMock.mkdir.mockReset().mockResolvedValue({ ok: true })
+  fsMock.writeFile.mockReset().mockResolvedValue({ ok: true })
 
   useAppStore.setState({
     projects: [{
@@ -90,6 +99,8 @@ describe('routine store', () => {
     expect(sendMessageMock).toHaveBeenCalledWith('p1', 's1', 'Summarize the inbox', 'queue')
     expect(routineApi.recordResult).toHaveBeenCalledWith('r1', 'summary done')
     expect(notifyMock).toHaveBeenCalledTimes(2)
+    expect(fsMock.writeFile).toHaveBeenCalledTimes(1)
+    expect(String(fsMock.writeFile.mock.calls[0][0])).toContain('/home/user/.pawn/reports/Morning/')
   })
 
   it('creates a general session for routines without a bound session', async () => {

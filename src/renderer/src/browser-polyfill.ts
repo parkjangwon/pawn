@@ -16,6 +16,8 @@ if (typeof window !== 'undefined' && !window.api) {
       // Will be handled by FileBrowser component - return null to trigger it
       return null
     },
+    saveFile: async (): Promise<string | null> => null,
+    openFile: async (): Promise<string | null> => null,
     fs: {
       readFile: async (path: string) => {
         const result = await fsPost('readFile', { path })
