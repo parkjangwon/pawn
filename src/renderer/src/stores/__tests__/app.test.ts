@@ -144,6 +144,28 @@ describe('message actions', () => {
     expect(dbMock.getMessages).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps locally added messages that arrived while loading', async () => {
+    useAppStore.setState({
+      projects: [{
+        id: 'p1', name: 'P', paths: ['/p'],
+        sessions: [{ id: 's1', title: 'S', path: '', createdAt: 1, messages: [{ id: 'local-1', role: 'user', content: 'sent during load', createdAt: 9 }] }]
+      }],
+      activeProjectId: 'p1',
+      activeSessionId: 's1',
+      loadedSessions: new Set()
+    })
+    dbMock.getMessages.mockResolvedValue([{ id: 'm1', role: 'assistant', content: 'loaded', createdAt: 2 }])
+
+    await useAppStore.getState().loadMessages('p1', 's1')
+    const messages = useAppStore.getState().projects[0].sessions[0].messages
+    expect(messages).toHaveLength(2)
+    expect(messages.map((m) => m.id)).toContain('local-1')
+    expect(messages.map((m) => m.id)).toContain('m1')
+    // Order by createdAt: loaded (2) first, local (9) last.
+    expect(messages[0].id).toBe('m1')
+    expect(messages[1].id).toBe('local-1')
+  })
+
   it('updates, deletes and clears messages', () => {
     useAppStore.getState().addProject('P', ['/p'], 'p1')
     useAppStore.getState().addSession('p1', 'S')

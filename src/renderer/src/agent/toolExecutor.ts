@@ -150,9 +150,14 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
       }
 
       case 'shell_exec': {
+        const timeoutArg = Number(call.arguments.timeout)
+        const timeoutMs = Number.isFinite(timeoutArg) && timeoutArg > 0
+          ? Math.min(300_000, Math.max(5_000, timeoutArg * 1000))
+          : undefined
         const result = await api.shell.exec(
           call.arguments.command as string,
-          (call.arguments.cwd as string) || projectPath
+          (call.arguments.cwd as string) || projectPath,
+          timeoutMs
         )
         const output = [result.stdout, result.stderr].filter(Boolean).join('\n')
         return {
