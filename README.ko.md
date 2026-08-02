@@ -37,6 +37,14 @@ pawn
   - 첫 실행: 우클릭 → **열기**를 선택한 뒤 Gatekeeper 대화상자에서 승인하세요 (서명되지 않은 빌드입니다).
 - **Windows** — `Pawn-<version>-x64-setup.exe` (Intel/AMD) 또는 `Pawn-<version>-arm64-setup.exe` (ARM). 파일을 더블클릭하여 설치하세요.
 
+### 스킬 & 플러그인 설치
+
+- **Pawn에게 맡기기** — GitHub URL을 붙여넣고 "이 스킬 설치해줘"라고 하면(`install_skill` 툴) 리포를 clone해 레이아웃(`plugin.json`, `skills/`, 루트 `SKILL.md`)을 자동 감지한 뒤 표준 경로에 설치합니다.
+- **사용자 전역 스킬** — `<이름>/SKILL.md` 폴더를 `~/.agents/skills/` 또는 `~/.claude/skills/`에 복사합니다.
+- **프로젝트 스킬** — `<프로젝트>/.claude/skills/`, `<프로젝트>/skills/`, `<프로젝트>/.agent/skills/` 중 원하는 곳에 복사합니다.
+- **플러그인** — 프로젝트 전용은 `<프로젝트>/.claude/plugins/`, 사용자 전역은 Claude Code 플러그인 설치(또는 `~/.claude/plugins/` + `installed_plugins.json` 항목)로 설치합니다.
+- 설치된 스킬은 **설정 → 플러그인**에서 확인하고 켜고 끌 수 있습니다.
+
 ### 요구 사항
 
 - macOS 10.12+ 또는 Windows 10/11

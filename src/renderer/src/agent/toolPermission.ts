@@ -14,6 +14,7 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   browser_read_text: 'safe',
   browser_screenshot: 'safe',
   browser_back: 'safe',
+  install_skill: 'risky',
   browser_open_external: 'risky',
   browser_click: 'risky',
   browser_fill: 'risky',
@@ -70,6 +71,7 @@ export async function checkPermission(
     browser_eval: 'Evaluate JS in Page',
     browser_open_external: 'Open External Browser',
     load_skill: 'Load Skill',
+    install_skill: 'Install Skill',
     search_files: 'Search Files',
     grep_search: 'Search Text',
     app_open_tab: 'Open App Tab',
@@ -91,7 +93,7 @@ export async function checkPermission(
           shell_exec: 'shell_exec',
           write_file: 'file_write', edit_file: 'file_write',
           app_open_tab: 'app', app_close_tab: 'app', app_list_automations: 'app', app_create_automation: 'app', app_set_model: 'app',
-          app_set_permission_mode: 'app', app_set_reasoning: 'app', app_toggle_theme: 'app'
+          app_set_permission_mode: 'app', app_set_reasoning: 'app', app_toggle_theme: 'app', install_skill: 'app'
         }
         return map[callName] || 'file_read'
       })() as PermissionType,

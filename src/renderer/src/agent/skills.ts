@@ -30,6 +30,11 @@ const CACHE_TTL = 30_000
 const CACHE_MAX_ENTRIES = 20
 const ctxCache = new Map<string, { at: number; ctx: ProjectContext }>()
 
+/** Drop every cached project context so newly installed skills are visible immediately. */
+export function clearProjectContextCache(): void {
+  ctxCache.clear()
+}
+
 async function readText(path: string): Promise<string | null> {
   const r = await window.api.fs.readFile(path)
   return typeof r === 'string' ? r : null
