@@ -1025,3 +1025,323 @@
   background: rgba(70, 70, 70, 0.9);
   color: #fff;
 }
+
+/* ========== File Editor (in-panel) ========== */
+.rp-file-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rp-fe-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+}
+
+.rp-fe-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s;
+}
+
+.rp-fe-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.rp-fe-btn.is-active {
+  color: var(--accent);
+  background: var(--accent-subtle);
+}
+
+.rp-fe-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  min-width: 0;
+}
+
+.rp-fe-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--warning);
+  flex-shrink: 0;
+}
+
+.rp-fe-spacer {
+  flex: 1;
+}
+
+.rp-fe-meta {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  flex-shrink: 0;
+}
+
+.rp-fe-save {
+  padding: 4px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: 5px;
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.1s, color 0.1s, border-color 0.1s;
+}
+
+.rp-fe-save:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.rp-fe-save:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Body: line-number gutter + textarea share layout so numbers stay aligned. */
+.rp-fe-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rp-fe-gutter {
+  flex-shrink: 0;
+  width: 42px;
+  overflow: hidden;
+  background: var(--bg-secondary);
+  border-right: 1px solid var(--border-color);
+  padding: 10px 0;
+  text-align: right;
+  user-select: none;
+  /* The gutter never scrolls on its own; its scrollTop mirrors the textarea. */
+  scrollbar-width: none;
+}
+
+.rp-fe-gutter::-webkit-scrollbar {
+  display: none;
+}
+
+.rp-fe-ln {
+  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 18px;
+  height: 18px;
+  padding: 0 8px;
+  color: var(--text-muted);
+}
+
+.rp-fe-editor-wrap {
+  position: relative;
+  flex: 1;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Highlight overlay: sits exactly under the textarea (same font metrics and
+   padding) and paints the colored tokens. Its scroll is driven by the
+   textarea's onScroll so it never desyncs from the caret. */
+.rp-fe-highlight {
+  position: absolute;
+  inset: 0;
+  margin: 0;
+  padding: 10px 12px;
+  border: 0;
+  box-sizing: border-box;
+  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 18px;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  pointer-events: none;
+  color: var(--text-primary);
+  background: transparent;
+  scrollbar-width: none;
+}
+
+.rp-fe-highlight.wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.rp-fe-highlight::-webkit-scrollbar {
+  display: none;
+}
+
+.rp-fe-highlight code.hljs {
+  font: inherit;
+  background: transparent;
+  padding: 0;
+  color: var(--text-primary);
+}
+
+.rp-fe-textarea {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  border: none;
+  outline: none;
+  resize: none;
+  box-sizing: border-box;
+  background: transparent;
+  color: transparent;
+  caret-color: var(--text-primary);
+  font-family: 'SF Mono', 'Fira Code', ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 18px;
+  padding: 10px 12px;
+  white-space: pre;
+  overflow: auto;
+  tab-size: 2;
+}
+
+.rp-fe-textarea.wrap {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rp-fe-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.rp-fe-error {
+  color: var(--danger);
+}
+
+/* ========== Editor syntax theme (scoped, theme-aware) ==========
+   These rules are scoped to the editor overlay so they follow the app theme
+   (.app.light / .app.dark) and never leak into the chat code blocks, which
+   ship their own github-dark theme. Palettes mirror github (light) and
+   github-dark for a familiar look. */
+.app.dark .rp-fe-highlight .hljs-keyword,
+.app.dark .rp-fe-highlight .hljs-doctag,
+.app.dark .rp-fe-highlight .hljs-template-tag,
+.app.dark .rp-fe-highlight .hljs-template-variable,
+.app.dark .rp-fe-highlight .hljs-type,
+.app.dark .rp-fe-highlight .hljs-variable.language_ { color: #ff7b72; }
+
+.app.dark .rp-fe-highlight .hljs-title,
+.app.dark .rp-fe-highlight .hljs-title.function_,
+.app.dark .rp-fe-highlight .hljs-title.class_,
+.app.dark .rp-fe-highlight .hljs-title.class_.inherited__ { color: #d2a8ff; }
+
+.app.dark .rp-fe-highlight .hljs-attr,
+.app.dark .rp-fe-highlight .hljs-attribute,
+.app.dark .rp-fe-highlight .hljs-literal,
+.app.dark .rp-fe-highlight .hljs-meta,
+.app.dark .rp-fe-highlight .hljs-number,
+.app.dark .rp-fe-highlight .hljs-operator,
+.app.dark .rp-fe-highlight .hljs-variable,
+.app.dark .rp-fe-highlight .hljs-selector-attr,
+.app.dark .rp-fe-highlight .hljs-selector-class,
+.app.dark .rp-fe-highlight .hljs-selector-id { color: #79c0ff; }
+
+.app.dark .rp-fe-highlight .hljs-string,
+.app.dark .rp-fe-highlight .hljs-regexp,
+.app.dark .rp-fe-highlight .hljs-meta .hljs-string { color: #a5d6ff; }
+
+.app.dark .rp-fe-highlight .hljs-built_in,
+.app.dark .rp-fe-highlight .hljs-symbol { color: #ffa657; }
+
+.app.dark .rp-fe-highlight .hljs-comment,
+.app.dark .rp-fe-highlight .hljs-code,
+.app.dark .rp-fe-highlight .hljs-formula { color: #8b949e; }
+
+.app.dark .rp-fe-highlight .hljs-name,
+.app.dark .rp-fe-highlight .hljs-quote,
+.app.dark .rp-fe-highlight .hljs-selector-tag,
+.app.dark .rp-fe-highlight .hljs-selector-pseudo { color: #7ee787; }
+
+.app.dark .rp-fe-highlight .hljs-section { color: #1f6feb; font-weight: bold; }
+.app.dark .rp-fe-highlight .hljs-bullet { color: #f2cc60; }
+.app.dark .rp-fe-highlight .hljs-emphasis { font-style: italic; }
+.app.dark .rp-fe-highlight .hljs-strong { font-weight: bold; }
+.app.dark .rp-fe-highlight .hljs-addition { color: #aff5b4; background-color: rgba(3, 58, 22, 0.6); }
+.app.dark .rp-fe-highlight .hljs-deletion { color: #ffdcd7; background-color: rgba(103, 6, 12, 0.6); }
+
+/* Light theme (github) */
+.app.light .rp-fe-highlight .hljs-keyword,
+.app.light .rp-fe-highlight .hljs-doctag,
+.app.light .rp-fe-highlight .hljs-template-tag,
+.app.light .rp-fe-highlight .hljs-template-variable,
+.app.light .rp-fe-highlight .hljs-type,
+.app.light .rp-fe-highlight .hljs-variable.language_ { color: #d73a49; }
+
+.app.light .rp-fe-highlight .hljs-title,
+.app.light .rp-fe-highlight .hljs-title.function_,
+.app.light .rp-fe-highlight .hljs-title.class_,
+.app.light .rp-fe-highlight .hljs-title.class_.inherited__ { color: #6f42c1; }
+
+.app.light .rp-fe-highlight .hljs-attr,
+.app.light .rp-fe-highlight .hljs-attribute,
+.app.light .rp-fe-highlight .hljs-literal,
+.app.light .rp-fe-highlight .hljs-meta,
+.app.light .rp-fe-highlight .hljs-number,
+.app.light .rp-fe-highlight .hljs-operator,
+.app.light .rp-fe-highlight .hljs-variable,
+.app.light .rp-fe-highlight .hljs-selector-attr,
+.app.light .rp-fe-highlight .hljs-selector-class,
+.app.light .rp-fe-highlight .hljs-selector-id { color: #005cc5; }
+
+.app.light .rp-fe-highlight .hljs-string,
+.app.light .rp-fe-highlight .hljs-regexp,
+.app.light .rp-fe-highlight .hljs-meta .hljs-string { color: #032f62; }
+
+.app.light .rp-fe-highlight .hljs-built_in,
+.app.light .rp-fe-highlight .hljs-symbol { color: #e36209; }
+
+.app.light .rp-fe-highlight .hljs-comment,
+.app.light .rp-fe-highlight .hljs-code,
+.app.light .rp-fe-highlight .hljs-formula { color: #6a737d; }
+
+.app.light .rp-fe-highlight .hljs-name,
+.app.light .rp-fe-highlight .hljs-quote,
+.app.light .rp-fe-highlight .hljs-selector-tag,
+.app.light .rp-fe-highlight .hljs-selector-pseudo { color: #22863a; }
+
+.app.light .rp-fe-highlight .hljs-section { color: #005cc5; font-weight: bold; }
+.app.light .rp-fe-highlight .hljs-bullet { color: #735c0f; }
+.app.light .rp-fe-highlight .hljs-emphasis { font-style: italic; }
+.app.light .rp-fe-highlight .hljs-strong { font-weight: bold; }
+.app.light .rp-fe-highlight .hljs-addition { color: #22863a; background-color: #f0fff4; }
+.app.light .rp-fe-highlight .hljs-deletion { color: #b31d28; background-color: #ffeef0; }

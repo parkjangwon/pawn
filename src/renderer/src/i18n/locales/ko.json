@@ -485,6 +485,16 @@
     "loading": "파일 로딩 중...",
     "empty": "표시할 파일이 없습니다"
   },
+  "fileEditor": {
+    "back": "파일 목록으로",
+    "binary": "바이너리 파일 — 텍스트로 표시할 수 없습니다",
+    "tooLarge": "파일이 너무 커서 열 수 없습니다 (최대 {{max}})",
+    "readError": "파일을 읽을 수 없습니다",
+    "wrap": "자동 줄바꿈",
+    "saving": "저장 중…",
+    "saved": "저장됨",
+    "linesUnit": "줄"
+  },
   "toolMessage": {
     "showFullOutput": "전체 출력 보기",
     "showLess": "간략히 보기",
