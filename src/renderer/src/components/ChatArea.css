@@ -250,6 +250,22 @@
   padding: var(--space-xl) 0;
 }
 
+.message-load-earlier {
+  display: block;
+  margin: 12px auto;
+  padding: 6px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.message-load-earlier:hover {
+  background: var(--bg-hover);
+}
+
 .message {
   max-width: 760px;
   margin: 0 auto;

@@ -17,9 +17,15 @@ function MarkdownRenderer({ content }: Props): React.JSX.Element {
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { languages: HIGHLIGHT_LANGUAGES }]]}
         components={{
-          a: ({ href, children }) => (
-            <a href={href} target="_blank" rel="noopener noreferrer">{children}</a>
-          ),
+          a: ({ href, children }) => {
+            const safe = safeHref(href)
+            if (!safe) {
+              // Never render javascript:/data: links; the renderer holds
+              // privileged window.api access.
+              return <span>{children}</span>
+            }
+            return <a href={safe} target="_blank" rel="noopener noreferrer">{children}</a>
+          },
           pre: ({ children }) => (
             <div className="code-block-wrapper">
               <div className="code-block-header">
@@ -35,6 +41,20 @@ function MarkdownRenderer({ content }: Props): React.JSX.Element {
       </ReactMarkdown>
     </div>
   )
+}
+
+/** Allow only http(s)/mailto and relative links; block scriptable schemes. */
+function safeHref(href: string | undefined): string | null {
+  if (!href) return null
+  const trimmed = href.trim()
+  if (!trimmed) return null
+  try {
+    const protocol = new URL(trimmed, 'https://base.invalid').protocol
+    if (protocol === 'http:' || protocol === 'https:' || protocol === 'mailto:') return trimmed
+    return null
+  } catch {
+    return null
+  }
 }
 
 // Streaming appends content one chunk at a time; memoizing keeps earlier

@@ -36,4 +36,28 @@ describe('permission store', () => {
     usePermissionStore.getState().resolve('perm-999', true)
     expect(usePermissionStore.getState().pending).toHaveLength(0)
   })
+
+  it('auto-denies and removes a request when its signal aborts', async () => {
+    const controller = new AbortController()
+    const promise = usePermissionStore.getState().request(
+      { type: 'shell_exec', description: 'Run' },
+      controller.signal
+    )
+    expect(usePermissionStore.getState().pending).toHaveLength(1)
+
+    controller.abort()
+    await expect(promise).resolves.toBe(false)
+    expect(usePermissionStore.getState().pending).toHaveLength(0)
+  })
+
+  it('resolves false immediately for an already-aborted signal', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const promise = usePermissionStore.getState().request(
+      { type: 'shell_exec', description: 'Run' },
+      controller.signal
+    )
+    await expect(promise).resolves.toBe(false)
+    expect(usePermissionStore.getState().pending).toHaveLength(0)
+  })
 })

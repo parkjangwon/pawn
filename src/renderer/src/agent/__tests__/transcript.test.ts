@@ -102,6 +102,22 @@ describe('toClaudeMessages', () => {
   it('skips empty assistant turns', () => {
     expect(toClaudeMessages([{ role: 'assistant', content: '' }])).toEqual([])
   })
+
+  it('converts screenshot data URLs into image blocks', () => {
+    const out = toClaudeMessages([
+      { role: 'tool', toolCallId: 's1', name: 'computer_screenshot', content: 'data:image/png;base64,AAAA' }
+    ])
+    expect(out).toHaveLength(1)
+    const blocks = out[0].content as Array<Record<string, unknown>>
+    expect(blocks[0]).toMatchObject({
+      type: 'tool_result',
+      tool_use_id: 's1',
+      is_error: false
+    })
+    expect(blocks[0].content).toEqual([
+      { type: 'image', source: { type: 'base64', media_type: 'image/png', data: 'AAAA' } }
+    ])
+  })
 })
 
 describe('toOpenAIMessages', () => {
@@ -120,6 +136,21 @@ describe('toOpenAIMessages', () => {
   it('drops empty assistant turns without tool calls', () => {
     expect(toOpenAIMessages([{ role: 'assistant', content: '' }])).toEqual([])
   })
+
+  it('converts screenshot data URLs into image_url parts', () => {
+    const out = toOpenAIMessages([
+      { role: 'tool', toolCallId: 's1', name: 'computer_screenshot', content: 'data:image/jpeg;base64,BBBB' }
+    ])
+    expect(out[0]).toEqual({
+      role: 'tool',
+      tool_call_id: 's1',
+      content: 'Screenshot captured and attached.'
+    })
+    expect(out[1]).toEqual({
+      role: 'user',
+      content: [{ type: 'image_url', image_url: { url: 'data:image/jpeg;base64,BBBB' } }]
+    })
+  })
 })
 
 describe('sanitizeForSend', () => {
@@ -137,5 +168,16 @@ describe('sanitizeForSend', () => {
       { role: 'tool', toolCallId: 't1', name: 'edit_file', content: 'ok' }
     ]
     expect(sanitizeForSend(entries)).toEqual(entries)
+  })
+
+  it('trims only the trailing unanswered round, keeping earlier answered calls', () => {
+    const entries: TranscriptEntry[] = [
+      { role: 'assistant', content: '', toolCalls: [{ id: 'a', name: 'read_file', arguments: {} }] },
+      { role: 'tool', toolCallId: 'a', name: 'read_file', content: 'ok' },
+      { role: 'assistant', content: '', toolCalls: [{ id: 'b', name: 'edit_file', arguments: {} }] }
+    ]
+    const out = sanitizeForSend(entries)
+    expect(out).toHaveLength(2)
+    expect(out[1]).toEqual(entries[1])
   })
 })

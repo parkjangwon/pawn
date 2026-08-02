@@ -14,7 +14,7 @@ beforeEach(() => {
   saveMock.mockClear()
   loadMock.mockClear()
   powerMock.mockClear()
-  usePrefsStore.setState({ sleepPrevention: 'off' })
+  usePrefsStore.setState({ sleepPrevention: 'off', initialized: false })
 })
 
 describe('prefs store', () => {

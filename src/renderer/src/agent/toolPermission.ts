@@ -41,7 +41,8 @@ export type PermissionMode = 'ask' | 'auto' | 'yolo'
 
 export async function checkPermission(
   callName: string,
-  args: Record<string, unknown>
+  args: Record<string, unknown>,
+  signal?: AbortSignal
 ): Promise<boolean> {
   const mode = useProviderStore.getState().permissionMode
   if (mode === 'yolo') return true
@@ -81,20 +82,23 @@ export async function checkPermission(
     app_toggle_theme: 'Toggle Theme'
   }
 
-  const approved = await usePermissionStore.getState().request({
-    type: (() => {
-      const map: Record<string, string> = {
-        computer_screenshot: 'computer_use', computer_click: 'computer_use', computer_type: 'computer_use', computer_keypress: 'computer_use',
-        browser_eval: 'browser', browser_click: 'browser', browser_fill: 'browser', browser_open_external: 'browser',
-        shell_exec: 'shell_exec',
-        write_file: 'file_write', edit_file: 'file_write',
-        app_open_tab: 'app', app_close_tab: 'app', app_list_automations: 'app', app_create_automation: 'app', app_set_model: 'app',
-        app_set_permission_mode: 'app', app_set_reasoning: 'app', app_toggle_theme: 'app'
-      }
-      return map[callName] || 'file_read'
-    })() as PermissionType,
-    description: typeLabels[callName] || callName,
-    details: JSON.stringify(args, null, 2).slice(0, 500)
-  })
+  const approved = await usePermissionStore.getState().request(
+    {
+      type: (() => {
+        const map: Record<string, string> = {
+          computer_screenshot: 'computer_use', computer_click: 'computer_use', computer_type: 'computer_use', computer_keypress: 'computer_use',
+          browser_eval: 'browser', browser_click: 'browser', browser_fill: 'browser', browser_open_external: 'browser',
+          shell_exec: 'shell_exec',
+          write_file: 'file_write', edit_file: 'file_write',
+          app_open_tab: 'app', app_close_tab: 'app', app_list_automations: 'app', app_create_automation: 'app', app_set_model: 'app',
+          app_set_permission_mode: 'app', app_set_reasoning: 'app', app_toggle_theme: 'app'
+        }
+        return map[callName] || 'file_read'
+      })() as PermissionType,
+      description: typeLabels[callName] || callName,
+      details: JSON.stringify(args, null, 2).slice(0, 500)
+    },
+    signal
+  )
   return approved
 }

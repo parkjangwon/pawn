@@ -10,7 +10,7 @@ beforeEach(() => {
   ;(window as any).api = { config: { save: saveMock, load: loadMock } }
   saveMock.mockClear()
   loadMock.mockClear()
-  useThemeStore.setState({ theme: 'system', systemDark: false })
+  useThemeStore.setState({ theme: 'system', systemDark: false, initialized: false })
 })
 
 describe('theme store', () => {
@@ -45,6 +45,7 @@ describe('theme store', () => {
     await useThemeStore.getState().init()
     expect(useThemeStore.getState().theme).toBe('system')
 
+    useThemeStore.setState({ initialized: false })
     loadMock.mockResolvedValue({ settings: { theme: 'light' } })
     await useThemeStore.getState().init()
     expect(useThemeStore.getState().theme).toBe('light')

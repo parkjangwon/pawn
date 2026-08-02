@@ -7,6 +7,7 @@ import { useThemeStore } from '../../stores/theme'
 
 const fsMock = {
   readFile: vi.fn(),
+  readFiles: vi.fn(),
   writeFile: vi.fn(),
   listDir: vi.fn(),
   walk: vi.fn(),
@@ -37,6 +38,12 @@ beforeEach(() => {
   useProviderStore.setState({ permissionMode: 'ask' })
   usePermissionStore.setState({ pending: [] })
   for (const fn of Object.values(fsMock)) fn.mockReset()
+  fsMock.readFiles.mockImplementation((paths: string[]) =>
+    Promise.all(paths.map(async (p: string) => {
+      const r = await fsMock.readFile(p)
+      return typeof r === 'string' ? { path: p, content: r } : { path: p, error: String(r?.error || 'read failed') }
+    }))
+  )
   shellMock.exec.mockReset()
   routineMock.list.mockReset()
   routineMock.add.mockReset()
@@ -81,6 +88,29 @@ describe('permission gating', () => {
     const result = await promise
     expect(result.isError).toBe(true)
     expect(result.content).toContain('Permission denied')
+    expect(fsMock.writeFile).not.toHaveBeenCalled()
+  })
+
+  it('aborts a pending permission request when the signal fires', async () => {
+    const controller = new AbortController()
+    fsMock.writeFile.mockResolvedValue({ ok: true })
+    const promise = executeTool(call('write_file', { path: '/x.ts', content: 'c' }), undefined, controller.signal)
+    expect(usePermissionStore.getState().pending).toHaveLength(1)
+
+    controller.abort()
+    const result = await promise
+    expect(result.isError).toBe(true)
+    expect(result.content).toContain('Permission denied')
+    expect(fsMock.writeFile).not.toHaveBeenCalled()
+    expect(usePermissionStore.getState().pending).toHaveLength(0)
+  })
+
+  it('skips execution entirely for an already-aborted signal', async () => {
+    const controller = new AbortController()
+    controller.abort()
+    const result = await executeTool(call('write_file', { path: '/x.ts', content: 'c' }), undefined, controller.signal)
+    expect(result.isError).toBe(true)
+    expect(result.content).toContain('aborted')
     expect(fsMock.writeFile).not.toHaveBeenCalled()
   })
 
@@ -203,6 +233,17 @@ describe('search tools', () => {
     fsMock.walk.mockResolvedValue([{ path: '/p/readme.md', name: 'readme.md', isDirectory: false }])
     const result = await executeTool(call('search_files', { pattern: '*.css' }), '/p')
     expect(result.content).toContain('No files found')
+  })
+
+  it('matches Windows-style paths with forward-slash globs', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    fsMock.walk.mockResolvedValue([
+      { path: 'C:\\proj\\src\\a.ts', name: 'a.ts', isDirectory: false },
+      { path: 'C:\\proj\\src\\deep\\b.ts', name: 'b.ts', isDirectory: false }
+    ])
+    const result = await executeTool(call('search_files', { pattern: 'src/*.ts' }), 'C:\\proj')
+    expect(result.content).toContain('C:\\proj\\src\\a.ts')
+    expect(result.content).not.toContain('deep')
   })
 
   it('greps file contents and reports line matches', async () => {

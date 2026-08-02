@@ -18,7 +18,14 @@ import './Settings.css'
 
 type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'routines' | 'system' | 'shortcuts' | 'data'
 type SettingsSkillScope = 'all' | 'project' | 'device' | 'builtin'
-type SourceSignalId = 'project-claude' | 'project-rules' | 'project-plugins' | 'user-claude' | 'user-skills'
+type SourceSignalId =
+  | 'project-claude'
+  | 'project-rules'
+  | 'project-plugins'
+  | 'user-claude'
+  | 'user-skills'
+  | 'user-agents'
+  | 'user-agents-skills'
 type SettingsDeleteTarget =
   | { type: 'provider'; id: string; name: string }
   | { type: 'model'; id: string; name: string }
@@ -315,9 +322,20 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
       ])
       rows.push({ id: 'user-claude', path: userClaudePath, detected: hasUserClaude })
       rows.push({ id: 'user-skills', path: userSkillsPath, detected: userSkillCount > 0, details: userSkillCount > 0 ? `${userSkillCount}` : undefined })
+
+      const userAgentsMdPath = `${homeDir}/.agents/AGENTS.md`
+      const userAgentsSkillsPath = `${homeDir}/.agents/skills`
+      const [hasUserAgentsMd, userAgentsSkillCount] = await Promise.all([
+        fileExists(userAgentsMdPath),
+        countSubdirs(userAgentsSkillsPath)
+      ])
+      rows.push({ id: 'user-agents', path: userAgentsMdPath, detected: hasUserAgentsMd })
+      rows.push({ id: 'user-agents-skills', path: userAgentsSkillsPath, detected: userAgentsSkillCount > 0, details: userAgentsSkillCount > 0 ? `${userAgentsSkillCount}` : undefined })
     } else {
       rows.push({ id: 'user-claude', path: '', detected: false })
       rows.push({ id: 'user-skills', path: '', detected: false })
+      rows.push({ id: 'user-agents', path: '', detected: false })
+      rows.push({ id: 'user-agents-skills', path: '', detected: false })
     }
     return rows
   }

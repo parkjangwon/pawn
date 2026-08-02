@@ -1,10 +1,12 @@
 import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron'
-import { getMainWindow } from '../window'
+import { getHeadlessWindow, getMainWindow } from '../window'
 
-/** Only the app's own main window may invoke privileged IPC. */
+/** Only the app's own main window (or the hidden routine runner) may invoke privileged IPC. */
 export function isTrustedSender(event: { sender: WebContents }): boolean {
   const win = getMainWindow()
-  return win !== null && event.sender === win.webContents
+  if (win && event.sender === win.webContents) return true
+  const hw = getHeadlessWindow()
+  return hw !== null && event.sender === hw.webContents
 }
 
 /** ipcMain.handle wrapper that rejects calls from any untrusted webContents. */

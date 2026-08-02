@@ -54,6 +54,7 @@
     "noProvider": "プロバイダーが設定されていません",
     "taskComplete": "タスク完了",
     "modelSelected": "モデルが選択されました",
+    "showEarlier": "以前のメッセージを表示 ({{count}}件)",
     "suggestions": {
       "summarize": "プロジェクト構造を読んで要約",
       "searchWeb": "AIエージェントの最新ニュースを検索",
@@ -274,7 +275,9 @@
         "project-rules": ".claude/rules のMarkdownファイル",
         "project-plugins": ".claude/plugins ディレクトリ",
         "user-claude": "~/.claude/CLAUDE.md",
-        "user-skills": "~/.claude/skills ディレクトリ"
+        "user-skills": "~/.claude/skills ディレクトリ",
+        "user-agents": "~/.agents/AGENTS.md",
+        "user-agents-skills": "~/.agents/skills ディレクトリ"
       },
       "scopeLabel": "スキル範囲",
       "scope": {

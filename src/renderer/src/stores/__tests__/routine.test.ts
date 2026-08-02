@@ -36,7 +36,7 @@ beforeEach(() => {
   ;(window as any).api = {
     routine: routineApi,
     notification: { send: notifyMock },
-    db: { addProject: vi.fn(), addSession: vi.fn() }
+    db: { addProject: vi.fn().mockResolvedValue({ ok: true }), addSession: vi.fn().mockResolvedValue({ ok: true }) }
   }
   for (const fn of Object.values(routineApi)) fn.mockReset()
   notifyMock.mockReset()

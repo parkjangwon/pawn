@@ -230,6 +230,10 @@ async function agentLoop(
   set: (fn: (s: ChatState) => Partial<ChatState>) => void,
   get: () => ChatState
 ): Promise<void> {
+  // A live loop owns the turn; only an aborted one may be replaced. This makes
+  // concurrent agent loops impossible even if two send paths race.
+  if (abortController && !abortController.signal.aborted) return
+
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
     systemError(projectId, sessionId, 'No provider or model configured. Open Settings → Providers, then Settings → Models.')
@@ -238,8 +242,13 @@ async function agentLoop(
     return
   }
 
-  abortController = new AbortController()
-  const signal = abortController.signal
+  // Each loop owns its controller. `abortController` points at the newest loop
+  // so Stop/steer always abort the live one; the finally below only clears the
+  // reference if this loop is still the newest (a stale loop must never
+  // clobber the controller or the streaming flags of its replacement).
+  const controller = new AbortController()
+  abortController = controller
+  const signal = controller.signal
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -440,13 +449,17 @@ async function agentLoop(
 
       const resultsById = new Map<string, ToolResult>()
       if (safe.length > 0 && !signal.aborted) {
-        const settled = await Promise.all(safe.map((tc) => executeTool(tc, projectPath)))
+        const settled = await Promise.all(safe.map((tc) => executeTool(tc, projectPath, signal)))
         safe.forEach((tc, i) => resultsById.set(tc.id, settled[i]))
       }
       for (const tc of risky) {
         if (signal.aborted) break
-        resultsById.set(tc.id, await executeTool(tc, projectPath))
+        resultsById.set(tc.id, await executeTool(tc, projectPath, signal))
       }
+
+      // Aborted during tool execution: drop the round's tool log entries so a
+      // stopped turn never pollutes the transcript with half-run results.
+      if (signal.aborted) break
 
       let roundErrors = 0
       for (const tc of result.toolCalls) {
@@ -489,11 +502,16 @@ async function agentLoop(
       systemError(projectId, sessionId, 'Agent loop error: ' + String(err))
     }
   } finally {
+    const isCurrent = abortController === controller
+    if (isCurrent) abortController = null
     const aborted = signal.aborted
-    set(() => ({ isStreaming: false, streamingSessionId: null }))
-    abortController = null
-    if (!aborted) {
-      window.api.notification.send('pawn', 'Task complete')
+    if (isCurrent) {
+      set(() => ({ isStreaming: false, streamingSessionId: null }))
+      if (!aborted) {
+        window.api.notification.send('pawn', 'Task complete').catch(() => {})
+      }
+      // Drain the queue even after a manual stop: queued messages were
+      // explicitly scheduled and must not wait for the next user input.
       processQueue(set, get)
     }
   }
@@ -515,6 +533,12 @@ function processQueue(
   set((s) => ({ queue: s.queue.slice(1) }))
 
   setTimeout(() => {
+    // A newer message grabbed the turn while we waited (e.g. steer right after
+    // Stop). Keep the item queued instead of starting a second concurrent loop.
+    if (get().isStreaming) {
+      set((s) => ({ queue: [next, ...s.queue] }))
+      return
+    }
     // The bubble was rendered when the message was queued; going back through
     // sendMessage would render it a second time.
     if (!next.displayed) {

@@ -70,6 +70,31 @@ describe('loadProjectContext', () => {
     expect(ctx.skills[0].content).toBe('project version')
   })
 
+  it('loads user-level ~/.agents AGENTS.md and skills', async () => {
+    const root = '/p5/'
+    files.set('/home/user/.agents/AGENTS.md', 'global agent rules')
+    files.set('/home/user/.agents/skills', dir([{ name: 'git', path: '/home/user/.agents/skills/git', isDirectory: true }]))
+    files.set('/home/user/.agents/skills/git/SKILL.md', '---\ndescription: Git helpers\n---\nfull body')
+
+    const ctx = await loadProjectContext(root)
+    expect(ctx.systemAdditions).toContain('[User ~/.agents/AGENTS.md]\nglobal agent rules')
+    expect(ctx.skills).toHaveLength(1)
+    expect(ctx.skills[0].name).toBe('git')
+    await expect(readSkill(root, 'git')).resolves.toContain('full body')
+  })
+
+  it('prefers ~/.agents skills over ~/.claude on user-scope collisions', async () => {
+    const root = '/p6/'
+    files.set('/home/user/.claude/skills', dir([{ name: 'shared', path: '/home/user/.claude/skills/shared', isDirectory: true }]))
+    files.set('/home/user/.claude/skills/shared/SKILL.md', 'claude version')
+    files.set('/home/user/.agents/skills', dir([{ name: 'shared', path: '/home/user/.agents/skills/shared', isDirectory: true }]))
+    files.set('/home/user/.agents/skills/shared/SKILL.md', 'agents version')
+
+    const ctx = await loadProjectContext(root)
+    expect(ctx.skills).toHaveLength(1)
+    expect(ctx.skills[0].content).toBe('agents version')
+  })
+
   it('caches context within the TTL', async () => {
     const root = '/p4/'
     files.set(`${root}CLAUDE.md`, 'v1')

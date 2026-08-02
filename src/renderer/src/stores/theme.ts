@@ -7,6 +7,7 @@ interface ThemeState {
   theme: Theme
   /** Current OS preference, kept fresh while in system mode. */
   systemDark: boolean
+  initialized: boolean
   toggle: () => void
   set: (theme: Theme) => void
   init: () => Promise<void>
@@ -23,6 +24,7 @@ function systemPrefersDark(): boolean {
 export const useThemeStore = create<ThemeState>((set, get) => ({
   theme: 'system',
   systemDark: systemPrefersDark(),
+  initialized: false,
 
   toggle: () => {
     const s = get()
@@ -38,6 +40,10 @@ export const useThemeStore = create<ThemeState>((set, get) => ({
   },
 
   init: async () => {
+    // StrictMode double-mounts effects in dev; only one init (and one media
+    // query listener) may ever run.
+    if (get().initialized) return
+    set({ initialized: true })
     // Read the current OS preference and follow it live while on 'system'.
     try {
       const mq = window.matchMedia?.('(prefers-color-scheme: dark)')

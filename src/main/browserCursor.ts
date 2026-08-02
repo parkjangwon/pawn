@@ -93,6 +93,7 @@ const CURSOR_INJECT_JS = `(function(){
 })()`
 
 export function injectAICursor(wc: WebContents): void {
+  if (wc.isDestroyed()) return
   wc.executeJavaScript(CURSOR_INJECT_JS, true).catch(() => {})
 }
 
@@ -103,6 +104,7 @@ export function cursorShow(
   mode: 'move' | 'click' | 'type' | 'loading' | 'arrive',
   holdMs?: number
 ): void {
+  if (wc.isDestroyed()) return
   wc.executeJavaScript(
     `window.__pawnCursor && window.__pawnCursor.show(${Math.round(x)}, ${Math.round(y)}, ${JSON.stringify(mode)}, ${holdMs ?? 'null'})`,
     true
@@ -110,5 +112,6 @@ export function cursorShow(
 }
 
 export function cursorHide(wc: WebContents): void {
+  if (wc.isDestroyed()) return
   wc.executeJavaScript('window.__pawnCursor && window.__pawnCursor.hide()', true).catch(() => {})
 }
