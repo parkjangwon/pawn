@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
 import { clearSessionRoute } from '../agent/router'
+import { useUsageStore } from './usage'
 
 export interface Session {
   id: string
@@ -43,12 +44,24 @@ interface AppState {
   setActiveSession: (id: string) => void
   loadMessages: (projectId: string, sessionId: string) => Promise<void>
   addMessage: (projectId: string, sessionId: string, message: Message) => void
-  updateMessageContent: (projectId: string, sessionId: string, messageId: string, content: string) => void
+  updateMessageContent: (
+    projectId: string,
+    sessionId: string,
+    messageId: string,
+    content: string,
+    persist?: boolean
+  ) => void
   updateMessageModel: (projectId: string, sessionId: string, messageId: string, modelLabel: string) => void
   removeMessage: (projectId: string, sessionId: string, messageId: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
   clearMessages: (projectId: string, sessionId: string) => void
 }
+
+// Streaming updates the bubble at up to 60 Hz; persisting each frame would push
+// hundreds of full-text IPC writes through the main process. Intermediate
+// writes are throttled; the final flush always persists.
+const MESSAGE_PERSIST_INTERVAL_MS = 800
+const messagePersistTimes = new Map<string, number>()
 
 export const useAppStore = create<AppState>((set, get) => ({
   projects: [],
@@ -85,15 +98,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     id = id || uid()
     const project: Project = { id, name, paths, sessions: [] }
     set((s) => ({ projects: [...s.projects, project], activeProjectId: id }))
-    window.api.db.addProject(id, name, JSON.stringify(paths))
+    window.api.db.addProject(id, name, JSON.stringify(paths)).catch(() => {})
   },
 
   removeProject: (id) => {
+    for (const s of get().projects.find((p) => p.id === id)?.sessions || []) {
+      useUsageStore.getState().reset(s.id)
+    }
     set((s) => ({
       projects: s.projects.filter((p) => p.id !== id),
       activeProjectId: s.activeProjectId === id ? null : s.activeProjectId
     }))
-    window.api.db.removeProject(id)
+    window.api.db.removeProject(id).catch(() => {})
   },
 
   setActiveProject: (id) => set({ activeProjectId: id }),
@@ -102,14 +118,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     set((s) => ({
       projects: s.projects.map((p) => p.id === projectId ? { ...p, name } : p)
     }))
-    window.api.db.updateProjectName(projectId, name)
+    window.api.db.updateProjectName(projectId, name).catch(() => {})
   },
 
   updateProjectPaths: (projectId, paths) => {
     set((s) => ({
       projects: s.projects.map((p) => p.id === projectId ? { ...p, paths } : p)
     }))
-    window.api.db.updateProjectPaths(projectId, JSON.stringify(paths))
+    window.api.db.updateProjectPaths(projectId, JSON.stringify(paths)).catch(() => {})
   },
 
   addSession: (projectId, title, opts) => {
@@ -127,11 +143,12 @@ export const useAppStore = create<AppState>((set, get) => ({
       // New sessions start as already "loaded" since they have no messages in DB yet
       loadedSessions: new Set([...s.loadedSessions, id])
     }))
-    window.api.db.addSession(id, projectId, session.title, '')
+    window.api.db.addSession(id, projectId, session.title, '').catch(() => {})
     return id
   },
 
   removeSession: (projectId, sessionId) => {
+    useUsageStore.getState().reset(sessionId)
     set((s) => {
       const next = new Set(s.loadedSessions)
       next.delete(sessionId)
@@ -143,7 +160,7 @@ export const useAppStore = create<AppState>((set, get) => ({
         loadedSessions: next
       }
     })
-    window.api.db.removeSession(sessionId)
+    window.api.db.removeSession(sessionId).catch(() => {})
   },
 
   setActiveSession: (id) => {
@@ -188,10 +205,10 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
-    window.api.db.addMessage(message.id, sessionId, message.role, message.content)
+    window.api.db.addMessage(message.id, sessionId, message.role, message.content).catch(() => {})
   },
 
-  updateMessageContent: (projectId, sessionId, messageId, content) => {
+  updateMessageContent: (projectId, sessionId, messageId, content, persist = true) => {
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId
@@ -199,7 +216,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
-    window.api.db.updateMessageContent(messageId, content)
+    const now = Date.now()
+    const last = messagePersistTimes.get(messageId) || 0
+    if (persist || now - last >= MESSAGE_PERSIST_INTERVAL_MS) {
+      messagePersistTimes.set(messageId, now)
+      window.api.db.updateMessageContent(messageId, content).catch(() => {})
+    }
   },
 
   updateMessageModel: (projectId, sessionId, messageId, modelLabel) => {
@@ -213,6 +235,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   removeMessage: (projectId, sessionId, messageId) => {
+    messagePersistTimes.delete(messageId)
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId
@@ -220,7 +243,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
-    window.api.db.deleteMessage(messageId)
+    window.api.db.deleteMessage(messageId).catch(() => {})
   },
 
   updateSessionTitle: (projectId, sessionId, title) => {
@@ -229,10 +252,11 @@ export const useAppStore = create<AppState>((set, get) => ({
         p.id === projectId ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, title } : ss) } : p
       )
     }))
-    window.api.db.updateSessionTitle(sessionId, title)
+    window.api.db.updateSessionTitle(sessionId, title).catch(() => {})
   },
 
   clearMessages: (projectId, sessionId) => {
+    useUsageStore.getState().reset(sessionId)
     set((s) => ({
       projects: s.projects.map((p) =>
         p.id === projectId
@@ -242,7 +266,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }))
     // Also drops the replayed API transcript on the backend, so a cleared
     // session really starts cold instead of silently resending the old thread.
-    window.api.db.clearMessages(sessionId)
+    window.api.db.clearMessages(sessionId).catch(() => {})
     clearSessionRoute(sessionId)
   }
 }))

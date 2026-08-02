@@ -4,6 +4,7 @@ import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
+import { useStreamingStore } from '../stores/streaming'
 import type { TriggerItem } from './TriggerMenu'
 import ProjectEditDialog from './ProjectEditDialog'
 import { loadProjectContext, type LoadedSkill } from '../agent/skills'
@@ -20,6 +21,11 @@ interface ChatAreaProps {
   onOpenSettings: () => void
 }
 
+// Long sessions render only the tail; scrolling to the top reveals older
+// messages in batches. New messages always append to the visible window.
+const DEFAULT_VISIBLE_MESSAGES = 300
+const EARLIER_BATCH = 300
+
 export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaProps): React.JSX.Element {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
@@ -33,6 +39,8 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [showUsagePopover, setShowUsagePopover] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const stickToBottomRef = useRef(true)
+  const lastMessageIdRef = useRef<string | undefined>(undefined)
   const projectPickerRef = useRef<HTMLDivElement>(null)
   const permPickerRef = useRef<HTMLDivElement>(null)
   const modelPickerRef = useRef<HTMLDivElement>(null)
@@ -44,6 +52,8 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [fileIndex, setFileIndex] = useState<Array<{ name: string; path: string; rel: string }>>([])
   const [filesLoading, setFilesLoading] = useState(false)
   const [skills, setSkills] = useState<LoadedSkill[]>([])
+  const [startIndex, setStartIndex] = useState<number | null>(null)
+  const [nearTop, setNearTop] = useState(false)
   const [showProjectMenu, setShowProjectMenu] = useState(false)
   const [showProjectEdit, setShowProjectEdit] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -54,6 +64,12 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
   const messages = activeSession?.messages || []
   const effectivePath = activeProject?.paths?.[0] || ''
+  const lastMessage = messages[messages.length - 1]
+  const tailStart = Math.max(0, messages.length - DEFAULT_VISIBLE_MESSAGES)
+  const effectiveStart = startIndex === null
+    ? tailStart
+    : Math.min(startIndex, messages.length)
+  const streamingTail = useStreamingStore((s) => (lastMessage ? s.content[lastMessage.id] : undefined))
 
   // Detect git branch
   useEffect(() => {
@@ -64,10 +80,36 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   }, [effectivePath])
 
   // Current model label
-  // Scroll to bottom on new messages AND on content updates (streaming).
+  // Scroll to bottom on new messages AND on content updates (streaming). While
+  // streaming, jump instantly instead of restarting a smooth animation on every
+  // token, and never yank the view away when the user has scrolled up.
+  const lastMessageId = messages[messages.length - 1]?.id
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages.length, isStreaming, messages[messages.length - 1]?.content])
+    if (lastMessageIdRef.current !== lastMessageId) {
+      lastMessageIdRef.current = lastMessageId
+      stickToBottomRef.current = true
+    }
+  }, [lastMessageId])
+
+  // A new session starts with a tail-only window.
+  useEffect(() => {
+    setStartIndex(null)
+    setNearTop(false)
+  }, [activeSessionId])
+
+  useEffect(() => {
+    if (!stickToBottomRef.current) return
+    messagesEndRef.current?.scrollIntoView({ behavior: isStreaming ? 'auto' : 'smooth' })
+  }, [messages.length, isStreaming, lastMessage?.content, streamingTail])
+
+  const handleMessageScroll = (e: React.UIEvent<HTMLDivElement>): void => {
+    const el = e.currentTarget
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    stickToBottomRef.current = nearBottom
+    setNearTop(el.scrollTop < 40)
+    // Reached the bottom: drop the earlier-messages window and follow the tail.
+    if (nearBottom && startIndex !== null) setStartIndex(null)
+  }
 
   // Close any open dropdown when the user presses outside of it.
   const anyDropdownOpen = showProjectPicker || showPermPicker || showModelPicker || showUsagePopover
@@ -365,7 +407,15 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
           onPick={(text) => { setInput(text); setTrigger(null) }}
         />
       ) : (
-        <MessageList messages={messages} isStreaming={isStreaming} endRef={messagesEndRef} />
+        <MessageList
+          messages={messages}
+          isStreaming={isStreaming}
+          endRef={messagesEndRef}
+          startIndex={effectiveStart}
+          nearTop={nearTop}
+          onShowEarlier={() => setStartIndex(Math.max(0, effectiveStart - EARLIER_BATCH))}
+          onScroll={handleMessageScroll}
+        />
       )}
       <Composer
         activeSession={!!activeSession}

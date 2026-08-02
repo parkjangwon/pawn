@@ -10,6 +10,7 @@ const api = {
   // File System
   fs: {
     readFile: (path: string) => ipcRenderer.invoke('fs:readFile', path),
+    readFiles: (paths: string[]) => ipcRenderer.invoke('fs:readFiles', paths),
     writeFile: (path: string, content: string) => ipcRenderer.invoke('fs:writeFile', path, content),
     listDir: (path: string) => ipcRenderer.invoke('fs:listDir', path),
     stat: (path: string) => ipcRenderer.invoke('fs:stat', path),
@@ -78,15 +79,10 @@ const api = {
     requestAccessibility: () => ipcRenderer.invoke('permission:requestAccessibility')
   },
 
-  // Scheduling
-  schedule: {
-    add: (id: string, intervalMs: number, payload: unknown) =>
-      ipcRenderer.invoke('schedule:add', id, intervalMs, payload),
-    remove: (id: string) => ipcRenderer.invoke('schedule:remove', id),
-    list: () => ipcRenderer.invoke('schedule:list'),
-    onTick: (callback: (data: { id: string; payload: unknown }) => void) => {
-      ipcRenderer.on('schedule:tick', (_, data) => callback(data))
-    }
+  // Hidden-window handshake: the renderer signals that its routine listeners
+  // are registered so the main process can deliver pending headless fires.
+  headless: {
+    ready: () => ipcRenderer.send('headless:ready')
   },
 
   // Config (TOML)

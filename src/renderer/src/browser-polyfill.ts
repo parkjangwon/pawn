@@ -22,6 +22,14 @@ if (typeof window !== 'undefined' && !window.api) {
         if (typeof result === 'string') return result
         return result as { error: string }
       },
+      readFiles: async (paths: string[]) => {
+        const results = await Promise.all(paths.map(async (path) => {
+          const result = await fsPost('readFile', { path })
+          if (typeof result === 'string') return { path, content: result }
+          return { path, error: (result as { error: string }).error }
+        }))
+        return results
+      },
       writeFile: async (path: string, content: string) => {
         return await fsPost('writeFile', { path, content }) as { ok?: boolean; error?: string }
       },
@@ -76,11 +84,8 @@ if (typeof window !== 'undefined' && !window.api) {
       checkAccessibility: async () => true,
       requestAccessibility: async () => true
     },
-    schedule: {
-      add: async () => ({ ok: true }),
-      remove: async () => ({ ok: true }),
-      list: async () => [],
-      onTick: () => {}
+    headless: {
+      ready: () => {}
     },
 
     // Config (TOML via HTTP)

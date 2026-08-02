@@ -66,7 +66,12 @@ export function noteProviderSuccess(providerId: string): void {
 
 export function isProviderAvailable(providerId: string): boolean {
   const h = health.get(providerId)
-  return !h || h.cooldownUntil <= Date.now()
+  if (!h) return true
+  if (h.cooldownUntil <= Date.now()) {
+    health.delete(providerId)
+    return true
+  }
+  return false
 }
 
 export function providerCooldownRemaining(providerId: string): number {

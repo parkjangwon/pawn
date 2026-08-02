@@ -12,7 +12,7 @@ A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI
 - **BYOK** — Register any OpenAI or Claude compatible API endpoint.
 - **Auto mode** — Multi-model routing based on task complexity and cache optimization.
 - **Open source** — MIT licensed, fully customizable.
-- **Claude Code compatible** — Loads `CLAUDE.md`, `.claude/skills/`, `.claude/rules/`, and `.agent/` directories.
+- **Claude Code compatible** — Loads `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, and `~/.agents/` directories.
 
 ## Installation
 
@@ -89,6 +89,7 @@ pawn
 ### Extensibility
 - Claude Code skill format (`.claude/skills/*/SKILL.md`).
 - Codex-compatible `.agent/` directory.
+- OpenAI Agents user context (`~/.agents/AGENTS.md`, `~/.agents/skills/`).
 - `CLAUDE.md` / `CLAUDE.local.md` project context.
 - `.claude/rules/*.md` rule files.
 

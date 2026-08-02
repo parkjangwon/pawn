@@ -89,6 +89,11 @@ function initSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_usage_created ON usage(created_at);
     CREATE INDEX IF NOT EXISTS idx_routines_enabled ON routines(enabled);
   `)
+
+  // The usage ledger grows one row per LLM call forever; prune anything older
+  // than 90 days on every launch so the database does not balloon over time.
+  db.prepare('DELETE FROM usage WHERE created_at < ?')
+    .run(Math.floor(Date.now() / 1000) - 90 * 86400)
 }
 
 // --- Projects ---

@@ -5,14 +5,18 @@ export type SleepPreventionMode = 'off' | 'sleep' | 'display'
 interface PrefsState {
   /** Whether the system is kept awake, and how aggressively. */
   sleepPrevention: SleepPreventionMode
+  initialized: boolean
   init: () => Promise<void>
   setSleepPrevention: (mode: SleepPreventionMode) => void
 }
 
-export const usePrefsStore = create<PrefsState>((set) => ({
+export const usePrefsStore = create<PrefsState>((set, get) => ({
   sleepPrevention: 'off',
+  initialized: false,
 
   init: async () => {
+    if (get().initialized) return
+    set({ initialized: true })
     try {
       const cfg = await window.api.config.load() as Record<string, unknown>
       const saved = (cfg as { settings?: { sleepPrevention?: string } }).settings?.sleepPrevention

@@ -54,6 +54,7 @@
     "noProvider": "설정된 프로바이더가 없습니다",
     "taskComplete": "작업 완료",
     "modelSelected": "모델 선택됨",
+    "showEarlier": "이전 메시지 보기 ({{count}}개)",
     "suggestions": {
       "summarize": "프로젝트 구조를 읽고 요약해줘",
       "searchWeb": "AI 에이전트 관련 최신 뉴스 검색",
@@ -274,7 +275,9 @@
         "project-rules": ".claude/rules 마크다운 파일",
         "project-plugins": ".claude/plugins 디렉터리",
         "user-claude": "~/.claude/CLAUDE.md",
-        "user-skills": "~/.claude/skills 디렉터리"
+        "user-skills": "~/.claude/skills 디렉터리",
+        "user-agents": "~/.agents/AGENTS.md",
+        "user-agents-skills": "~/.agents/skills 디렉터리"
       },
       "scopeLabel": "스킬 범위",
       "scope": {

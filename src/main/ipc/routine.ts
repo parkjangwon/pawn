@@ -1,12 +1,47 @@
-import { ipcMain, powerSaveBlocker } from 'electron'
-import { handleTrusted } from './trust'
-import { getMainWindow } from '../window'
+import { ipcMain, powerSaveBlocker, type WebContents } from 'electron'
+import { handleTrusted, isTrustedSender } from './trust'
+import { closeHeadlessWindow, ensureHeadlessWindow, getHeadlessWindow, getMainWindow } from '../window'
 import * as db from '../db'
 import { loadConfig } from '../config'
 import { computeNextRun, MAX_TIMEOUT_MS, parseSchedule } from '../routineSchedule'
 
 const timers = new Map<string, NodeJS.Timeout>()
 let powerBlockerId: number | null = null
+
+// --- Headless routine execution ---------------------------------------------
+// Routines run in the renderer, so when every window is closed (macOS docked
+// app) a hidden window is spun up to receive routine:fire. The renderer sends
+// headless:ready once its listeners are registered; fires before that are queued.
+const HEADLESS_WATCHDOG_MS = 25 * 60 * 1000
+const headlessActive = new Set<string>()
+let headlessReady = false
+let pendingHeadlessFires: Array<{ row: db.RoutineRow; next: number }> = []
+let headlessWatchdog: NodeJS.Timeout | null = null
+
+function armHeadlessWatchdog(): void {
+  if (headlessWatchdog) clearTimeout(headlessWatchdog)
+  headlessWatchdog = setTimeout(() => {
+    headlessWatchdog = null
+    // Safety net: a crashed renderer never sends recordResult, so force-close
+    // the hidden window and forget the run instead of leaking it forever.
+    closeHeadlessWindow()
+    headlessReady = false
+    headlessActive.clear()
+    pendingHeadlessFires = []
+  }, HEADLESS_WATCHDOG_MS)
+}
+
+function deliverFire(wc: WebContents, row: db.RoutineRow, next: number): void {
+  if (wc.isDestroyed()) return
+  wc.send('routine:fire', { ...row, nextRunAt: next, lastRunAt: Date.now() })
+}
+
+function maybeCloseHeadless(): void {
+  if (headlessActive.size > 0) return
+  closeHeadlessWindow()
+  headlessReady = false
+  pendingHeadlessFires = []
+}
 
 function clearTimer(id: string): void {
   const timer = timers.get(id)
@@ -28,8 +63,18 @@ function armTimer(row: db.RoutineRow): void {
     db.setRoutineRunState(row.id, next, Date.now(), '')
 
     const win = getMainWindow()
-    if (win && !win.isDestroyed()) {
-      win.webContents.send('routine:fire', { ...row, nextRunAt: next, lastRunAt: Date.now() })
+    if (win) {
+      deliverFire(win.webContents, row, next)
+    } else {
+      // No window: run headlessly in a hidden renderer.
+      const hw = ensureHeadlessWindow()
+      headlessActive.add(row.id)
+      armHeadlessWatchdog()
+      if (headlessReady) {
+        deliverFire(hw.webContents, row, next)
+      } else {
+        pendingHeadlessFires.push({ row, next })
+      }
     }
     // Re-arm from the DB so edits made since this timer was scheduled win.
     const fresh = db.getAllRoutines().find((r) => r.id === row.id)
@@ -70,6 +115,19 @@ function applySleepPrevention(mode: string): void {
 }
 
 export function registerRoutineIpc(): void {
+  ipcMain.on('headless:ready', (event) => {
+    if (!isTrustedSender(event)) return
+    if (getMainWindow()) return // The main window path needs no handshake.
+    headlessReady = true
+    const hw = getHeadlessWindow()
+    const queued = pendingHeadlessFires
+    pendingHeadlessFires = []
+    for (const f of queued) {
+      if (hw) deliverFire(hw.webContents, f.row, f.next)
+      else headlessActive.delete(f.row.id)
+    }
+  })
+
   handleTrusted('routine:list', async () => db.getAllRoutines())
 
   handleTrusted('routine:add', async (_, input: {
@@ -135,6 +193,8 @@ export function registerRoutineIpc(): void {
     const schedule = parseSchedule(row.schedule)
     const next = schedule ? computeNextRun(schedule) : row.nextRunAt
     db.setRoutineRunState(id, next, Date.now(), (result || '').slice(0, 2000))
+    headlessActive.delete(id)
+    maybeCloseHeadless()
     return { ok: true }
   })
 
@@ -158,6 +218,14 @@ export function startRoutineServices(): void {
 
 export function stopRoutineServices(): void {
   timers.forEach((_timer, id) => clearTimer(id))
+  if (headlessWatchdog) {
+    clearTimeout(headlessWatchdog)
+    headlessWatchdog = null
+  }
+  headlessActive.clear()
+  pendingHeadlessFires = []
+  closeHeadlessWindow()
+  headlessReady = false
   if (powerBlockerId !== null) {
     powerSaveBlocker.stop(powerBlockerId)
     powerBlockerId = null

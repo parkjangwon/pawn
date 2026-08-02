@@ -12,7 +12,7 @@ Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, 그리고 Claude Desktop
 - **BYOK (개인 키 제공)** — OpenAI 또는 Claude 호환 규격의 모든 API 엔드포인트를 자유롭게 등록하여 사용합니다.
 - **Auto mode (자동 모드)** — 작업 난이도 및 프롬프트 캐시 최적화 알고리즘에 기반한 지능형 멀티 모델 라우팅을 지원합니다.
 - **Open source (오픈 소스)** — MIT 라이선스 하에 배포되며 완전한 커스터마이징이 가능합니다.
-- **Claude Code 호환** — 프로젝트 내의 `CLAUDE.md`, `.claude/skills/`, `.claude/rules/`, 및 `.agent/` 디렉토리를 로드하고 인식합니다.
+- **Claude Code 호환** — 프로젝트 내의 `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, 및 `~/.agents/` 디렉토리를 로드하고 인식합니다.
 
 ## 설치
 
@@ -89,6 +89,7 @@ pawn
 ### 확장성 (Extensibility)
 - Claude Code 스킬 포맷 지원 (`.claude/skills/*/SKILL.md`).
 - Codex 호환 `.agent/` 디렉토리 지원.
+- OpenAI Agents 사용자 컨텍스트 지원 (`~/.agents/AGENTS.md`, `~/.agents/skills/`).
 - 프로젝트 전체 맥락을 잡기 위한 `CLAUDE.md` / `CLAUDE.local.md` 파싱.
 - 프로젝트별 커스텀 규칙 적용을 위한 `.claude/rules/*.md` 연동.
 

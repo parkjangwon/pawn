@@ -7,9 +7,10 @@
 //   .claude/plugins/<name>/{CLAUDE.md, skills/*/SKILL.md, commands/*.md}
 //   skills/*/SKILL.md (Agent Skills), .agent/*.md, .agent/skills/*/SKILL.md
 //
-// User-level sources (~/.claude, when available):
+// User-level sources (~/.claude, ~/.agents, when available):
 //   CLAUDE.md, CLAUDE.local.md, skills/*/SKILL.md, commands/*.md, and every
-//   installed plugin's skills/commands (resolved via installed_plugins.json).
+//   installed plugin's skills/commands (resolved via installed_plugins.json);
+//   AGENTS.md and skills/*/SKILL.md (OpenAI Agents convention).
 
 export type SkillKind = 'skill' | 'command' | 'agent' | 'plugin'
 
@@ -26,6 +27,7 @@ export interface ProjectContext {
 }
 
 const CACHE_TTL = 30_000
+const CACHE_MAX_ENTRIES = 20
 const ctxCache = new Map<string, { at: number; ctx: ProjectContext }>()
 
 async function readText(path: string): Promise<string | null> {
@@ -67,12 +69,18 @@ async function loadPluginDir(pluginDir: string, ctx: ProjectContext): Promise<vo
 export async function loadProjectContext(projectPath?: string): Promise<ProjectContext> {
   const key = projectPath || '__user__'
   const hit = ctxCache.get(key)
-  if (hit && Date.now() - hit.at < CACHE_TTL) return hit.ctx
+  if (hit && Date.now() - hit.at < CACHE_TTL) {
+    // Touch the entry so hot projects are not evicted by insertion order.
+    ctxCache.delete(key)
+    ctxCache.set(key, hit)
+    return hit.ctx
+  }
+  if (hit) ctxCache.delete(key)
 
   const ctx: ProjectContext = { systemAdditions: [], skills: [] }
   const pushSkill = (s: LoadedSkill): void => { ctx.skills.push(s) }
 
-  // --- User-level (~/.claude) ----------------------------------------------
+  // --- User-level (~/.claude + ~/.agents) ----------------------------------
   const home = await window.api.fs.homeDir().catch(() => null)
   if (home) {
     const userClaude = `${home}/.claude`
@@ -102,6 +110,13 @@ export async function loadProjectContext(projectPath?: string): Promise<ProjectC
         // Corrupt manifest — user skills/commands above still work.
       }
     }
+
+    // User-level ~/.agents (OpenAI Agents convention): AGENTS.md + skills.
+    // Loaded after ~/.claude so it wins user-scope skill name collisions.
+    const userAgents = `${home}/.agents`
+    const userAgentsMd = await readText(`${userAgents}/AGENTS.md`)
+    if (userAgentsMd) ctx.systemAdditions.push(`[User ~/.agents/AGENTS.md]\n${userAgentsMd}`)
+    await loadSkillDir(`${userAgents}/skills`, pushSkill)
   }
 
   // --- Project-level --------------------------------------------------------
@@ -158,6 +173,12 @@ export async function loadProjectContext(projectPath?: string): Promise<ProjectC
   }).reverse()
 
   ctxCache.set(key, { at: Date.now(), ctx })
+  if (ctxCache.size > CACHE_MAX_ENTRIES) {
+    for (const k of ctxCache.keys()) {
+      if (ctxCache.size <= CACHE_MAX_ENTRIES) break
+      ctxCache.delete(k)
+    }
+  }
   return ctx
 }
 

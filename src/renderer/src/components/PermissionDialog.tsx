@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePermissionStore } from '../stores/permission'
 import './PermissionDialog.css'
@@ -5,6 +6,17 @@ import './PermissionDialog.css'
 export default function PermissionDialog(): React.JSX.Element | null {
   const { t } = useTranslation()
   const { pending, resolve } = usePermissionStore()
+
+  // Escape denies the current request so a stuck dialog can always be dismissed
+  // without letting the agent wait forever.
+  useEffect(() => {
+    if (pending.length === 0) return
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key === 'Escape') resolve(pending[0].id, false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [pending, resolve])
 
   if (pending.length === 0) return null
 

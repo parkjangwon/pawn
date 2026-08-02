@@ -47,11 +47,15 @@ export function matchesGlob(name: string, pattern: string): boolean {
 }
 
 // Execute a tool call and return the result
-export async function executeTool(call: ToolCall, projectPath?: string): Promise<ToolResult> {
+export async function executeTool(call: ToolCall, projectPath?: string, signal?: AbortSignal): Promise<ToolResult> {
   const api = window.api
 
+  if (signal?.aborted) {
+    return { toolCallId: call.id, content: 'Tool was not executed (run aborted).', isError: true }
+  }
+
   // Check permission before execution
-  const permitted = await checkPermission(call.name, call.arguments)
+  const permitted = await checkPermission(call.name, call.arguments, signal)
   if (!permitted) {
     return { toolCallId: call.id, content: `Permission denied: ${call.name}`, isError: true }
   }
@@ -287,10 +291,13 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         }
         // Match against the path relative to the search root so **/*.ts and
         // src/**/*.css work as expected.
-        const root = rootPath.endsWith('/') ? rootPath : rootPath + '/'
+        // Normalize separators on both sides so Windows paths (backslashes)
+        // compare and glob consistently with forward-slash patterns.
+        const root = (rootPath.endsWith('/') || rootPath.endsWith('\\') ? rootPath : rootPath + '/').replace(/\\/g, '/')
         const files = walkResult.filter((f) => {
           if (f.isDirectory) return false
-          const rel = f.path.startsWith(root) ? f.path.slice(root.length) : f.name
+          const pathNorm = f.path.replace(/\\/g, '/')
+          const rel = pathNorm.startsWith(root) ? pathNorm.slice(root.length) : f.name
           return matchesGlob(rel, pattern)
         })
         if (files.length === 0) return { toolCallId: call.id, content: 'No files found matching: ' + pattern }
@@ -306,11 +313,12 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
         if (!Array.isArray(walkResult2)) {
           return { toolCallId: call.id, content: (walkResult2 as { error: string }).error, isError: true }
         }
-        const grepRoot2 = (grepRoot.endsWith('/') ? grepRoot : grepRoot + '/')
+        const grepRoot2 = (grepRoot.endsWith('/') || grepRoot.endsWith('\\') ? grepRoot : grepRoot + '/').replace(/\\/g, '/')
         const candidates = filePattern
           ? walkResult2.filter((f) => {
               if (f.isDirectory) return false
-              const rel = f.path.startsWith(grepRoot2) ? f.path.slice(grepRoot2.length) : f.name
+              const pathNorm = f.path.replace(/\\/g, '/')
+              const rel = pathNorm.startsWith(grepRoot2) ? pathNorm.slice(grepRoot2.length) : f.name
               return matchesGlob(rel, filePattern)
             })
           : walkResult2.filter((f) => !f.isDirectory)
@@ -321,15 +329,15 @@ export async function executeTool(call: ToolCall, projectPath?: string): Promise
           return { toolCallId: call.id, content: 'Invalid regex pattern: ' + query, isError: true }
         }
         const matches: string[] = []
-        for (const file of candidates.slice(0, 200)) {
+        const reads = await window.api.fs.readFiles(candidates.slice(0, 200).map((f) => f.path))
+        for (const item of reads) {
           if (matches.length >= 50) break
-          const content = await window.api.fs.readFile(file.path)
-          if (typeof content !== 'string') continue
-          const lines = content.split('\n')
+          if (typeof item.content !== 'string') continue
+          const lines = item.content.split('\n')
           for (let i = 0; i < lines.length; i++) {
             regex.lastIndex = 0
             if (regex.test(lines[i])) {
-              matches.push(`${file.path}:${i + 1}: ${lines[i].trim()}`)
+              matches.push(`${item.path}:${i + 1}: ${lines[i].trim()}`)
               if (matches.length >= 50) break
             }
           }

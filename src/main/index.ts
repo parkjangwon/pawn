@@ -5,6 +5,7 @@ import { createMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
 import { startRoutineServices, stopRoutineServices } from './ipc/routine'
 import { initKeybindings, registerShortcutForwarding } from './ipc/keybindings'
+import { closeDb } from './db'
 
 // Must be registered before any webContents is created so every view
 // (main window, embedded browser, DevTools) forwards shortcuts to the app.
@@ -29,7 +30,7 @@ app.whenReady().then(() => {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https:;"
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self'; connect-src 'self' https:;"
         ]
       }
     })
@@ -42,12 +43,20 @@ app.whenReady().then(() => {
   app.on('will-quit', () => {
     killAllTerminals()
     stopRoutineServices()
+    closeDb()
   })
 
-  createMainWindow()
+  const createWindow = (): void => {
+    const win = createMainWindow()
+    // A closed window leaves no UI for its PTYs; kill them so no orphan shell
+    // keeps running until the app quits.
+    win.on('closed', () => killAllTerminals())
+  }
+
+  createWindow()
 
   app.on('activate', () => {
-    if (BrowserWindow.getAllWindows().length === 0) createMainWindow()
+    if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
 

@@ -17,6 +17,8 @@ interface RoutineState {
 }
 
 const ROUTINE_IDLE_TIMEOUT = 10 * 60 * 1000
+// StrictMode double-mounts effects in dev; the fire listener must register once.
+let routineListenerRegistered = false
 
 /** Ensure the routine has a bound project/session, creating one if needed. */
 function ensureRoutineSession(routine: Routine): { projectId: string; sessionId: string } | null {
@@ -72,7 +74,7 @@ export async function runRoutine(routine: Routine): Promise<void> {
   }
 
   useRoutineStore.setState((s) => ({ runningIds: new Set(s.runningIds).add(routine.id) }))
-  window.api.notification?.send('Routine started', routine.name)
+  window.api.notification?.send?.('Routine started', routine.name)?.catch?.(() => {})
 
   try {
     useChatStore.getState().sendMessage(bound.projectId, bound.sessionId, routine.prompt, 'queue')
@@ -83,8 +85,8 @@ export async function runRoutine(routine: Routine): Promise<void> {
       ?.sessions.find((s) => s.id === bound.sessionId)
     const lastAssistant = [...(session?.messages || [])].reverse().find((m) => m.role === 'assistant')
     const result = lastAssistant?.content?.trim() || 'Task completed.'
-    void window.api.routine?.recordResult(routine.id, result.slice(0, 2000))
-    window.api.notification?.send(`Routine finished: ${routine.name}`, result.slice(0, 200))
+    void window.api.routine?.recordResult?.(routine.id, result.slice(0, 2000))?.catch?.(() => {})
+    window.api.notification?.send?.(`Routine finished: ${routine.name}`, result.slice(0, 200))?.catch?.(() => {})
   } finally {
     useRoutineStore.setState((s) => {
       const next = new Set(s.runningIds)
@@ -99,10 +101,14 @@ export const useRoutineStore = create<RoutineState>((set, get) => ({
   runningIds: new Set(),
 
   init: async () => {
-    window.api.routine?.onFire?.((routine) => {
-      void runRoutine(routine)
-    })
+    if (!routineListenerRegistered) {
+      routineListenerRegistered = true
+      window.api.routine?.onFire?.((routine) => {
+        void runRoutine(routine)
+      })
+    }
     await get().refresh()
+    window.api.headless?.ready?.()
   },
 
   refresh: async () => {

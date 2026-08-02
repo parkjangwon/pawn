@@ -3,6 +3,7 @@
  * streaming call itself (OpenAI-compatible and Claude formats).
  */
 import { useAppStore } from '../stores/app'
+import { useStreamingStore } from '../stores/streaming'
 import { useProviderStore } from '../stores/provider'
 import { toolsToClaude, toolsToOpenAI, type ToolCall } from './tools'
 import type { CallUsage } from '../stores/usage'
@@ -99,6 +100,9 @@ export interface LlmRequest {
   signal: AbortSignal
 }
 
+/** No data for this long means the provider connection is dead; bail out. */
+const STREAM_IDLE_TIMEOUT_MS = 90_000
+
 export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const { decision, systemLayers, projectPreamble, sessionId, projectId, assistantMsgId, signal } = req
   const { provider, model } = decision
@@ -110,6 +114,17 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   let body: Record<string, unknown>
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   const token = provider.apiKey || ''
+
+  // Idle timeout: a stalled stream must not hold the turn forever. It aborts
+  // the fetch/reader through a combined signal and surfaces as a transient
+  // error so the router retries on another model.
+  const timeoutController = new AbortController()
+  let idleTimer: ReturnType<typeof setTimeout> | null = null
+  const armIdleTimer = (): void => {
+    if (idleTimer) clearTimeout(idleTimer)
+    idleTimer = setTimeout(() => timeoutController.abort(), STREAM_IDLE_TIMEOUT_MS)
+  }
+  const combinedSignal = AbortSignal.any([signal, timeoutController.signal])
 
   if (provider.apiFormat === 'claude') {
     const budget = reasoningEffort && reasoningEffort !== 'auto'
@@ -143,9 +158,6 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       // cached_tokens can't be measured.
       stream_options: { include_usage: true },
       tools: toolsToOpenAI(),
-      // OpenAI caches by exact prefix automatically; the key routes repeat
-      // requests of one session to the same cache shard.
-      prompt_cache_key: sessionId,
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
         : {}),
@@ -159,7 +171,16 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     }
   }
 
-  const response = await fetchWithRetry(url, headers, body, isBrowser, signal)
+  armIdleTimer()
+  let response: Response
+  try {
+    response = await fetchWithRetry(url, headers, body, isBrowser, combinedSignal)
+  } catch (err) {
+    if (timeoutController.signal.aborted) {
+      throw markTransient(new Error('Provider request timed out (no response within 90s)'), true)
+    }
+    throw err
+  }
 
   const reader = response.body?.getReader()
   if (!reader) throw new Error('No response body')
@@ -187,7 +208,8 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
 
   const applyFlush = (display: string): void => {
     lastFlushed = display
-    useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, display)
+    // Live view only — the app store (and DB) are touched once at stream end.
+    useStreamingStore.getState().setContent(assistantMsgId, display)
   }
 
   const flushText = (): void => {
@@ -216,14 +238,28 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     if (pendingDisplay !== null && pendingDisplay !== lastFlushed) {
       const next = pendingDisplay
       pendingDisplay = null
-      applyFlush(next)
+      lastFlushed = next
+      // Final flush persists the complete text and releases the live buffer.
+      useStreamingStore.getState().setContent(assistantMsgId, next)
+      useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, next, true)
+      useStreamingStore.getState().clear(assistantMsgId)
     }
   }
 
   try {
     for (;;) {
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
-      const { done, value } = await reader.read()
+      let chunk: ReadableStreamReadResult<Uint8Array>
+      try {
+        chunk = await reader.read()
+      } catch (err) {
+        if (timeoutController.signal.aborted) {
+          throw markTransient(new Error('Provider stream timed out (no data received for 90s)'), true)
+        }
+        throw err
+      }
+      armIdleTimer()
+      const { done, value } = chunk
       if (done) break
 
       buffer += decoder.decode(value, { stream: true })
@@ -338,6 +374,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       }
     }
   } finally {
+    if (idleTimer) clearTimeout(idleTimer)
     reader.cancel().catch(() => {})
     flushNow()
   }

@@ -24,7 +24,7 @@ function emitBrowserEvent(payload: Record<string, unknown>): void {
 }
 
 function browserState(): Record<string, unknown> {
-  if (!browserView) return { created: false }
+  if (!browserView || browserView.webContents.isDestroyed()) return { created: false }
   const wc = browserView.webContents
   const nav = (wc as unknown as { navigationHistory?: { canGoBack(): boolean; canGoForward(): boolean } }).navigationHistory
   return {
@@ -179,16 +179,27 @@ export function registerBrowserIpc(): void {
     if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url
     cursorShow(wc, 140, 24, 'loading')
 
+    let timedOut = false
+    const timer = setTimeout(() => {
+      timedOut = true
+      wc.stop()
+    }, 60_000)
     try {
       await wc.loadURL(url)
     } catch (err) {
       const msg = String(err)
+      if (timedOut) {
+        cursorShow(wc, 140, 24, 'move')
+        return { error: `Timed out loading ${url}` }
+      }
       // ERR_ABORTED fires on redirects and on pages that navigate during load;
       // the page is usually fine, so report the resulting URL rather than failing.
       if (!msg.includes('ERR_ABORTED')) {
         cursorShow(wc, 140, 24, 'move')
         return { error: `Failed to load ${url}: ${msg}` }
       }
+    } finally {
+      clearTimeout(timer)
     }
     injectAICursor(wc)
     return { url: wc.getURL(), title: wc.getTitle() }
@@ -200,8 +211,13 @@ export function registerBrowserIpc(): void {
     const wc = guard.view.webContents
     const nav = (wc as unknown as { navigationHistory?: { canGoBack(): boolean; goBack(): void } }).navigationHistory
     if (!nav || !nav.canGoBack()) return { error: 'No previous page in history' }
+    const before = wc.getURL()
     nav.goBack()
-    await new Promise((r) => setTimeout(r, 400))
+    // Return as soon as the URL actually changes instead of a fixed delay.
+    const start = Date.now()
+    while (!wc.isDestroyed() && wc.getURL() === before && Date.now() - start < 3000) {
+      await new Promise((r) => setTimeout(r, 50))
+    }
     injectAICursor(wc)
     return { url: wc.getURL() }
   })

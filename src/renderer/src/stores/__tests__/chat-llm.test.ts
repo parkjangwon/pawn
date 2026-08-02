@@ -53,7 +53,7 @@ beforeEach(() => {
   vi.stubGlobal('fetch', vi.fn())
   ;(window as any).api = {
     platform: 'electron',
-    db: { updateMessageContent: vi.fn() }
+    db: { updateMessageContent: vi.fn().mockResolvedValue({ ok: true }) }
   }
 })
 

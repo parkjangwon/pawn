@@ -28,6 +28,15 @@ beforeEach(() => {
     loadedSessions: new Set()
   })
   for (const fn of Object.values(dbMock)) fn.mockClear()
+  dbMock.loadAll.mockResolvedValue({ projects: [] })
+  dbMock.getMessages.mockResolvedValue([])
+  for (const fn of [
+    dbMock.addProject, dbMock.removeProject, dbMock.updateProjectName, dbMock.updateProjectPaths,
+    dbMock.addSession, dbMock.removeSession, dbMock.addMessage, dbMock.updateMessageContent,
+    dbMock.deleteMessage, dbMock.clearMessages, dbMock.updateSessionTitle
+  ]) {
+    fn.mockResolvedValue({ ok: true })
+  }
 })
 
 describe('app store init', () => {

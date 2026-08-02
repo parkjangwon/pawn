@@ -28,6 +28,7 @@ declare global {
       selectFolder: () => Promise<string | null>
       fs: {
         readFile: (path: string) => Promise<string | { error: string }>
+        readFiles: (paths: string[]) => Promise<Array<{ path: string; content?: string; error?: string }>>
         writeFile: (path: string, content: string) => Promise<{ ok?: boolean; error?: string }>
         listDir: (path: string) => Promise<Array<{ name: string; isDirectory: boolean; path: string }> | { error: string }>
         stat: (path: string) => Promise<{ size: number; isFile: boolean; isDirectory: boolean; mtime: number } | { error: string }>
@@ -86,11 +87,8 @@ declare global {
         checkAccessibility: () => Promise<boolean>
         requestAccessibility: () => Promise<boolean>
       }
-      schedule: {
-        add: (id: string, intervalMs: number, payload: unknown) => Promise<{ ok?: boolean }>
-        remove: (id: string) => Promise<{ ok?: boolean }>
-        list: () => Promise<string[]>
-        onTick: (callback: (data: { id: string; payload: unknown }) => void) => void
+      headless: {
+        ready: () => void
       }
       config: {
         load: () => Promise<Record<string, unknown>>
