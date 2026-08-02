@@ -37,6 +37,14 @@ pawn
   - First launch: right-click → **Open**, then confirm in the Gatekeeper dialog (the build is unsigned).
 - **Windows** — `Pawn-<version>-x64-setup.exe` (Intel/AMD) or `Pawn-<version>-arm64-setup.exe` (ARM). Double-click to run the installer.
 
+### Installing skills & plugins
+
+- **Ask Pawn** — paste a GitHub URL and say "install this skill" (or use the `install_skill` tool). It clones the repo, detects the layout (`plugin.json`, `skills/`, `root SKILL.md`), and installs into the standard locations.
+- **User-global skills** — drop `<name>/SKILL.md` folders into `~/.agents/skills/` or `~/.claude/skills/`.
+- **Project skills** — drop them into `<project>/.claude/skills/`, `<project>/skills/`, or `<project>/.agent/skills/`.
+- **Plugins** — project-scoped into `<project>/.claude/plugins/`, user-global via Claude Code's plugin install (or `~/.claude/plugins/` with an `installed_plugins.json` entry).
+- All installed skills are visible and toggleable in **Settings → Plugins**.
+
 ### Requirements
 
 - macOS 10.12+ or Windows 10/11

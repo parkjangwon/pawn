@@ -1,4 +1,5 @@
 import { readSkill } from './skills'
+import { installSkillFromRepo } from './skillInstaller'
 import { getBrowserAgent, type BrowserAgent } from './browser'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
@@ -279,6 +280,13 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         const content = await readSkill(projectPath, name)
         if (!content) return { toolCallId: call.id, content: `No skill named "${name}". Check the Available Skills list.`, isError: true }
         return { toolCallId: call.id, content }
+      }
+
+      case 'install_skill': {
+        const repo = String(call.arguments.repo ?? '').trim()
+        const scope = call.arguments.scope === 'project' ? 'project' : 'user'
+        const res = await installSkillFromRepo(repo, scope, projectPath)
+        return { toolCallId: call.id, content: res.content, isError: res.isError === true }
       }
 
       case 'search_files': {

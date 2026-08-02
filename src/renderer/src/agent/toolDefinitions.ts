@@ -190,6 +190,27 @@ export const TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'install_skill',
+    description:
+      'Install a skill or plugin from a git repository URL into standard locations: ' +
+      'user skills go to ~/.agents/skills/, project skills to <project>/.claude/skills/, ' +
+      'and Claude plugins to ~/.claude/plugins/ (installed_plugins.json updated). ' +
+      'Detects .claude-plugin/plugin.json, skills/, .claude/skills/ and root SKILL.md layouts automatically, ' +
+      'and refreshes the skill cache. Use when the user asks to install a skill or plugin from a GitHub URL.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'Git repository URL (https://...) to install' },
+        scope: {
+          type: 'string',
+          enum: ['user', 'project'],
+          description: '"user" (default) installs globally via the standard user directories; "project" installs into the active project'
+        }
+      },
+      required: ['repo']
+    }
+  },
+  {
     name: 'search_files',
     description: 'Search for files in the project by name pattern. Uses glob-style matching. For example: *.tsx, *util*, **/*.css',
     parameters: {
@@ -290,5 +311,4 @@ export const TOOLS: ToolDefinition[] = [
     parameters: { type: 'object', properties: {} }
   }
 ]
-
 
