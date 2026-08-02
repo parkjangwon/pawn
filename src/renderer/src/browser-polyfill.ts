@@ -12,6 +12,7 @@ if (typeof window !== 'undefined' && !window.api) {
 
   (window as unknown as Record<string, unknown>).api = {
     platform: 'browser',
+    appVersion: async (): Promise<string> => 'web',
     selectFolder: async (): Promise<string | null> => {
       // Will be handled by FileBrowser component - return null to trigger it
       return null
@@ -88,6 +89,11 @@ if (typeof window !== 'undefined' && !window.api) {
     },
     headless: {
       ready: () => {}
+    },
+    tray: {
+      getEnabled: async () => true,
+      setEnabled: async () => ({ ok: true }),
+      setLanguage: async () => ({ ok: true })
     },
 
     // Config (TOML via HTTP)

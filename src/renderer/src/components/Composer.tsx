@@ -1,8 +1,13 @@
+import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
 import { useProviderStore } from '../stores/provider'
 import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
 import type { Project } from '../stores/app'
+import {
+  LARGE_PASTE_CHARS, MAX_ATTACHMENTS, MAX_IMAGE_BYTES, MAX_TEXT_BYTES,
+  truncateText, type ChatAttachment
+} from '../utils/attachments'
 
 interface ComposerProps {
   activeSession: boolean
@@ -37,10 +42,14 @@ interface ComposerProps {
   usageRef: React.RefObject<HTMLDivElement | null>
   isStreaming: boolean
   onStop: () => void
+  attachments: ChatAttachment[]
+  onAddAttachment: (a: ChatAttachment) => void
+  onRemoveAttachment: (id: string) => void
 }
 
 export default function Composer(props: ComposerProps): React.JSX.Element {
   const { t } = useTranslation()
+  const fileInputRef = useRef<HTMLInputElement>(null)
   const {
     models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode,
     reasoningEffort, setReasoningEffort, routingMode, setRoutingMode
@@ -65,6 +74,70 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const { input, onChange, onKeyDown, onSend, textareaRef, activeSession, projects, activeProject, activeProjectId, onSelectProject, gitBranch } = props
   const { showProjectPicker, setShowProjectPicker, showPermPicker, setShowPermPicker, showModelPicker, setShowModelPicker, showUsagePopover, setShowUsagePopover } = props
   const { projectPickerRef, permPickerRef, modelPickerRef, usageRef, isStreaming, onStop } = props
+  const { attachments, onAddAttachment, onRemoveAttachment } = props
+
+  const addFile = (file: File): void => {
+    if (file.type.startsWith('image/')) {
+      if (file.size > MAX_IMAGE_BYTES) return
+      const reader = new FileReader()
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          onAddAttachment({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name: file.name || t('chat.attachedImage'),
+            kind: 'image',
+            dataUrl: reader.result,
+            bytes: file.size
+          })
+        }
+      }
+      reader.readAsDataURL(file)
+      return
+    }
+    if (file.size <= MAX_TEXT_BYTES) {
+      void file.text().then((content) => {
+        onAddAttachment({
+          id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+          name: file.name || t('chat.attachedText'),
+          kind: 'text',
+          content: truncateText(content).text,
+          bytes: file.size
+        })
+      }).catch(() => {})
+    }
+  }
+
+  const handlePaste = (e: React.ClipboardEvent): void => {
+    const items = Array.from(e.clipboardData?.items || [])
+    const images = items.filter((i) => i.type.startsWith('image/'))
+    if (images.length > 0) {
+      e.preventDefault()
+      for (const item of images.slice(0, MAX_ATTACHMENTS)) {
+        const file = item.getAsFile()
+        if (file) addFile(file)
+      }
+      return
+    }
+    const text = e.clipboardData?.getData('text') || ''
+    if (text.length > LARGE_PASTE_CHARS) {
+      // Large pastes become a removable chip instead of flooding the input.
+      e.preventDefault()
+      onAddAttachment({
+        id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+        name: t('chat.pastedText'),
+        kind: 'text',
+        content: truncateText(text).text,
+        bytes: text.length
+      })
+    }
+  }
+
+  const handleFilesPicked = (e: React.ChangeEvent<HTMLInputElement>): void => {
+    const files = Array.from(e.target.files || [])
+    for (const file of files.slice(0, MAX_ATTACHMENTS)) addFile(file)
+    e.target.value = ''
+  }
+
   return (
       <div className="chat-input-wrapper">
        <div className="chat-input-container">
@@ -124,17 +197,48 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
 
           {/* Text input */}
           <div className="chat-input-box">
+            {attachments.length > 0 && (
+              <div className="attachment-bar">
+                {attachments.map((a) => (
+                  <span key={a.id} className="attachment-chip" title={a.name}>
+                    {a.kind === 'image' && a.dataUrl && (
+                      <img className="attachment-chip-thumb" src={a.dataUrl} alt="" />
+                    )}
+                    <span className="attachment-chip-name">{a.name}</span>
+                    <button
+                      className="attachment-chip-x"
+                      onClick={() => onRemoveAttachment(a.id)}
+                      aria-label={t('chat.removeAttachment')}
+                      title={t('chat.removeAttachment')}
+                    >×</button>
+                  </span>
+                ))}
+              </div>
+            )}
             <textarea
               ref={textareaRef}
               value={input}
               onChange={onChange}
               onKeyDown={onKeyDown}
+              onPaste={handlePaste}
               placeholder={t('chat.placeholder')}
               rows={1}
             />
             <div className="input-actions">
               {/* Left: permission mode */}
               <div className="input-actions-left">
+                <button className="attach-btn" onClick={() => fileInputRef.current?.click()} title={t('chat.attach')} aria-label={t('chat.attach')}>
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                  </svg>
+                </button>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={handleFilesPicked}
+                />
                 <div className="context-chip-wrapper" ref={permPickerRef}>
                   <button className={`perm-chip perm-${permissionMode}`} onClick={() => { setShowPermPicker(!showPermPicker); setShowProjectPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
@@ -243,7 +347,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
                   </button>
                 ) : (
-                  <button className="send-btn" onClick={onSend} disabled={!input.trim()}>
+                  <button className="send-btn" onClick={onSend} disabled={!input.trim() && attachments.length === 0}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
                     </svg>

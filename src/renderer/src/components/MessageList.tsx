@@ -26,11 +26,9 @@ const MessageRow = memo(function MessageRow({ msg }: { msg: Message }): React.JS
     <div className={`message ${msg.role}`}>
       <div className="message-role">{msg.role === 'user' ? t('chat.you') : t('chat.assistant')}</div>
       <div className="message-content">
-        {msg.role === 'assistant' ? (
-          <MarkdownRenderer content={content} />
-        ) : (
-          content
-        )}
+        {/* User bubbles render as markdown too: attached images come through as
+            inline data-URL images (safeHref/CSP still apply). */}
+        <MarkdownRenderer content={content} />
       </div>
       {msg.role === 'assistant' && msg.modelLabel && (
         <div className="message-model-label">{msg.modelLabel}</div>

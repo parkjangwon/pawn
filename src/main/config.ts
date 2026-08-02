@@ -32,6 +32,8 @@ export interface PawnConfig {
     language?: string
     routingMode?: string
     defaultSendMode?: string
+    sleepPrevention?: string
+    trayEnabled?: boolean
   }
   providers?: ProviderConfig[]
   models?: ModelConfig[]

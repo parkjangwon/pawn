@@ -14,6 +14,7 @@ import MessageList from './MessageList'
 import Composer from './Composer'
 import ConfirmDialog from './ConfirmDialog'
 import { filterEnabledSkills } from '../utils/skillVisibility'
+import { MAX_ATTACHMENTS, type ChatAttachment } from '../utils/attachments'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -54,6 +55,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [skills, setSkills] = useState<LoadedSkill[]>([])
   const [startIndex, setStartIndex] = useState<number | null>(null)
   const [nearTop, setNearTop] = useState(false)
+  const [attachments, setAttachments] = useState<ChatAttachment[]>([])
   const [showProjectMenu, setShowProjectMenu] = useState(false)
   const [showProjectEdit, setShowProjectEdit] = useState(false)
   const [showClearConfirm, setShowClearConfirm] = useState(false)
@@ -70,6 +72,14 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
     ? tailStart
     : Math.min(startIndex, messages.length)
   const streamingTail = useStreamingStore((s) => (lastMessage ? s.content[lastMessage.id] : undefined))
+
+  const addAttachment = (a: ChatAttachment): void => {
+    setAttachments((prev) => (prev.length >= MAX_ATTACHMENTS ? prev : [...prev, a]))
+  }
+
+  const removeAttachment = (id: string): void => {
+    setAttachments((prev) => prev.filter((a) => a.id !== id))
+  }
 
   // Detect git branch
   useEffect(() => {
@@ -340,8 +350,9 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
     }
     const finalContent = blocks.length ? blocks.join('\n\n') + '\n\n' + input.trim() : input.trim()
 
-    sendMessage(projectId, sessionId, finalContent, sendMode)
+    sendMessage(projectId, sessionId, finalContent, sendMode, attachments)
     setInput('')
+    setAttachments([])
     setTrigger(null)
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
@@ -450,6 +461,9 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
         usageRef={usageRef}
         isStreaming={isStreaming}
         onStop={stopStreaming}
+        attachments={attachments}
+        onAddAttachment={addAttachment}
+        onRemoveAttachment={removeAttachment}
       />
       {showProjectEdit && activeProjectId && (
         <ProjectEditDialog projectId={activeProjectId} onClose={() => setShowProjectEdit(false)} />

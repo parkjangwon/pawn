@@ -15,6 +15,7 @@ import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
 import type { ModelTier } from '../types/provider'
 import { filterEnabledSkills } from '../utils/skillVisibility'
+import { buildDisplayContent, buildTranscriptText, imageAttachments, stripDisplayImages, type ChatAttachment } from '../utils/attachments'
 
 export type SendMode = 'queue' | 'steer'
 
@@ -35,6 +36,7 @@ interface QueueItem {
   projectId: string
   sessionId: string
   content: string
+  attachments?: ChatAttachment[]
   /** The bubble is already on screen from when the message was queued. */
   displayed: boolean
 }
@@ -44,7 +46,7 @@ interface ChatState {
   /** Session currently producing tokens; lets the UI mark it as running. */
   streamingSessionId: string | null
   queue: QueueItem[]
-  sendMessage: (projectId: string, sessionId: string, content: string, mode: SendMode) => void
+  sendMessage: (projectId: string, sessionId: string, content: string, mode: SendMode, attachments?: ChatAttachment[]) => void
   stopStreaming: () => void
 }
 
@@ -57,7 +59,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
   streamingSessionId: null,
   queue: [],
 
-  sendMessage: (projectId, sessionId, content, mode) => {
+  sendMessage: (projectId, sessionId, content, mode, attachments) => {
     const state = get()
 
     // Refresh measured pricing from recent usage (throttled inside the router)
@@ -65,8 +67,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     void refreshMeasuredPricing()
 
     if (mode === 'queue' && state.isStreaming) {
-      set({ queue: [...state.queue, { projectId, sessionId, content, displayed: true }] })
-      pushUserBubble(projectId, sessionId, content)
+      set({ queue: [...state.queue, { projectId, sessionId, content, attachments, displayed: true }] })
+      pushUserBubble(projectId, sessionId, content, attachments)
       return
     }
 
@@ -74,11 +76,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
       abortController?.abort()
     }
 
-    pushUserBubble(projectId, sessionId, content)
+    pushUserBubble(projectId, sessionId, content, attachments)
     autoTitle(projectId, sessionId, content)
 
     set({ isStreaming: true, streamingSessionId: sessionId })
-    void agentLoop(projectId, sessionId, content, set, get)
+    void agentLoop(projectId, sessionId, content, set, get, attachments)
   },
 
   stopStreaming: () => {
@@ -87,11 +89,11 @@ export const useChatStore = create<ChatState>((set, get) => ({
   }
 }))
 
-function pushUserBubble(projectId: string, sessionId: string, content: string): void {
+function pushUserBubble(projectId: string, sessionId: string, content: string, attachments?: ChatAttachment[]): void {
   useAppStore.getState().addMessage(projectId, sessionId, {
     id: `${Date.now()}-user-${Math.random().toString(36).slice(2, 8)}`,
     role: 'user',
-    content,
+    content: buildDisplayContent(content, attachments),
     createdAt: Date.now()
   })
 }
@@ -167,7 +169,10 @@ export async function loadTranscript(projectId: string, sessionId: string): Prom
   for (const m of session?.messages || []) {
     if (m.role === 'system') continue
     if (!m.content.trim()) continue
-    if (m.role === 'user') entries.push({ role: 'user', content: m.content })
+    if (m.role === 'user') {
+      const text = stripDisplayImages(m.content)
+      if (text) entries.push({ role: 'user', content: text })
+    }
     else entries.push({ role: 'assistant', content: m.content })
   }
   // The bubble for the message being sent right now is already in the store;
@@ -228,7 +233,8 @@ async function agentLoop(
   sessionId: string,
   userContent: string,
   set: (fn: (s: ChatState) => Partial<ChatState>) => void,
-  get: () => ChatState
+  get: () => ChatState,
+  attachments?: ChatAttachment[]
 ): Promise<void> {
   // A live loop owns the turn; only an aborted one may be replaced. This makes
   // concurrent agent loops impossible even if two send paths race.
@@ -280,7 +286,12 @@ async function agentLoop(
     // preamble to callLLM, where it is injected into the messages array.
 
    let entries = await loadTranscript(projectId, sessionId)
-    entries.push({ role: 'user', content: userContent })
+    const imgs = imageAttachments(attachments)
+    entries.push({
+      role: 'user',
+      content: buildTranscriptText(userContent, attachments),
+      ...(imgs.length > 0 ? { attachments: imgs } : {})
+    })
 
     const complexity = estimateComplexity(userContent)
     let consecutiveToolErrors = 0
@@ -542,11 +553,11 @@ function processQueue(
     // The bubble was rendered when the message was queued; going back through
     // sendMessage would render it a second time.
     if (!next.displayed) {
-      get().sendMessage(next.projectId, next.sessionId, next.content, 'queue')
+      get().sendMessage(next.projectId, next.sessionId, next.content, 'queue', next.attachments)
       return
     }
     autoTitle(next.projectId, next.sessionId, next.content)
     set(() => ({ isStreaming: true, streamingSessionId: next.sessionId }))
-    void agentLoop(next.projectId, next.sessionId, next.content, set, get)
+    void agentLoop(next.projectId, next.sessionId, next.content, set, get, next.attachments)
   }, 50)
 }

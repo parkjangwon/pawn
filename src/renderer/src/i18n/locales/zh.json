@@ -50,6 +50,11 @@
     "export": "导出",
     "you": "你",
     "assistant": "助手",
+    "attach": "附加文件",
+    "removeAttachment": "移除附件",
+    "pastedText": "粘贴的文本",
+    "attachedImage": "粘贴的图片",
+    "attachedText": "附件",
     "thinking": "思考中...",
     "noProvider": "未配置提供商",
     "taskComplete": "任务完成",
@@ -373,7 +378,9 @@
       "sleepPreventionDesc": "应用运行时防止系统休眠。屏幕模式还会阻止显示器关闭。",
       "sleepOff": "关闭",
       "sleepSystem": "防止休眠",
-      "sleepDisplay": "防休眠+屏幕"
+      "sleepDisplay": "防休眠+屏幕",
+      "trayEnabled": "在菜单栏中显示",
+      "trayEnabledDesc": "在系统托盘/菜单栏保留 Pawn 图标（支持右键菜单）"
     },
     "shortcuts": "快捷键",
     "shortcutSection": {

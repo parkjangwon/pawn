@@ -18,6 +18,7 @@ export default function App(): React.JSX.Element {
   const [showSettings, setShowSettings] = useState(false)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
   const [mainView, setMainView] = useState<'chat' | 'automations'>('chat')
+  const [appVersion, setAppVersion] = useState('')
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('pawn-sidebar-open') !== 'false' } catch { return true }
   })
@@ -30,6 +31,7 @@ export default function App(): React.JSX.Element {
     void usePrefsStore.getState().init()
     void useRoutineStore.getState().init()
     void useKeybindingsStore.getState().init()
+    void window.api.appVersion().then((v) => { if (v) setAppVersion(v) }).catch(() => {})
   }, [])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
@@ -110,6 +112,7 @@ export default function App(): React.JSX.Element {
         />
       )}
       <PermissionDialog />
+      {appVersion && <div className="app-version">v{appVersion}</div>}
     </div>
   )
 }
