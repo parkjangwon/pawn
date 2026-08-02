@@ -14,6 +14,34 @@ Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, 그리고 Claude Desktop
 - **Open source (오픈 소스)** — MIT 라이선스 하에 배포되며 완전한 커스터마이징이 가능합니다.
 - **Claude Code 호환** — 프로젝트 내의 `CLAUDE.md`, `.claude/skills/`, `.claude/rules/`, 및 `.agent/` 디렉토리를 로드하고 인식합니다.
 
+## 설치
+
+[릴리스 페이지](https://github.com/parkjangwon/pawn/releases/latest)에서 사용 중인 플랫폼에 맞는 최신 버전을 다운로드하거나, 터미널에서 한 줄로 실행할 수 있습니다.
+
+### 간편 설치 (권장)
+
+```bash
+npx @parkjangwon/pawn
+```
+
+현재 OS에 맞는 빌드를 다운로드하여 설치 파일을 자동으로 실행합니다. 설치 파일은 `~/.pawn/installers/`에 캐싱되며 이후 실행 시 재사용됩니다. 명령어를 글로벌로 설치하려면:
+
+```bash
+npm install -g @parkjangwon/pawn
+pawn
+```
+
+### 직접 다운로드
+
+- **macOS** — `Pawn-<version>-universal.dmg` (Apple Silicon + Intel). `.dmg`를 열어 **Pawn**을 응용 프로그램으로 드래그하세요.
+  - 첫 실행: 우클릭 → **열기**를 선택한 뒤 Gatekeeper 대화상자에서 승인하세요 (서명되지 않은 빌드입니다).
+- **Windows** — `Pawn-<version>-x64-setup.exe` (Intel/AMD) 또는 `Pawn-<version>-arm64-setup.exe` (ARM). 파일을 더블클릭하여 설치하세요.
+
+### 요구 사항
+
+- macOS 10.12+ 또는 Windows 10/11
+- OpenAI 또는 Claude 호환 API 키 (BYOK)
+
 ## 주요 기능
 
 ### 코어 에이전트 및 도구 (Tools)
