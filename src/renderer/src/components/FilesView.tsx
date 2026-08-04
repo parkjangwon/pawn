@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import FileEditor from './FileEditor'
+import { useFilesPanelStore } from '../stores/filesPanel'
 
 interface FileEntry {
   name: string
@@ -59,6 +60,15 @@ export default function FilesView({ projectPath }: FilesViewProps): React.JSX.El
   useEffect(() => {
     setSelectedFile(null)
   }, [projectPath])
+
+  const pendingPath = useFilesPanelStore((s) => s.pendingPath)
+  const pendingToken = useFilesPanelStore((s) => s.token)
+  useEffect(() => {
+    if (!pendingPath) return
+    const name = pendingPath.split('/').pop() || pendingPath
+    setSelectedFile({ path: pendingPath, name })
+    useFilesPanelStore.getState().consume()
+  }, [pendingPath, pendingToken])
 
   const openFile = useCallback((entry: FileEntry): void => {
     setSelectedFile({ path: entry.path, name: entry.name })

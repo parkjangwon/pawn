@@ -105,7 +105,9 @@
     },
     "mention": {
       "title": "文件与文件夹",
-      "noResults": "没有匹配的文件"
+      "noResults": "没有匹配的文件",
+      "gitDesc": "注入 git 状态与分支",
+      "diffDesc": "注入 git diff HEAD"
     }
   },
   "automation": {
@@ -175,7 +177,11 @@
     "usageSaved": "缓存节省",
     "noSession": "无会话",
     "statusIdle": "空闲",
-    "statusRunning": "运行中"
+    "statusRunning": "运行中",
+    "sendQueue": "排队",
+    "sendSteer": "转向",
+    "sendQueueHint": "代理运行时将消息加入队列",
+    "sendSteerHint": "中断并用新消息重新引导"
   },
   "modelPicker": {
     "noModels": "没有可用模型",
@@ -213,7 +219,9 @@
       "file_read": "文件读取",
       "app": "应用控制",
       "mcp": "MCP 工具"
-    }
+    },
+    "allowPathAlways": "始终允许此文件夹",
+    "allowShellAlways": "始终允许此命令"
   },
   "statusBar": {
     "working": "工作中...",
@@ -526,7 +534,8 @@
     },
     "diff": {
       "title": "最近更改",
-      "empty": "没有最近的文件更改"
+      "empty": "没有最近的文件更改",
+      "recent": "最近更改 ({{count}})"
     },
     "tools": {
       "terminal": "终端",
@@ -594,11 +603,24 @@
     "click": "点击元素",
     "type": "输入文本",
     "browser": "浏览页面",
-    "search": "搜索"
+    "search": "搜索",
+    "delete": "删除",
+    "shellPoll": "轮询终端",
+    "shellKill": "终止终端",
+    "gitStatus": "Git 状态",
+    "gitDiff": "Git diff",
+    "gitLog": "Git 日志",
+    "plan": "计划",
+    "keypress": "按键"
   },
   "diffView": {
     "showAllLines": "显示所有行",
-    "showAll": "显示全部 {{total}} 行（还有 {{extra}} 行）"
+    "showAll": "显示全部 {{total}} 行 (+{{extra}})",
+    "open": "打开",
+    "revert": "还原",
+    "reverted": "已还原",
+    "revertFailed": "还原失败",
+    "noPath": "无路径"
   },
   "usage": {
     "diagnostics": {
@@ -620,5 +642,18 @@
     "light": "浅色",
     "dark": "深色",
     "system": "跟随系统"
+  },
+  "plan": {
+    "title": "计划",
+    "clear": "清除计划"
+  },
+  "turnReview": {
+    "label": "代理更改",
+    "files": "{{count}} 个文件",
+    "openDiff": "Diff 面板",
+    "undoTurn": "撤销本轮",
+    "undoing": "正在撤销…",
+    "reverted": "已撤销 {{count}} 个文件",
+    "failed": "撤销失败"
   }
 }

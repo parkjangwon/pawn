@@ -1,27 +1,49 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { computeDiff, type DiffResult } from '../utils/diff'
+import { computeDiff } from '../utils/diff'
+import { useChangeLedger } from '../stores/changeLedger'
+import { openFileInPanel } from '../stores/filesPanel'
 import './DiffView.css'
 
 interface DiffViewProps {
   oldText: string
   newText: string
   filename?: string
+  path?: string
   maxLines?: number
+  showActions?: boolean
 }
 
-export default function DiffView({ oldText, newText, filename, maxLines = 100 }: DiffViewProps): React.JSX.Element {
+export default function DiffView({
+  oldText,
+  newText,
+  filename,
+  path,
+  maxLines = 100,
+  showActions = true
+}: DiffViewProps): React.JSX.Element {
   const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(false)
   const [showAll, setShowAll] = useState(false)
+  const [actionMsg, setActionMsg] = useState<string | null>(null)
 
   const diff = useMemo(() => computeDiff(oldText, newText), [oldText, newText])
-
   const lines = showAll ? diff.lines : diff.lines.slice(0, maxLines)
   const truncated = diff.lines.length > maxLines && !showAll
+  const openPath = path || undefined
 
-  const fromLine = diff.lines.find((l) => l.oldLine !== null)?.oldLine || 1
-  const toLine = [...diff.lines].reverse().find((l) => l.newLine !== null)?.newLine || 1
+  const onOpen = (): void => {
+    if (openPath) openFileInPanel(openPath)
+  }
+
+  const onRevert = async (): Promise<void> => {
+    if (!openPath) {
+      setActionMsg(t('diffView.noPath'))
+      return
+    }
+    const r = await useChangeLedger.getState().revertFile(openPath)
+    setActionMsg(r.ok ? t('diffView.reverted') : r.error || t('diffView.revertFailed'))
+  }
 
   return (
     <div className={`diff-view ${collapsed ? 'collapsed' : ''}`}>
@@ -49,6 +71,21 @@ export default function DiffView({ oldText, newText, filename, maxLines = 100 }:
           <span className="diff-stat-removed">-{diff.removed}</span>
         </div>
       </div>
+      {showActions && (openPath || filename) && (
+        <div className="diff-actions" onClick={(e) => e.stopPropagation()}>
+          {openPath && (
+            <button type="button" className="diff-action-btn" onClick={onOpen}>
+              {t('diffView.open')}
+            </button>
+          )}
+          {openPath && (
+            <button type="button" className="diff-action-btn diff-action-revert" onClick={() => void onRevert()}>
+              {t('diffView.revert')}
+            </button>
+          )}
+          {actionMsg && <span className="diff-action-msg">{actionMsg}</span>}
+        </div>
+      )}
       {!collapsed && (
         <div className="diff-body">
           {lines.map((line, i) => (

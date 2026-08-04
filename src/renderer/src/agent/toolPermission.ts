@@ -1,5 +1,6 @@
 import { useProviderStore } from '../stores/provider'
 import { usePermissionStore, type PermissionType } from '../stores/permission'
+import { resolveToolPath } from './pathUtils'
 
 export type SafetyLevel = 'safe' | 'risky'
 
@@ -11,6 +12,9 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   grep_search: 'safe',
   git_status: 'safe',
   git_diff: 'safe',
+  git_log: 'safe',
+  update_plan: 'safe',
+  shell_poll: 'safe',
   browser_navigate: 'safe',
   browser_snapshot: 'safe',
   browser_read_text: 'safe',
@@ -25,6 +29,7 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   edit_file: 'risky',
   delete_file: 'risky',
   shell_exec: 'risky',
+  shell_kill: 'risky',
   computer_screenshot: 'risky',
   computer_click: 'risky',
   computer_type: 'risky',
@@ -36,24 +41,52 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   app_set_model: 'safe',
   app_set_reasoning: 'safe',
   app_toggle_theme: 'safe',
-  // Escalating permissions (auto -> yolo) deserves an explicit confirmation.
   app_set_permission_mode: 'risky'
 }
 
-// Permission mode
 export type PermissionMode = 'ask' | 'auto' | 'yolo'
+
+function permissionTypeFor(callName: string): PermissionType {
+  if (callName.startsWith('mcp__')) return 'mcp'
+  const map: Record<string, PermissionType> = {
+    computer_screenshot: 'computer_use',
+    computer_click: 'computer_use',
+    computer_type: 'computer_use',
+    computer_keypress: 'computer_use',
+    browser_eval: 'browser',
+    browser_click: 'browser',
+    browser_fill: 'browser',
+    browser_open_external: 'browser',
+    shell_exec: 'shell_exec',
+    shell_kill: 'shell_exec',
+    write_file: 'file_write',
+    edit_file: 'file_write',
+    delete_file: 'file_write',
+    git_status: 'file_read',
+    git_diff: 'file_read',
+    git_log: 'file_read',
+    app_open_tab: 'app',
+    app_close_tab: 'app',
+    app_list_automations: 'app',
+    app_create_automation: 'app',
+    app_set_model: 'app',
+    app_set_permission_mode: 'app',
+    app_set_reasoning: 'app',
+    app_toggle_theme: 'app',
+    install_skill: 'app'
+  }
+  return map[callName] || 'file_read'
+}
 
 export async function checkPermission(
   callName: string,
   args: Record<string, unknown>,
-  signal?: AbortSignal
+  signal?: AbortSignal,
+  projectPath?: string
 ): Promise<boolean> {
   const mode = useProviderStore.getState().permissionMode
   if (mode === 'yolo') return true
 
-  // A hidden window (headless routine runs) can never show a permission
-  // dialog. 'ask' degrades to 'auto' semantics there: safe tools pass,
-  // risky tools are denied outright instead of hanging the run.
   const hidden = typeof document !== 'undefined' && document.hidden === true
   if (hidden && mode === 'ask') {
     const safety = TOOL_SAFETY[callName] || 'risky'
@@ -63,22 +96,18 @@ export async function checkPermission(
   const safety = TOOL_SAFETY[callName] || 'risky'
   if (mode === 'auto' && safety === 'safe') return true
 
-  const type = (() => {
-    if (callName.startsWith('mcp__')) return 'mcp' as PermissionType
-    const map: Record<string, string> = {
-      computer_screenshot: 'computer_use', computer_click: 'computer_use', computer_type: 'computer_use', computer_keypress: 'computer_use',
-      browser_eval: 'browser', browser_click: 'browser', browser_fill: 'browser', browser_open_external: 'browser',
-      shell_exec: 'shell_exec',
-      write_file: 'file_write', edit_file: 'file_write', delete_file: 'file_write',
-      git_status: 'file_read', git_diff: 'file_read',
-      app_open_tab: 'app', app_close_tab: 'app', app_list_automations: 'app', app_create_automation: 'app', app_set_model: 'app',
-      app_set_permission_mode: 'app', app_set_reasoning: 'app', app_toggle_theme: 'app', install_skill: 'app'
-    }
-    return (map[callName] || 'file_read') as PermissionType
-  })()
+  const type = permissionTypeFor(callName)
 
-  // The user clicked "Allow for this session" on this type earlier; skip the
-  // dialog until the app restarts.
+  const pathArg =
+    typeof args.path === 'string'
+      ? resolveToolPath(args.path, projectPath)
+      : undefined
+  const command = typeof args.command === 'string' ? args.command : undefined
+
+  if (usePermissionStore.getState().isAllowedByRules(type, { path: pathArg, command })) {
+    return true
+  }
+
   if (mode === 'ask' && usePermissionStore.getState().sessionApproved.has(type)) return true
 
   const typeLabels: Record<string, string> = {
@@ -88,8 +117,12 @@ export async function checkPermission(
     delete_file: 'Delete File',
     list_dir: 'List Directory',
     shell_exec: 'Shell Command',
+    shell_poll: 'Poll Shell Job',
+    shell_kill: 'Kill Shell Job',
     git_status: 'Git Status',
     git_diff: 'Git Diff',
+    git_log: 'Git Log',
+    update_plan: 'Update Plan',
     computer_screenshot: 'Take Screenshot',
     computer_click: 'Mouse Click',
     computer_type: 'Type Text',
@@ -117,7 +150,6 @@ export async function checkPermission(
     app_toggle_theme: 'Toggle Theme'
   }
 
-  // mcp__<server>__<tool> reads better as "server: tool" than the raw name.
   const mcpMatch = callName.startsWith('mcp__') ? callName.slice(5).match(/^(.+?)__(.+)$/) : null
   const description = mcpMatch ? `${mcpMatch[1]}: ${mcpMatch[2]}` : (typeLabels[callName] || callName)
 
@@ -125,7 +157,9 @@ export async function checkPermission(
     {
       type,
       description,
-      details: JSON.stringify(args, null, 2).slice(0, 500)
+      details: JSON.stringify(args, null, 2).slice(0, 500),
+      path: pathArg,
+      command
     },
     signal
   )

@@ -180,7 +180,7 @@ describe('file tools', () => {
     fsMock.writeFile.mockResolvedValue({ ok: true })
     const result = await executeTool(call('write_file', { path: '/new.ts', content: 'x' }))
     expect(result.content).toContain('File created')
-    expect(result.diffData).toBeUndefined()
+    expect(result.diffData).toMatchObject({ oldText: '', newText: 'x', filename: 'new.ts', path: '/new.ts' })
   })
 
   it('returns diff data when overwriting an existing file', async () => {
@@ -188,7 +188,7 @@ describe('file tools', () => {
     fsMock.readFile.mockResolvedValue('old content')
     fsMock.writeFile.mockResolvedValue({ ok: true })
     const result = await executeTool(call('write_file', { path: '/a.ts', content: 'new content' }))
-    expect(result.diffData).toEqual({ oldText: 'old content', newText: 'new content', filename: 'a.ts' })
+    expect(result.diffData).toEqual({ oldText: 'old content', newText: 'new content', filename: 'a.ts', path: '/a.ts' })
   })
 
   it('edits a file with unique old_string and returns diff data', async () => {
@@ -197,7 +197,7 @@ describe('file tools', () => {
     fsMock.writeFile.mockResolvedValue({ ok: true })
     const result = await executeTool(call('edit_file', { path: '/a.ts', old_string: 'two', new_string: 'TWO' }))
     expect(result.content).toContain('File edited')
-    expect(result.diffData).toEqual({ oldText: 'two', newText: 'TWO', filename: 'a.ts' })
+    expect(result.diffData).toEqual({ oldText: 'one two three', newText: 'one TWO three', filename: 'a.ts', path: '/a.ts' })
   })
 
   it('fails when old_string is missing or ambiguous', async () => {

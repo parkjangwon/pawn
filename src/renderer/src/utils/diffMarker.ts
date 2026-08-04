@@ -2,6 +2,7 @@ export const DIFF_MARKER = '__DIFF__:'
 
 export interface ParsedDiffMarker {
   filename: string
+  path?: string
   oldText: string
   newText: string
 }
@@ -22,6 +23,7 @@ export function parseDiffMarker(content: string): ParsedDiffMarker | null {
       if (parsed && typeof parsed.filename === 'string') {
         return {
           filename: parsed.filename,
+          path: typeof parsed.path === 'string' && parsed.path ? parsed.path : undefined,
           oldText: parsed.oldText ?? '',
           newText: parsed.newText ?? ''
         }

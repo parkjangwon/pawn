@@ -105,7 +105,9 @@
     },
     "mention": {
       "title": "ファイルとフォルダ",
-      "noResults": "一致するファイルがありません"
+      "noResults": "一致するファイルがありません",
+      "gitDesc": "git ステータスを挿入",
+      "diffDesc": "git diff HEAD を挿入"
     }
   },
   "automation": {
@@ -175,7 +177,11 @@
     "usageSaved": "キャッシュ節約",
     "noSession": "セッションなし",
     "statusIdle": "待機中",
-    "statusRunning": "実行中"
+    "statusRunning": "実行中",
+    "sendQueue": "キュー",
+    "sendSteer": "ステア",
+    "sendQueueHint": "実行中はメッセージをキューに入れます",
+    "sendSteerHint": "中断して新しいメッセージで指示します"
   },
   "modelPicker": {
     "noModels": "利用可能なモデルがありません",
@@ -213,7 +219,9 @@
       "file_read": "ファイル読み取り",
       "app": "アプリ操作",
       "mcp": "MCPツール"
-    }
+    },
+    "allowPathAlways": "このフォルダを常に許可",
+    "allowShellAlways": "このコマンドを常に許可"
   },
   "statusBar": {
     "working": "処理中...",
@@ -526,7 +534,8 @@
     },
     "diff": {
       "title": "最近の変更",
-      "empty": "最近のファイル変更はありません"
+      "empty": "最近のファイル変更はありません",
+      "recent": "最近の変更 ({{count}})"
     },
     "tools": {
       "terminal": "ターミナル",
@@ -594,11 +603,24 @@
     "click": "要素をクリック",
     "type": "テキスト入力",
     "browser": "ページを閲覧",
-    "search": "検索"
+    "search": "検索",
+    "delete": "削除",
+    "shellPoll": "シェル確認",
+    "shellKill": "シェル停止",
+    "gitStatus": "Git 状態",
+    "gitDiff": "Git diff",
+    "gitLog": "Git ログ",
+    "plan": "プラン",
+    "keypress": "キー入力"
   },
   "diffView": {
     "showAllLines": "すべての行を表示",
-    "showAll": "全{{total}}行を表示 (残り{{extra}}行)"
+    "showAll": "全 {{total}} 行を表示 (+{{extra}})",
+    "open": "開く",
+    "revert": "元に戻す",
+    "reverted": "元に戻しました",
+    "revertFailed": "失敗しました",
+    "noPath": "パスがありません"
   },
   "usage": {
     "diagnostics": {
@@ -620,5 +642,18 @@
     "light": "ライト",
     "dark": "ダーク",
     "system": "システム"
+  },
+  "plan": {
+    "title": "プラン",
+    "clear": "プランをクリア"
+  },
+  "turnReview": {
+    "label": "エージェントの変更",
+    "files": "{{count}} ファイル",
+    "openDiff": "Diffパネル",
+    "undoTurn": "ターンを元に戻す",
+    "undoing": "戻しています…",
+    "reverted": "{{count}} ファイルを戻しました",
+    "failed": "元に戻せませんでした"
   }
 }

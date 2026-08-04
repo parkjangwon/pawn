@@ -105,7 +105,9 @@
     },
     "mention": {
       "title": "파일 및 폴더",
-      "noResults": "일치하는 파일이 없습니다"
+      "noResults": "일치하는 파일이 없습니다",
+      "gitDesc": "git 상태·브랜치 삽입",
+      "diffDesc": "git diff HEAD 삽입"
     }
   },
   "automation": {
@@ -175,7 +177,11 @@
     "usageSaved": "캐시 절약",
     "noSession": "세션 없음",
     "statusIdle": "대기",
-    "statusRunning": "실행 중"
+    "statusRunning": "실행 중",
+    "sendQueue": "큐",
+    "sendSteer": "스티어",
+    "sendQueueHint": "에이전트 실행 중 메시지를 대기열에 넣습니다",
+    "sendSteerHint": "실행을 중단하고 새 메시지로 방향을 바꿉니다"
   },
   "modelPicker": {
     "noModels": "사용 가능한 모델이 없습니다",
@@ -213,7 +219,9 @@
       "file_read": "파일 읽기",
       "app": "앱 제어",
       "mcp": "MCP 도구"
-    }
+    },
+    "allowPathAlways": "이 폴더 항상 허용",
+    "allowShellAlways": "이 명령 항상 허용"
   },
   "statusBar": {
     "working": "작업 중...",
@@ -526,7 +534,8 @@
     },
     "diff": {
       "title": "최근 변경사항",
-      "empty": "최근 파일 변경이 없습니다"
+      "empty": "최근 파일 변경이 없습니다",
+      "recent": "최근 변경 ({{count}})"
     },
     "tools": {
       "terminal": "터미널",
@@ -594,11 +603,24 @@
     "click": "요소 클릭",
     "type": "텍스트 입력",
     "browser": "페이지 탐색",
-    "search": "검색"
+    "search": "검색",
+    "delete": "삭제",
+    "shellPoll": "셸 폴링",
+    "shellKill": "셸 종료",
+    "gitStatus": "Git 상태",
+    "gitDiff": "Git diff",
+    "gitLog": "Git 로그",
+    "plan": "계획",
+    "keypress": "키 입력"
   },
   "diffView": {
     "showAllLines": "모든 줄 표시",
-    "showAll": "전체 {{total}}줄 보기 ({{extra}}줄 더)"
+    "showAll": "전체 {{total}}줄 보기 (+{{extra}})",
+    "open": "열기",
+    "revert": "되돌리기",
+    "reverted": "되돌림",
+    "revertFailed": "되돌리기 실패",
+    "noPath": "경로 없음"
   },
   "usage": {
     "diagnostics": {
@@ -620,5 +642,18 @@
     "light": "라이트",
     "dark": "다크",
     "system": "시스템"
+  },
+  "plan": {
+    "title": "계획",
+    "clear": "계획 지우기"
+  },
+  "turnReview": {
+    "label": "에이전트 변경",
+    "files": "파일 {{count}}개",
+    "openDiff": "Diff 패널",
+    "undoTurn": "턴 되돌리기",
+    "undoing": "되돌리는 중…",
+    "reverted": "{{count}}개 파일 되돌림",
+    "failed": "되돌리기 실패"
   }
 }

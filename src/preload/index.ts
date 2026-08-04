@@ -33,6 +33,9 @@ const api = {
       ipcRenderer.invoke('shell:exec', command, cwd, timeoutMs),
     execFile: (file: string, args: string[], cwd?: string, timeoutMs?: number) =>
       ipcRenderer.invoke('shell:execFile', file, args, cwd, timeoutMs),
+    start: (command: string, cwd?: string) => ipcRenderer.invoke('shell:start', command, cwd),
+    poll: (jobId: string) => ipcRenderer.invoke('shell:poll', jobId),
+    kill: (jobId: string) => ipcRenderer.invoke('shell:kill', jobId),
     killAll: () => ipcRenderer.invoke('shell:killAll')
   },
 

@@ -14,7 +14,7 @@ export interface ToolResult {
   toolCallId: string
   content: string
   isError?: boolean
-  diffData?: { oldText: string; newText: string; filename: string }
+  diffData?: { oldText: string; newText: string; filename: string; path?: string }
 }
 
 // Tool definitions sent to LLM
@@ -92,15 +92,79 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: 'shell_exec',
     description:
-      'Execute a shell command and return stdout/stderr. Prefer specialized tools (read_file, edit_file, grep_search, search_files, git_status, git_diff) when available. Avoid interactive TUI commands.',
+      'Execute a shell command and return stdout/stderr. Prefer specialized tools (read_file, edit_file, grep_search, search_files, git_status, git_diff) when available. Avoid interactive TUI commands. Set background:true for long jobs (tests/builds); then use shell_poll / shell_kill.',
     parameters: {
       type: 'object',
       properties: {
         command: { type: 'string', description: 'Shell command to execute' },
         cwd: { type: 'string', description: 'Working directory (optional, defaults to project root)' },
-        timeout: { type: 'number', description: 'Timeout in seconds (5-300, default 30)' }
+        timeout: { type: 'number', description: 'Timeout in seconds (5-300, default 30). Ignored when background is true.' },
+        background: {
+          type: 'boolean',
+          description: 'If true, start the command in the background and return a job id immediately.'
+        }
       },
       required: ['command']
+    }
+  },
+  {
+    name: 'shell_poll',
+    description: 'Poll a background shell job started with shell_exec(background:true). Returns status, stdout, stderr.',
+    parameters: {
+      type: 'object',
+      properties: {
+        job_id: { type: 'string', description: 'Job id returned by shell_exec background start' }
+      },
+      required: ['job_id']
+    }
+  },
+  {
+    name: 'shell_kill',
+    description: 'Kill a background shell job by id.',
+    parameters: {
+      type: 'object',
+      properties: {
+        job_id: { type: 'string', description: 'Job id to kill' }
+      },
+      required: ['job_id']
+    }
+  },
+  {
+    name: 'update_plan',
+    description:
+      'Create or replace the session task plan checklist shown to the user. Call at the start of multi-step work and update statuses as you progress.',
+    parameters: {
+      type: 'object',
+      properties: {
+        items: {
+          type: 'array',
+          description: 'Plan items in order',
+          items: {
+            type: 'object',
+            properties: {
+              id: { type: 'string', description: 'Stable id (optional)' },
+              content: { type: 'string', description: 'Short step description' },
+              status: {
+                type: 'string',
+                description: 'pending | in_progress | done | cancelled'
+              }
+            },
+            required: ['content']
+          }
+        }
+      },
+      required: ['items']
+    }
+  },
+  {
+    name: 'git_log',
+    description: 'Show recent git commits (oneline). Prefer this over shell_exec for history.',
+    parameters: {
+      type: 'object',
+      properties: {
+        limit: { type: 'number', description: 'Number of commits (default 15, max 50)' },
+        cwd: { type: 'string', description: 'Repo root (optional)' }
+      }
     }
   },
   {

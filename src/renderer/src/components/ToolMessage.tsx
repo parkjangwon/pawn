@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import './ToolMessage.css'
 import DiffView from './DiffView'
 import { parseDiffMarker, stripDiffMarker } from '../utils/diffMarker'
+import { openFileInPanel } from '../stores/filesPanel'
 
 interface ToolMessageProps {
   content: string
@@ -16,6 +17,7 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
   // A __DIFF__: JSON marker (or the legacy block) carries the diff for DiffView.
   const diff = parseDiffMarker(content)
   const diffFilename = diff?.filename || ''
+  const diffPath = diff?.path || ''
   const diffOld = diff?.oldText || ''
   const diffNew = diff?.newText || ''
   const displayContentBase = stripDiffMarker(content)
@@ -36,11 +38,19 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
     read_file: { icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', label: t('toolMessage.read') },
     write_file: { icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', label: t('toolMessage.write') },
     edit_file: { icon: 'M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7', label: t('toolMessage.edit') },
+    delete_file: { icon: 'M3 6h18M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2', label: t('toolMessage.delete') },
     list_dir: { icon: 'M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z', label: t('toolMessage.list') },
     shell_exec: { icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t('toolMessage.shell') },
+    shell_poll: { icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t('toolMessage.shellPoll') },
+    shell_kill: { icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t('toolMessage.shellKill') },
+    git_status: { icon: 'M6 3v12M18 9a3 3 0 11-6 0 3 3 0 016 0zM6 15a3 3 0 100 6 3 3 0 000-6z', label: t('toolMessage.gitStatus') },
+    git_diff: { icon: 'M16 18l6-6-6-6M8 6l-6 6 6 6', label: t('toolMessage.gitDiff') },
+    git_log: { icon: 'M12 8v4l3 3', label: t('toolMessage.gitLog') },
+    update_plan: { icon: 'M9 11l3 3L22 4', label: t('toolMessage.plan') },
     computer_screenshot: { icon: 'M11 4a2 2 0 118 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z', label: t('toolMessage.screenshot') },
     computer_click: { icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', label: t('toolMessage.click') },
     computer_type: { icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t('toolMessage.type') },
+    computer_keypress: { icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t('toolMessage.keypress') },
     browser_open: { icon: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71', label: t('toolMessage.browser') }
   }
 
@@ -74,7 +84,13 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
         <div className="tool-message-body">
           {diffFilename && (
             <div className="tool-diff-preview">
-              <DiffView oldText={diffOld} newText={diffNew} filename={diffFilename} maxLines={50} />
+              <DiffView
+                oldText={diffOld}
+                newText={diffNew}
+                filename={diffFilename}
+                path={diffPath || undefined}
+                maxLines={50}
+              />
             </div>
           )}
           <pre className="tool-message-content">

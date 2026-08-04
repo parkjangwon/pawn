@@ -5,10 +5,8 @@ import './PermissionDialog.css'
 
 export default function PermissionDialog(): React.JSX.Element | null {
   const { t } = useTranslation()
-  const { pending, resolve, approveSession } = usePermissionStore()
+  const { pending, resolve, approveSession, addRule } = usePermissionStore()
 
-  // Escape denies the current request so a stuck dialog can always be dismissed
-  // without letting the agent wait forever.
   useEffect(() => {
     if (pending.length === 0) return
     const onKey = (e: KeyboardEvent): void => {
@@ -32,26 +30,60 @@ export default function PermissionDialog(): React.JSX.Element | null {
     mcp: t('permission.types.mcp')
   }
 
+  const pathPrefix = current.path
+    ? current.path.replace(/\\/g, '/').split('/').slice(0, -1).join('/') || current.path
+    : undefined
+  const shellPrefix = current.command
+    ? current.command.trim().split(/\s+/).slice(0, 2).join(' ')
+    : undefined
+
   return (
     <div className="permission-overlay">
       <div className="permission-dialog">
-        <h3>{t("permission.title")}</h3>
+        <h3>{t('permission.title')}</h3>
         <div className="permission-type">{typeLabels[current.type] || current.type}</div>
         <p className="permission-desc">{current.description}</p>
         {current.details && <pre className="permission-details">{current.details}</pre>}
         <div className="permission-actions">
           <button className="deny-btn" onClick={() => resolve(current.id, false)}>
-            {t("permission.deny")}
+            {t('permission.deny')}
           </button>
           <button
             className="session-btn"
             title={t('permission.allowSessionHint')}
-            onClick={() => { approveSession(current.type); resolve(current.id, true) }}
+            onClick={() => {
+              approveSession(current.type)
+              resolve(current.id, true)
+            }}
           >
-            {t("permission.allowSession")}
+            {t('permission.allowSession')}
           </button>
+          {pathPrefix && current.type === 'file_write' && (
+            <button
+              className="session-btn"
+              title={pathPrefix}
+              onClick={() => {
+                addRule({ kind: 'path_prefix', prefix: pathPrefix, scope: 'always' })
+                resolve(current.id, true)
+              }}
+            >
+              {t('permission.allowPathAlways')}
+            </button>
+          )}
+          {shellPrefix && current.type === 'shell_exec' && (
+            <button
+              className="session-btn"
+              title={shellPrefix}
+              onClick={() => {
+                addRule({ kind: 'shell_prefix', prefix: shellPrefix, scope: 'always' })
+                resolve(current.id, true)
+              }}
+            >
+              {t('permission.allowShellAlways')}
+            </button>
+          )}
           <button className="allow-btn" onClick={() => resolve(current.id, true)}>
-            {t("permission.allow")}
+            {t('permission.allow')}
           </button>
         </div>
       </div>

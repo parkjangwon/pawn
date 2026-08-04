@@ -12,6 +12,8 @@ import ChatHeader from './ChatHeader'
 import WelcomeScreen from './WelcomeScreen'
 import MessageList from './MessageList'
 import Composer from './Composer'
+import PlanStrip from './PlanStrip'
+import TurnReviewBar from './TurnReviewBar'
 import ConfirmDialog from './ConfirmDialog'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { MAX_ATTACHMENTS, type ChatAttachment } from '../utils/attachments'
@@ -34,7 +36,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
   const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, clearMessages, updateProjectName } = useAppStore()
-  const { sendMessage, isStreaming, stopStreaming } = useChatStore()
+  const { sendMessage, isStreaming, stopStreaming, queue } = useChatStore()
   const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
   const [showUsagePopover, setShowUsagePopover] = useState(false)
@@ -50,7 +52,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
   const [gitBranch, setGitBranch] = useState<string | null>(null)
   const [trigger, setTrigger] = useState<{ type: '/' | '@'; start: number; query: string } | null>(null)
   const [menuIndex, setMenuIndex] = useState(0)
-  const [fileIndex, setFileIndex] = useState<Array<{ name: string; path: string; rel: string }>>([])
+  const [fileIndex, setFileIndex] = useState<Array<{ name: string; path: string; rel: string; isDirectory?: boolean }>>([])
   const [filesLoading, setFilesLoading] = useState(false)
   const [skills, setSkills] = useState<LoadedSkill[]>([])
   const [startIndex, setStartIndex] = useState<number | null>(null)
@@ -219,12 +221,42 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
     ]
   }
 
-  const mentionItems = useMemo<TriggerItem[]>(() => fileIndex.map((f) => ({
-    id: f.rel,
-    label: f.name,
-    description: f.rel !== f.name ? f.rel : undefined,
-    icon: <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>
-  })), [fileIndex])
+  const mentionItems = useMemo<TriggerItem[]>(() => {
+    const fileIcon = (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+        <polyline points="14 2 14 8 20 8" />
+      </svg>
+    )
+    const folderIcon = (
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
+      </svg>
+    )
+    const specials: TriggerItem[] = [
+      {
+        id: 'git',
+        label: 'git',
+        description: t('chat.mention.gitDesc'),
+        hint: 'special',
+        icon: fileIcon
+      },
+      {
+        id: 'diff',
+        label: 'diff',
+        description: t('chat.mention.diffDesc'),
+        hint: 'special',
+        icon: fileIcon
+      }
+    ]
+    const files = fileIndex.map((f) => ({
+      id: f.rel + (f.isDirectory ? '/' : ''),
+      label: f.name + (f.isDirectory ? '/' : ''),
+      description: f.rel !== f.name ? f.rel : undefined,
+      icon: f.isDirectory ? folderIcon : fileIcon
+    }))
+    return [...specials, ...files]
+  }, [fileIndex, t])
 
   const loadFiles = async (): Promise<void> => {
     if (!effectivePath) return
@@ -233,7 +265,12 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
       const res = await window.api.fs.walk(effectivePath)
       if (Array.isArray(res)) {
         const base = effectivePath.endsWith('/') ? effectivePath : effectivePath + '/'
-        setFileIndex(res.map((f) => ({ name: f.name, path: f.path, rel: f.path.startsWith(base) ? f.path.slice(base.length) : f.name })))
+        setFileIndex(res.map((f) => ({
+          name: f.name,
+          path: f.path,
+          rel: f.path.startsWith(base) ? f.path.slice(base.length) : f.name,
+          isDirectory: Boolean(f.isDirectory)
+        })))
       }
     } finally {
       setFilesLoading(false)
@@ -332,15 +369,55 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
 
     if (!projectId || !sessionId) return
 
-    // Resolve @file mentions into inline context blocks (only known project files)
-    const pathByRel = new Map(fileIndex.map((f) => [f.rel, f.path]))
+    // Resolve @mentions: specials (@git/@diff), folders, files (size-capped)
+    const MENTION_FILE_CAP = 40_000
+    const pathByRel = new Map(fileIndex.map((f) => [f.rel.replace(/\/$/, ''), f]))
+    // also map with trailing slash for dirs
+    for (const f of fileIndex) {
+      if (f.isDirectory) pathByRel.set(f.rel.replace(/\/$/, '') + '/', f)
+    }
     const tokens = [...new Set((input.match(/@(\S+)/g) || []).map((tok) => tok.slice(1)))]
     const blocks: string[] = []
-    for (const rel of tokens) {
-      const abs = pathByRel.get(rel)
-      if (!abs) continue
-      const r = await window.api.fs.readFile(abs)
-      if (typeof r === 'string') blocks.push(`<file path="${rel}">\n${r}\n</file>`)
+    const cwd = effectivePath || ''
+    for (const raw of tokens) {
+      const rel = raw.replace(/\/$/, '')
+      if (rel === 'git' && cwd) {
+        const [branch, status] = await Promise.all([
+          window.api.shell.execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], cwd, 10_000),
+          window.api.shell.execFile('git', ['status', '--short', '--branch'], cwd, 10_000)
+        ])
+        blocks.push(
+          `<git>\nbranch: ${(branch.stdout || '').trim()}\n${(status.stdout || '').trim() || '(clean)'}\n</git>`
+        )
+        continue
+      }
+      if (rel === 'diff' && cwd) {
+        const d = await window.api.shell.execFile('git', ['diff', 'HEAD', '--no-color'], cwd, 20_000)
+        const text = (d.stdout || '(no changes)').slice(0, 30_000)
+        blocks.push(`<git_diff>\n${text}\n</git_diff>`)
+        continue
+      }
+      const entry = pathByRel.get(raw) || pathByRel.get(rel) || pathByRel.get(rel + '/')
+      if (!entry) continue
+      if (entry.isDirectory) {
+        const listing = await window.api.fs.listDir(entry.path)
+        if (Array.isArray(listing)) {
+          const lines = listing
+            .slice(0, 80)
+            .map((e) => `${e.isDirectory ? '[DIR]' : '[FILE]'} ${e.name}`)
+            .join('\n')
+          blocks.push(`<folder path="${entry.rel}">\n${lines || '(empty)'}\n</folder>`)
+        }
+        continue
+      }
+      const r = await window.api.fs.readFile(entry.path)
+      if (typeof r === 'string') {
+        const body =
+          r.length > MENTION_FILE_CAP
+            ? r.slice(0, MENTION_FILE_CAP) + `\n...(truncated ${r.length - MENTION_FILE_CAP} chars)`
+            : r
+        blocks.push(`<file path="${entry.rel}">\n${body}\n</file>`)
+      }
     }
     const skillByName = new Map(skills.map((s) => [s.name, s]))
     const slashTokens = [...new Set((input.match(/\/([^\s/]+)/g) || []).map((tok) => tok.slice(1)))]
@@ -429,6 +506,8 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
           onScroll={handleMessageScroll}
         />
       )}
+      <PlanStrip sessionId={activeSessionId} />
+      <TurnReviewBar sessionId={activeSessionId} />
       <Composer
         activeSession={!!activeSession}
         activeSessionId={activeSessionId}
@@ -462,6 +541,9 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
         isStreaming={isStreaming}
         onStop={stopStreaming}
         attachments={attachments}
+        sendMode={sendMode}
+        onSendModeChange={setSendMode}
+        queueLength={queue.length}
         onAddAttachment={addAttachment}
         onRemoveAttachment={removeAttachment}
       />

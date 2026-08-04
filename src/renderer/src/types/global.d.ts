@@ -42,6 +42,10 @@ declare global {
 
 declare global {
   interface Window {
+    __openRightPanelTab?: (id: string) => void
+    __closeRightPanelTab?: (id: string) => void
+    __toggleRightPanel?: () => void
+    __openFileInPanel?: (path: string) => void
     api: {
       platform: string
       appVersion: () => Promise<string>
@@ -74,6 +78,22 @@ declare global {
           cwd?: string,
           timeoutMs?: number
         ) => Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }>
+        start: (
+          command: string,
+          cwd?: string
+        ) => Promise<{ jobId?: string; pid?: number; error?: string }>
+        poll: (jobId: string) => Promise<{
+          jobId?: string
+          command?: string
+          status?: 'running' | 'exited'
+          stdout?: string
+          stderr?: string
+          exitCode?: number | null
+          killed?: boolean
+          elapsedMs?: number
+          error?: string
+        }>
+        kill: (jobId: string) => Promise<{ ok?: boolean; jobId?: string; error?: string }>
         killAll: () => Promise<{ ok?: boolean; killed?: number }>
       }
       setStreaming: (streaming: boolean) => void

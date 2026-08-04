@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron'
 import { handleTrusted } from './trust'
-import { join } from 'path'
+import { join, relative } from 'path'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync, rmdirSync } from 'fs'
 import { cp, rm } from 'fs/promises'
 
@@ -80,6 +80,122 @@ const MAX_READ_BYTES = 32 * 1024 * 1024
 const MAX_READ_TOTAL_BYTES = 96 * 1024 * 1024
 const walkCache = new Map<string, { at: number; result: Array<{ name: string; path: string; isDirectory: boolean }> }>()
 
+
+// --- gitignore-style matching (mirrors renderer utils/gitignore.ts) ---
+type IgnoreRule = {
+  negate: boolean
+  dirOnly: boolean
+  anchored: boolean
+  test: (relPath: string, isDirectory: boolean) => boolean
+}
+
+function globToRegExp(pattern: string): RegExp {
+  let i = 0
+  let out = ''
+  while (i < pattern.length) {
+    const c = pattern[i]
+    if (c === '*') {
+      if (pattern[i + 1] === '*') {
+        if (pattern[i + 2] === '/') {
+          out += '(?:.*/)?'
+          i += 3
+        } else {
+          out += '.*'
+          i += 2
+        }
+      } else {
+        out += '[^/]*'
+        i++
+      }
+    } else if (c === '?') {
+      out += '[^/]'
+      i++
+    } else if ('+|(){}^$.'.includes(c)) {
+      out += '\\' + c
+      i++
+    } else {
+      out += c
+      i++
+    }
+  }
+  return new RegExp(`^${out}$`)
+}
+
+function parseGitignore(text: string): IgnoreRule[] {
+  const rules: IgnoreRule[] = []
+  for (const rawLine of text.split(/\r?\n/)) {
+    let line = rawLine
+    if (!line || line.startsWith('#')) continue
+    if (!line.endsWith('\\ ')) line = line.replace(/ +$/, '')
+    let negate = false
+    if (line.startsWith('!')) {
+      negate = true
+      line = line.slice(1)
+    }
+    if (!line) continue
+    let dirOnly = false
+    if (line.endsWith('/') && line.length > 1) {
+      dirOnly = true
+      line = line.slice(0, -1)
+    }
+    let anchored = false
+    if (line.startsWith('/')) {
+      anchored = true
+      line = line.slice(1)
+    }
+    const re = globToRegExp(line)
+    rules.push({
+      negate,
+      dirOnly,
+      anchored,
+      test: (relPath, isDirectory) => {
+        if (dirOnly && !isDirectory) return false
+        const norm = relPath.replace(/\\/g, '/').replace(/^\.\//, '')
+        if (anchored) return re.test(norm)
+        if (re.test(norm)) return true
+        const parts = norm.split('/')
+        for (let i = 0; i < parts.length; i++) {
+          if (re.test(parts.slice(i).join('/')) || re.test(parts[i])) return true
+        }
+        return false
+      }
+    })
+  }
+  return rules
+}
+
+function isGitIgnored(relPath: string, isDirectory: boolean, rules: IgnoreRule[]): boolean {
+  let norm = relPath.split('\\').join('/')
+  if (norm.startsWith('./')) norm = norm.slice(2)
+  const candidates: Array<{ path: string; isDir: boolean }> = [{ path: norm, isDir: isDirectory }]
+  const parts = norm.split('/').filter(Boolean)
+  for (let i = 1; i < parts.length; i++) {
+    candidates.push({ path: parts.slice(0, i).join('/'), isDir: true })
+  }
+  let ignored = false
+  for (const rule of rules) {
+    for (const c of candidates) {
+      if (rule.test(c.path, c.isDir)) ignored = !rule.negate
+    }
+  }
+  return ignored
+}
+
+function loadIgnoreRules(rootPath: string): IgnoreRule[] {
+  const rules: IgnoreRule[] = []
+  for (const name of ['.gitignore', '.pawnignore']) {
+    try {
+      const p = join(rootPath, name)
+      if (existsSync(p)) {
+        rules.push(...parseGitignore(readFileSync(p, 'utf-8')))
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+  return rules
+}
+
 function shouldSkipEntry(name: string, isDirectory: boolean): boolean {
   if (WALK_IGNORE.has(name)) return true
   if (!name.startsWith('.')) return false
@@ -93,6 +209,7 @@ function shouldSkipEntry(name: string, isDirectory: boolean): boolean {
 
 function walkTree(rootPath: string): Array<{ name: string; path: string; isDirectory: boolean }> {
   const results: Array<{ name: string; path: string; isDirectory: boolean }> = []
+  const ignoreRules = loadIgnoreRules(rootPath)
   const walk = (dir: string, depth: number): void => {
     if (depth > WALK_MAX_DEPTH || results.length >= WALK_MAX) return
     let entries
@@ -102,7 +219,15 @@ function walkTree(rootPath: string): Array<{ name: string; path: string; isDirec
       const isDir = e.isDirectory()
       if (shouldSkipEntry(e.name, isDir)) continue
       const full = join(dir, e.name)
+      let rel: string
+      try {
+        rel = relative(rootPath, full).replace(/\\/g, '/')
+      } catch {
+        rel = e.name
+      }
+      if (ignoreRules.length > 0 && isGitIgnored(rel, isDir, ignoreRules)) continue
       if (isDir) {
+        results.push({ name: e.name, path: full, isDirectory: true })
         walk(full, depth + 1)
       } else {
         results.push({ name: e.name, path: full, isDirectory: false })
@@ -110,9 +235,6 @@ function walkTree(rootPath: string): Array<{ name: string; path: string; isDirec
     }
   }
   walk(rootPath, 0)
-  // Sort by path for deterministic output — filesystem order varies
-  // between runs and causes unnecessary cache-prefix drift.
-  results.sort((a, b) => a.path.localeCompare(b.path))
   return results
 }
 

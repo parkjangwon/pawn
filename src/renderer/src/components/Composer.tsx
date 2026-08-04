@@ -45,6 +45,9 @@ interface ComposerProps {
   attachments: ChatAttachment[]
   onAddAttachment: (a: ChatAttachment) => void
   onRemoveAttachment: (id: string) => void
+  sendMode?: 'queue' | 'steer'
+  onSendModeChange?: (mode: 'queue' | 'steer') => void
+  queueLength?: number
 }
 
 export default function Composer(props: ComposerProps): React.JSX.Element {
@@ -74,7 +77,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const { input, onChange, onKeyDown, onSend, textareaRef, activeSession, projects, activeProject, activeProjectId, onSelectProject } = props
   const { showProjectPicker, setShowProjectPicker, showPermPicker, setShowPermPicker, showModelPicker, setShowModelPicker, showUsagePopover, setShowUsagePopover } = props
   const { projectPickerRef, permPickerRef, modelPickerRef, usageRef, isStreaming, onStop } = props
-  const { attachments, onAddAttachment, onRemoveAttachment } = props
+  const { attachments, onAddAttachment, onRemoveAttachment, sendMode = 'queue', onSendModeChange, queueLength = 0 } = props
 
   const addFile = (file: File): void => {
     if (file.type.startsWith('image/')) {
@@ -235,6 +238,19 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   onChange={handleFilesPicked}
                 />
                 <div className="context-chip-wrapper" ref={permPickerRef}>
+
+                {onSendModeChange && (
+                  <button
+                    className={`perm-chip perm-send-${sendMode}`}
+                    onClick={() => onSendModeChange(sendMode === 'queue' ? 'steer' : 'queue')}
+                    title={sendMode === 'queue' ? t('contextBar.sendQueueHint') : t('contextBar.sendSteerHint')}
+                  >
+                    <span>{sendMode === 'queue' ? t('contextBar.sendQueue') : t('contextBar.sendSteer')}</span>
+                    {queueLength > 0 && sendMode === 'queue' && (
+                      <span className="usage-chip-cache">· {queueLength}</span>
+                    )}
+                  </button>
+                )}
                   <button className={`perm-chip perm-${permissionMode}`} onClick={() => { setShowPermPicker(!showPermPicker); setShowProjectPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                     <span>{permLabels[permissionMode]}</span>
