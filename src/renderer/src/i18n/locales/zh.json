@@ -470,11 +470,11 @@
   },
   "chatHeader": {
     "running": "运行中",
-    "open": "Open",
-    "openIn": "Open in",
-    "run": "Run",
-    "noScripts": "No scripts found",
-    "noApps": "No supported apps found"
+    "open": "打开",
+    "openIn": "打开",
+    "run": "运行",
+    "noScripts": "未找到脚本",
+    "noApps": "未找到支持的应用"
   },
   "fileBrowser": {
     "title": "选择文件夹",

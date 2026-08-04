@@ -1,10 +1,53 @@
 import { Notification, app, ipcMain, shell, systemPreferences } from 'electron'
 import { spawn } from 'child_process'
-import { resolve, sep } from 'path'
+import { resolve, sep, join } from 'path'
+import { readFile, readdir } from 'fs/promises'
 import { handleTrusted, isTrustedSender } from './trust'
 import { setTrayEnabled, setTrayLanguage, trayEnabled } from '../tray'
 import { setAppStreaming } from '../streamingState'
 import { getPawnDir } from '../config'
+
+/** Modern (10.7+) ICNS chunk types that embed a PNG directly, smallest-first
+ *  — a menu-row icon never needs more than ~64-128px, and skipping the large
+ *  ic09/ic10/ic14 (512-1024px) variants keeps the payload small. */
+const ICNS_PNG_TYPES = ['ic11', 'ic07', 'ic12', 'ic08', 'ic13', 'ic09', 'ic10', 'ic14']
+
+/** Most apps ship exactly one primary icon in Contents/Resources; a name
+ *  matching this pattern is preferred if there happen to be several
+ *  (e.g. extra icons for document types), otherwise take the first found. */
+async function findAppIcnsPath(appBundlePath: string): Promise<string | null> {
+  const resourcesDir = join(appBundlePath, 'Contents', 'Resources')
+  const entries = await readdir(resourcesDir).catch(() => [] as string[])
+  const icnsFiles = entries.filter((f) => f.toLowerCase().endsWith('.icns'))
+  if (icnsFiles.length === 0) return null
+  const preferred = icnsFiles.find((f) => /^(icon|app|appicon)\.icns$/i.test(f))
+  return join(resourcesDir, preferred || icnsFiles[0])
+}
+
+/** ICNS is a sequence of [4-byte type][4-byte big-endian length incl. header]
+ *  [data] chunks after an 8-byte "icns" + total-length header. Extract
+ *  whichever PNG-format chunk we prefer instead of pulling in a full ICNS
+ *  parsing library for this one read-only lookup. */
+async function extractIcnsPng(icnsPath: string): Promise<Buffer | null> {
+  const buf = await readFile(icnsPath)
+  if (buf.length < 8 || buf.toString('ascii', 0, 4) !== 'icns') return null
+  const chunks = new Map<string, Buffer>()
+  let offset = 8
+  while (offset + 8 <= buf.length) {
+    const type = buf.toString('ascii', offset, offset + 4)
+    const length = buf.readUInt32BE(offset + 4)
+    if (length < 8 || offset + length > buf.length) break
+    chunks.set(type, buf.subarray(offset + 8, offset + length))
+    offset += length
+  }
+  for (const type of ICNS_PNG_TYPES) {
+    const data = chunks.get(type)
+    if (data && data.length > 8 && data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47) {
+      return Buffer.from(data)
+    }
+  }
+  return null
+}
 
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
 
@@ -106,6 +149,32 @@ export function registerMiscIpc(): void {
     }
     const err = await shell.openPath(resolved)
     return err ? { error: err } : { ok: true }
+  })
+
+  // Icon for the "open in" menu's app list. Read-only (just a bitmap for
+  // display), so no path restriction like app:openPath's pawn-dir check.
+  //
+  // Reads the bundle's own .icns directly rather than calling
+  // app.getFileIcon() — that API has a real Electron/Chromium bug where only
+  // the very first call in a process's lifetime returns the correct icon;
+  // every call after that (regardless of path, regardless of concurrency)
+  // comes back as the same generic/corrupted bitmap. Since this menu always
+  // needs several distinct icons, the API is unusable here.
+  handleTrusted('app:getFileIcon', async (_, path: string) => {
+    if (typeof path !== 'string' || !path.trim()) return { error: 'Invalid path' }
+    if (path.endsWith('.app')) {
+      try {
+        const icnsPath = await findAppIcnsPath(path)
+        const png = icnsPath ? await extractIcnsPng(icnsPath) : null
+        if (png) return { dataUrl: `data:image/png;base64,${png.toString('base64')}` }
+      } catch { /* fall through to the generic lookup below */ }
+    }
+    try {
+      const icon = await app.getFileIcon(path, { size: 'normal' })
+      return { dataUrl: icon.toDataURL() }
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : String(err) }
+    }
   })
 
   handleTrusted('workspace:runScript', async (_, cwd: string, script: string, packageManager: string) => {

@@ -68,7 +68,8 @@ if (typeof window !== 'undefined' && !window.api) {
     workspace: {
       openIn: async () => ({ error: 'Not available in browser mode' }),
       runScript: async () => ({ error: 'Not available in browser mode' }),
-      openPath: async () => ({ error: 'Not available in browser mode' })
+      openPath: async () => ({ error: 'Not available in browser mode' }),
+      getAppIcon: async () => ({ error: 'Not available in browser mode' })
     },
     computer: {
       screenshot: async () => ({ error: 'Not available in browser mode' }),

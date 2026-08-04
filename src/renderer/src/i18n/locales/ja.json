@@ -470,11 +470,11 @@
   },
   "chatHeader": {
     "running": "実行中",
-    "open": "Open",
-    "openIn": "Open in",
-    "run": "Run",
-    "noScripts": "No scripts found",
-    "noApps": "No supported apps found"
+    "open": "開く",
+    "openIn": "開く",
+    "run": "実行",
+    "noScripts": "スクリプトが見つかりません",
+    "noApps": "対応するアプリが見つかりません"
   },
   "fileBrowser": {
     "title": "フォルダを選択",

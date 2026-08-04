@@ -71,6 +71,7 @@ declare global {
         openIn: (path: string, app: string) => Promise<{ ok?: boolean; error?: string }>
         runScript: (cwd: string, script: string, packageManager?: string) => Promise<{ ok?: boolean; error?: string }>
         openPath: (path: string) => Promise<{ ok?: boolean; error?: string }>
+        getAppIcon: (path: string) => Promise<{ dataUrl?: string; error?: string }>
       }
       computer: {
         screenshot: () => Promise<{ dataUrl?: string; error?: string }>
