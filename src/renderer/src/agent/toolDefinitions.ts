@@ -21,20 +21,25 @@ export interface ToolResult {
 export const TOOLS: ToolDefinition[] = [
   {
     name: 'read_file',
-    description: 'Read the contents of a file at the given path.',
+    description:
+      'Read a file. Paths may be absolute or relative to the project working directory. For large files, pass offset/limit (1-based line numbers) to page through content.',
     parameters: {
       type: 'object',
-      properties: { path: { type: 'string', description: 'Absolute file path' } },
+      properties: {
+        path: { type: 'string', description: 'File path (absolute or project-relative)' },
+        offset: { type: 'number', description: '1-based start line (optional)' },
+        limit: { type: 'number', description: 'Max lines to return (optional, default 500 when paging)' }
+      },
       required: ['path']
     }
   },
   {
     name: 'write_file',
-    description: 'Write content to a file. Creates the file if it does not exist.',
+    description: 'Write content to a file. Creates the file if it does not exist. Paths may be absolute or project-relative.',
     parameters: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Absolute file path' },
+        path: { type: 'string', description: 'File path (absolute or project-relative)' },
         content: { type: 'string', description: 'File content to write' }
       },
       required: ['path', 'content']
@@ -42,24 +47,34 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     name: 'edit_file',
-    description: 'Edit a file by replacing old_string with new_string.',
+    description:
+      'Edit a file by replacing old_string with new_string. old_string must match exactly once unless replace_all is true. Include enough surrounding context for a unique match.',
     parameters: {
       type: 'object',
       properties: {
-        path: { type: 'string', description: 'Absolute file path' },
-        old_string: { type: 'string', description: 'Text to find and replace' },
-        new_string: { type: 'string', description: 'Replacement text' }
+        path: { type: 'string', description: 'File path (absolute or project-relative)' },
+        old_string: { type: 'string', description: 'Exact text to find' },
+        new_string: { type: 'string', description: 'Replacement text' },
+        replace_all: {
+          type: 'boolean',
+          description: 'If true, replace every occurrence. Default false (requires a unique match).'
+        }
       },
       required: ['path', 'old_string', 'new_string']
     }
   },
   {
     name: 'list_dir',
-    description: 'List files and directories in a given path.',
+    description: 'List files and directories in a path (non-recursive). Paths may be absolute or project-relative.',
     parameters: {
       type: 'object',
-      properties: { path: { type: 'string', description: 'Directory path' } },
-      required: ['path']
+      properties: {
+        path: {
+          type: 'string',
+          description: 'Directory path (absolute or project-relative). Defaults to project root when omitted.'
+        }
+      },
+      required: []
     }
   },
   {
