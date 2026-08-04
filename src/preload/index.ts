@@ -32,7 +32,8 @@ const api = {
     exec: (command: string, cwd?: string, timeoutMs?: number) =>
       ipcRenderer.invoke('shell:exec', command, cwd, timeoutMs),
     execFile: (file: string, args: string[], cwd?: string, timeoutMs?: number) =>
-      ipcRenderer.invoke('shell:execFile', file, args, cwd, timeoutMs)
+      ipcRenderer.invoke('shell:execFile', file, args, cwd, timeoutMs),
+    killAll: () => ipcRenderer.invoke('shell:killAll')
   },
 
   // Main-process streaming flag: lets the window guard against closing while

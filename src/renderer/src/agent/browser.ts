@@ -25,7 +25,7 @@ export interface BrowserAgent {
   readText: (selector: string) => Promise<{ text: string; error?: string }>
   evaluate: (code: string) => Promise<{ result: string; error?: string }>
   back: () => Promise<{ url?: string; error?: string }>
-  screenshot: () => Promise<{ bytes: number; error?: string }>
+  screenshot: () => Promise<{ bytes: number; dataUrl?: string; error?: string }>
 }
 
 let cached: BrowserAgent | null | undefined
@@ -82,7 +82,8 @@ export function getBrowserAgent(): BrowserAgent | null {
     },
     screenshot: async () => {
       const res = await api.browser.screenshot()
-      return res.error ? { bytes: 0, error: res.error } : { bytes: res.bytes || 0 }
+      if (res.error) return { bytes: 0, error: res.error }
+      return { bytes: res.bytes || 0, dataUrl: res.dataUrl }
     }
   }
   return cached

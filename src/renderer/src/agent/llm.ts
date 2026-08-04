@@ -138,8 +138,8 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     headers['anthropic-version'] = '2023-06-01'
     body = {
       model: model.modelId,
-      // max_tokens must exceed the thinking budget, not merely equal it.
-      max_tokens: budget ? budget + 8192 : 8192,
+      // Coding turns need headroom; thinking budget must stay under max_tokens.
+      max_tokens: budget ? budget + 16_384 : 16_384,
       stream: true,
       ...(budget ? { thinking: { type: 'enabled', budget_tokens: budget } } : {}),
       system: systemLayers.map((text, i) =>
@@ -159,6 +159,8 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       // Without this the usage block never arrives on a streamed response and
       // cached_tokens can't be measured.
       stream_options: { include_usage: true },
+      // Explicit cap so coding responses are not cut short by low provider defaults.
+      max_tokens: 16_384,
       tools: toolsToOpenAI(mcpTools),
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
@@ -393,13 +395,28 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   return { text: fullText, toolCalls, thinking, usage }
 }
 
-function safeParseArgs(raw: string): Record<string, unknown> {
+/**
+ * Parse streamed tool arguments. On failure, mark the call so the executor can
+ * refuse to run with empty `{}` (which causes silent bad tool use loops).
+ */
+export function safeParseArgs(raw: string): Record<string, unknown> {
   if (!raw.trim()) return {}
   try {
     const parsed = JSON.parse(raw)
-    return parsed && typeof parsed === 'object' ? (parsed as Record<string, unknown>) : {}
-  } catch {
-    return {}
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, unknown>
+    }
+    return {
+      __parse_error: true,
+      __raw: raw.slice(0, 500),
+      __message: 'Tool arguments were not a JSON object'
+    }
+  } catch (err) {
+    return {
+      __parse_error: true,
+      __raw: raw.slice(0, 500),
+      __message: err instanceof Error ? err.message : 'Invalid tool argument JSON'
+    }
   }
 }
 

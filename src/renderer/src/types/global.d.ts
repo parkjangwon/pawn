@@ -63,8 +63,18 @@ declare global {
         removeDir: (path: string) => Promise<{ ok?: boolean; error?: string }>
       }
       shell: {
-        exec: (command: string, cwd?: string, timeoutMs?: number) => Promise<{ stdout: string; stderr: string; exitCode: number }>
-        execFile: (file: string, args: string[], cwd?: string, timeoutMs?: number) => Promise<{ stdout: string; stderr: string; exitCode: number }>
+        exec: (
+          command: string,
+          cwd?: string,
+          timeoutMs?: number
+        ) => Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }>
+        execFile: (
+          file: string,
+          args: string[],
+          cwd?: string,
+          timeoutMs?: number
+        ) => Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }>
+        killAll: () => Promise<{ ok?: boolean; killed?: number }>
       }
       setStreaming: (streaming: boolean) => void
       workspace: {

@@ -78,21 +78,61 @@ export const TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'delete_file',
+    description:
+      'Delete a single file or an empty directory. Prefer this over shell rm for simple deletes. Non-empty directories are refused — clear contents first or use shell_exec carefully for recursive removal.',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'File or empty directory path (absolute or project-relative)' }
+      },
+      required: ['path']
+    }
+  },
+  {
     name: 'shell_exec',
-    description: 'Execute a shell command and return stdout/stderr.',
+    description:
+      'Execute a shell command and return stdout/stderr. Prefer specialized tools (read_file, edit_file, grep_search, search_files, git_status, git_diff) when available. Avoid interactive TUI commands.',
     parameters: {
       type: 'object',
       properties: {
         command: { type: 'string', description: 'Shell command to execute' },
-        cwd: { type: 'string', description: 'Working directory (optional)' },
+        cwd: { type: 'string', description: 'Working directory (optional, defaults to project root)' },
         timeout: { type: 'number', description: 'Timeout in seconds (5-300, default 30)' }
       },
       required: ['command']
     }
   },
   {
+    name: 'git_status',
+    description:
+      'Show git status --short and current branch for the project. Prefer this over shell_exec for reviewing workspace changes.',
+    parameters: {
+      type: 'object',
+      properties: {
+        cwd: { type: 'string', description: 'Repo root (optional, defaults to project path)' }
+      }
+    }
+  },
+  {
+    name: 'git_diff',
+    description:
+      'Show git diff. Default is working tree vs HEAD (staged + unstaged). Set staged:true for index-only (--cached). Use path to scope to a file or directory.',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Optional path to limit the diff' },
+        staged: {
+          type: 'boolean',
+          description: 'If true, only staged changes (git diff --cached). Default false (git diff HEAD).'
+        },
+        cwd: { type: 'string', description: 'Repo root (optional)' }
+      }
+    }
+  },
+  {
     name: 'computer_screenshot',
-    description: 'Take a screenshot of the current screen.',
+    description: 'Take a screenshot of the current screen. Image is attached for vision models.',
     parameters: { type: 'object', properties: {} }
   },
   {
@@ -114,6 +154,15 @@ export const TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { text: { type: 'string', description: 'Text to type' } },
       required: ['text']
+    }
+  },
+  {
+    name: 'computer_keypress',
+    description: 'Press a key or combination (e.g. Return, Escape, ctrl+c, alt+Tab).',
+    parameters: {
+      type: 'object',
+      properties: { key: { type: 'string', description: 'Key name or combination' } },
+      required: ['key']
     }
   },
   {
@@ -228,25 +277,38 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     name: 'search_files',
-    description: 'Search for files in the project by name pattern. Uses glob-style matching. For example: *.tsx, *util*, **/*.css',
+    description:
+      'Find files by glob pattern under the project (e.g. **/*.tsx, src/**/*Util*.ts). Prefer this over shell find/ls.',
     parameters: {
       type: 'object',
-      properties: { 
-        pattern: { type: 'string', description: 'File name pattern to search for (e.g. *.tsx, *util*, *.css)' },
-        rootPath: { type: 'string', description: 'Root directory to search in (optional, defaults to project root)' }
+      properties: {
+        pattern: { type: 'string', description: 'Glob pattern (e.g. *.tsx, **/*util*, src/**/*.css)' },
+        rootPath: { type: 'string', description: 'Root directory (optional, defaults to project root)' },
+        max_results: { type: 'number', description: 'Max paths to return (default 80, max 300)' }
       },
       required: ['pattern']
     }
   },
   {
     name: 'grep_search',
-    description: 'Search for text content across all project files. Useful for finding where a function is defined, where a string is used, etc.',
+    description:
+      'Search file contents with a regex (or fixed string). Returns path:line:text. Prefer this over shell grep for code search.',
     parameters: {
       type: 'object',
-      properties: { 
+      properties: {
         query: { type: 'string', description: 'Text or regex pattern to search for' },
-        pattern: { type: 'string', description: 'File pattern to filter (e.g. *.tsx, *.ts), optional' },
-        rootPath: { type: 'string', description: 'Root directory to search in (optional)' }
+        pattern: { type: 'string', description: 'Glob file filter (e.g. *.tsx, *.{ts,tsx}), optional' },
+        rootPath: { type: 'string', description: 'Root directory to search (optional)' },
+        case_insensitive: { type: 'boolean', description: 'Case-insensitive match (default false)' },
+        fixed_string: {
+          type: 'boolean',
+          description: 'Treat query as literal text, not regex (default false)'
+        },
+        context_lines: {
+          type: 'number',
+          description: 'Lines of context before/after each match (0-3, default 0)'
+        },
+        max_matches: { type: 'number', description: 'Max matches to return (default 80, max 200)' }
       },
       required: ['query']
     }

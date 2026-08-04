@@ -7,7 +7,8 @@ import { useRoutineStore } from '../stores/routine'
 import { checkPermission } from './toolPermission'
 import { isMcpToolName, callMcpTool } from './mcp'
 import { uid } from '../utils/uid'
-import { resolveToolPath, countOccurrences, formatFileRead } from './pathUtils'
+import { resolveToolPath, formatFileRead } from './pathUtils'
+import { applyEdit } from './editUtils'
 import type { ToolCall, ToolResult } from './toolDefinitions'
 
 async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: string }> {
@@ -63,6 +64,15 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
 
   if (signal?.aborted) {
     return { toolCallId: call.id, content: 'Tool was not executed (run aborted).', isError: true }
+  }
+
+  // Streamed JSON for tool args can arrive truncated; never run with silent {}.
+  if (call.arguments && call.arguments.__parse_error === true) {
+    return {
+      toolCallId: call.id,
+      content: `Invalid tool arguments for ${call.name}: ${String(call.arguments.__message || 'JSON parse failed')}\nRaw: ${String(call.arguments.__raw || '').slice(0, 300)}`,
+      isError: true
+    }
   }
 
   // Check permission before execution
@@ -132,44 +142,38 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         const oldStr = call.arguments.old_string as string
         const newStr = call.arguments.new_string as string
         const replaceAll = Boolean(call.arguments.replace_all)
-        if (!oldStr) {
-          return { toolCallId: call.id, content: 'old_string must not be empty', isError: true }
-        }
-        if (oldStr === newStr) {
-          return { toolCallId: call.id, content: 'old_string and new_string are identical', isError: true }
-        }
         const fileContent = await api.fs.readFile(path)
         if (typeof fileContent === 'object' && 'error' in fileContent) {
           return { toolCallId: call.id, content: fileContent.error, isError: true }
         }
-        const text = fileContent as string
-        const occurrences = countOccurrences(text, oldStr)
-        if (occurrences === 0) {
+        const applied = applyEdit(fileContent as string, oldStr, newStr, replaceAll)
+        if (!applied.ok) {
           return {
             toolCallId: call.id,
-            content:
-              'old_string not found in file. Re-read the file and use the exact current text (including whitespace).',
+            content: applied.hint ? `${applied.error}\n${applied.hint}` : applied.error,
             isError: true
           }
         }
-        if (occurrences > 1 && !replaceAll) {
-          return {
-            toolCallId: call.id,
-            content: `old_string appears ${occurrences} times in file. Provide more surrounding context to make it unique, or set replace_all: true.`,
-            isError: true
-          }
-        }
-        const updated = replaceAll ? text.split(oldStr).join(newStr) : text.replace(oldStr, newStr)
-        const writeResult = await api.fs.writeFile(path, updated)
+        const writeResult = await api.fs.writeFile(path, applied.updated)
         if ('error' in writeResult) {
           return { toolCallId: call.id, content: writeResult.error!, isError: true }
         }
         const filename = path.split('/').pop() || path
+        const modeNote = applied.mode === 'flex_ws' ? ', whitespace-flex match' : ''
         return {
           toolCallId: call.id,
-          content: `File edited: ${path} (${replaceAll ? occurrences : 1} replacement${replaceAll && occurrences > 1 ? 's' : ''})`,
+          content: `File edited: ${path} (${applied.replacements} replacement${applied.replacements > 1 ? 's' : ''}${modeNote})`,
           diffData: { oldText: oldStr, newText: newStr, filename }
         }
+      }
+
+      case 'delete_file': {
+        const path = resolveToolPath(call.arguments.path as string, projectPath)
+        const result = await api.fs.delete(path)
+        if (result && 'error' in result && result.error) {
+          return { toolCallId: call.id, content: result.error, isError: true }
+        }
+        return { toolCallId: call.id, content: `Deleted: ${path}` }
       }
 
       case 'list_dir': {
@@ -190,16 +194,82 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         const timeoutMs = Number.isFinite(timeoutArg) && timeoutArg > 0
           ? Math.min(300_000, Math.max(5_000, timeoutArg * 1000))
           : undefined
+        const cwd = resolveToolPath(
+          (call.arguments.cwd as string) || projectPath || undefined,
+          projectPath
+        )
         const result = await api.shell.exec(
           call.arguments.command as string,
-          (call.arguments.cwd as string) || projectPath,
+          cwd === '.' ? projectPath : cwd,
           timeoutMs
         )
-        const output = [result.stdout, result.stderr].filter(Boolean).join('\n')
+        const parts = [result.stdout, result.stderr].filter(Boolean)
+        if (result.killed) parts.push('(command killed — stopped or timed out)')
+        const output = parts.join('\n')
         return {
           toolCallId: call.id,
           content: output || `(exit code: ${result.exitCode})`,
-          isError: result.exitCode !== 0
+          isError: result.exitCode !== 0 || Boolean(result.killed)
+        }
+      }
+
+      case 'git_status': {
+        const cwd = resolveToolPath(
+          (call.arguments.cwd as string) || projectPath || undefined,
+          projectPath
+        )
+        const workDir = !cwd || cwd === '.' ? projectPath : cwd
+        if (!workDir) {
+          return { toolCallId: call.id, content: 'No project path set', isError: true }
+        }
+        const [branch, status] = await Promise.all([
+          api.shell.execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], workDir, 15_000),
+          api.shell.execFile('git', ['status', '--short', '--branch'], workDir, 15_000)
+        ])
+        if (status.exitCode !== 0 && branch.exitCode !== 0) {
+          return {
+            toolCallId: call.id,
+            content: status.stderr || branch.stderr || 'Not a git repository',
+            isError: true
+          }
+        }
+        const lines = [
+          branch.exitCode === 0 ? `branch: ${branch.stdout.trim()}` : null,
+          status.stdout.trim() || '(clean working tree)'
+        ].filter(Boolean)
+        return { toolCallId: call.id, content: lines.join('\n') }
+      }
+
+      case 'git_diff': {
+        const cwd = resolveToolPath(
+          (call.arguments.cwd as string) || projectPath || undefined,
+          projectPath
+        )
+        const workDir = !cwd || cwd === '.' ? projectPath : cwd
+        if (!workDir) {
+          return { toolCallId: call.id, content: 'No project path set', isError: true }
+        }
+        const pathArg = call.arguments.path ? resolveToolPath(String(call.arguments.path), projectPath) : ''
+        const stagedOnly = Boolean(call.arguments.staged)
+        const argsBase = stagedOnly
+          ? ['diff', '--cached', '--no-color']
+          : ['diff', 'HEAD', '--no-color']
+        // For unstaged-only when not stagedOnly, show working tree vs index AND index vs HEAD
+        // via `git diff HEAD` which covers both.
+        const args = pathArg ? [...argsBase, '--', pathArg] : argsBase
+        const result = await api.shell.execFile('git', args, workDir, 30_000)
+        if (result.exitCode !== 0 && !result.stdout) {
+          return {
+            toolCallId: call.id,
+            content: result.stderr || 'git diff failed',
+            isError: true
+          }
+        }
+        const text = result.stdout || '(no changes)'
+        const cap = 40_000
+        return {
+          toolCallId: call.id,
+          content: text.length > cap ? text.slice(0, cap) + `\n...(truncated ${text.length - cap} chars)` : text
         }
       }
 
@@ -222,6 +292,14 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         const result = await api.computer.type(call.arguments.text as string)
         if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
         return { toolCallId: call.id, content: `Typed: ${call.arguments.text}` }
+      }
+
+      case 'computer_keypress': {
+        const key = String(call.arguments.key || '')
+        if (!key) return { toolCallId: call.id, content: 'key is required', isError: true }
+        const result = await api.computer.keypress(key)
+        if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
+        return { toolCallId: call.id, content: `Pressed key: ${key}` }
       }
 
       case 'browser_navigate': {
@@ -308,7 +386,14 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.screenshot()
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
-        return { toolCallId: call.id, content: `[Screenshot captured, ${res.bytes} bytes of PNG data]` }
+        // Return data URL so transcript maps it to a vision image block (same as computer_screenshot).
+        if (res.dataUrl && res.dataUrl.startsWith('data:image/')) {
+          return { toolCallId: call.id, content: res.dataUrl }
+        }
+        return {
+          toolCallId: call.id,
+          content: `[Screenshot captured, ${res.bytes} bytes — no image data returned]`
+        }
       }
 
       case 'browser_open_external': {
@@ -337,6 +422,7 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
           projectPath
         )
         if (!rootPath || rootPath === '.') return { toolCallId: call.id, content: 'No project path set', isError: true }
+        const maxResults = Math.min(300, Math.max(1, Number(call.arguments.max_results) || 80))
         const walkResult = await window.api.fs.walk(rootPath)
         if (!Array.isArray(walkResult)) {
           return { toolCallId: call.id, content: (walkResult as { error: string }).error, isError: true }
@@ -351,10 +437,15 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
           if (f.isDirectory) return false
           const pathNorm = f.path.replace(/\\/g, '/')
           const rel = pathNorm.startsWith(root) ? pathNorm.slice(root.length) : f.name
-          return matchesGlob(rel, pattern, compiledPattern)
+          return matchesGlob(rel, pattern, compiledPattern) || matchesGlob(f.name, pattern, compiledPattern)
         })
         if (files.length === 0) return { toolCallId: call.id, content: 'No files found matching: ' + pattern }
-        return { toolCallId: call.id, content: `Found ${files.length} files:\n${files.slice(0, 50).map((f) => f.path).join('\n')}` }
+        const shown = files.slice(0, maxResults)
+        const more = files.length > maxResults ? `\n...(${files.length - maxResults} more)` : ''
+        return {
+          toolCallId: call.id,
+          content: `Found ${files.length} files:\n${shown.map((f) => f.path).join('\n')}${more}`
+        }
       }
 
       case 'grep_search': {
@@ -365,6 +456,11 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
           projectPath
         )
         if (!grepRoot || grepRoot === '.') return { toolCallId: call.id, content: 'No project path set', isError: true }
+        const caseInsensitive = Boolean(call.arguments.case_insensitive)
+        const fixedString = Boolean(call.arguments.fixed_string)
+        const contextLines = Math.min(3, Math.max(0, Number(call.arguments.context_lines) || 0))
+        const maxMatches = Math.min(200, Math.max(1, Number(call.arguments.max_matches) || 80))
+
         const walkResult2 = await window.api.fs.walk(grepRoot)
         if (!Array.isArray(walkResult2)) {
           return { toolCallId: call.id, content: (walkResult2 as { error: string }).error, isError: true }
@@ -376,47 +472,76 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
               if (f.isDirectory) return false
               const pathNorm = f.path.replace(/\\/g, '/')
               const rel = pathNorm.startsWith(grepRoot2) ? pathNorm.slice(grepRoot2.length) : f.name
-              return matchesGlob(rel, filePattern, compiledFilePattern)
+              return matchesGlob(rel, filePattern, compiledFilePattern) || matchesGlob(f.name, filePattern, compiledFilePattern)
             })
           : walkResult2.filter((f) => !f.isDirectory)
         let regex: RegExp
         try {
-          if (query.length > 256) throw new Error('pattern too long')
-          regex = new RegExp(query, 'g')
+          if (query.length > 512) throw new Error('pattern too long')
+          const source = fixedString ? query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') : query
+          regex = new RegExp(source, caseInsensitive ? 'gi' : 'g')
         } catch {
           return {
             toolCallId: call.id,
-            content: query.length > 256 ? 'Regex pattern too long (max 256 chars)' : 'Invalid regex pattern: ' + query,
+            content: query.length > 512 ? 'Pattern too long (max 512 chars)' : 'Invalid regex pattern: ' + query,
             isError: true
           }
         }
         const matches: string[] = []
         let skippedLongLines = 0
-        const reads = await window.api.fs.readFiles(candidates.slice(0, 200).map((f) => f.path))
+        let truncated = false
+        // Prefer source-like files first so node_modules-less walks still hit app code early.
+        const ranked = [...candidates].sort((a, b) => {
+          const score = (p: string): number => {
+            if (/\.(tsx?|jsx?|mjs|cjs|py|go|rs|java|kt|swift|rb|php|vue|svelte)$/i.test(p)) return 0
+            if (/\.(md|json|ya?ml|toml|css|scss)$/i.test(p)) return 1
+            return 2
+          }
+          return score(a.path) - score(b.path) || a.path.localeCompare(b.path)
+        })
+        const reads = await window.api.fs.readFiles(ranked.slice(0, 400).map((f) => f.path))
         for (const item of reads) {
-          if (matches.length >= 50) break
+          if (matches.length >= maxMatches) {
+            truncated = true
+            break
+          }
           if (typeof item.content !== 'string') continue
           const lines = item.content.split('\n')
           for (let i = 0; i < lines.length; i++) {
-            // Minified files can have megabyte lines; a pathological regex on
-            // one of them could stall the turn (catastrophic backtracking).
-            // Long lines are skipped so a single huge file cannot wedge the loop.
+            if (matches.length >= maxMatches) {
+              truncated = true
+              break
+            }
+            // Minified files can have megabyte lines; skip to avoid catastrophic backtracking.
             if (lines[i].length > 20_000) {
               skippedLongLines++
               continue
             }
             regex.lastIndex = 0
-            if (regex.test(lines[i])) {
-              matches.push(`${item.path}:${i + 1}: ${lines[i].trim()}`)
-              if (matches.length >= 50) break
+            if (!regex.test(lines[i])) continue
+            if (contextLines > 0) {
+              const from = Math.max(0, i - contextLines)
+              const to = Math.min(lines.length - 1, i + contextLines)
+              for (let j = from; j <= to; j++) {
+                const mark = j === i ? ':' : '-'
+                matches.push(`${item.path}${mark}${j + 1}: ${lines[j].slice(0, 300)}`)
+              }
+              matches.push('--')
+            } else {
+              matches.push(`${item.path}:${i + 1}: ${lines[i].slice(0, 400)}`)
             }
           }
         }
         if (matches.length === 0) return { toolCallId: call.id, content: 'No matches found for: ' + query }
-        const skippedNote = skippedLongLines > 0
-          ? `\n...(${skippedLongLines} lines over 20k chars skipped for safety)`
-          : ''
-        return { toolCallId: call.id, content: matches.join('\n').slice(0, 3000) + skippedNote }
+        const body = matches.join('\n')
+        const notes: string[] = []
+        if (truncated) notes.push(`truncated at ${maxMatches} matches`)
+        if (skippedLongLines > 0) notes.push(`${skippedLongLines} lines over 20k chars skipped`)
+        if (ranked.length > 400) notes.push(`scanned first 400 of ${ranked.length} candidate files`)
+        const footer = notes.length ? `\n...(${notes.join('; ')})` : ''
+        const cap = 16_000
+        const clipped = body.length > cap ? body.slice(0, cap) + `\n...(output truncated)` : body
+        return { toolCallId: call.id, content: clipped + footer }
       }
 
       case 'app_open_tab': {
