@@ -16,7 +16,7 @@ describe('truncateToolResult', () => {
   it('truncates long results with a note', () => {
     const out = truncateToolResult({ content: 'x'.repeat(2000) }, 100)
     expect(out.length).toBeLessThan(2000)
-    expect(out).toContain('...(truncated 1900 chars)')
+    expect(out).toContain('...(truncated 1900 chars')
   })
 })
 

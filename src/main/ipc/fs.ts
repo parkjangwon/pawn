@@ -1,12 +1,73 @@
 import { app, ipcMain } from 'electron'
 import { handleTrusted } from './trust'
 import { join } from 'path'
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
+import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync, rmdirSync } from 'fs'
 import { cp, rm } from 'fs/promises'
 
-const WALK_IGNORE = new Set(['node_modules', '.git', 'dist', 'out', 'release', '.next', 'coverage', '.turbo', '.cache'])
-const WALK_MAX = 3000
-const WALK_MAX_DEPTH = 6
+const WALK_IGNORE = new Set([
+  'node_modules',
+  '.git',
+  'dist',
+  'build',
+  'out',
+  'release',
+  '.next',
+  '.nuxt',
+  'coverage',
+  '.turbo',
+  '.cache',
+  '.parcel-cache',
+  '.vite',
+  '.svelte-kit',
+  'vendor',
+  '__pycache__',
+  '.pytest_cache',
+  '.mypy_cache',
+  '.tox',
+  '.venv',
+  'venv',
+  '.idea',
+  '.yarn',
+  'target' // rust/java build output (shallow name match is OK for walk skip)
+])
+// Dot-directories we *do* want to index for coding agents
+const WALK_ALLOW_DOT_DIRS = new Set([
+  '.github',
+  '.claude',
+  '.agent',
+  '.agents',
+  '.vscode',
+  '.cursor',
+  '.pawn',
+  '.config'
+])
+// Dot-files we want searchable (configs agents actually need)
+const WALK_ALLOW_DOT_FILES = new Set([
+  '.env',
+  '.env.example',
+  '.env.local',
+  '.env.development',
+  '.env.production',
+  '.gitignore',
+  '.gitattributes',
+  '.editorconfig',
+  '.npmrc',
+  '.nvmrc',
+  '.node-version',
+  '.prettierrc',
+  '.prettierrc.js',
+  '.prettierrc.cjs',
+  '.prettierrc.json',
+  '.eslintrc',
+  '.eslintrc.js',
+  '.eslintrc.cjs',
+  '.eslintrc.json',
+  '.babelrc',
+  '.dockerignore'
+])
+// Monorepos and nested packages need more than 6 levels (e.g. apps/web/src/features/x).
+const WALK_MAX = 12_000
+const WALK_MAX_DEPTH = 14
 // Agent tools (search/grep) and the @-mention index call fs:walk repeatedly;
 // a short TTL keeps large projects responsive while staying fresh enough for
 // interactive edits.
@@ -14,10 +75,21 @@ const WALK_CACHE_TTL_MS = 3000
 const WALK_CACHE_MAX = 10
 // A single huge synchronous read would freeze the main process (and the UI).
 const MAX_READ_BYTES = 32 * 1024 * 1024
-// grep-style scans read up to 200 files; bound the TOTAL so a hostile repo
+// grep-style scans read up to 400 files; bound the TOTAL so a hostile repo
 // cannot make one call balloon into gigabytes of main-process memory.
-const MAX_READ_TOTAL_BYTES = 64 * 1024 * 1024
+const MAX_READ_TOTAL_BYTES = 96 * 1024 * 1024
 const walkCache = new Map<string, { at: number; result: Array<{ name: string; path: string; isDirectory: boolean }> }>()
+
+function shouldSkipEntry(name: string, isDirectory: boolean): boolean {
+  if (WALK_IGNORE.has(name)) return true
+  if (!name.startsWith('.')) return false
+  if (isDirectory) return !WALK_ALLOW_DOT_DIRS.has(name)
+  if (WALK_ALLOW_DOT_FILES.has(name)) return false
+  // Allow .env.* variants and common RC files
+  if (name.startsWith('.env.')) return false
+  if (name.endsWith('rc') || name.endsWith('rc.js') || name.endsWith('rc.cjs') || name.endsWith('rc.json')) return false
+  return true
+}
 
 function walkTree(rootPath: string): Array<{ name: string; path: string; isDirectory: boolean }> {
   const results: Array<{ name: string; path: string; isDirectory: boolean }> = []
@@ -27,10 +99,10 @@ function walkTree(rootPath: string): Array<{ name: string; path: string; isDirec
     try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
     for (const e of entries) {
       if (results.length >= WALK_MAX) return
-      if (e.name.startsWith('.')) continue
-      if (WALK_IGNORE.has(e.name)) continue
+      const isDir = e.isDirectory()
+      if (shouldSkipEntry(e.name, isDir)) continue
       const full = join(dir, e.name)
-      if (e.isDirectory()) {
+      if (isDir) {
         walk(full, depth + 1)
       } else {
         results.push({ name: e.name, path: full, isDirectory: false })
@@ -105,6 +177,9 @@ export function registerFsIpc(): void {
 
   handleTrusted('fs:writeFile', async (_, filePath: string, content: string) => {
     try {
+      // Ensure parent directory exists (agents often write new nested files).
+      const parent = join(filePath, '..')
+      if (!existsSync(parent)) mkdirSync(parent, { recursive: true })
       writeFileSync(filePath, content, 'utf-8')
       walkCache.clear()
       return { ok: true }
@@ -153,9 +228,22 @@ export function registerFsIpc(): void {
     }
   })
 
+  // Agent delete_file: files and empty directories only. Recursive trees use
+  // fs:removeDir (skill installer) or shell_exec with an explicit rm -rf.
   handleTrusted('fs:delete', async (_, filePath: string) => {
     try {
-      unlinkSync(filePath)
+      const s = statSync(filePath)
+      if (s.isDirectory()) {
+        try {
+          rmdirSync(filePath)
+        } catch {
+          return {
+            error: `Directory not empty: ${filePath}. Remove contents first, or use shell_exec carefully for recursive delete.`
+          }
+        }
+      } else {
+        unlinkSync(filePath)
+      }
       walkCache.clear()
       return { ok: true }
     } catch (err) {

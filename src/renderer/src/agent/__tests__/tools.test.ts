@@ -14,7 +14,7 @@ const fsMock = {
   exists: vi.fn()
 }
 
-const shellMock = { exec: vi.fn() }
+const shellMock = { exec: vi.fn(), execFile: vi.fn() }
 const routineMock = {
   list: vi.fn(),
   add: vi.fn(),
@@ -34,7 +34,16 @@ const browserApi = {
 }
 
 beforeEach(() => {
-  ;(window as any).api = { fs: fsMock, shell: shellMock }
+  ;(window as any).api = {
+    fs: fsMock,
+    shell: shellMock,
+    computer: {
+      screenshot: vi.fn(),
+      click: vi.fn(),
+      type: vi.fn(),
+      keypress: vi.fn().mockResolvedValue({ ok: true })
+    }
+  }
   useProviderStore.setState({ permissionMode: 'ask' })
   usePermissionStore.setState({ pending: [] })
   for (const fn of Object.values(fsMock)) fn.mockReset()
@@ -45,6 +54,7 @@ beforeEach(() => {
     }))
   )
   shellMock.exec.mockReset()
+  shellMock.execFile.mockReset()
   routineMock.list.mockReset()
   routineMock.add.mockReset()
   routineMock.setEnabled.mockReset()
@@ -215,6 +225,27 @@ describe('file tools', () => {
     expect(fsMock.writeFile).toHaveBeenCalledWith('/a.ts', 'one TWO TWO')
   })
 
+  it('flex-matches whitespace when exact old_string misses', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    fsMock.readFile.mockResolvedValue('foo  bar\nbaz\n')
+    fsMock.writeFile.mockResolvedValue({ ok: true })
+    const result = await executeTool(
+      call('edit_file', { path: '/a.ts', old_string: 'foo bar\nbaz', new_string: 'qux' })
+    )
+    expect(result.isError).toBeFalsy()
+    expect(result.content).toMatch(/flex|edited/i)
+    expect(fsMock.writeFile).toHaveBeenCalled()
+  })
+
+  it('deletes files', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    const del = vi.fn().mockResolvedValue({ ok: true })
+    ;(window as any).api.fs.delete = del
+    const result = await executeTool(call('delete_file', { path: 'tmp.txt' }), '/proj')
+    expect(del).toHaveBeenCalledWith('/proj/tmp.txt')
+    expect(result.content).toContain('Deleted')
+  })
+
   it('resolves relative paths against the project root', async () => {
     useProviderStore.setState({ permissionMode: 'yolo' })
     fsMock.readFile.mockResolvedValue('body')
@@ -256,6 +287,36 @@ describe('search tools', () => {
     const result = await executeTool(call('search_files', { pattern: '**/*.ts' }), '/p')
     expect(result.content).toContain('Found 2 files')
     expect(result.content).toContain('/p/src/deep/b.ts')
+  })
+
+  it('greps with case_insensitive and fixed_string', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    fsMock.walk.mockResolvedValue([{ path: '/p/a.ts', name: 'a.ts', isDirectory: false }])
+    fsMock.readFiles.mockResolvedValue([{ path: '/p/a.ts', content: 'Hello World\nfoo\n' }])
+    const result = await executeTool(
+      call('grep_search', { query: 'hello', case_insensitive: true, fixed_string: true }),
+      '/p'
+    )
+    expect(result.content).toContain('Hello World')
+    expect(result.content).toMatch(/a\.ts:1:/)
+  })
+
+  it('runs git_status via execFile', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    shellMock.execFile
+      .mockResolvedValueOnce({ stdout: 'main\n', stderr: '', exitCode: 0 })
+      .mockResolvedValueOnce({ stdout: '## main\n M src/a.ts\n', stderr: '', exitCode: 0 })
+    const result = await executeTool(call('git_status'), '/p')
+    expect(result.content).toContain('branch: main')
+    expect(result.content).toContain('M src/a.ts')
+    expect(shellMock.execFile).toHaveBeenCalledWith('git', expect.any(Array), '/p', expect.any(Number))
+  })
+
+  it('presses computer keys', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    const result = await executeTool(call('computer_keypress', { key: 'Return' }))
+    expect(result.content).toContain('Return')
+    expect((window as any).api.computer.keypress).toHaveBeenCalledWith('Return')
   })
 
   it('reports no matches', async () => {

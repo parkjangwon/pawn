@@ -87,6 +87,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   stopStreaming: () => {
     abortController?.abort()
+    // Kill live shell process groups so `npm test` etc. don't keep running after Stop.
+    void window.api.shell?.killAll?.().catch(() => {})
     set({ isStreaming: false, streamingSessionId: null })
     window.api.setStreaming?.(false)
   }
@@ -259,6 +261,7 @@ async function agentLoop(
   const controller = new AbortController()
   abortController = controller
   const signal = controller.signal
+  let usedTools = false
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -457,6 +460,8 @@ async function agentLoop(
         break
       }
 
+      usedTools = true
+
       // --- Tool execution: safe calls in parallel, risky ones serially so their
       // permission prompts queue up one at a time.
       const safe: ToolCall[] = []
@@ -465,29 +470,33 @@ async function agentLoop(
         (TOOL_SAFETY[tc.name] === 'safe' ? safe : risky).push(tc)
       }
 
+      // Effective tool cwd: session override path, else project root.
+      // Must match the Working Directory preamble or relative paths silently resolve wrong.
+      const toolCwd = cwd || projectPath
+
       const resultsById = new Map<string, ToolResult>()
       if (safe.length > 0 && !signal.aborted) {
-        const settled = await Promise.all(safe.map((tc) => executeTool(tc, projectPath, signal)))
+        const settled = await Promise.all(safe.map((tc) => executeTool(tc, toolCwd, signal)))
         safe.forEach((tc, i) => resultsById.set(tc.id, settled[i]))
       }
       for (const tc of risky) {
         if (signal.aborted) break
-        resultsById.set(tc.id, await executeTool(tc, projectPath, signal))
+        resultsById.set(tc.id, await executeTool(tc, toolCwd, signal))
       }
 
-      // Aborted during tool execution: drop the round's tool log entries so a
-      // stopped turn never pollutes the transcript with half-run results.
-      if (signal.aborted) break
-
+      // Always record tool results for completed work. On abort, still persist
+      // what finished so the next turn knows about side effects (writes, etc.).
       let roundErrors = 0
       for (const tc of result.toolCalls) {
         const raw = resultsById.get(tc.id) ?? {
           toolCallId: tc.id,
-          content: 'Tool was not executed (run aborted).',
+          content: signal.aborted
+            ? 'Tool was not executed (run aborted).'
+            : 'Tool produced no result.',
           isError: true
         }
         if (raw.isError) roundErrors++
-        const truncated = truncateToolResult(raw)
+        const truncated = truncateToolResult(raw, tc.name)
 
         const toolMsgId = `${Date.now()}-tool-${tc.id}`
         useAppStore.getState().addMessage(projectId, sessionId, {
@@ -526,8 +535,9 @@ async function agentLoop(
     if (isCurrent) {
       set(() => ({ isStreaming: false, streamingSessionId: null }))
       window.api.setStreaming?.(false)
-      if (!aborted) {
-        window.api.notification.send('pawn', 'Task complete').catch(() => {})
+      // Notify only after tool-using turns (coding work), not every short chat reply.
+      if (!aborted && usedTools) {
+        window.api.notification.send('Pawn', 'Task complete').catch(() => {})
       }
       // Drain the queue even after a manual stop: queued messages were
       // explicitly scheduled and must not wait for the next user input.
@@ -536,9 +546,46 @@ async function agentLoop(
   }
 }
 
-export function truncateToolResult(result: { content: string }, maxLen = 2000): string {
+/** Per-tool transcript budgets. UI still truncates display separately (formatToolMessageContent). */
+const TOOL_RESULT_CAPS: Record<string, number> = {
+  read_file: 80_000,
+  grep_search: 24_000,
+  search_files: 16_000,
+  git_diff: 40_000,
+  git_status: 8_000,
+  shell_exec: 24_000,
+  list_dir: 12_000,
+  write_file: 4_000,
+  edit_file: 4_000,
+  load_skill: 40_000
+}
+const DEFAULT_TOOL_RESULT_CAP = 12_000
+
+/** Cap tool payloads fed back into the transcript / LLM. */
+export function truncateToolResult(
+  result: { content: string; name?: string },
+  toolNameOrMax?: string | number,
+  maybeMax?: number
+): string {
+  // Screenshots are data URLs consumed as vision; keep full content for the image path.
+  if (typeof result.content === 'string' && result.content.startsWith('data:image/')) {
+    return result.content
+  }
+  let toolName = result.name
+  let maxLen = DEFAULT_TOOL_RESULT_CAP
+  if (typeof toolNameOrMax === 'number') {
+    maxLen = toolNameOrMax
+  } else if (typeof toolNameOrMax === 'string') {
+    toolName = toolNameOrMax
+    maxLen = maybeMax ?? (toolName ? TOOL_RESULT_CAPS[toolName] ?? DEFAULT_TOOL_RESULT_CAP : DEFAULT_TOOL_RESULT_CAP)
+  } else if (toolName) {
+    maxLen = TOOL_RESULT_CAPS[toolName] ?? DEFAULT_TOOL_RESULT_CAP
+  }
   if (result.content.length <= maxLen) return result.content
-  return result.content.slice(0, maxLen) + `\n...(truncated ${result.content.length - maxLen} chars)`
+  return (
+    result.content.slice(0, maxLen) +
+    `\n...(truncated ${result.content.length - maxLen} chars — re-read with offset/limit or narrow the search)`
+  )
 }
 
 function processQueue(

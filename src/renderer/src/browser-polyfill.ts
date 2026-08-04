@@ -63,7 +63,8 @@ if (typeof window !== 'undefined' && !window.api) {
         // Shell exec not available via HTTP for security
         return { stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 }
       },
-      execFile: async () => ({ stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 })
+      execFile: async () => ({ stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 }),
+      killAll: async () => ({ ok: true, killed: 0 })
     },
     workspace: {
       openIn: async () => ({ error: 'Not available in browser mode' }),
