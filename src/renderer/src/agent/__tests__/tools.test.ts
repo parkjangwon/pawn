@@ -203,6 +203,36 @@ describe('file tools', () => {
     expect(ambiguous.content).toContain('times')
   })
 
+  it('supports replace_all for multi-occurrence edits', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    fsMock.readFile.mockResolvedValue('one two two')
+    fsMock.writeFile.mockResolvedValue({ ok: true })
+    const result = await executeTool(
+      call('edit_file', { path: '/a.ts', old_string: 'two', new_string: 'TWO', replace_all: true })
+    )
+    expect(result.isError).toBeFalsy()
+    expect(result.content).toContain('2 replacement')
+    expect(fsMock.writeFile).toHaveBeenCalledWith('/a.ts', 'one TWO TWO')
+  })
+
+  it('resolves relative paths against the project root', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    fsMock.readFile.mockResolvedValue('body')
+    const result = await executeTool(call('read_file', { path: 'src/a.ts' }), '/home/proj')
+    expect(fsMock.readFile).toHaveBeenCalledWith('/home/proj/src/a.ts')
+    expect(result.content).toBe('body')
+  })
+
+  it('pages large reads with offset/limit', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    const body = Array.from({ length: 20 }, (_, i) => `L${i + 1}`).join('\n')
+    fsMock.readFile.mockResolvedValue(body)
+    const result = await executeTool(call('read_file', { path: '/a.ts', offset: 5, limit: 3 }))
+    expect(result.content).toContain('lines 5-7 of 20')
+    expect(result.content).toContain('L5')
+    expect(result.content).toContain('L7')
+  })
+
   it('lists a directory', async () => {
     useProviderStore.setState({ permissionMode: 'yolo' })
     fsMock.listDir.mockResolvedValue([
