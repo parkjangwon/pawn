@@ -14,6 +14,8 @@
     "noResults": "検索結果が見つかりません"
   },
   "sidebar": {
+    "project": "プロジェクト",
+    "session": "セッション",
     "newSession": "新しいセッション",
     "addProject": "プロジェクトを追加",
     "settings": "設定",
@@ -55,10 +57,26 @@
     "pastedText": "貼り付けたテキスト",
     "attachedImage": "貼り付けた画像",
     "attachedText": "添付ファイル",
+    "copy": "コピー",
+    "copied": "コピーしました",
     "thinking": "考え中...",
     "noProvider": "プロバイダーが設定されていません",
     "taskComplete": "タスク完了",
     "modelSelected": "モデルが選択されました",
+    "configureProviders": "プロバイダーを設定",
+    "diagnostics": {
+      "coldStart": "コールドスタート — キャッシュが期限切れのため再記録が必要です。",
+      "compacted": "コンテキスト圧縮を実行 — キャッシュを再記録します。",
+      "routing": "ルーティング: {{model}} — {{reason}}"
+    },
+    "errors": {
+      "noProvider": "プロバイダーまたはモデルが設定されていません。設定 → プロバイダー、設定 → モデルで追加してください。",
+      "allAttemptsFailed": "すべてのモデル試行が失敗しました。最後のエラー: {{error}}",
+      "noUsableModel": "利用可能なモデルがありません。プロバイダーが有効でモデルが接続されているか確認してください。",
+      "toolLoop": "ツールループを検出: 同じ呼び出し({{names}})が{{rounds}}ラウンド繰り返されたため停止します。",
+      "maxRounds": "最終回答なしで{{rounds}}ラウンド後に停止しました。",
+      "agentError": "エージェントループエラー: {{error}}"
+    },
     "showEarlier": "以前のメッセージを表示 ({{count}}件)",
     "suggestions": {
       "summarize": "プロジェクト構造を読んで要約",
@@ -185,13 +203,16 @@
     "yoloDesc": "確認なしで全てのアクションを承認する",
     "deny": "拒否",
     "allow": "許可",
+    "allowSession": "このセッション中は許可",
+    "allowSessionHint": "アプリを再起動するまでこの種類のすべてのリクエストを承認します",
     "types": {
       "computer_use": "コンピューター操作",
       "file_write": "ファイル書き込み",
       "shell_exec": "シェル実行",
       "browser": "ブラウザ",
       "file_read": "ファイル読み取り",
-      "app": "アプリ操作"
+      "app": "アプリ操作",
+      "mcp": "MCPツール"
     }
   },
   "statusBar": {
@@ -204,12 +225,14 @@
   "settings": {
     "title": "設定",
     "backToApp": "アプリに戻る",
+    "toggleNav": "設定サイドバーの表示切替",
     "searchPlaceholder": "設定を検索...",
     "appearance": "外観",
     "providers": "プロバイダー",
     "models": "モデル",
     "agent": "エージェント",
     "plugins": "プラグイン",
+    "mcp": "MCP",
     "data": "データ",
     "groups": {
       "general": "一般",
@@ -247,7 +270,10 @@
       "apiKeyPlaceholder": "sk-...",
       "addWithModels": "追加（{{count}}モデル含む）",
       "presetDesc": "有名プロバイダー — APIキーを入力するだけで利用できます",
-      "pasteApiKey": "APIキーを貼り付け"
+      "pasteApiKey": "APIキーを貼り付け",
+      "hintBailian": "bailian.console.aliyun.com — Token Plan でAPIキーを発行",
+      "hintOllama": "ローカル実行 — APIキー不要、Ollamaの起動が必要",
+      "hintLmStudio": "ローカル実行 — APIキー不要、LM Studioの起動が必要"
     },
     "modelSection": {
       "title": "モデル",
@@ -324,6 +350,30 @@
       "agentDirDesc": "エージェント固有の設定ディレクトリ",
       "auto": "自動検出"
     },
+    "mcpSection": {
+      "title": "MCP",
+      "desc": "このデバイスに設定された、Pawnで追加した、またはこのプロジェクトだけに紐づくMCPサーバーです — エージェントは組み込みツールと一緒にこれらのツールも呼び出せます。",
+      "empty": "MCPサーバーが見つかりません",
+      "statusConnected": "接続済み · ツール{{count}}個",
+      "statusConnecting": "接続中…",
+      "statusError": "エラー",
+      "statusDisabled": "無効",
+      "source": {
+        "user-claude": "~/.claude.json から（ここでは読み取り専用）",
+        "user-pawn": "Pawnで追加 · 全プロジェクト",
+        "project": "Pawnで追加 · このプロジェクトのみ"
+      },
+      "hint": "~/.claude.json のサーバーはここでは読み取り専用です — Claude Code側で管理してください。以下で追加したサーバーはPawn自身の設定に保存され、いつでも編集・削除できます。",
+      "add": "MCPサーバーを追加",
+      "scopeProject": "このプロジェクトのみ",
+      "scopeUser": "全プロジェクト",
+      "noProjectForScope": "プロジェクト専用サーバーを追加するには、先にプロジェクトを開いてください。",
+      "idPlaceholder": "サーバーID (例: codegraph)",
+      "commandPlaceholder": "コマンド (例: npx)",
+      "argsPlaceholder": "引数（スペース区切り、例: -y @some/mcp-server）",
+      "envPlaceholder": "環境変数、1行に1つ: KEY=value",
+      "addFailed": "サーバーを追加できませんでした。"
+    },
     "dataSection": {
       "title": "データ",
       "desc": "データと設定を管理",
@@ -331,6 +381,8 @@
       "exportDesc": "すべての設定をファイルにエクスポート",
       "import": "データをインポート",
       "importDesc": "以前エクスポートしたファイルから設定をインポート",
+      "exportKeyNote": "APIキーはエクスポートされません。インポート後にキーを再入力してください。",
+      "open": "開く",
       "configFile": "設定ファイル",
       "configFileDesc": "生の設定ファイルを表示・編集",
       "database": "データベース",
@@ -439,7 +491,11 @@
     "project": "プロジェクト",
     "git": {
       "noRepo": "Gitリポジトリがありません",
-      "noChanges": "変更なし"
+      "noChanges": "変更なし",
+      "commitPlaceholder": "コミットメッセージ...",
+      "history": "履歴 ({{count}})",
+      "checkoutFailed": "ブランチを切り替えられませんでした",
+      "noBranches": "ブランチが見つかりません"
     },
     "openTool": "ツールを開く",
     "toolDescs": {
@@ -520,11 +576,15 @@
     "wrap": "折り返し",
     "saving": "保存中…",
     "saved": "保存済み",
-    "linesUnit": "行"
+    "linesUnit": "行",
+    "unsavedTitle": "未保存の変更",
+    "unsavedConfirm": "未保存の変更があります。破棄して閉じますか？",
+    "discard": "破棄して閉じる"
   },
   "toolMessage": {
     "showFullOutput": "完全な出力を表示",
     "showLess": "折りたたむ",
+    "empty": "(空)",
     "read": "ファイルを読む",
     "write": "ファイルを書く",
     "edit": "ファイルを編集",
@@ -537,7 +597,20 @@
     "search": "検索"
   },
   "diffView": {
-    "showAllLines": "すべての行を表示"
+    "showAllLines": "すべての行を表示",
+    "showAll": "全{{total}}行を表示 (残り{{extra}}行)"
+  },
+  "usage": {
+    "diagnostics": {
+      "cacheMiss": "キャッシュミス — プレフィックスが変更されたかキャッシュが期限切れです。",
+      "cachePriming": "キャッシュのプライミング — 新しいプレフィックスを記録中です。",
+      "cacheHit": "良好なキャッシュヒット — 入力の大部分がキャッシュから提供されました。"
+    }
+  },
+  "errorBoundary": {
+    "title": "問題が発生しました",
+    "tryAgain": "再試行",
+    "reload": "アプリを再読み込み"
   },
   "agent": {
     "taskComplete": "タスクが正常に完了しました",

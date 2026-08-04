@@ -416,6 +416,7 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
           activeProject={activeProject}
           suggestions={suggestions}
           onPick={(text) => { setInput(text); setTrigger(null) }}
+          onOpenSettings={onOpenSettings}
         />
       ) : (
         <MessageList
@@ -446,7 +447,6 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
         activeProject={activeProject}
         activeProjectId={activeProjectId}
         onSelectProject={handleSelectProject}
-        gitBranch={gitBranch}
         showProjectPicker={showProjectPicker}
         setShowProjectPicker={setShowProjectPicker}
         showPermPicker={showPermPicker}

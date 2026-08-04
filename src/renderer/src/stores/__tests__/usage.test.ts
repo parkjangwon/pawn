@@ -94,7 +94,7 @@ describe('record', () => {
     const diags = diagnosticsFor('s')
     expect(diags.length).toBe(2)
     expect(diags[1].level).toBe('info')
-    expect(diags[1].message).toContain('캐시 적중')
+    expect(diags[1].message).toContain('cache hit')
   })
 
   it('keeps at most 20 diagnostics per session and resets state', () => {

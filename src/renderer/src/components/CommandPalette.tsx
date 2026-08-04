@@ -51,7 +51,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
       description: t('commandPalette.commands.toggleThemeDesc'),
       shortcut: '',
       action: () => toggleTheme(),
-      group: 'Actions'
+      group: 'actions'
     },
     {
       id: 'stop-streaming',
@@ -59,7 +59,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
       description: t('commandPalette.commands.stopStreamingDesc'),
       shortcut: '',
       action: () => stopStreaming(),
-      group: 'Actions'
+      group: 'actions'
     },
     {
       id: 'open-settings',
@@ -67,7 +67,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
       description: t('commandPalette.commands.openSettingsDesc'),
       shortcut: formatCombo(keybindings['open-settings']),
       action: () => { onOpenSettings(); onClose() },
-      group: 'Actions'
+      group: 'actions'
     },
     {
       id: 'toggle-right-panel',
@@ -75,7 +75,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
       description: t('commandPalette.commands.toggleRightPanelDesc'),
       shortcut: formatCombo(keybindings['toggle-right-panel']),
       action: () => { (window as any).__toggleRightPanel?.(); onClose() },
-      group: 'Actions'
+      group: 'actions'
     },
     {
       id: 'toggle-sidebar',
@@ -83,7 +83,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
       description: t('commandPalette.commands.toggleSidebarDesc'),
       shortcut: formatCombo(keybindings['toggle-sidebar']),
       action: () => { (window as any).__toggleSidebar?.(); onClose() },
-      group: 'Actions'
+      group: 'actions'
     },
     ...projects.flatMap((p) => [
       {
@@ -92,7 +92,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
         description: p.paths?.[0] || 'No path',
         shortcut: '',
         action: () => { setActiveProject(p.id); onClose() },
-        group: t('commandPalette.groups.projects')
+        group: 'projects'
       } as Command,
       ...p.sessions.map((s) => ({
         id: `switch-session-${s.id}`,
@@ -100,7 +100,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
         description: `${p.name} - ${s.messages.length} msgs`,
         shortcut: '',
         action: () => { setActiveProject(p.id); useAppStore.getState().setActiveSession(s.id); onClose() },
-        group: t('commandPalette.groups.sessions')
+        group: 'sessions'
       } as Command))
     ])
   ]
@@ -151,7 +151,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
     return acc
   }, {})
 
-  const groupOrder = ['Actions', 'Sessions', 'Projects']
+  const groupOrder = ['actions', 'sessions', 'projects']
 
   return (
     <div className="cp-overlay" onClick={onClose}>
@@ -181,7 +181,7 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
           )}
           {groupOrder.filter((g) => grouped[g]).map((group) => (
             <div key={group}>
-              <div className="cp-group-label">{group}</div>
+              <div className="cp-group-label">{t(`commandPalette.groups.${group}`)}</div>
               {grouped[group].map((cmd, i) => {
                 const idx = filtered.indexOf(cmd)
                 return (

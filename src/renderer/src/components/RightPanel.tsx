@@ -22,8 +22,9 @@ const TOOL_ICONS: Record<TabId, string> = {
 }
 
 // The panel is intentionally ephemeral: every launch starts closed and empty.
-// Open at half the window width; the user can drag the resizer afterwards.
-const DEFAULT_WIDTH = Math.round(window.innerWidth * 0.5)
+// Open at half the window width (capped so the chat column keeps breathing
+// room); the user can drag the resizer afterwards.
+const DEFAULT_WIDTH = Math.min(Math.round(window.innerWidth * 0.5), 640)
 const HIDE_MS = 220
 
 export default function RightPanel(): React.JSX.Element | null {

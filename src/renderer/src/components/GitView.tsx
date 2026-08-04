@@ -23,6 +23,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
   const [history, setHistory] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!projectPath) { setBranch(null); setFiles([]); return }
@@ -63,8 +64,12 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
 
   const checkoutBranch = async (name: string): Promise<void> => {
     setBusy(true)
-    const r = await window.api.shell.exec(`git checkout ${name}`, projectPath)
+    setError(null)
+    // execFile keeps the branch name out of any shell, so repo-controlled
+    // branch names cannot inject commands.
+    const r = await window.api.shell.execFile('git', ['checkout', name], projectPath)
     if (r.exitCode === 0) setBranch(name)
+    else setError(r.stderr || r.stdout || `git checkout failed (${r.exitCode})`)
     setShowBranches(false)
     setBusy(false)
   }
@@ -72,16 +77,40 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
   const doCommit = async (): Promise<void> => {
     if (!commitMessage.trim()) return
     setBusy(true)
-    await window.api.shell.exec('git add -A', projectPath)
-    await window.api.shell.exec(`git commit -m "${commitMessage.replace(/"/g, '\\"')}"`, projectPath)
-    setCommitMessage('')
+    setError(null)
+    const add = await window.api.shell.execFile('git', ['add', '-A'], projectPath)
+    if (add.exitCode !== 0) {
+      setError(add.stderr || add.stdout || `git add failed (${add.exitCode})`)
+    } else {
+      const commit = await window.api.shell.execFile('git', ['commit', '-m', commitMessage], projectPath)
+      if (commit.exitCode !== 0) {
+        setError(commit.stderr || commit.stdout || `git commit failed (${commit.exitCode})`)
+      } else {
+        setCommitMessage('')
+        // Refresh the status list after a successful commit.
+        window.api.shell.exec('git status --porcelain', projectPath)
+          .then((r) => { if (r.exitCode !== 0) { setFiles([]); return } setFiles(parsePorcelain(r.stdout)) })
+          .catch(() => {})
+      }
+    }
     setBusy(false)
   }
 
   const doPush = async (): Promise<void> => {
     setBusy(true)
-    await window.api.shell.exec('git push', projectPath)
+    setError(null)
+    const r = await window.api.shell.execFile('git', ['push'], projectPath)
+    if (r.exitCode !== 0) setError(r.stderr || r.stdout || `git push failed (${r.exitCode})`)
     setBusy(false)
+  }
+
+  const parsePorcelain = (stdout: string): GitFile[] => {
+    const lines = stdout.trim().split('\n').filter(Boolean)
+    return lines.map((line) => {
+      const status = line.substring(0, 2).trim()
+      const path = line.substring(3).trim()
+      return { path, status: status[0] || 'M', name: path.split('/').pop() || path }
+    })
   }
 
   const statusLabel: Record<string, string> = { 'M': 'M', 'A': 'A', 'D': 'D', '?': 'U' }
@@ -129,8 +158,9 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
           <span className="rp-git-summary-deleted">-{summary.deleted}</span>
         </div>
       )}
+      {error && <div className="rp-git-error">{error}</div>}
       <div className="rp-git-actions">
-        <input className="rp-git-commit-input" placeholder="Commit message..." value={commitMessage} onChange={(e) => setCommitMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !busy) doCommit() }} />
+        <input className="rp-git-commit-input" placeholder={t('rightPanel.git.commitPlaceholder')} value={commitMessage} onChange={(e) => setCommitMessage(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !busy) doCommit() }} />
         <button className="rp-git-btn" onClick={doCommit} disabled={busy || !commitMessage.trim()}>Commit</button>
         <button className="rp-git-btn" onClick={doPush} disabled={busy}>Push</button>
       </div>
@@ -138,7 +168,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
         <div className="rp-git-history">
           <div className="rp-git-history-header" onClick={() => setShowHistory(!showHistory)} style={{ cursor: 'pointer' }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ transform: showHistory ? 'rotate(90deg)' : 'rotate(0deg)', transition: 'transform 0.15s' }}><polyline points="9 18 15 12 9 6" /></svg>
-            History ({history.length})
+            {t('rightPanel.git.history', { count: history.length })}
           </div>
           {showHistory && (
             <div className="rp-git-history-list">

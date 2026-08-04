@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
 import { useRoutineStore } from '../stores/routine'
+import { useMcpStore } from '../stores/mcp'
 import { usePrefsStore } from '../stores/prefs'
 import { useAppStore } from '../stores/app'
 import {
@@ -16,7 +17,7 @@ import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../util
 import ConfirmDialog from './ConfirmDialog'
 import './Settings.css'
 
-type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'routines' | 'system' | 'shortcuts' | 'data'
+type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'mcp' | 'routines' | 'system' | 'shortcuts' | 'data'
 type SettingsSkillScope = 'all' | 'project' | 'device' | 'builtin'
 type SourceSignalId =
   | 'project-claude'
@@ -48,6 +49,7 @@ const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon:
   { id: 'models', labelKey: 'settings.models', groupKey: 'settings.groups.general', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
   { id: 'agent', labelKey: 'settings.agent', groupKey: 'settings.groups.coding', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { id: 'plugins', labelKey: 'settings.plugins', groupKey: 'settings.groups.integration', icon: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' },
+  { id: 'mcp', labelKey: 'settings.mcp', groupKey: 'settings.groups.integration', icon: 'M20 7H4a2 2 0 00-2 2v1a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM6 11h.01M20 15H4a2 2 0 00-2 2v1a2 2 0 002 2h16a2 2 0 002-2v-1a2 2 0 00-2-2zM6 19h.01' },
   { id: 'system', labelKey: 'settings.system', groupKey: 'settings.groups.system', icon: 'M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z' },
   { id: 'shortcuts', labelKey: 'settings.shortcuts', groupKey: 'settings.groups.system', icon: 'M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM7 8h10M7 12h4' },
   { id: 'data', labelKey: 'settings.data', groupKey: 'settings.groups.general', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
@@ -57,10 +59,21 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   const { t, i18n } = useTranslation()
   const { theme, set } = useThemeStore()
   const { routines, runningIds, add: addRoutine, toggle: toggleRoutine, remove: removeRoutine, runNow } = useRoutineStore()
+  const { servers: mcpServers, toggleServer: toggleMcpServer } = useMcpStore()
   const { sleepPrevention, setSleepPrevention } = usePrefsStore()
   const { bindings: keybindings, setBinding: setKeybinding, reset: resetKeybinding } = useKeybindingsStore()
   const [recording, setRecording] = useState<KeyBindingId | null>(null)
   const [trayVisible, setTrayVisible] = useState(true)
+  const [navOpen, setNavOpen] = useState(true)
+
+  // App.tsx's toggle-sidebar shortcut routes here while Settings is open,
+  // since the main sidebar it would otherwise toggle is hidden behind this
+  // full-screen overlay.
+  useEffect(() => {
+    (window as any).__toggleSettingsNav = () => setNavOpen((v) => !v)
+    return () => { delete (window as any).__toggleSettingsNav }
+  }, [])
+
   const {
     providers, models, routingMode, defaultSendMode, permissionMode,
     addProvider, removeProvider, updateProvider,
@@ -96,7 +109,14 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   const [disabledSkills, setDisabledSkills] = useState<Set<string>>(new Set())
   const [contextSignals, setContextSignals] = useState<SourceSignal[]>([])
   const [contextAdditionCount, setContextAdditionCount] = useState(0)
+  const [mcpLoading, setMcpLoading] = useState(false)
+  const [showAddMcpServer, setShowAddMcpServer] = useState(false)
+  const [mcpForm, setMcpForm] = useState({ id: '', command: '', args: '', env: '' })
+  const [mcpScope, setMcpScope] = useState<'user' | 'project'>('project')
+  const [mcpFormError, setMcpFormError] = useState<string | null>(null)
+  const [mcpAdding, setMcpAdding] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<SettingsDeleteTarget | null>(null)
+  const [pawnPaths, setPawnPaths] = useState<{ configPath: string; dataDir: string } | null>(null)
   const { projects, activeProjectId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const projectPath = activeProject?.paths?.[0] || ''
@@ -186,6 +206,41 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
     setShowAddModel(false)
   }
 
+  const handleAddMcpServer = async (): Promise<void> => {
+    if (!mcpForm.id.trim() || !mcpForm.command.trim() || mcpAdding) return
+    setMcpAdding(true)
+    setMcpFormError(null)
+    const args = mcpForm.args.trim() ? mcpForm.args.trim().split(/\s+/) : []
+    const envEntries = mcpForm.env.split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .map((line): [string, string] => {
+        const idx = line.indexOf('=')
+        return idx === -1 ? [line, ''] : [line.slice(0, idx).trim(), line.slice(idx + 1).trim()]
+      })
+      .filter(([key]) => key)
+    const env = envEntries.length ? Object.fromEntries(envEntries) : undefined
+
+    const res = await useMcpStore.getState().addServer(
+      mcpScope,
+      mcpScope === 'project' ? (projectPath || undefined) : undefined,
+      mcpForm.id.trim(),
+      { command: mcpForm.command.trim(), args, env }
+    )
+    setMcpAdding(false)
+    if (res.ok) {
+      setMcpForm({ id: '', command: '', args: '', env: '' })
+      setShowAddMcpServer(false)
+    } else {
+      setMcpFormError(res.error || t('settings.mcpSection.addFailed'))
+    }
+  }
+
+  const handleRemoveMcpServer = async (server: { id: string; source: McpServerSource }): Promise<void> => {
+    const scope = server.source === 'user-pawn' ? 'user' : 'project'
+    await useMcpStore.getState().removeServer(scope, scope === 'project' ? (projectPath || undefined) : undefined, server.id)
+  }
+
   const handleTestProvider = async (providerId: string): Promise<void> => {
     const p = providers.find((pr) => pr.id === providerId)
     if (!p) return
@@ -271,6 +326,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
     window.api.fs.homeDir().then((home) => {
       if (typeof home === 'string') setHomeDir(home)
     }).catch(() => {})
+    window.api.config.getPaths().then((paths) => setPawnPaths(paths)).catch(() => {})
     setDisabledSkills(loadDisabledSkillNames())
     void window.api.tray?.getEnabled().then((v) => setTrayVisible(v === true)).catch(() => {})
   }, [])
@@ -362,6 +418,14 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
       .finally(() => setSkillsLoading(false))
   }, [activeSection, projectPath, homeDir])
 
+  // MCP server status is only worth fetching (and connecting to servers for)
+  // while the panel showing it is actually open.
+  useEffect(() => {
+    if (activeSection !== 'mcp') return
+    setMcpLoading(true)
+    useMcpStore.getState().refresh(projectPath || undefined).finally(() => setMcpLoading(false))
+  }, [activeSection, projectPath])
+
   const groups = useMemo(() => [...new Set(SECTIONS.map((s) => s.groupKey))], [])
 
   const visibleSkills = useMemo(() => {
@@ -425,11 +489,16 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   }
 
   return (
-    <div className="settings-page">
+    <div className={`settings-page ${navOpen ? '' : 'nav-collapsed'}`}>
       <div className="settings-header">
         <div className="settings-header-left">
+          <button className="settings-header-back" onClick={() => setNavOpen((v) => !v)} aria-label={t('settings.toggleNav')} title={t('settings.toggleNav')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </button>
           <button className="settings-header-back" onClick={onClose} aria-label={t('settings.backToApp')} title={t('settings.backToApp')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
           </button>
         </div>
       </div>
@@ -440,7 +509,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
               <div className="settings-nav-label">{t(group)}</div>
               {SECTIONS.filter((s) => s.groupKey === group).map((section) => (
                 <button key={section.id} className={`settings-nav-item ${activeSection === section.id ? 'active' : ''}`} onClick={() => setActiveSection(section.id)}>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={section.icon} /></svg>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d={section.icon} /></svg>
                   <span>{t(section.labelKey)}</span>
                 </button>
               ))}
@@ -514,7 +583,9 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
                 <div className="settings-card add-form preset-form">
                   <div className="settings-row-label">{presetPicking.name}</div>
                   <div className="settings-row-desc">{presetPicking.baseUrl}</div>
-                  <div className="settings-row-desc">{presetPicking.keyHint}</div>
+                  <div className="settings-row-desc">
+                    {presetPicking.keyHintKey ? t(presetPicking.keyHintKey) : presetPicking.keyHint}
+                  </div>
                   {!presetPicking.localNoKey && (
                     <input
                       type="password"
@@ -700,6 +771,81 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
           </div>
         )}
 
+        {activeSection === 'mcp' && (
+          <div className="settings-section">
+            <h2>{t('settings.mcpSection.title')}</h2>
+            <p className="settings-desc">{t('settings.mcpSection.desc')}</p>
+            <div className="settings-card">
+              {mcpLoading && mcpServers.length === 0 && <div className="settings-empty">{t('common.loading')}</div>}
+              {!mcpLoading && mcpServers.length === 0 && <div className="settings-empty">{t('settings.mcpSection.empty')}</div>}
+              {mcpServers.map((server) => (
+                <div key={server.id} className="settings-row">
+                  <div className="settings-row-info">
+                    <span className="settings-row-label">
+                      {server.id}
+                      <span className={`mcp-status-badge ${server.disabled ? 'disabled' : server.status}`}>
+                        {server.disabled
+                          ? t('settings.mcpSection.statusDisabled')
+                          : server.status === 'connected'
+                            ? t('settings.mcpSection.statusConnected', { count: server.toolCount })
+                            : server.status === 'error'
+                              ? t('settings.mcpSection.statusError')
+                              : t('settings.mcpSection.statusConnecting')}
+                      </span>
+                    </span>
+                    <span className="settings-row-desc">
+                      {!server.disabled && server.status === 'error'
+                        ? server.error
+                        : t(`settings.mcpSection.source.${server.source}`)}
+                    </span>
+                  </div>
+                  <div className="settings-row-actions">
+                    <label className="toggle-switch">
+                      <input type="checkbox" checked={!server.disabled} onChange={() => void toggleMcpServer(server.id)} />
+                      <span className="toggle-slider" />
+                    </label>
+                    {server.source !== 'user-claude' && (
+                      <button className="delete-btn" title={t('common.delete')} onClick={() => void handleRemoveMcpServer(server)}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+              <p className="settings-mcp-hint">{t('settings.mcpSection.hint')}</p>
+            </div>
+
+            {showAddMcpServer ? (
+              <div className="settings-card add-form">
+                <div className="theme-toggle">
+                  <button className={mcpScope === 'project' ? 'active' : ''} disabled={!projectPath} onClick={() => setMcpScope('project')}>{t('settings.mcpSection.scopeProject')}</button>
+                  <button className={mcpScope === 'user' ? 'active' : ''} onClick={() => setMcpScope('user')}>{t('settings.mcpSection.scopeUser')}</button>
+                </div>
+                {mcpScope === 'project' && !projectPath && <div className="settings-row-desc">{t('settings.mcpSection.noProjectForScope')}</div>}
+                <input placeholder={t('settings.mcpSection.idPlaceholder')} value={mcpForm.id} onChange={(e) => setMcpForm({ ...mcpForm, id: e.target.value })} />
+                <input placeholder={t('settings.mcpSection.commandPlaceholder')} value={mcpForm.command} onChange={(e) => setMcpForm({ ...mcpForm, command: e.target.value })} />
+                <input placeholder={t('settings.mcpSection.argsPlaceholder')} value={mcpForm.args} onChange={(e) => setMcpForm({ ...mcpForm, args: e.target.value })} />
+                <textarea
+                  className="mcp-env-input"
+                  placeholder={t('settings.mcpSection.envPlaceholder')}
+                  value={mcpForm.env}
+                  onChange={(e) => setMcpForm({ ...mcpForm, env: e.target.value })}
+                  rows={3}
+                />
+                {mcpFormError && <div className="settings-row-desc mcp-form-error">{mcpFormError}</div>}
+                <div className="form-actions">
+                  <button className="btn-primary" onClick={() => void handleAddMcpServer()} disabled={mcpAdding || !mcpForm.id.trim() || !mcpForm.command.trim() || (mcpScope === 'project' && !projectPath)}>
+                    {mcpAdding ? t('common.loading') : t('common.save')}
+                  </button>
+                  <button className="btn-cancel" onClick={() => { setShowAddMcpServer(false); setMcpFormError(null) }}>{t('common.cancel')}</button>
+                </div>
+              </div>
+            ) : (
+              <button className="add-btn-full" onClick={() => setShowAddMcpServer(true)}>{t('settings.mcpSection.add')}</button>
+            )}
+          </div>
+        )}
+
         {activeSection === 'routines' && (
           <div className="settings-section">
             <h2>{t('settings.routineSection.title')}</h2>
@@ -830,7 +976,7 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
             <div className="settings-card">
               <div className="settings-row">
                 <div className="settings-row-info"><span className="settings-row-label">{t('settings.dataSection.export')}</span><span className="settings-row-desc">{t('settings.dataSection.exportDesc')}</span></div>
-                <button className="btn-action" onClick={() => { const data = { providers, models, settings: { routingMode, defaultSendMode } }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'pawn-settings.json'; a.click(); URL.revokeObjectURL(url) }}>{t('settings.dataSection.export')}</button>
+                <button className="btn-action" onClick={() => { const data = { _note: t('settings.dataSection.exportKeyNote'), providers: providers.map((p) => { const { apiKey, ...rest } = p; return rest }), models, settings: { routingMode, defaultSendMode } }; const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'pawn-settings.json'; a.click(); URL.revokeObjectURL(url) }}>{t('settings.dataSection.export')}</button>
               </div>
               <div className="settings-row">
                 <div className="settings-row-info"><span className="settings-row-label">{t('settings.dataSection.import')}</span><span className="settings-row-desc">{t('settings.dataSection.importDesc')}</span></div>
@@ -838,8 +984,30 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
               </div>
             </div>
             <div className="settings-card">
-              <div className="settings-row"><div className="settings-row-info"><span className="settings-row-label">{t('settings.dataSection.configFile')}</span><span className="settings-row-desc">{t('settings.dataSection.configFileDesc')}</span></div></div>
-              <div className="settings-row"><div className="settings-row-info"><span className="settings-row-label">{t('settings.dataSection.database')}</span><span className="settings-row-desc">{t('settings.dataSection.databaseDesc')}</span></div></div>
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">{t('settings.dataSection.configFile')}</span>
+                  <span className="settings-row-desc">{t('settings.dataSection.configFileDesc')}</span>
+                  {pawnPaths?.configPath && <span className="plugin-source">{pawnPaths.configPath}</span>}
+                </div>
+                <div className="settings-row-actions">
+                  <button className="btn-action" disabled={!pawnPaths?.configPath} onClick={() => { if (pawnPaths) void window.api.workspace.openPath(pawnPaths.configPath) }}>
+                    {t('settings.dataSection.open')}
+                  </button>
+                </div>
+              </div>
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">{t('settings.dataSection.database')}</span>
+                  <span className="settings-row-desc">{t('settings.dataSection.databaseDesc')}</span>
+                  {pawnPaths?.dataDir && <span className="plugin-source">{pawnPaths.dataDir}</span>}
+                </div>
+                <div className="settings-row-actions">
+                  <button className="btn-action" disabled={!pawnPaths?.dataDir} onClick={() => { if (pawnPaths) void window.api.workspace.openPath(pawnPaths.dataDir) }}>
+                    {t('settings.dataSection.open')}
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         )}

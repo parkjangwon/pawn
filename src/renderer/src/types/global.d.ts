@@ -19,6 +19,25 @@ declare global {
     lastResult: string
     createdAt: number
   }
+
+  interface McpToolInfo {
+    name: string
+    description: string
+    inputSchema: Record<string, unknown>
+  }
+
+  type McpServerSource = 'user-claude' | 'user-pawn' | 'project'
+
+  type McpServerStatus =
+    | { id: string; source: McpServerSource; status: 'connecting' }
+    | { id: string; source: McpServerSource; status: 'connected'; tools: McpToolInfo[] }
+    | { id: string; source: McpServerSource; status: 'error'; error: string }
+
+  interface McpServerInput {
+    command: string
+    args: string[]
+    env?: Record<string, string>
+  }
 }
 
 declare global {
@@ -40,13 +59,18 @@ declare global {
         exists: (path: string) => Promise<boolean>
         homeDir: () => Promise<string | null>
         walk: (path: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }>
+        copyDir: (src: string, dest: string) => Promise<{ ok?: boolean; error?: string }>
+        removeDir: (path: string) => Promise<{ ok?: boolean; error?: string }>
       }
       shell: {
         exec: (command: string, cwd?: string, timeoutMs?: number) => Promise<{ stdout: string; stderr: string; exitCode: number }>
+        execFile: (file: string, args: string[], cwd?: string, timeoutMs?: number) => Promise<{ stdout: string; stderr: string; exitCode: number }>
       }
+      setStreaming: (streaming: boolean) => void
       workspace: {
         openIn: (path: string, app: string) => Promise<{ ok?: boolean; error?: string }>
         runScript: (cwd: string, script: string, packageManager?: string) => Promise<{ ok?: boolean; error?: string }>
+        openPath: (path: string) => Promise<{ ok?: boolean; error?: string }>
       }
       computer: {
         screenshot: () => Promise<{ dataUrl?: string; error?: string }>
@@ -96,6 +120,7 @@ declare global {
       config: {
         load: () => Promise<Record<string, unknown>>
         save: (config: unknown) => Promise<{ ok?: boolean }>
+        getPaths: () => Promise<{ configPath: string; dataDir: string }>
       }
       db: {
         loadAll: () => Promise<{ projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number }> }> }>
@@ -166,6 +191,27 @@ declare global {
       keybindings: {
         set: (id: string, combo: string) => Promise<{ ok?: boolean }>
         setPaused: (paused: boolean) => Promise<{ ok?: boolean }>
+      }
+      mcp: {
+        listTools: (projectPath?: string) => Promise<McpServerStatus[]>
+        status: (projectPath?: string) => Promise<McpServerStatus[]>
+        callTool: (
+          projectPath: string | undefined,
+          serverId: string,
+          toolName: string,
+          args: Record<string, unknown>
+        ) => Promise<{ content: string; isError?: boolean }>
+        addServer: (
+          scope: 'user' | 'project',
+          projectPath: string | undefined,
+          id: string,
+          input: McpServerInput
+        ) => Promise<{ ok: boolean; error?: string }>
+        removeServer: (
+          scope: 'user' | 'project',
+          projectPath: string | undefined,
+          id: string
+        ) => Promise<{ ok: boolean; error?: string }>
       }
     }
   }

@@ -82,3 +82,9 @@
   background: var(--accent);
   color: #fff;
 }
+
+.session-btn {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color) !important;
+}

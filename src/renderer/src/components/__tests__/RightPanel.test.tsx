@@ -4,9 +4,13 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import RightPanel from '../RightPanel'
 import { useAppStore } from '../../stores/app'
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key })
-}))
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key })
+  }
+})
 
 vi.mock('../TerminalView', () => ({ default: () => <div>TERMINAL_VIEW</div> }))
 vi.mock('../FilesView', () => ({ default: () => <div>FILES_VIEW</div> }))

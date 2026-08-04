@@ -5,7 +5,7 @@ import './PermissionDialog.css'
 
 export default function PermissionDialog(): React.JSX.Element | null {
   const { t } = useTranslation()
-  const { pending, resolve } = usePermissionStore()
+  const { pending, resolve, approveSession } = usePermissionStore()
 
   // Escape denies the current request so a stuck dialog can always be dismissed
   // without letting the agent wait forever.
@@ -28,7 +28,8 @@ export default function PermissionDialog(): React.JSX.Element | null {
     file_read: t('permission.types.file_read'),
     shell_exec: t('permission.types.shell_exec'),
     browser: t('permission.types.browser'),
-    app: t('permission.types.app')
+    app: t('permission.types.app'),
+    mcp: t('permission.types.mcp')
   }
 
   return (
@@ -41,6 +42,13 @@ export default function PermissionDialog(): React.JSX.Element | null {
         <div className="permission-actions">
           <button className="deny-btn" onClick={() => resolve(current.id, false)}>
             {t("permission.deny")}
+          </button>
+          <button
+            className="session-btn"
+            title={t('permission.allowSessionHint')}
+            onClick={() => { approveSession(current.type); resolve(current.id, true) }}
+          >
+            {t("permission.allowSession")}
           </button>
           <button className="allow-btn" onClick={() => resolve(current.id, true)}>
             {t("permission.allow")}

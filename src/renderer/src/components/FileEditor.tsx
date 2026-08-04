@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { languageForPath, highlightCode } from '../utils/syntaxHighlight'
+import ConfirmDialog from './ConfirmDialog'
 
 interface FileEditorProps {
   filePath: string
@@ -41,6 +42,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
   const [saving, setSaving] = useState(false)
   const [savedFlash, setSavedFlash] = useState(false)
   const [wrap, setWrap] = useState(false)
+  const [confirmClose, setConfirmClose] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const gutterRef = useRef<HTMLDivElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
@@ -133,6 +135,11 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
     }
   }
 
+  const requestClose = (): void => {
+    if (dirty) setConfirmClose(true)
+    else onClose()
+  }
+
   // The textarea owns the scroll; the highlight overlay and gutter mirror it so
   // colors and line numbers stay locked to the caret position.
   const syncScroll = (): void => {
@@ -156,7 +163,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
     return (
       <div className="rp-file-editor">
         <div className="rp-fe-header">
-          <button className="rp-fe-btn" onClick={onClose} title={t('fileEditor.back')}>
+          <button className="rp-fe-btn" onClick={requestClose} title={t('fileEditor.back')}>
             {chevron}
           </button>
           <span className="rp-fe-name" title={filePath}>{fileName}</span>
@@ -180,7 +187,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
   return (
     <div className="rp-file-editor">
       <div className="rp-fe-header">
-        <button className="rp-fe-btn" onClick={onClose} title={t('fileEditor.back')}>
+        <button className="rp-fe-btn" onClick={requestClose} title={t('fileEditor.back')}>
           {chevron}
         </button>
         <span className={`rp-fe-name ${dirty ? 'is-dirty' : ''}`} title={filePath}>
@@ -238,6 +245,16 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
           />
         </div>
       </div>
+      {confirmClose && (
+        <ConfirmDialog
+          title={t('fileEditor.unsavedTitle')}
+          message={t('fileEditor.unsavedConfirm')}
+          confirmLabel={t('fileEditor.discard')}
+          cancelLabel={t('common.cancel')}
+          onConfirm={() => { setConfirmClose(false); onClose() }}
+          onCancel={() => setConfirmClose(false)}
+        />
+      )}
     </div>
   )
 }

@@ -34,6 +34,13 @@ export interface PawnConfig {
     defaultSendMode?: string
     sleepPrevention?: string
     trayEnabled?: boolean
+    windowState?: {
+      x?: number
+      y?: number
+      width?: number
+      height?: number
+      maximized?: boolean
+    }
   }
   providers?: ProviderConfig[]
   models?: ModelConfig[]

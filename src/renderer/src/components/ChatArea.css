@@ -9,7 +9,10 @@
   overflow: hidden;
 }
 
-/* ChatGPT-style top header */
+/* ChatGPT-style top header. The whole bar is a drag region so double-clicking
+   anywhere in it (not just the sidebar) maximizes/restores the window, same
+   as Codex/Claude's native title bar; interactive children opt back out
+   below. */
 .chat-header {
   position: fixed;
   top: 0;
@@ -20,12 +23,12 @@
   align-items: center;
   gap: 4px;
   padding: 0 var(--space-md);
-  padding-left: calc(var(--sidebar-width) + var(--space-md));
   padding-top: max(env(safe-area-inset-top, 0px));
   height: 48px;
   min-height: 48px;
   flex-shrink: 0;
   background: var(--bg-primary);
+  -webkit-app-region: drag;
 }
 
 .close-sidebar-btn {
@@ -243,6 +246,17 @@
   color: var(--accent);
 }
 
+.welcome-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.welcome-btn.primary:hover {
+  background: var(--accent-hover, var(--accent));
+  color: #fff;
+}
+
 /* Messages */
 .chat-messages {
   flex: 1;
@@ -290,6 +304,45 @@
   word-break: break-word;
 }
 
+.message-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.message-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  align-self: flex-start;
+  margin-top: var(--space-xs);
+  padding: 3px 8px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-muted);
+  font-size: var(--font-xs);
+  font-weight: 500;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.55;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.message.user .message-copy {
+  align-self: flex-end;
+}
+
+.message-copy:hover {
+  opacity: 1;
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.message-copy.copied {
+  opacity: 1;
+  color: var(--accent);
+}
+
 .message.user .message-content {
   background: var(--user-bubble);
   border-radius: var(--radius-lg);
@@ -318,26 +371,10 @@
   50% { opacity: 0; }
 }
 
-/* Tool/system messages */
+/* Tool/system messages render as a collapsed ToolMessage row (see
+   ToolMessage.css) instead of a full message bubble. */
 .message.system {
-  padding: var(--space-xs) var(--space-xl);
-}
-
-.message.system .message-role {
-  display: none;
-}
-
-.message.system .message-content {
-  font-size: var(--font-sm);
-  color: var(--text-muted);
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  padding: var(--space-xs) var(--space-sm);
-  font-family: 'SF Mono', 'Fira Code', monospace;
-  white-space: pre-wrap;
-  max-height: 120px;
-  overflow-y: auto;
+  padding: 2px var(--space-xl);
 }
 
 /* Input area - Codex style */
@@ -416,10 +453,6 @@
   color: var(--text-primary);
 }
 
-.context-chip.branch-chip {
-  color: var(--text-muted);
-}
-
 .context-chip.path-chip {
   cursor: pointer;
   color: var(--accent);
@@ -451,6 +484,188 @@
 .context-chip.model-chip {
   color: var(--text-muted);
   font-style: italic;
+}
+
+/* Git summary chip: branch + live diff stat, with a popover for branch
+   switching and quick jumps into the right panel's Git/Diff tabs. */
+.context-chip.git-chip {
+  cursor: pointer;
+  color: var(--text-muted);
+}
+
+.context-chip.git-chip:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.context-chip.git-chip.dirty {
+  color: var(--text-secondary);
+}
+
+.git-chip-sync {
+  display: inline-flex;
+  gap: 3px;
+  color: var(--text-muted);
+  font-size: 10px;
+}
+
+.git-chip-stat {
+  display: inline-flex;
+  gap: 5px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.git-stat-ins { color: #22c55e; }
+.git-stat-del { color: #ef4444; }
+
+.git-chip-popover {
+  position: absolute;
+  bottom: calc(100% + 4px);
+  left: 0;
+  min-width: 240px;
+  max-width: 320px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+  overflow: hidden;
+  padding: var(--space-xs);
+}
+
+.git-popover-branch {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 6px var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--font-md);
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.git-popover-branch:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+
+.git-popover-branch:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.git-popover-branch-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-popover-chevron {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  transition: transform 0.15s;
+}
+
+.git-popover-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.git-branch-list {
+  max-height: 160px;
+  overflow-y: auto;
+  padding: 2px var(--space-xs) 2px calc(var(--space-sm) + 18px);
+}
+
+.git-branch-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 5px var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.git-branch-item:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.git-branch-item.active {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.git-branch-item svg {
+  flex-shrink: 0;
+}
+
+.git-branch-empty {
+  padding: 5px var(--space-sm);
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.git-popover-error {
+  margin: 2px var(--space-xs);
+  padding: 5px var(--space-sm);
+  border-radius: var(--radius-sm);
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-size: var(--font-sm);
+}
+
+.git-popover-divider {
+  margin: var(--space-xs) 2px;
+  border-top: 1px solid var(--border-color);
+}
+
+.git-popover-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+  padding: 6px var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.1s;
+}
+
+.git-popover-row:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.git-popover-row svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.git-popover-spacer {
+  flex: 1;
+}
+
+.git-popover-muted {
+  color: var(--text-muted);
+  font-size: var(--font-xs);
 }
 
 /* Project picker dropdown */
@@ -985,6 +1200,7 @@
 
 .chat-header-action-group {
   position: relative;
+  -webkit-app-region: no-drag;
 }
 
 .chat-header-btn {
@@ -998,6 +1214,7 @@
   padding: 5px 10px;
   font-size: var(--font-sm);
   cursor: pointer;
+  -webkit-app-region: no-drag;
 }
 
 .chat-header-btn.chat-header-btn-icon {
@@ -1030,6 +1247,7 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   z-index: 90;
   padding: 4px;
+  -webkit-app-region: no-drag;
 }
 
 .chat-header-menu-item {

@@ -2,6 +2,7 @@ import { app, ipcMain } from 'electron'
 import { handleTrusted } from './trust'
 import { join } from 'path'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
+import { cp, rm } from 'fs/promises'
 
 const WALK_IGNORE = new Set(['node_modules', '.git', 'dist', 'out', 'release', '.next', 'coverage', '.turbo', '.cache'])
 const WALK_MAX = 3000
@@ -171,6 +172,33 @@ export function registerFsIpc(): void {
       return app.getPath('home')
     } catch {
       return null
+    }
+  })
+
+  // Recursive copy/remove for the skill installer. These replace shell
+  // `cp -R` / `rm -rf` invocations, which risked command injection through
+  // repo-controlled paths.
+  handleTrusted('fs:copyDir', async (_, srcDir: string, destDir: string) => {
+    if (typeof srcDir !== 'string' || typeof destDir !== 'string' || !srcDir || !destDir) {
+      return { error: 'Invalid copy paths' }
+    }
+    try {
+      await cp(srcDir, destDir, { recursive: true, force: true, errorOnExist: false })
+      walkCache.clear()
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  handleTrusted('fs:removeDir', async (_, dirPath: string) => {
+    if (typeof dirPath !== 'string' || !dirPath) return { error: 'Invalid path' }
+    try {
+      await rm(dirPath, { recursive: true, force: true })
+      walkCache.clear()
+      return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
     }
   })
 }

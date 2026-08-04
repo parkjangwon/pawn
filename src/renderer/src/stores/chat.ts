@@ -16,6 +16,7 @@ import { SYSTEM_PROMPT } from '../agent/prompts'
 import type { ModelTier } from '../types/provider'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildDisplayContent, buildTranscriptText, imageAttachments, stripDisplayImages, type ChatAttachment } from '../utils/attachments'
+import i18n from '../i18n'
 
 export type SendMode = 'queue' | 'steer'
 
@@ -80,12 +81,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     autoTitle(projectId, sessionId, content)
 
     set({ isStreaming: true, streamingSessionId: sessionId })
+    window.api.setStreaming?.(true)
     void agentLoop(projectId, sessionId, content, set, get, attachments)
   },
 
   stopStreaming: () => {
     abortController?.abort()
     set({ isStreaming: false, streamingSessionId: null })
+    window.api.setStreaming?.(false)
   }
 }))
 
@@ -140,7 +143,7 @@ export async function loadTranscript(projectId: string, sessionId: string): Prom
         // doesn't assume a warm prefix and misjudge downgrade economics.
        if (parsed.lastActivity && Date.now() - parsed.lastActivity > CACHE_STALE_MS) {
          clearSessionRoute(sessionId)
-          useUsageStore.getState().noteDiagnostic(sessionId, 'warn', '콜드 스타트 — 캐시가 만료돼 다시 기록해야 합니다.')
+          useUsageStore.getState().noteDiagnostic(sessionId, 'warn', i18n.t('chat.diagnostics.coldStart'))
        } else if (parsed.warmFor) {
          // Resume the sticky route so the first call of a resumed session reuses
          // the still-live ephemeral cache instead of paying a re-prime.
@@ -242,8 +245,9 @@ async function agentLoop(
 
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
-    systemError(projectId, sessionId, 'No provider or model configured. Open Settings → Providers, then Settings → Models.')
+    systemError(projectId, sessionId, i18n.t('chat.errors.noProvider'))
     set(() => ({ isStreaming: false, streamingSessionId: null }))
+    window.api.setStreaming?.(false)
     processQueue(set, get)
     return
   }
@@ -311,7 +315,7 @@ async function agentLoop(
      if (estimateTokens(entries) > contextWindow * COMPACT_AT_RATIO) {
        entries = compactTranscript(entries)
        persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
-        useUsageStore.getState().noteDiagnostic(sessionId, 'info', '컨텍스트 압축 실행 — 캐시를 다시 기록합니다.')
+        useUsageStore.getState().noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.compacted'))
      }
 
       const escalate = shouldEscalate({ consecutiveToolErrors, round, emptyResponses })
@@ -341,7 +345,10 @@ async function agentLoop(
           useUsageStore.getState().noteDiagnostic(
             sessionId,
             'info',
-            `라우팅: ${decision.model.label || decision.model.modelId} — ${decision.reason}`
+            i18n.t('chat.diagnostics.routing', {
+              model: decision.model.label || decision.model.modelId,
+              reason: decision.reason
+            })
           )
         }
 
@@ -352,7 +359,7 @@ async function agentLoop(
 
         try {
          result = await callLLM({
-            decision, entries, systemLayers, projectPreamble, sessionId, projectId, assistantMsgId, signal
+            decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal
          })
           noteProviderSuccess(decision.provider.id)
           setSessionRoute(sessionId, decision.key, decision.tier, estimateTokens(entries))
@@ -412,13 +419,13 @@ async function agentLoop(
           excluded.add(decision.key)
           result = null
           if (attempt === MAX_ROUTE_ATTEMPTS - 1) {
-            systemError(projectId, sessionId, `All model attempts failed. Last error: ${message}`)
+            systemError(projectId, sessionId, i18n.t('chat.errors.allAttemptsFailed', { error: message }))
           }
         }
       }
 
       if (!decision) {
-        systemError(projectId, sessionId, 'No usable model. Check that a provider is enabled and has models attached.')
+        systemError(projectId, sessionId, i18n.t('chat.errors.noUsableModel'))
         break
       }
       if (!result) break
@@ -445,7 +452,7 @@ async function agentLoop(
         systemError(
           projectId,
           sessionId,
-          `Tool loop detected: repeated the same calls (${names}) ${MAX_REPEATED_TOOL_ROUNDS} rounds without progress. Stopping.`
+          i18n.t('chat.errors.toolLoop', { names, rounds: MAX_REPEATED_TOOL_ROUNDS })
         )
         break
       }
@@ -506,11 +513,11 @@ async function agentLoop(
     }
 
     if (round >= MAX_TOOL_ROUNDS) {
-      systemError(projectId, sessionId, `Stopped after ${MAX_TOOL_ROUNDS} tool rounds without a final answer.`)
+      systemError(projectId, sessionId, i18n.t('chat.errors.maxRounds', { rounds: MAX_TOOL_ROUNDS }))
     }
   } catch (err) {
     if (!signal.aborted) {
-      systemError(projectId, sessionId, 'Agent loop error: ' + String(err))
+      systemError(projectId, sessionId, i18n.t('chat.errors.agentError', { error: String(err) }))
     }
   } finally {
     const isCurrent = abortController === controller
@@ -518,6 +525,7 @@ async function agentLoop(
     const aborted = signal.aborted
     if (isCurrent) {
       set(() => ({ isStreaming: false, streamingSessionId: null }))
+      window.api.setStreaming?.(false)
       if (!aborted) {
         window.api.notification.send('pawn', 'Task complete').catch(() => {})
       }
@@ -558,6 +566,7 @@ function processQueue(
     }
     autoTitle(next.projectId, next.sessionId, next.content)
     set(() => ({ isStreaming: true, streamingSessionId: next.sessionId }))
+    window.api.setStreaming?.(true)
     void agentLoop(next.projectId, next.sessionId, next.content, set, get, next.attachments)
   }, 50)
 }

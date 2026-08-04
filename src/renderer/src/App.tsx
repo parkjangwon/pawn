@@ -4,6 +4,7 @@ import { useAppStore } from './stores/app'
 import { useProviderStore } from './stores/provider'
 import { usePrefsStore } from './stores/prefs'
 import { useRoutineStore } from './stores/routine'
+import { useMcpStore } from './stores/mcp'
 import { useKeybindingsStore, useKeybinding } from './stores/keybindings'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
@@ -30,6 +31,7 @@ export default function App(): React.JSX.Element {
     useProviderStore.getState().init()
     void usePrefsStore.getState().init()
     void useRoutineStore.getState().init()
+    void useMcpStore.getState().init()
     void useKeybindingsStore.getState().init()
     void window.api.appVersion().then((v) => { if (v) setAppVersion(v) }).catch(() => {})
   }, [])
@@ -43,6 +45,14 @@ export default function App(): React.JSX.Element {
     })
   }, [])
 
+  // The main sidebar is hidden behind the full-screen Settings overlay, so
+  // toggling it there is invisible. Route the same shortcut to Settings' own
+  // nav toggle instead — Settings registers this bridge while it's open.
+  const toggleActiveSidebar = useCallback(() => {
+    if (showSettings) (window as any).__toggleSettingsNav?.()
+    else toggleSidebar()
+  }, [showSettings, toggleSidebar])
+
   const { projects, activeProjectId, addSession } = useAppStore()
 
   // In Electron the main process forwards shortcuts from whichever webContents
@@ -53,17 +63,17 @@ export default function App(): React.JSX.Element {
   useKeybinding('open-command-palette', useCallback(() => { if (isBrowserMode) setShowCommandPalette(true) }, [isBrowserMode]))
   useKeybinding('open-settings', useCallback(() => { if (isBrowserMode) setShowSettings((v) => !v) }, [isBrowserMode]))
   useKeybinding('new-session', useCallback(() => { if (isBrowserMode && activeProjectId) addSession(activeProjectId) }, [isBrowserMode, activeProjectId, addSession]))
-  useKeybinding('toggle-sidebar', useCallback(() => { if (isBrowserMode) toggleSidebar() }, [isBrowserMode, toggleSidebar]))
+  useKeybinding('toggle-sidebar', useCallback(() => { if (isBrowserMode) toggleActiveSidebar() }, [isBrowserMode, toggleActiveSidebar]))
 
   // Electron: main-process forwarding dispatches every bound action here.
   useEffect(() => {
     return window.api?.onAppShortcut?.((id) => {
-      if (id === 'toggle-sidebar') toggleSidebar()
+      if (id === 'toggle-sidebar') toggleActiveSidebar()
       else if (id === 'open-command-palette') setShowCommandPalette(true)
       else if (id === 'open-settings') setShowSettings((v) => !v)
       else if (id === 'new-session') { if (activeProjectId) addSession(activeProjectId) }
     })
-  }, [toggleSidebar, activeProjectId, addSession])
+  }, [toggleActiveSidebar, activeProjectId, addSession])
 
   // Escape closes modals.
   useEffect(() => {

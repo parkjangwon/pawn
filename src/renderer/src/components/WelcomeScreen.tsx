@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useProviderStore } from '../stores/provider'
 
 export interface WelcomeSuggestion {
   icon: string
@@ -9,10 +10,13 @@ interface WelcomeScreenProps {
   activeProject: { name: string } | undefined
   suggestions: WelcomeSuggestion[]
   onPick: (text: string) => void
+  onOpenSettings: () => void
 }
 
-export default function WelcomeScreen({ activeProject, suggestions, onPick }: WelcomeScreenProps): React.JSX.Element {
+export default function WelcomeScreen({ activeProject, suggestions, onPick, onOpenSettings }: WelcomeScreenProps): React.JSX.Element {
   const { t } = useTranslation()
+  const providers = useProviderStore((s) => s.providers)
+  const needsSetup = providers.filter((p) => p.enabled).length === 0
   return (
         <div className="chat-welcome">
           <div className="welcome-icon">
@@ -36,6 +40,15 @@ export default function WelcomeScreen({ activeProject, suggestions, onPick }: We
                 <span>{s.text}</span>
               </button>
             ))}
+            {needsSetup && (
+              <button className="welcome-btn primary" onClick={onOpenSettings}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="12" cy="12" r="3" />
+                  <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                </svg>
+                <span>{t('chat.configureProviders')}</span>
+              </button>
+            )}
           </div>
         </div>
   )

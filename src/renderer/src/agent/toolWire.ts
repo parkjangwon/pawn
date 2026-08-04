@@ -1,16 +1,17 @@
-import { TOOLS } from './toolDefinitions'
+import { TOOLS, type ToolDefinition } from './toolDefinitions'
 
-// Convert tools to OpenAI format
-export function toolsToOpenAI(): Array<Record<string, unknown>> {
-  return TOOLS.map((t) => ({
+// Convert tools to OpenAI format. `extra` carries dynamically-discovered
+// tools (currently just MCP servers) that aren't part of the static TOOLS list.
+export function toolsToOpenAI(extra: ToolDefinition[] = []): Array<Record<string, unknown>> {
+  return [...TOOLS, ...extra].map((t) => ({
     type: 'function',
     function: { name: t.name, description: t.description, parameters: t.parameters }
   }))
 }
 
 // Convert tools to Claude format
-export function toolsToClaude(): Array<Record<string, unknown>> {
-  const tools: Array<Record<string, unknown>> = TOOLS.map((t) => ({
+export function toolsToClaude(extra: ToolDefinition[] = []): Array<Record<string, unknown>> {
+  const tools: Array<Record<string, unknown>> = [...TOOLS, ...extra].map((t) => ({
     name: t.name,
     description: t.description,
     input_schema: t.parameters

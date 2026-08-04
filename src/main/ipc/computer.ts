@@ -11,9 +11,13 @@ const EXEC_TIMEOUT_MS = 20_000
 export function registerComputerIpc(): void {
   handleTrusted('computer:screenshot', async () => {
     try {
+      // Thumbnail at the display's logical size, so coordinates the model
+      // reads off the image map 1:1 to the OS coordinate space the click
+      // handlers use (cliclick points on macOS, DIPs on Windows).
+      const primary = screen.getPrimaryDisplay()
       const sources = await desktopCapturer.getSources({
         types: ['screen'],
-        thumbnailSize: { width: 1920, height: 1080 }
+        thumbnailSize: { width: primary.size.width, height: primary.size.height }
       })
       if (sources.length === 0) return { error: 'No screen sources' }
       return { dataUrl: sources[0].thumbnail.toDataURL() }
@@ -34,7 +38,9 @@ export function registerComputerIpc(): void {
           throw err;
         }
       } else if (process.platform === 'linux') {
-        await execFileAsync('xdotool', ['mousemove', String(x), String(y), 'click', '1'], { timeout: EXEC_TIMEOUT_MS })
+        // X11 coordinates are physical pixels; the screenshot is logical.
+        const scaleFactor = screen.getPrimaryDisplay().scaleFactor || 1
+        await execFileAsync('xdotool', ['mousemove', String(Math.round(x * scaleFactor)), String(Math.round(y * scaleFactor)), 'click', '1'], { timeout: EXEC_TIMEOUT_MS })
       } else if (process.platform === 'win32') {
         const scaleFactor = screen.getPrimaryDisplay().scaleFactor || 1
         const physicalX = Math.round(x * scaleFactor)

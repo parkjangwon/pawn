@@ -1,14 +1,70 @@
-import { BrowserWindow, nativeTheme, shell } from 'electron'
+import { BrowserWindow, dialog, nativeTheme, screen, shell } from 'electron'
 import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { existsSync } from 'fs'
-import { loadConfig } from './config'
+import { loadConfig, saveConfig } from './config'
+import { isAppStreaming, setAppStreaming } from './streamingState'
 
 let mainWindow: BrowserWindow | null = null
 let headlessWindow: BrowserWindow | null = null
 let lastRendererCrashAt = 0
 let crashStreak = 0
 let crashStreakSince = 0
+
+interface WindowState {
+  x?: number
+  y?: number
+  width?: number
+  height?: number
+  maximized?: boolean
+}
+
+function loadWindowState(): WindowState {
+  try {
+    const cfg = loadConfig() as { settings?: { windowState?: WindowState } }
+    return cfg.settings?.windowState || {}
+  } catch {
+    return {}
+  }
+}
+
+/** Saved bounds only count if they are sane and land on a connected display. */
+function windowStateUsable(s: WindowState): boolean {
+  const w = s.width
+  const h = s.height
+  if (typeof w !== 'number' || typeof h !== 'number') return false
+  if (w < 480 || h < 400) return false
+  return screen.getAllDisplays().some((d) => {
+    const b = d.workArea
+    const x = typeof s.x === 'number' ? s.x : b.x
+    const y = typeof s.y === 'number' ? s.y : b.y
+    return x < b.x + b.width && x + w > b.x && y < b.y + b.height && y + h > b.y
+  })
+}
+
+let stateSaveTimer: NodeJS.Timeout | null = null
+
+function saveWindowState(win: BrowserWindow): void {
+  if (win.isDestroyed()) return
+  const bounds = win.getNormalBounds()
+  const state: WindowState = {
+    x: bounds.x,
+    y: bounds.y,
+    width: bounds.width,
+    height: bounds.height,
+    maximized: win.isMaximized()
+  }
+  try {
+    saveConfig({ settings: { windowState: state } })
+  } catch {
+    // Best-effort; a failed state write must not break the window.
+  }
+}
+
+function scheduleStateSave(win: BrowserWindow): void {
+  if (stateSaveTimer) clearTimeout(stateSaveTimer)
+  stateSaveTimer = setTimeout(() => saveWindowState(win), 400)
+}
 
 /** Match the renderer theme on startup so there is no white/dark flash. */
 function initialBackground(): string {
@@ -24,10 +80,12 @@ function initialBackground(): string {
 
 function resolvePreload(): string {
   // electron-vite v6 emits the preload as index.mjs when package.json has
-  // "type": "module"; older versions emit index.js. Load whichever exists
-  // so a stale path never silently disables window.api.
+  // "type": "module"; the sandboxed build emits index.cjs. Load whichever
+  // exists so a stale path never silently disables window.api.
   return existsSync(join(__dirname, '../preload/index.mjs'))
     ? join(__dirname, '../preload/index.mjs')
+    : existsSync(join(__dirname, '../preload/index.cjs'))
+      ? join(__dirname, '../preload/index.cjs')
     : join(__dirname, '../preload/index.js')
 }
 
@@ -64,9 +122,13 @@ export function getMainWindow(): BrowserWindow | null {
 }
 
 export function createMainWindow(): BrowserWindow {
+  const savedState = loadWindowState()
+  const useSaved = windowStateUsable(savedState)
   const win = new BrowserWindow({
-    width: 1200,
-    height: 800,
+    width: savedState.width || 1200,
+    height: savedState.height || 800,
+    x: useSaved ? savedState.x : undefined,
+    y: useSaved ? savedState.y : undefined,
     minWidth: 480,
     minHeight: 600,
     show: false,
@@ -75,13 +137,39 @@ export function createMainWindow(): BrowserWindow {
     trafficLightPosition: { x: 16, y: 18 },
     webPreferences: {
       preload: resolvePreload(),
-      sandbox: false
+      sandbox: true
     }
   })
   mainWindow = win
+  if (useSaved && savedState.maximized === true) win.maximize()
+
+  win.on('resize', () => scheduleStateSave(win))
+  win.on('move', () => scheduleStateSave(win))
 
   win.on('ready-to-show', () => {
     if (!win.isDestroyed()) win.show()
+  })
+
+  // Closing the window while an agent turn is running would silently kill it;
+  // ask before letting the renderer go away.
+  win.on('close', (event) => {
+    if (!isAppStreaming() || win.isDestroyed()) return
+    const choice = dialog.showMessageBoxSync(win, {
+      type: 'warning',
+      title: 'Pawn',
+      message: 'A task is still running.',
+      detail: 'Closing the window cancels the running task. Close anyway?',
+      buttons: ['Cancel', 'Close anyway'],
+      defaultId: 0,
+      cancelId: 0,
+      noLink: true
+    })
+    if (choice === 0) {
+      event.preventDefault()
+    } else {
+      // Don't ask again if the app quits mid-teardown.
+      setAppStreaming(false)
+    }
   })
 
   win.webContents.setWindowOpenHandler((details) => {
@@ -111,7 +199,7 @@ export function ensureHeadlessWindow(): BrowserWindow {
     backgroundColor: initialBackground(),
     webPreferences: {
       preload: resolvePreload(),
-      sandbox: false
+      sandbox: true
     }
   })
   headlessWindow = win

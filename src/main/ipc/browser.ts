@@ -12,6 +12,26 @@ const BROWSER_PARTITION = 'persist:pawn-browser'
 const BROWSER_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
 
+const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
+
+/**
+ * Normalize a navigation target and enforce an http/https allowlist. Allowing
+ * file:/javascript:/data: here would let the agent read local files through
+ * browser_snapshot/readText without ever touching the permission system.
+ */
+function normalizeBrowserUrl(rawUrl: string): string | null {
+  let url = String(rawUrl || '').trim()
+  if (!url) return null
+  if (!SCHEME_RE.test(url)) url = 'https://' + url
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null
+    return parsed.href
+  } catch {
+    return null
+  }
+}
+
 let browserView: WebContentsView | null = null
 let browserVisible = false
 const browserLogs: string[] = []
@@ -174,9 +194,8 @@ export function registerBrowserIpc(): void {
   handleTrusted('browser:navigate', async (_, rawUrl: string) => {
     const view = ensureBrowserView()
     const wc = view.webContents
-    let url = String(rawUrl || '').trim()
-    if (!url) return { error: 'Empty URL' }
-    if (!/^[a-z][a-z0-9+.-]*:/i.test(url)) url = 'https://' + url
+    const url = normalizeBrowserUrl(rawUrl)
+    if (!url) return { error: 'Only http:// and https:// URLs can be opened in the browser' }
     cursorShow(wc, 140, 24, 'loading')
 
     let timedOut = false
@@ -230,7 +249,9 @@ export function registerBrowserIpc(): void {
   })
 
   handleTrusted('browser:eval', async (_, code: string) => {
-    const result = await runInPage<unknown>(`(function(){ try { return { ok: (${code}) } } catch (e) { return { err: String(e) } } })()`)
+    // The async wrapper lets the injected expression await promises; the
+    // returned promise is resolved by executeJavaScript itself.
+    const result = await runInPage<unknown>(`(async function(){ try { return { ok: await (${code}) } } catch (e) { return { err: String(e) } } })()`)
     if (result && typeof result === 'object' && 'error' in (result as object)) return result
     const wrapped = result as { ok?: unknown; err?: string }
     if (wrapped?.err) return { error: wrapped.err }

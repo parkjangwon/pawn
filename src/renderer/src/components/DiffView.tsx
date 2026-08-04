@@ -67,7 +67,7 @@ export default function DiffView({ oldText, newText, filename, maxLines = 100 }:
           ))}
           {truncated && (
             <button className="diff-show-more" onClick={() => setShowAll(true)}>
-              Show all {diff.lines.length} lines ({diff.lines.length - maxLines} more)
+              {t('diffView.showAll', { total: diff.lines.length, extra: diff.lines.length - maxLines })}
             </button>
           )}
         </div>
