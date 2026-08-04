@@ -17,6 +17,9 @@ interface OpenAppItem {
   id: string
   label: string
   appName?: string
+  /** Extra names to try (in order) if `appName`/`label` isn't found — e.g. a
+   *  free/Community edition that installs under a different .app name. */
+  altNames?: string[]
   /** Resolved .app bundle path, used to fetch its real icon (macOS only). */
   iconPath?: string
 }
@@ -29,10 +32,34 @@ const FIXED_APP_PATHS: Record<string, string> = {
 
 const APP_PRESETS: OpenAppItem[] = [
   { id: 'terminal', label: 'Terminal', appName: 'Terminal' },
+  // General-purpose / AI-assisted editors
   { id: 'vscode', label: 'Visual Studio Code', appName: 'Visual Studio Code' },
+  { id: 'vscode-insiders', label: 'Visual Studio Code - Insiders', appName: 'Visual Studio Code - Insiders' },
+  { id: 'vscodium', label: 'VSCodium', appName: 'VSCodium' },
   { id: 'cursor', label: 'Cursor', appName: 'Cursor' },
-  { id: 'intellij', label: 'IntelliJ IDEA', appName: 'IntelliJ IDEA' },
+  { id: 'windsurf', label: 'Windsurf', appName: 'Windsurf' },
+  { id: 'trae', label: 'Trae', appName: 'Trae' },
+  { id: 'zed', label: 'Zed', appName: 'Zed' },
+  { id: 'nova', label: 'Nova', appName: 'Nova' },
   { id: 'sublime', label: 'Sublime Text', appName: 'Sublime Text' },
+  { id: 'textmate', label: 'TextMate', appName: 'TextMate' },
+  { id: 'bbedit', label: 'BBEdit', appName: 'BBEdit' },
+  { id: 'macvim', label: 'MacVim', appName: 'MacVim' },
+  { id: 'emacs', label: 'Emacs', appName: 'Emacs' },
+  // Apple / mobile platforms
+  { id: 'xcode', label: 'Xcode', appName: 'Xcode' },
+  { id: 'android-studio', label: 'Android Studio', appName: 'Android Studio' },
+  // JetBrains suite
+  { id: 'intellij', label: 'IntelliJ IDEA', appName: 'IntelliJ IDEA' },
+  { id: 'webstorm', label: 'WebStorm', appName: 'WebStorm' },
+  { id: 'pycharm', label: 'PyCharm', appName: 'PyCharm', altNames: ['PyCharm CE'] },
+  { id: 'clion', label: 'CLion', appName: 'CLion' },
+  { id: 'goland', label: 'GoLand', appName: 'GoLand' },
+  { id: 'phpstorm', label: 'PhpStorm', appName: 'PhpStorm' },
+  { id: 'rubymine', label: 'RubyMine', appName: 'RubyMine' },
+  { id: 'datagrip', label: 'DataGrip', appName: 'DataGrip' },
+  { id: 'rider', label: 'Rider', appName: 'Rider' },
+  { id: 'fleet', label: 'Fleet', appName: 'Fleet' },
   { id: 'finder', label: 'Show in Finder', appName: 'Finder' }
 ]
 
@@ -99,20 +126,27 @@ export default function ChatHeader({ onToggleSidebar, projectName, gitBranch, pr
       }
 
       const roots = ['/Applications', `${(await window.api.fs.homeDir()) || ''}/Applications`].filter(Boolean)
-      const found: OpenAppItem[] = []
-      for (const item of APP_PRESETS) {
-        if (item.id === 'finder') continue
-        const appName = item.appName || item.label
-        let iconPath: string | undefined
-        for (const root of roots) {
-          const path = `${root}/${appName}.app`
-          if (await window.api.fs.exists(path)) {
-            iconPath = path
-            break
-          }
-        }
-        if (iconPath) found.push({ ...item, iconPath })
-      }
+      // The preset list is long enough now that checking it item-by-item,
+      // root-by-root would be a noticeably slow chain of IPC round-trips —
+      // fs.exists is a plain, side-effect-free filesystem check, so unlike
+      // the icon lookup there's no reason not to run these concurrently.
+      const detected = await Promise.all(
+        APP_PRESETS
+          .filter((item) => item.id !== 'finder')
+          .map(async (item): Promise<OpenAppItem | null> => {
+            const candidates = [item.appName || item.label, ...(item.altNames || [])]
+            for (const name of candidates) {
+              for (const root of roots) {
+                const path = `${root}/${name}.app`
+                if (await window.api.fs.exists(path)) {
+                  return { ...item, appName: name, iconPath: path }
+                }
+              }
+            }
+            return null
+          })
+      )
+      const found = detected.filter((item): item is OpenAppItem => item !== null)
       if (!cancelled) setAvailableApps([...found, ...base])
     }
     void detectApps()
