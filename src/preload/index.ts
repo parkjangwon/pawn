@@ -42,7 +42,8 @@ const api = {
   workspace: {
     openIn: (path: string, app: string) => ipcRenderer.invoke('workspace:openIn', path, app),
     runScript: (cwd: string, script: string, packageManager?: string) => ipcRenderer.invoke('workspace:runScript', cwd, script, packageManager || 'npm'),
-    openPath: (path: string) => ipcRenderer.invoke('app:openPath', path)
+    openPath: (path: string) => ipcRenderer.invoke('app:openPath', path),
+    getAppIcon: (path: string) => ipcRenderer.invoke('app:getFileIcon', path)
   },
 
   // Computer Use

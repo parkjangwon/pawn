@@ -17,6 +17,14 @@ interface OpenAppItem {
   id: string
   label: string
   appName?: string
+  /** Resolved .app bundle path, used to fetch its real icon (macOS only). */
+  iconPath?: string
+}
+
+// Fixed system app locations that aren't under /Applications, so the normal
+// "does <appName>.app exist under a root" scan would never find them.
+const FIXED_APP_PATHS: Record<string, string> = {
+  finder: '/System/Library/CoreServices/Finder.app'
 }
 
 const APP_PRESETS: OpenAppItem[] = [
@@ -38,6 +46,7 @@ export default function ChatHeader({ onToggleSidebar, projectName, gitBranch, pr
   const [showOpenMenu, setShowOpenMenu] = useState(false)
   const [scripts, setScripts] = useState<ScriptItem[]>([])
   const [availableApps, setAvailableApps] = useState<OpenAppItem[]>([])
+  const [appIcons, setAppIcons] = useState<Record<string, string>>({})
   const [runningScript, setRunningScript] = useState<string | null>(null)
 
   const canRunScript = Boolean(projectPath) && scripts.length > 0
@@ -81,7 +90,9 @@ export default function ChatHeader({ onToggleSidebar, projectName, gitBranch, pr
   useEffect(() => {
     let cancelled = false
     const detectApps = async (): Promise<void> => {
-      const base = APP_PRESETS.filter((app) => app.id === 'finder')
+      const base = APP_PRESETS
+        .filter((app) => app.id === 'finder')
+        .map((app) => ({ ...app, iconPath: FIXED_APP_PATHS[app.id] }))
       if (window.api.platform !== 'darwin') {
         if (!cancelled) setAvailableApps(base)
         return
@@ -92,21 +103,43 @@ export default function ChatHeader({ onToggleSidebar, projectName, gitBranch, pr
       for (const item of APP_PRESETS) {
         if (item.id === 'finder') continue
         const appName = item.appName || item.label
-        let exists = false
+        let iconPath: string | undefined
         for (const root of roots) {
-          const ok = await window.api.fs.exists(`${root}/${appName}.app`)
-          if (ok) {
-            exists = true
+          const path = `${root}/${appName}.app`
+          if (await window.api.fs.exists(path)) {
+            iconPath = path
             break
           }
         }
-        if (exists) found.push(item)
+        if (iconPath) found.push({ ...item, iconPath })
       }
       if (!cancelled) setAvailableApps([...found, ...base])
     }
     void detectApps()
     return () => { cancelled = true }
   }, [])
+
+  // Real app icons instead of a generic glyph — best-effort, desktop only.
+  // Fetched one at a time: firing all of them concurrently via Promise.all
+  // made Electron's underlying NSWorkspace icon lookup return the same
+  // corrupted/generic icon for every app instead of each one's real icon.
+  useEffect(() => {
+    if (window.api.platform !== 'darwin' || !window.api.workspace.getAppIcon) return
+    let cancelled = false
+    const targets = availableApps.filter((a) => a.iconPath && !appIcons[a.id])
+    if (targets.length === 0) return
+    const run = async (): Promise<void> => {
+      for (const a of targets) {
+        if (cancelled) return
+        const res = await window.api.workspace.getAppIcon(a.iconPath!).catch(() => null)
+        if (!cancelled && res?.dataUrl) {
+          setAppIcons((prev) => ({ ...prev, [a.id]: res.dataUrl! }))
+        }
+      }
+    }
+    void run()
+    return () => { cancelled = true }
+  }, [availableApps, appIcons])
 
   const openTarget = async (item: OpenAppItem): Promise<void> => {
     if (!projectPath) return
@@ -170,13 +203,21 @@ export default function ChatHeader({ onToggleSidebar, projectName, gitBranch, pr
         </div>
 
         <div className="chat-header-action-group">
-          <button className="chat-header-btn chat-header-btn-icon" disabled={!projectPath} onClick={() => { setShowOpenMenu((v) => !v); setShowScriptMenu(false) }} title={openButtonLabel} aria-label={openButtonLabel}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M3 7h6l2 2h10v8a2 2 0 0 1-2 2H3z" /><path d="M3 7a2 2 0 0 1 2-2h4l2 2" /></svg>
+          <button className="chat-header-btn" disabled={!projectPath} onClick={() => { setShowOpenMenu((v) => !v); setShowScriptMenu(false) }} title={openButtonLabel} aria-label={openButtonLabel}>
+            <span>{openButtonLabel}</span>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
           {showOpenMenu && (
             <div className="chat-header-menu">
               {availableApps.map((app) => (
                 <button key={app.id} className="chat-header-menu-item" onClick={() => void openTarget(app)}>
+                  {appIcons[app.id] ? (
+                    <img className="chat-header-menu-item-icon" src={appIcons[app.id]} alt="" />
+                  ) : (
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="chat-header-menu-item-icon">
+                      <rect x="3" y="3" width="18" height="18" rx="4" />
+                    </svg>
+                  )}
                   {app.label}
                 </button>
               ))}
