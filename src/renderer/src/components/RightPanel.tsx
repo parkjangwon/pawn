@@ -7,6 +7,7 @@ import FilesView from './FilesView'
 import GitView from './GitView'
 import BrowserView from './BrowserView'
 import DiffListView from './DiffListView'
+import { openFileInPanel } from '../stores/filesPanel'
 import './RightPanel.css'
 
 type TabId = 'terminal' | 'files' | 'git' | 'browser' | 'diff'
@@ -258,6 +259,13 @@ export default function RightPanel(): React.JSX.Element | null {
       closeTabById(id)
     }
     return () => { delete (window as any).__closeRightPanelTab }
+  }, [])
+
+  useEffect(() => {
+    (window as any).__openFileInPanel = (path: string): void => {
+      openFileInPanel(path)
+    }
+    return () => { delete (window as any).__openFileInPanel }
   }, [])
 
   const renderContent = (): React.JSX.Element => {

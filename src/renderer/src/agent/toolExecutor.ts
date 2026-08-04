@@ -9,6 +9,8 @@ import { isMcpToolName, callMcpTool } from './mcp'
 import { uid } from '../utils/uid'
 import { resolveToolPath, formatFileRead } from './pathUtils'
 import { applyEdit } from './editUtils'
+import { useChangeLedger } from '../stores/changeLedger'
+import { usePlanStore } from '../stores/plan'
 import type { ToolCall, ToolResult } from './toolDefinitions'
 
 async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: string }> {
@@ -59,7 +61,14 @@ export function matchesGlob(name: string, pattern: string, compiled?: RegExp | n
 }
 
 // Execute a tool call and return the result
-export async function executeTool(call: ToolCall, projectPath?: string, signal?: AbortSignal): Promise<ToolResult> {
+export type ToolExecContext = { sessionId?: string }
+
+export async function executeTool(
+  call: ToolCall,
+  projectPath?: string,
+  signal?: AbortSignal,
+  ctx?: ToolExecContext
+): Promise<ToolResult> {
   const api = window.api
 
   if (signal?.aborted) {
@@ -76,7 +85,7 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
   }
 
   // Check permission before execution
-  const permitted = await checkPermission(call.name, call.arguments, signal)
+  const permitted = await checkPermission(call.name, call.arguments, signal, projectPath)
   if (!permitted) {
     return { toolCallId: call.id, content: `Permission denied: ${call.name}`, isError: true }
   }
@@ -122,19 +131,31 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         const wPath = resolveToolPath(call.arguments.path as string, projectPath)
         const newContent = call.arguments.content as string
         const existing = await api.fs.readFile(wPath)
+        const before = typeof existing === 'string' ? existing : null
         const result = await api.fs.writeFile(wPath, newContent)
         if ('error' in result) {
           return { toolCallId: call.id, content: result.error!, isError: true }
         }
         const filename = wPath.split('/').pop() || wPath
-        if (typeof existing === 'string') {
+        useChangeLedger.getState().recordChange({
+          path: wPath,
+          before,
+          after: newContent,
+          op: 'write',
+          toolCallId: call.id
+        })
+        if (before !== null) {
           return {
             toolCallId: call.id,
             content: `File written: ${wPath}`,
-            diffData: { oldText: existing, newText: newContent, filename }
+            diffData: { oldText: before, newText: newContent, filename, path: wPath }
           }
         }
-        return { toolCallId: call.id, content: `File created: ${wPath}` }
+        return {
+          toolCallId: call.id,
+          content: `File created: ${wPath}`,
+          diffData: { oldText: '', newText: newContent, filename, path: wPath }
+        }
       }
 
       case 'edit_file': {
@@ -146,7 +167,8 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         if (typeof fileContent === 'object' && 'error' in fileContent) {
           return { toolCallId: call.id, content: fileContent.error, isError: true }
         }
-        const applied = applyEdit(fileContent as string, oldStr, newStr, replaceAll)
+        const before = fileContent as string
+        const applied = applyEdit(before, oldStr, newStr, replaceAll)
         if (!applied.ok) {
           return {
             toolCallId: call.id,
@@ -160,19 +182,35 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         }
         const filename = path.split('/').pop() || path
         const modeNote = applied.mode === 'flex_ws' ? ', whitespace-flex match' : ''
+        useChangeLedger.getState().recordChange({
+          path,
+          before,
+          after: applied.updated,
+          op: 'edit',
+          toolCallId: call.id
+        })
         return {
           toolCallId: call.id,
           content: `File edited: ${path} (${applied.replacements} replacement${applied.replacements > 1 ? 's' : ''}${modeNote})`,
-          diffData: { oldText: oldStr, newText: newStr, filename }
+          diffData: { oldText: before, newText: applied.updated, filename, path }
         }
       }
 
       case 'delete_file': {
         const path = resolveToolPath(call.arguments.path as string, projectPath)
+        const existing = await api.fs.readFile(path)
+        const before = typeof existing === 'string' ? existing : null
         const result = await api.fs.delete(path)
         if (result && 'error' in result && result.error) {
           return { toolCallId: call.id, content: result.error, isError: true }
         }
+        useChangeLedger.getState().recordChange({
+          path,
+          before,
+          after: undefined,
+          op: 'delete',
+          toolCallId: call.id
+        })
         return { toolCallId: call.id, content: `Deleted: ${path}` }
       }
 
@@ -198,9 +236,25 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
           (call.arguments.cwd as string) || projectPath || undefined,
           projectPath
         )
+        const workDir = cwd === '.' ? projectPath : cwd
+        const background = Boolean(call.arguments.background)
+        if (background) {
+          const started = await api.shell.start(call.arguments.command as string, workDir)
+          if (started.error || !started.jobId) {
+            return {
+              toolCallId: call.id,
+              content: started.error || 'Failed to start background job',
+              isError: true
+            }
+          }
+          return {
+            toolCallId: call.id,
+            content: `Background job started: ${started.jobId}${started.pid ? ` (pid ${started.pid})` : ''}\nUse shell_poll with job_id to check output; shell_kill to stop.`
+          }
+        }
         const result = await api.shell.exec(
           call.arguments.command as string,
-          cwd === '.' ? projectPath : cwd,
+          workDir,
           timeoutMs
         )
         const parts = [result.stdout, result.stderr].filter(Boolean)
@@ -211,6 +265,81 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
           content: output || `(exit code: ${result.exitCode})`,
           isError: result.exitCode !== 0 || Boolean(result.killed)
         }
+      }
+
+      case 'shell_poll': {
+        const jobId = String(call.arguments.job_id || call.arguments.jobId || '')
+        const polled = await api.shell.poll(jobId)
+        if (polled.error) {
+          return { toolCallId: call.id, content: polled.error, isError: true }
+        }
+        const header = `[${polled.status}] ${polled.command || jobId} (${polled.elapsedMs || 0}ms)`
+        const body = [polled.stdout, polled.stderr].filter(Boolean).join('\n')
+        const foot =
+          polled.status === 'exited'
+            ? `\n(exit ${polled.exitCode}${polled.killed ? ', killed' : ''})`
+            : ''
+        return {
+          toolCallId: call.id,
+          content: (header + (body ? '\n' + body : '') + foot).slice(0, 24000)
+        }
+      }
+
+      case 'shell_kill': {
+        const jobId = String(call.arguments.job_id || call.arguments.jobId || '')
+        const killed = await api.shell.kill(jobId)
+        if (killed.error) {
+          return { toolCallId: call.id, content: killed.error, isError: true }
+        }
+        return { toolCallId: call.id, content: `Killed job ${jobId}` }
+      }
+
+      case 'update_plan': {
+        const sessionId = ctx?.sessionId
+        if (!sessionId) {
+          return { toolCallId: call.id, content: 'No active session for plan', isError: true }
+        }
+        const rawItems = call.arguments.items
+        if (!Array.isArray(rawItems) || rawItems.length === 0) {
+          return { toolCallId: call.id, content: 'items must be a non-empty array', isError: true }
+        }
+        const items = rawItems.map((it) => {
+          const row = (it && typeof it === 'object' ? it : {}) as Record<string, unknown>
+          return {
+            id: typeof row.id === 'string' ? row.id : undefined,
+            content: String(row.content || ''),
+            status: (row.status as 'pending' | 'in_progress' | 'done' | 'cancelled') || 'pending'
+          }
+        }).filter((it) => it.content.trim())
+        const next = usePlanStore.getState().updatePlan(sessionId, items)
+        const lines = next.map((it) => `- [${it.status}] ${it.content}`)
+        return { toolCallId: call.id, content: `Plan updated (${next.length} items):\n${lines.join('\n')}` }
+      }
+
+      case 'git_log': {
+        const cwd = resolveToolPath(
+          (call.arguments.cwd as string) || projectPath || undefined,
+          projectPath
+        )
+        const workDir = !cwd || cwd === '.' ? projectPath : cwd
+        if (!workDir) {
+          return { toolCallId: call.id, content: 'No project path set', isError: true }
+        }
+        const limit = Math.min(50, Math.max(1, Number(call.arguments.limit) || 15))
+        const result = await api.shell.execFile(
+          'git',
+          ['log', `-n${limit}`, '--oneline', '--decorate'],
+          workDir,
+          15_000
+        )
+        if (result.exitCode !== 0 && !result.stdout) {
+          return {
+            toolCallId: call.id,
+            content: result.stderr || 'git log failed',
+            isError: true
+          }
+        }
+        return { toolCallId: call.id, content: result.stdout.trim() || '(no commits)' }
       }
 
       case 'git_status': {

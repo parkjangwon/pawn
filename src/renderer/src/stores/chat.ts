@@ -13,6 +13,7 @@ import { compactTranscript, estimateTokens, TRANSCRIPT_VERSION, type TranscriptE
 import { formatToolMessageContent } from '../agent/toolMessage'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
+import { useChangeLedger } from './changeLedger'
 import type { ModelTier } from '../types/provider'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildDisplayContent, buildTranscriptText, imageAttachments, stripDisplayImages, type ChatAttachment } from '../utils/attachments'
@@ -262,6 +263,7 @@ async function agentLoop(
   abortController = controller
   const signal = controller.signal
   let usedTools = false
+  useChangeLedger.getState().beginTurn(sessionId, projectId, userContent)
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -476,12 +478,12 @@ async function agentLoop(
 
       const resultsById = new Map<string, ToolResult>()
       if (safe.length > 0 && !signal.aborted) {
-        const settled = await Promise.all(safe.map((tc) => executeTool(tc, toolCwd, signal)))
+        const settled = await Promise.all(safe.map((tc) => executeTool(tc, toolCwd, signal, { sessionId })))
         safe.forEach((tc, i) => resultsById.set(tc.id, settled[i]))
       }
       for (const tc of risky) {
         if (signal.aborted) break
-        resultsById.set(tc.id, await executeTool(tc, toolCwd, signal))
+        resultsById.set(tc.id, await executeTool(tc, toolCwd, signal, { sessionId }))
       }
 
       // Always record tool results for completed work. On abort, still persist
@@ -532,6 +534,7 @@ async function agentLoop(
     const isCurrent = abortController === controller
     if (isCurrent) abortController = null
     const aborted = signal.aborted
+    useChangeLedger.getState().endTurn()
     if (isCurrent) {
       set(() => ({ isStreaming: false, streamingSessionId: null }))
       window.api.setStreaming?.(false)

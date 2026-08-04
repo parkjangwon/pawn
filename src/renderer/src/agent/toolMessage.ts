@@ -7,6 +7,7 @@ export interface ToolDiffData {
   filename: string
   oldText: string
   newText: string
+  path?: string
 }
 
 /**
@@ -23,6 +24,7 @@ export function formatToolMessageContent(
     diffData
       ? `\n${DIFF_MARKER}${JSON.stringify({
           filename: diffData.filename,
+          path: diffData.path || '',
           oldText: diffData.oldText.slice(0, DIFF_TEXT_CAP),
           newText: diffData.newText.slice(0, DIFF_TEXT_CAP)
         })}`

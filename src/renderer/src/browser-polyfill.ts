@@ -64,6 +64,9 @@ if (typeof window !== 'undefined' && !window.api) {
         return { stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 }
       },
       execFile: async () => ({ stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 }),
+      start: async () => ({ error: 'Shell not available in browser mode' }),
+      poll: async () => ({ error: 'Shell not available in browser mode' }),
+      kill: async () => ({ error: 'Shell not available in browser mode' }),
       killAll: async () => ({ ok: true, killed: 0 })
     },
     workspace: {

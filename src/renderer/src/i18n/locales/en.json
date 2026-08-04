@@ -105,7 +105,9 @@
     },
     "mention": {
       "title": "Files & folders",
-      "noResults": "No matching files"
+      "noResults": "No matching files",
+      "gitDesc": "Inject git status & branch",
+      "diffDesc": "Inject git diff HEAD"
     }
   },
   "automation": {
@@ -175,7 +177,11 @@
     "usageSaved": "Saved by cache",
     "noSession": "No session",
     "statusIdle": "Idle",
-    "statusRunning": "Running"
+    "statusRunning": "Running",
+    "sendQueue": "Queue",
+    "sendSteer": "Steer",
+    "sendQueueHint": "Queue messages while the agent runs",
+    "sendSteerHint": "Interrupt and steer with a new message"
   },
   "modelPicker": {
     "noModels": "No models available",
@@ -213,7 +219,9 @@
       "file_read": "File Read",
       "app": "App Control",
       "mcp": "MCP Tool"
-    }
+    },
+    "allowPathAlways": "Always allow this folder",
+    "allowShellAlways": "Always allow this command"
   },
   "statusBar": {
     "working": "Working...",
@@ -526,7 +534,8 @@
     },
     "diff": {
       "title": "Recent Changes",
-      "empty": "No recent file changes"
+      "empty": "No recent file changes",
+      "recent": "Recent Changes ({{count}})"
     },
     "tools": {
       "terminal": "Terminal",
@@ -594,11 +603,24 @@
     "click": "Click element",
     "type": "Type text",
     "browser": "Browse page",
-    "search": "Search"
+    "search": "Search",
+    "delete": "Delete",
+    "shellPoll": "Shell poll",
+    "shellKill": "Shell kill",
+    "gitStatus": "Git status",
+    "gitDiff": "Git diff",
+    "gitLog": "Git log",
+    "plan": "Plan",
+    "keypress": "Keypress"
   },
   "diffView": {
     "showAllLines": "Show all lines",
-    "showAll": "Show all {{total}} lines ({{extra}} more)"
+    "showAll": "Show all {{total}} lines (+{{extra}})",
+    "open": "Open",
+    "revert": "Revert",
+    "reverted": "Reverted",
+    "revertFailed": "Revert failed",
+    "noPath": "No path to revert"
   },
   "usage": {
     "diagnostics": {
@@ -620,5 +642,18 @@
     "light": "Light",
     "dark": "Dark",
     "system": "System"
+  },
+  "plan": {
+    "title": "Plan",
+    "clear": "Clear plan"
+  },
+  "turnReview": {
+    "label": "Agent changes",
+    "files": "{{count}} files",
+    "openDiff": "Diff panel",
+    "undoTurn": "Undo turn",
+    "undoing": "Reverting…",
+    "reverted": "Reverted {{count}} file(s)",
+    "failed": "Revert failed"
   }
 }

@@ -1,0 +1,74 @@
+
+.plan-strip {
+  margin: 0 16px 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 12px;
+}
+.plan-strip-done {
+  opacity: 0.72;
+}
+.plan-strip-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+.plan-strip-title {
+  letter-spacing: 0.02em;
+}
+.plan-strip-progress {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+.plan-strip-clear {
+  margin-left: auto;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 0 4px;
+}
+.plan-strip-clear:hover {
+  color: var(--text-primary);
+}
+.plan-strip-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.plan-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--text-primary);
+}
+.plan-item-done .plan-item-text,
+.plan-item-cancelled .plan-item-text {
+  text-decoration: line-through;
+  color: var(--text-muted);
+}
+.plan-item-in_progress .plan-item-icon {
+  color: var(--accent);
+}
+.plan-item-done .plan-item-icon {
+  color: #3ecf8e;
+}
+.plan-item-icon {
+  flex-shrink: 0;
+  width: 14px;
+  text-align: center;
+}
+.plan-item-text {
+  line-height: 1.35;
+  word-break: break-word;
+}
