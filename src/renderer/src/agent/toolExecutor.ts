@@ -5,6 +5,7 @@ import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
 import { useRoutineStore } from '../stores/routine'
 import { checkPermission } from './toolPermission'
+import { isMcpToolName, callMcpTool } from './mcp'
 import { uid } from '../utils/uid'
 import type { ToolCall, ToolResult } from './toolDefinitions'
 
@@ -25,8 +26,8 @@ async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: stri
   return { agent }
 }
 
-// Convert a glob pattern to a RegExp and test against a filename
-export function matchesGlob(name: string, pattern: string): boolean {
+/** Convert a glob pattern to a RegExp (compile once per search, not per file). */
+export function compileGlob(pattern: string): RegExp | null {
   // Convert a glob pattern to a RegExp that understands:
   //   **  — matches zero or more path segments (across / boundaries)
   //   *   — matches within a single path segment (no /)
@@ -41,10 +42,18 @@ export function matchesGlob(name: string, pattern: string): boolean {
     .replace(/\*/g, '[^/]*')
     .replace(/__GLOBSTAR__/g, '.*')
   try {
-    return new RegExp(`^${regexStr}$`, 'i').test(name)
+    return new RegExp(`^${regexStr}$`, 'i')
   } catch {
-    return name.toLowerCase().includes(pattern.toLowerCase())
+    return null
   }
+}
+
+// Test a filename against a glob. Pass a precompiled pattern to avoid
+// rebuilding the regex for every file in a large walk.
+export function matchesGlob(name: string, pattern: string, compiled?: RegExp | null): boolean {
+  const re = compiled !== undefined ? compiled : compileGlob(pattern)
+  if (re) return re.test(name)
+  return name.toLowerCase().includes(pattern.toLowerCase())
 }
 
 // Execute a tool call and return the result
@@ -62,6 +71,10 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
   }
 
   try {
+    if (isMcpToolName(call.name)) {
+      return await callMcpTool(call.id, call.name, call.arguments, projectPath)
+    }
+
     switch (call.name) {
       case 'read_file': {
         const filePath = call.arguments.path as string
@@ -307,11 +320,12 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
         // Normalize separators on both sides so Windows paths (backslashes)
         // compare and glob consistently with forward-slash patterns.
         const root = (rootPath.endsWith('/') || rootPath.endsWith('\\') ? rootPath : rootPath + '/').replace(/\\/g, '/')
+        const compiledPattern = compileGlob(pattern)
         const files = walkResult.filter((f) => {
           if (f.isDirectory) return false
           const pathNorm = f.path.replace(/\\/g, '/')
           const rel = pathNorm.startsWith(root) ? pathNorm.slice(root.length) : f.name
-          return matchesGlob(rel, pattern)
+          return matchesGlob(rel, pattern, compiledPattern)
         })
         if (files.length === 0) return { toolCallId: call.id, content: 'No files found matching: ' + pattern }
         return { toolCallId: call.id, content: `Found ${files.length} files:\n${files.slice(0, 50).map((f) => f.path).join('\n')}` }
@@ -327,27 +341,41 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
           return { toolCallId: call.id, content: (walkResult2 as { error: string }).error, isError: true }
         }
         const grepRoot2 = (grepRoot.endsWith('/') || grepRoot.endsWith('\\') ? grepRoot : grepRoot + '/').replace(/\\/g, '/')
+        const compiledFilePattern = filePattern ? compileGlob(filePattern) : null
         const candidates = filePattern
           ? walkResult2.filter((f) => {
               if (f.isDirectory) return false
               const pathNorm = f.path.replace(/\\/g, '/')
               const rel = pathNorm.startsWith(grepRoot2) ? pathNorm.slice(grepRoot2.length) : f.name
-              return matchesGlob(rel, filePattern)
+              return matchesGlob(rel, filePattern, compiledFilePattern)
             })
           : walkResult2.filter((f) => !f.isDirectory)
         let regex: RegExp
         try {
+          if (query.length > 256) throw new Error('pattern too long')
           regex = new RegExp(query, 'g')
         } catch {
-          return { toolCallId: call.id, content: 'Invalid regex pattern: ' + query, isError: true }
+          return {
+            toolCallId: call.id,
+            content: query.length > 256 ? 'Regex pattern too long (max 256 chars)' : 'Invalid regex pattern: ' + query,
+            isError: true
+          }
         }
         const matches: string[] = []
+        let skippedLongLines = 0
         const reads = await window.api.fs.readFiles(candidates.slice(0, 200).map((f) => f.path))
         for (const item of reads) {
           if (matches.length >= 50) break
           if (typeof item.content !== 'string') continue
           const lines = item.content.split('\n')
           for (let i = 0; i < lines.length; i++) {
+            // Minified files can have megabyte lines; a pathological regex on
+            // one of them could stall the turn (catastrophic backtracking).
+            // Long lines are skipped so a single huge file cannot wedge the loop.
+            if (lines[i].length > 20_000) {
+              skippedLongLines++
+              continue
+            }
             regex.lastIndex = 0
             if (regex.test(lines[i])) {
               matches.push(`${item.path}:${i + 1}: ${lines[i].trim()}`)
@@ -356,7 +384,10 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
           }
         }
         if (matches.length === 0) return { toolCallId: call.id, content: 'No matches found for: ' + query }
-        return { toolCallId: call.id, content: matches.join('\n').slice(0, 3000) }
+        const skippedNote = skippedLongLines > 0
+          ? `\n...(${skippedLongLines} lines over 20k chars skipped for safety)`
+          : ''
+        return { toolCallId: call.id, content: matches.join('\n').slice(0, 3000) + skippedNote }
       }
 
       case 'app_open_tab': {

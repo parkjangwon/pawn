@@ -3,10 +3,11 @@ import { is } from '@electron-toolkit/utils'
 import { registerAllIpc } from './ipc'
 import { createMainWindow, getMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
+import { killAllMcpServers } from './mcpManager'
 import { startRoutineServices, stopRoutineServices } from './ipc/routine'
 import { initKeybindings, registerShortcutForwarding } from './ipc/keybindings'
 import { closeDb } from './db'
-import { createTray, destroyTray } from './tray'
+import { createTray, destroyTray, trayEnabled } from './tray'
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err)
@@ -50,7 +51,7 @@ app.whenReady().then(() => {
       responseHeaders: {
         ...details.responseHeaders,
         'Content-Security-Policy': [
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self'; connect-src 'self' https:;"
+          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https: http:; font-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*;"
         ]
       }
     })
@@ -62,6 +63,10 @@ app.whenReady().then(() => {
 
   app.on('will-quit', () => {
     killAllTerminals()
+    // Unlike terminals, MCP servers are a shared background capability a
+    // headless routine run may still depend on — only torn down at quit,
+    // not when the main window closes.
+    killAllMcpServers()
     stopRoutineServices()
     destroyTray()
     closeDb()
@@ -75,7 +80,7 @@ app.whenReady().then(() => {
   }
 
   createWindow()
-  createTray()
+  if (trayEnabled()) createTray()
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
@@ -83,6 +88,8 @@ app.whenReady().then(() => {
 })
 
 app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') app.quit()
+  // Keep the app alive on Windows/Linux while the tray is enabled, so the
+  // tray icon is not destroyed the moment the last window closes.
+  if (process.platform !== 'darwin' && !trayEnabled()) app.quit()
 })
 }

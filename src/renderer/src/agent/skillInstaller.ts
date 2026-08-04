@@ -119,27 +119,6 @@ async function buildProbe(src: string): Promise<RepoProbe> {
   return probe
 }
 
-async function copyDirContents(srcDir: string, destDir: string): Promise<string | null> {
-  const platform = window.api.platform
-  const res = platform === 'win32'
-    ? await window.api.shell.exec(`xcopy /E /I /Y /H ${JSON.stringify(srcDir)} ${JSON.stringify(destDir + '\\')}`)
-    : await window.api.shell.exec(`cp -R ${JSON.stringify(srcDir + '/.')} ${JSON.stringify(destDir + '/')}`)
-  return res.exitCode === 0 ? null : (res.stderr || res.stdout || 'copy failed')
-}
-
-async function removeTmp(tmp: string): Promise<void> {
-  try {
-    const platform = window.api.platform
-    await window.api.shell.exec(
-      platform === 'win32'
-        ? `rmdir /S /Q ${JSON.stringify(tmp)}`
-        : `rm -rf ${JSON.stringify(tmp)}`
-    )
-  } catch {
-    // Best-effort cleanup only.
-  }
-}
-
 export async function installSkillFromRepo(
   repo: string,
   scope: InstallScope,
@@ -158,8 +137,14 @@ export async function installSkillFromRepo(
 
   const tmp = `${home}/.pawn/tmp/install-${Date.now().toString(36)}`
   const src = `${tmp}/src`
-  const clone = await window.api.shell.exec(
-    `git clone --depth 1 --quiet ${JSON.stringify(repo)} ${JSON.stringify(src)}`
+  // execFile passes the URL as a literal argument, so a repo string containing
+  // shell metacharacters can never inject into a command line.
+  await window.api.fs.mkdir(tmp)
+  const clone = await window.api.shell.execFile(
+    'git',
+    ['clone', '--depth', '1', '--quiet', repo, src],
+    tmp,
+    120_000
   )
   if (clone.exitCode !== 0) {
     return { content: `git clone failed:\n${(clone.stderr || clone.stdout || '').slice(0, 1500)}`, isError: true }
@@ -183,8 +168,8 @@ export async function installSkillFromRepo(
         ? `${home}/.claude/plugins/${name}`
         : `${projectPath}/.claude/plugins/${name}`
       await window.api.fs.mkdir(dest)
-      const copyErr = await copyDirContents(src, dest)
-      if (copyErr) return { content: `Copy failed: ${copyErr}`, isError: true }
+      const copyRes = await window.api.fs.copyDir(src, dest)
+      if (copyRes && copyRes.error) return { content: `Copy failed: ${copyRes.error}`, isError: true }
       targets.push(dest)
 
       if (scope === 'user') {
@@ -219,9 +204,9 @@ export async function installSkillFromRepo(
           : layout === 'claude-skills-dir'
             ? `${src}/.claude/skills/${dirName}`
             : src
-        const copyErr = await copyDirContents(srcDir, dest)
-        if (copyErr) {
-          notes.push(`${dirName}: copy error ${copyErr}`)
+        const copyRes = await window.api.fs.copyDir(srcDir, dest)
+        if (copyRes && copyRes.error) {
+          notes.push(`${dirName}: copy error ${copyRes.error}`)
           continue
         }
         targets.push(dest)
@@ -244,6 +229,6 @@ export async function installSkillFromRepo(
     ].filter(Boolean)
     return { content: lines.join('\n') }
   } finally {
-    await removeTmp(tmp)
+    await window.api.fs.removeDir(tmp).catch(() => {})
   }
 }

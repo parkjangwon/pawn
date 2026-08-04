@@ -4,9 +4,13 @@ import { render, screen, fireEvent, act } from '@testing-library/react'
 import DiffListView from '../DiffListView'
 import { useAppStore } from '../../stores/app'
 
-vi.mock('react-i18next', () => ({
-  useTranslation: () => ({ t: (key: string) => key })
-}))
+vi.mock('react-i18next', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('react-i18next')>()
+  return {
+    ...actual,
+    useTranslation: () => ({ t: (key: string) => key })
+  }
+})
 
 function seedStore(messages: Array<{ id: string; role: 'user' | 'assistant' | 'system'; content: string }>): void {
   useAppStore.setState({

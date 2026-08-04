@@ -16,6 +16,16 @@ describe('toolsToOpenAI', () => {
     })
     expect(out.every((t) => t.type === 'function')).toBe(true)
   })
+
+  it('appends extra (e.g. MCP-discovered) tools after the static list', () => {
+    const extra = [{ name: 'mcp__codegraph__codegraph_status', description: 'status', parameters: { type: 'object' } }]
+    const out = toolsToOpenAI(extra)
+    expect(out).toHaveLength(TOOLS.length + 1)
+    expect(out[out.length - 1]).toEqual({
+      type: 'function',
+      function: { name: extra[0].name, description: extra[0].description, parameters: extra[0].parameters }
+    })
+  })
 })
 
 describe('toolsToClaude', () => {
@@ -39,5 +49,13 @@ describe('toolsToClaude', () => {
     const before = JSON.stringify(TOOLS)
     toolsToClaude()
     expect(JSON.stringify(TOOLS)).toBe(before)
+  })
+
+  it('marks the extra tools last-entry as cacheable, not a static tool', () => {
+    const extra = [{ name: 'mcp__codegraph__codegraph_status', description: 'status', parameters: { type: 'object' } }]
+    const out = toolsToClaude(extra)
+    expect(out).toHaveLength(TOOLS.length + 1)
+    expect(out[out.length - 1].name).toBe(extra[0].name)
+    expect(out[out.length - 1].cache_control).toEqual({ type: 'ephemeral' })
   })
 })

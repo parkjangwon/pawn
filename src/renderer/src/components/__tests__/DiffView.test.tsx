@@ -35,9 +35,9 @@ describe('DiffView', () => {
 
     const lines = screen.getAllByText(/^line\d+$/)
     expect(lines.length).toBeLessThan(10)
-    expect(screen.getByText(/Show all/)).toBeInTheDocument()
+    expect(screen.getByText('diffView.showAll')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByText(/Show all/))
+    fireEvent.click(screen.getByText('diffView.showAll'))
     expect(screen.getByText('extra')).toBeInTheDocument()
     expect(screen.queryByText(/Show all/)).not.toBeInTheDocument()
   })

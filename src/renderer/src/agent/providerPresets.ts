@@ -29,6 +29,8 @@ export interface ProviderPreset {
   baseUrl: string
   /** Shown in the picker so the user knows where to get a key. */
   keyHint: string
+  /** Localized variant of keyHint; wins over keyHint when present. */
+  keyHintKey?: string
   /** True for a local server with no real key requirement (Ollama, LM Studio). */
   localNoKey?: boolean
   models: PresetModel[]
@@ -109,7 +111,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     name: 'Alibaba Cloud Token Plan (OpenAI)',
     apiFormat: 'openai',
     baseUrl: 'https://token-plan.ap-southeast-1.maas.aliyuncs.com/compatible-mode/v1',
-    keyHint: 'bailian.console.aliyun.com — Token Plan API-KEY 발급',
+    keyHint: 'bailian.console.aliyun.com',
+    keyHintKey: 'settings.providerSection.hintBailian',
     models: [
       model('qwen-turbo', 'Qwen Turbo', 'low'),
       model('qwen-plus', 'Qwen Plus', 'mid'),
@@ -121,7 +124,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     name: 'Alibaba Cloud Token Plan (Anthropic)',
     apiFormat: 'claude',
     baseUrl: 'https://token-plan.ap-southeast-1.maas.aliyuncs.com/apps/anthropic',
-    keyHint: 'bailian.console.aliyun.com — Token Plan API-KEY 발급',
+    keyHint: 'bailian.console.aliyun.com',
+    keyHintKey: 'settings.providerSection.hintBailian',
     models: [
       model('qwen-turbo', 'Qwen Turbo', 'low'),
       model('qwen-plus', 'Qwen Plus', 'mid'),
@@ -202,7 +206,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     name: 'Ollama (local)',
     apiFormat: 'openai',
     baseUrl: 'http://localhost:11434/v1',
-    keyHint: '로컬 실행 — API 키 불필요, Ollama가 떠 있어야 함',
+    keyHint: 'Ollama',
+    keyHintKey: 'settings.providerSection.hintOllama',
     localNoKey: true,
     models: [
       { modelId: 'llama3.3', label: 'Llama 3.3 (local)', tier: 'mid' },
@@ -215,7 +220,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     name: 'LM Studio (local)',
     apiFormat: 'openai',
     baseUrl: 'http://localhost:1234/v1',
-    keyHint: '로컬 실행 — API 키 불필요, LM Studio 서버가 떠 있어야 함',
+    keyHint: 'LM Studio',
+    keyHintKey: 'settings.providerSection.hintLmStudio',
     localNoKey: true,
     models: [{ modelId: 'local-model', label: 'Loaded model (local)', tier: 'mid' }]
   }

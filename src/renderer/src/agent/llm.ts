@@ -5,7 +5,7 @@
 import { useAppStore } from '../stores/app'
 import { useStreamingStore } from '../stores/streaming'
 import { useProviderStore } from '../stores/provider'
-import { toolsToClaude, toolsToOpenAI, type ToolCall } from './tools'
+import { toolsToClaude, toolsToOpenAI, getMcpToolDefinitions, type ToolCall } from './tools'
 import type { CallUsage } from '../stores/usage'
 import type { RouteDecision } from './router'
 import {
@@ -96,6 +96,7 @@ export interface LlmRequest {
   projectPreamble: string
   sessionId: string
   projectId: string
+  projectPath?: string
   assistantMsgId: string
   signal: AbortSignal
 }
@@ -104,11 +105,12 @@ export interface LlmRequest {
 const STREAM_IDLE_TIMEOUT_MS = 90_000
 
 export async function callLLM(req: LlmRequest): Promise<LlmResult> {
-  const { decision, systemLayers, projectPreamble, sessionId, projectId, assistantMsgId, signal } = req
+  const { decision, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal } = req
   const { provider, model } = decision
   const { reasoningEffort } = useProviderStore.getState()
   const isBrowser = window.api?.platform === 'browser'
   const sendable = sanitizeForSend(req.entries)
+  const mcpTools = projectPath ? await getMcpToolDefinitions(projectPath) : []
 
   let url: string
   let body: Record<string, unknown>
@@ -145,7 +147,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
           ? { type: 'text', text, cache_control: { type: 'ephemeral' } }
           : { type: 'text', text }
       ),
-      tools: toolsToClaude(),
+      tools: toolsToClaude(mcpTools),
       messages: withConversationCacheAnchors(injectClaudePreamble(toClaudeMessages(sendable), projectPreamble))
     }
   } else {
@@ -157,7 +159,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       // Without this the usage block never arrives on a streamed response and
       // cached_tokens can't be measured.
       stream_options: { include_usage: true },
-      tools: toolsToOpenAI(),
+      tools: toolsToOpenAI(mcpTools),
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
         : {}),

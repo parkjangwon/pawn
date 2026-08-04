@@ -6,6 +6,20 @@ import { defineConfig, type Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import { WebSocketServer } from 'ws'
 
+/**
+ * Dev-only middlewares expose the real filesystem, database, config (API keys)
+ * and a shell-backed terminal. They must never be callable from arbitrary web
+ * pages, so the server binds to loopback and every browser request has to come
+ * from the Vite page itself. Origin-less requests (curl, local tooling) are
+ * still accepted for developer convenience.
+ */
+const ALLOWED_ORIGINS = new Set(['http://localhost:5173', 'http://127.0.0.1:5173'])
+
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true
+  return ALLOWED_ORIGINS.has(origin)
+}
+
 // Dev-only proxy to bypass CORS when testing in browser (not Electron)
 function apiProxyPlugin(): Plugin {
   return {
@@ -15,6 +29,10 @@ function apiProxyPlugin(): Plugin {
       const wss = new WebSocketServer({ noServer: true })
       server.httpServer?.on('upgrade', (request, socket, head) => {
         if (request.url === '/api/terminal') {
+          if (!isAllowedOrigin(request.headers.origin)) {
+            socket.destroy()
+            return
+          }
           wss.handleUpgrade(request, socket, head, (ws) => {
             try {
               const nodePty = require(require('path').join(process.cwd(), 'node_modules', 'node-pty'))
@@ -44,6 +62,7 @@ function apiProxyPlugin(): Plugin {
       // them, so every request 404'd and dev:web silently ran with providers
       // and models that never persisted across a reload.
       server.middlewares.use('/api/config', (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) { res.statusCode = 403; res.end('Forbidden'); return }
         if (req.method !== 'POST') { res.statusCode = 405; res.end('Method not allowed'); return }
         const action = (req.url || '').replace(/^\//, '').split('?')[0]
         let body = ''
@@ -76,6 +95,7 @@ function apiProxyPlugin(): Plugin {
 
       // Database API for browser mode — backs sessions, messages, and project lists
       server.middlewares.use('/api/db', (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) { res.statusCode = 403; res.end('Forbidden'); return }
         if (req.method !== 'POST') { res.statusCode = 405; res.end('Method not allowed'); return }
         const action = (req.url || '').replace(/^\//, '').split('?')[0]
         let body = ''
@@ -176,6 +196,7 @@ function apiProxyPlugin(): Plugin {
 
       // Filesystem API for browser (dev:web) mode — backs FileTree, skills, and @ mentions
       server.middlewares.use('/api/fs', (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) { res.statusCode = 403; res.end('Forbidden'); return }
         if (req.method !== 'POST') { res.statusCode = 405; res.end('Method not allowed'); return }
         const action = (req.url || '').replace(/^\//, '').split('?')[0]
         let body = ''
@@ -251,6 +272,7 @@ function apiProxyPlugin(): Plugin {
 
       // Browser proxy: strip X-Frame-Options to allow iframe embedding
       server.middlewares.use('/api/browser/proxy', async (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) { res.statusCode = 403; res.end('Forbidden'); return }
         const raw = new URL(req.url || '', 'http://x').searchParams.get('url')
         if (!raw) { res.statusCode = 400; res.end('Missing url'); return }
         try {
@@ -281,6 +303,7 @@ function apiProxyPlugin(): Plugin {
       })
 
       server.middlewares.use('/api/proxy', async (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) { res.statusCode = 403; res.end('Forbidden'); return }
         if (req.method !== 'POST') {
           res.statusCode = 405
           res.end('Method not allowed')
@@ -333,9 +356,9 @@ export default defineConfig({
     }
   },
   server: {
-    host: '0.0.0.0',
+    host: '127.0.0.1',
     port: 5173,
-    allowedHosts: 'all'
+    allowedHosts: ['localhost', '127.0.0.1']
   },
   plugins: [react(), apiProxyPlugin()]
 })

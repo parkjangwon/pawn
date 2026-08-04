@@ -22,18 +22,27 @@ const api = {
     delete: (path: string) => ipcRenderer.invoke('fs:delete', path),
     exists: (path: string) => ipcRenderer.invoke('fs:exists', path),
     homeDir: () => ipcRenderer.invoke('fs:homeDir'),
-    walk: (path: string) => ipcRenderer.invoke('fs:walk', path)
+    walk: (path: string) => ipcRenderer.invoke('fs:walk', path),
+    copyDir: (src: string, dest: string) => ipcRenderer.invoke('fs:copyDir', src, dest),
+    removeDir: (path: string) => ipcRenderer.invoke('fs:removeDir', path)
   },
 
   // Shell
   shell: {
     exec: (command: string, cwd?: string, timeoutMs?: number) =>
-      ipcRenderer.invoke('shell:exec', command, cwd, timeoutMs)
+      ipcRenderer.invoke('shell:exec', command, cwd, timeoutMs),
+    execFile: (file: string, args: string[], cwd?: string, timeoutMs?: number) =>
+      ipcRenderer.invoke('shell:execFile', file, args, cwd, timeoutMs)
   },
+
+  // Main-process streaming flag: lets the window guard against closing while
+  // an agent turn is in flight.
+  setStreaming: (streaming: boolean) => ipcRenderer.send('app:streaming', streaming === true),
 
   workspace: {
     openIn: (path: string, app: string) => ipcRenderer.invoke('workspace:openIn', path, app),
-    runScript: (cwd: string, script: string, packageManager?: string) => ipcRenderer.invoke('workspace:runScript', cwd, script, packageManager || 'npm')
+    runScript: (cwd: string, script: string, packageManager?: string) => ipcRenderer.invoke('workspace:runScript', cwd, script, packageManager || 'npm'),
+    openPath: (path: string) => ipcRenderer.invoke('app:openPath', path)
   },
 
   // Computer Use
@@ -93,7 +102,8 @@ const api = {
   // Config (TOML)
   config: {
     load: () => ipcRenderer.invoke('config:load'),
-    save: (config: unknown) => ipcRenderer.invoke('config:save', config)
+    save: (config: unknown) => ipcRenderer.invoke('config:save', config),
+    getPaths: () => ipcRenderer.invoke('config:getPaths')
   },
 
   // Database (SQLite)
@@ -165,6 +175,17 @@ const api = {
   keybindings: {
     set: (id: string, combo: string) => ipcRenderer.invoke('keybindings:set', id, combo),
     setPaused: (paused: boolean) => ipcRenderer.invoke('keybindings:setPaused', paused)
+  },
+
+  mcp: {
+    listTools: (projectPath?: string) => ipcRenderer.invoke('mcp:listTools', projectPath),
+    status: (projectPath?: string) => ipcRenderer.invoke('mcp:status', projectPath),
+    callTool: (projectPath: string | undefined, serverId: string, toolName: string, args: Record<string, unknown>) =>
+      ipcRenderer.invoke('mcp:callTool', projectPath, serverId, toolName, args),
+    addServer: (scope: 'user' | 'project', projectPath: string | undefined, id: string, input: Record<string, unknown>) =>
+      ipcRenderer.invoke('mcp:addServer', scope, projectPath, id, input),
+    removeServer: (scope: 'user' | 'project', projectPath: string | undefined, id: string) =>
+      ipcRenderer.invoke('mcp:removeServer', scope, projectPath, id)
   }
 }
 

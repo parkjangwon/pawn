@@ -88,6 +88,28 @@ body {
   margin-left: 0;
 }
 
+/* `transform` only moves the sidebar visually — Electron computes draggable
+   regions from layout geometry, not paint position, so a translated-off-screen
+   sidebar's "drag" box (and its traffic-light-spacer child, which sets its own
+   drag independently of the parent) still sits at x:0-244 and silently
+   swallows clicks on the chat header's toggle button, which lives in that
+   same rectangle once the sidebar is hidden. Explicitly clear both. */
+.app.sidebar-collapsed .sidebar,
+.app.sidebar-collapsed .traffic-light-spacer {
+  -webkit-app-region: no-drag;
+}
+
+/* macOS draws the traffic lights on top of the web content (hiddenInset
+   title bar), so the chat header needs enough left padding to clear them.
+   This is independent of the sidebar open/collapsed state on purpose — the
+   sidebar toggle button must stay put instead of jumping around when the
+   sidebar opens or closes. Settings has its own separate header/nav but
+   uses the exact same traffic-light clearance for visual consistency. */
+.app.platform-mac .chat-header,
+.app.platform-mac .settings-header {
+  padding-left: 92px;
+}
+
 /* Light theme */
 .app.light {
   --bg-primary: #ffffff;

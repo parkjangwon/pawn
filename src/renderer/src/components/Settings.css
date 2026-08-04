@@ -17,14 +17,15 @@
   display: flex;
   align-items: center;
   padding: 0 var(--space-md);
-  padding-left: calc(var(--sidebar-width) + var(--space-md));
   border-bottom: 1px solid var(--border-color);
   background: var(--bg-primary);
+  -webkit-app-region: drag;
 }
 
 .settings-header-left {
   display: flex;
   align-items: center;
+  gap: var(--space-xs);
 }
 
 .settings-header-back {
@@ -59,7 +60,20 @@
   padding: 0 var(--space-md) var(--space-md) var(--space-md);
   padding-top: calc(var(--app-header-height) + 8px);
   overflow-y: auto;
-  -webkit-app-region: drag;
+  overflow-x: hidden;
+  /* Not a drag region: its box spans the full height starting at y:0 (the
+     padding-top above only pushes content, not the box itself), so it would
+     geometrically overlap — and silently swallow clicks on — the header
+     buttons that sit in that same top strip. The header itself already
+     provides drag/double-click-maximize. */
+  transition: width 0.2s var(--ease-spring), min-width 0.2s var(--ease-spring), padding-left 0.2s var(--ease-spring), padding-right 0.2s var(--ease-spring);
+}
+
+.settings-page.nav-collapsed .settings-sidebar {
+  width: 0;
+  min-width: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .settings-nav {
@@ -148,15 +162,17 @@
   max-width: 800px;
 }
 
+/* Matches .chat-welcome h1/p (the main screen's own big-heading convention)
+   so a settings page doesn't read as a different, heavier type scale. */
 .settings-section h2 {
-  font-size: 24px;
-  font-weight: 700;
+  font-size: 20px;
+  font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--space-xs);
 }
 
 .settings-desc {
-  font-size: var(--font-md);
+  font-size: var(--font-lg);
   color: var(--text-muted);
   margin-bottom: var(--space-xl);
 }
@@ -373,7 +389,8 @@
 }
 
 .add-form input,
-.add-form select {
+.add-form select,
+.add-form textarea {
   padding: 8px 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -381,11 +398,23 @@
   color: var(--text-primary);
   font-size: var(--font-md);
   outline: none;
+  font-family: inherit;
 }
 
 .add-form input:focus,
-.add-form select:focus {
+.add-form select:focus,
+.add-form textarea:focus {
   border-color: var(--accent);
+}
+
+.mcp-env-input {
+  font-family: 'SF Mono', 'Fira Code', monospace;
+  font-size: var(--font-sm);
+  resize: vertical;
+}
+
+.mcp-form-error {
+  color: #ef4444;
 }
 
 .form-actions {
@@ -557,6 +586,34 @@
 }
 
 .plugin-context-status.off {
+  color: var(--text-muted);
+}
+
+.mcp-status-badge {
+  display: inline-flex;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 500;
+  vertical-align: middle;
+  color: var(--text-muted);
+  background: var(--bg-secondary);
+}
+
+.mcp-status-badge.connected {
+  color: #22c55e;
+  background: rgba(34, 197, 94, 0.1);
+}
+
+.mcp-status-badge.error {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.settings-mcp-hint {
+  padding: var(--space-sm) var(--space-md);
+  font-size: var(--font-sm);
   color: var(--text-muted);
 }
 

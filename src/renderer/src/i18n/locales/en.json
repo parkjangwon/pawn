@@ -14,6 +14,8 @@
     "noResults": "No results found"
   },
   "sidebar": {
+    "project": "Project",
+    "session": "Session",
     "newSession": "New Session",
     "addProject": "Add Project",
     "settings": "Settings",
@@ -55,10 +57,26 @@
     "pastedText": "Pasted text",
     "attachedImage": "Pasted image",
     "attachedText": "Attached file",
+    "copy": "Copy",
+    "copied": "Copied",
     "thinking": "Thinking...",
     "noProvider": "No provider configured",
     "taskComplete": "Task complete",
     "modelSelected": "Model selected",
+    "configureProviders": "Configure providers",
+    "diagnostics": {
+      "coldStart": "Cold start — the cache expired and needs to be re-primed.",
+      "compacted": "Context compaction ran — the cache prefix is being re-primed.",
+      "routing": "Routing: {{model}} — {{reason}}"
+    },
+    "errors": {
+      "noProvider": "No provider or model configured. Open Settings → Providers, then Settings → Models.",
+      "allAttemptsFailed": "All model attempts failed. Last error: {{error}}",
+      "noUsableModel": "No usable model. Check that a provider is enabled and has models attached.",
+      "toolLoop": "Tool loop detected: repeated the same calls ({{names}}) {{rounds}} rounds without progress. Stopping.",
+      "maxRounds": "Stopped after {{rounds}} tool rounds without a final answer.",
+      "agentError": "Agent loop error: {{error}}"
+    },
     "showEarlier": "Show earlier messages ({{count}})",
     "suggestions": {
       "summarize": "Read and summarize the project structure",
@@ -185,13 +203,16 @@
     "yoloDesc": "Approve all actions without confirmation",
     "deny": "Deny",
     "allow": "Allow",
+    "allowSession": "Allow for this session",
+    "allowSessionHint": "Approve every request of this type until the app restarts",
     "types": {
       "computer_use": "Computer Use",
       "file_write": "File Write",
       "shell_exec": "Shell Execution",
       "browser": "Browser",
       "file_read": "File Read",
-      "app": "App Control"
+      "app": "App Control",
+      "mcp": "MCP Tool"
     }
   },
   "statusBar": {
@@ -204,12 +225,14 @@
   "settings": {
     "title": "Settings",
     "backToApp": "Back to App",
+    "toggleNav": "Toggle Settings Sidebar",
     "searchPlaceholder": "Search settings...",
     "appearance": "Appearance",
     "providers": "Providers",
     "models": "Models",
     "agent": "Agent",
     "plugins": "Plugins",
+    "mcp": "MCP",
     "data": "Data",
     "groups": {
       "general": "General",
@@ -247,7 +270,10 @@
       "apiKeyPlaceholder": "sk-...",
       "addWithModels": "Add (includes {{count}} models)",
       "presetDesc": "Well-known providers — paste an API key and go",
-      "pasteApiKey": "Paste your API key"
+      "pasteApiKey": "Paste your API key",
+      "hintBailian": "bailian.console.aliyun.com — issue an API key on the Token Plan page",
+      "hintOllama": "Local server — no API key needed, Ollama must be running",
+      "hintLmStudio": "Local server — no API key needed, LM Studio must be running"
     },
     "modelSection": {
       "title": "Models",
@@ -324,6 +350,30 @@
       "agentDirDesc": "Directory for agent-specific configuration",
       "auto": "Auto-detect"
     },
+    "mcpSection": {
+      "title": "MCP",
+      "desc": "MCP servers configured for this device, added through Pawn, or scoped to this project — the agent can call their tools alongside its built-in ones.",
+      "empty": "No MCP servers found",
+      "statusConnected": "Connected · {{count}} tools",
+      "statusConnecting": "Connecting…",
+      "statusError": "Error",
+      "statusDisabled": "Disabled",
+      "source": {
+        "user-claude": "From ~/.claude.json (read-only here)",
+        "user-pawn": "Added in Pawn · all projects",
+        "project": "Added in Pawn · this project only"
+      },
+      "hint": "Servers from ~/.claude.json are read-only here — manage those with Claude Code. Servers you add below live in Pawn's own config and can be edited or removed anytime.",
+      "add": "Add MCP Server",
+      "scopeProject": "This project",
+      "scopeUser": "All projects",
+      "noProjectForScope": "Open a project to add a project-scoped server.",
+      "idPlaceholder": "Server id (e.g. codegraph)",
+      "commandPlaceholder": "Command (e.g. npx)",
+      "argsPlaceholder": "Arguments, space-separated (e.g. -y @some/mcp-server)",
+      "envPlaceholder": "Environment variables, one per line: KEY=value",
+      "addFailed": "Couldn't add the server."
+    },
     "dataSection": {
       "title": "Data",
       "desc": "Manage your data and configuration",
@@ -331,6 +381,8 @@
       "exportDesc": "Export all settings and configuration to a file",
       "import": "Import Data",
       "importDesc": "Import settings from a previously exported file",
+      "exportKeyNote": "API keys are not exported; re-enter keys after import.",
+      "open": "Open",
       "configFile": "Config File",
       "configFileDesc": "View and edit the raw configuration file",
       "database": "Database",
@@ -439,7 +491,11 @@
     "project": "Project",
     "git": {
       "noRepo": "No git repository",
-      "noChanges": "No changes"
+      "noChanges": "No changes",
+      "commitPlaceholder": "Commit message...",
+      "history": "History ({{count}})",
+      "checkoutFailed": "Couldn't switch branches",
+      "noBranches": "No branches found"
     },
     "openTool": "Open a tool",
     "toolDescs": {
@@ -520,11 +576,15 @@
     "wrap": "Word wrap",
     "saving": "Saving…",
     "saved": "Saved",
-    "linesUnit": "lines"
+    "linesUnit": "lines",
+    "unsavedTitle": "Unsaved changes",
+    "unsavedConfirm": "You have unsaved changes. Discard them and close?",
+    "discard": "Discard & Close"
   },
   "toolMessage": {
     "showFullOutput": "Show full output",
     "showLess": "Show less",
+    "empty": "(empty)",
     "read": "Read file",
     "write": "Write file",
     "edit": "Edit file",
@@ -537,7 +597,20 @@
     "search": "Search"
   },
   "diffView": {
-    "showAllLines": "Show all lines"
+    "showAllLines": "Show all lines",
+    "showAll": "Show all {{total}} lines ({{extra}} more)"
+  },
+  "usage": {
+    "diagnostics": {
+      "cacheMiss": "Cache miss — the prefix changed or the cache expired.",
+      "cachePriming": "Cache priming — writing a new prefix.",
+      "cacheHit": "Good cache hit — most of the input was served from cache."
+    }
+  },
+  "errorBoundary": {
+    "title": "Something went wrong",
+    "tryAgain": "Try again",
+    "reload": "Reload app"
   },
   "agent": {
     "taskComplete": "Task completed successfully",

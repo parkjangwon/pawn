@@ -6,12 +6,29 @@ import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSy
 import { loadConfig, saveConfig } from './src/main/config'
 import * as db from './src/main/db'
 
+/**
+ * The Electron dev server hosts file/db/config APIs and an LLM proxy with no
+ * authentication. Bind to loopback and reject requests from any origin other
+ * than the Vite page itself so a random website cannot reach them.
+ */
+const ALLOWED_ORIGINS = new Set(['http://localhost:5173', 'http://127.0.0.1:5173'])
+
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true
+  return ALLOWED_ORIGINS.has(origin)
+}
+
 // Dev-only proxy to bypass CORS when testing in browser (not Electron)
 function apiProxyPlugin(): Plugin {
   return {
     name: 'api-proxy',
     configureServer(server) {
       server.middlewares.use('/api/proxy', async (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) {
+          res.statusCode = 403
+          res.end('Forbidden')
+          return
+        }
         if (req.method !== 'POST') {
           res.statusCode = 405
           res.end('Method not allowed')
@@ -56,6 +73,11 @@ function apiProxyPlugin(): Plugin {
 
       // File system API for browser mode
       server.middlewares.use('/api/fs', async (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) {
+          res.statusCode = 403
+          res.end('Forbidden')
+          return
+        }
         res.setHeader('Content-Type', 'application/json')
         let body = ''
         req.on('data', (chunk: Buffer) => { body += chunk })
@@ -118,6 +140,11 @@ function apiProxyPlugin(): Plugin {
 
       // Config API (TOML)
       server.middlewares.use('/api/config', async (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) {
+          res.statusCode = 403
+          res.end('Forbidden')
+          return
+        }
         res.setHeader('Content-Type', 'application/json')
         let body = ''
         req.on('data', (chunk: Buffer) => { body += chunk })
@@ -147,6 +174,11 @@ function apiProxyPlugin(): Plugin {
 
       // Database API (SQLite)
       server.middlewares.use('/api/db', async (req, res) => {
+        if (!isAllowedOrigin(req.headers.origin)) {
+          res.statusCode = 403
+          res.end('Forbidden')
+          return
+        }
         res.setHeader('Content-Type', 'application/json')
         let body = ''
         req.on('data', (chunk: Buffer) => { body += chunk })
@@ -193,7 +225,18 @@ export default defineConfig({
     plugins: [externalizeDepsPlugin()]
   },
   preload: {
-    plugins: [externalizeDepsPlugin()]
+    // Sandboxed preloads are loaded as CommonJS by the renderer and cannot
+    // require external packages, so @electron-toolkit/preload must be bundled
+    // in and the output emitted as CJS (see window.ts sandbox: true).
+    plugins: [externalizeDepsPlugin({ exclude: ['@electron-toolkit/preload'] })],
+    build: {
+      rollupOptions: {
+        output: {
+          format: 'cjs',
+          entryFileNames: '[name].cjs'
+        }
+      }
+    }
   },
   renderer: {
     resolve: {
@@ -202,8 +245,8 @@ export default defineConfig({
       }
     },
     server: {
-      host: '0.0.0.0',
-      allowedHosts: true
+      host: '127.0.0.1',
+      allowedHosts: ['localhost', '127.0.0.1']
     },
     plugins: [react(), apiProxyPlugin()]
   }

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
 import type { ModelEntry } from '../types/provider'
+import i18n from '../i18n'
 
 /** Raw token counts reported by a provider for a single request. */
 export interface CallUsage {
@@ -107,11 +108,11 @@ export const useUsageStore = create<UsageState>((set, get) => ({
       const callPrompt = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens
       if (callPrompt > 0) {
         if (usage.cacheReadTokens === 0 && usage.cacheWriteTokens === 0) {
-          diags.push({ level: 'warn', message: '캐시 미스 — 접두사가 변경됐거나 캐시가 만료됐습니다.', at: Date.now() })
+          diags.push({ level: 'warn', message: i18n.t('usage.diagnostics.cacheMiss'), at: Date.now() })
         } else if (usage.cacheWriteTokens > usage.inputTokens && usage.cacheReadTokens === 0) {
-          diags.push({ level: 'info', message: '캐시 프라이밍 — 새 접두사를 기록하는 중입니다.', at: Date.now() })
+          diags.push({ level: 'info', message: i18n.t('usage.diagnostics.cachePriming'), at: Date.now() })
         } else if (usage.cacheReadTokens > callPrompt * 0.8) {
-          diags.push({ level: 'info', message: '캐시 적중 양호 — 입력의 대부분이 캐시에서 제공됐습니다.', at: Date.now() })
+          diags.push({ level: 'info', message: i18n.t('usage.diagnostics.cacheHit'), at: Date.now() })
         }
       }
       const prevDiags = s.diagnostics[sessionId] || []

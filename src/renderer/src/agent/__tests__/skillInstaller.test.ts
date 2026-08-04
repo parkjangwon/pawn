@@ -80,9 +80,11 @@ describe('installSkillFromRepo', () => {
     listDir: vi.fn(),
     mkdir: vi.fn().mockResolvedValue({ ok: true }),
     readFile: vi.fn(),
-    writeFile: vi.fn().mockResolvedValue({ ok: true })
+    writeFile: vi.fn().mockResolvedValue({ ok: true }),
+    copyDir: vi.fn().mockResolvedValue({ ok: true }),
+    removeDir: vi.fn().mockResolvedValue({ ok: true })
   }
-  const shellMock = { exec: vi.fn() }
+  const shellMock = { exec: vi.fn(), execFile: vi.fn() }
 
   beforeEach(() => {
     ;(window as any).api = {
@@ -94,6 +96,7 @@ describe('installSkillFromRepo', () => {
     fsMock.listDir.mockReset()
     fsMock.readFile.mockReset()
     shellMock.exec.mockReset().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 })
+    shellMock.execFile.mockReset().mockResolvedValue({ stdout: '', stderr: '', exitCode: 0 })
   })
 
   it('rejects non-http(s) sources', async () => {
@@ -109,7 +112,15 @@ describe('installSkillFromRepo', () => {
     expect(res.isError).toBeFalsy()
     expect(res.content).toContain('/home/user/.agents/skills/my-skill')
     expect(res.content).toContain('root-skill')
-    expect(shellMock.exec).toHaveBeenCalledWith(expect.stringContaining('git clone'))
+    // git runs through execFile with the URL as a literal argument — never a
+    // shell string, so repo names cannot inject commands.
+    expect(shellMock.execFile).toHaveBeenCalledWith(
+      'git',
+      expect.arrayContaining(['clone', '--depth', '1', '--quiet', 'https://github.com/owner/my-skill']),
+      expect.any(String),
+      expect.any(Number)
+    )
+    expect(fsMock.copyDir).toHaveBeenCalled()
     expect(fsMock.mkdir).toHaveBeenCalledWith('/home/user/.agents/skills/my-skill')
   })
 

@@ -103,21 +103,37 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     e.stopPropagation()
     if (id === GENERAL_PROJECT_ID) return
     const project = projects.find((p) => p.id === id)
-    setConfirmDelete({ type: 'project', id, name: project?.name || '프로젝트' })
+    setConfirmDelete({ type: 'project', id, name: project?.name || t('sidebar.project') })
   }
 
   const handleDeleteSession = (e: React.MouseEvent, projectId: string, sessionId: string): void => {
     e.stopPropagation()
     const session = projects.find((p) => p.id === projectId)?.sessions.find((s) => s.id === sessionId)
-    setConfirmDelete({ type: 'session', id: sessionId, projectId, name: session?.title || '세션' })
+    setConfirmDelete({ type: 'session', id: sessionId, projectId, name: session?.title || t('sidebar.session') })
   }
 
   const handleConfirmDelete = (): void => {
     if (!confirmDelete) return
+    // A deleted session/project can no longer receive the turn's tool
+    // results — abort it first so the agent loop doesn't keep streaming
+    // into a session that's already gone from the store.
+    const { streamingSessionId, stopStreaming } = useChatStore.getState()
     if (confirmDelete.type === 'project') {
+      const project = projects.find((p) => p.id === confirmDelete.id)
+      if (streamingSessionId && project?.sessions.some((s) => s.id === streamingSessionId)) stopStreaming()
       removeProject(confirmDelete.id)
     } else if (confirmDelete.type === 'session' && confirmDelete.projectId) {
+      if (streamingSessionId === confirmDelete.id) stopStreaming()
       removeSession(confirmDelete.projectId, confirmDelete.id)
+      // Drop it from the pinned set too, so a stale id doesn't linger in
+      // localStorage once its session no longer exists.
+      setPinnedSessions((prev) => {
+        if (!prev.has(confirmDelete.id)) return prev
+        const next = new Set(prev)
+        next.delete(confirmDelete.id)
+        try { localStorage.setItem('pawn-pinned-sessions', JSON.stringify([...next])) } catch {}
+        return next
+      })
     }
     setConfirmDelete(null)
   }
@@ -207,6 +223,11 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" onClick={(e) => togglePin(e, session.id)} style={{ cursor: 'pointer' }}><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
                 <span className="item-title">{session.title}</span>
                 {renderSessionMeta(sessionMeta(session), true)}
+                <div className="sidebar-item-actions">
+                  <button className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={t('common.delete')}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>
@@ -278,6 +299,11 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
                 <span className="item-title">{session.title}</span>
                 {renderSessionMeta(sessionMeta(session), true)}
+                <div className="sidebar-item-actions">
+                  <button className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={t('common.delete')}>
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </button>
+                </div>
               </div>
             ))}
           </div>

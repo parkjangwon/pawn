@@ -225,6 +225,17 @@
   flex-shrink: 1;
 }
 
+.sidebar-item-actions {
+  display: none;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.sidebar-item:hover .sidebar-item-actions {
+  display: flex;
+}
+
 /* Project tree */
 .tree-project {
   margin-bottom: 2px;

@@ -78,16 +78,16 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
             </div>
           )}
           <pre className="tool-message-content">
-            {displayContent || '(empty)'}
+            {displayContent || t('toolMessage.empty')}
           </pre>
           {truncated && (
             <button className="tool-show-more" onClick={() => setShowAll(true)}>
-              Show full output...
+              {t('toolMessage.showFullOutput')}
             </button>
           )}
           {showAll && remaining.length > 300 && (
             <button className="tool-show-more" onClick={() => setShowAll(false)}>
-              Show less
+              {t('toolMessage.showLess')}
             </button>
           )}
         </div>

@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
+import GitSummaryChip from './GitSummaryChip'
 import { useProviderStore } from '../stores/provider'
 import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
 import type { Project } from '../stores/app'
@@ -27,7 +28,6 @@ interface ComposerProps {
   activeProject: Project | undefined
   activeProjectId: string | null
   onSelectProject: (id: string) => void
-  gitBranch: string | null
   showProjectPicker: boolean
   setShowProjectPicker: (v: boolean) => void
   showPermPicker: boolean
@@ -71,7 +71,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   }
   const triggerOpen = props.trigger !== null
   const { trigger, triggerItems, menuIndex, onMenuIndexChange, filesLoading, onSelect } = props
-  const { input, onChange, onKeyDown, onSend, textareaRef, activeSession, projects, activeProject, activeProjectId, onSelectProject, gitBranch } = props
+  const { input, onChange, onKeyDown, onSend, textareaRef, activeSession, projects, activeProject, activeProjectId, onSelectProject } = props
   const { showProjectPicker, setShowProjectPicker, showPermPicker, setShowPermPicker, showModelPicker, setShowModelPicker, showUsagePopover, setShowUsagePopover } = props
   const { projectPickerRef, permPickerRef, modelPickerRef, usageRef, isStreaming, onStop } = props
   const { attachments, onAddAttachment, onRemoveAttachment } = props
@@ -186,12 +186,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   </div>
                 )}
               </div>
-              {gitBranch && (
-                <span className="context-chip branch-chip">
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="6" y1="3" x2="6" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" /></svg>
-                  <span>{gitBranch}</span>
-                </span>
-              )}
+              <GitSummaryChip projectPath={activeProject?.paths?.[0] || ''} />
             </div>
           )}
 

@@ -54,17 +54,21 @@ if (typeof window !== 'undefined' && !window.api) {
       homeDir: async () => null,
       walk: async (path: string) => {
         return await fsPost('walk', { path }) as Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }
-      }
+      },
+      copyDir: async () => ({ error: 'Not available in browser mode' }),
+      removeDir: async () => ({ error: 'Not available in browser mode' })
     },
     shell: {
       exec: async (command: string, cwd?: string, timeoutMs?: number) => {
         // Shell exec not available via HTTP for security
         return { stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 }
-      }
+      },
+      execFile: async () => ({ stdout: '', stderr: 'Shell exec not available in browser mode', exitCode: 1 })
     },
     workspace: {
       openIn: async () => ({ error: 'Not available in browser mode' }),
-      runScript: async () => ({ error: 'Not available in browser mode' })
+      runScript: async () => ({ error: 'Not available in browser mode' }),
+      openPath: async () => ({ error: 'Not available in browser mode' })
     },
     computer: {
       screenshot: async () => ({ error: 'Not available in browser mode' }),
@@ -90,6 +94,7 @@ if (typeof window !== 'undefined' && !window.api) {
     headless: {
       ready: () => {}
     },
+    setStreaming: () => {},
     tray: {
       getEnabled: async () => true,
       setEnabled: async () => ({ ok: true }),
@@ -105,7 +110,8 @@ if (typeof window !== 'undefined' && !window.api) {
       save: async (config: unknown) => {
         await fetch('/api/config/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) })
         return { ok: true }
-      }
+      },
+      getPaths: async () => ({ configPath: '', dataDir: '' })
     },
 
     // Database (SQLite via HTTP)
