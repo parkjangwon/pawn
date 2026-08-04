@@ -7,6 +7,7 @@ import { useRoutineStore } from '../stores/routine'
 import { checkPermission } from './toolPermission'
 import { isMcpToolName, callMcpTool } from './mcp'
 import { uid } from '../utils/uid'
+import { resolveToolPath, countOccurrences, formatFileRead } from './pathUtils'
 import type { ToolCall, ToolResult } from './toolDefinitions'
 
 async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: string }> {
@@ -77,7 +78,7 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
 
     switch (call.name) {
       case 'read_file': {
-        const filePath = call.arguments.path as string
+        const filePath = resolveToolPath(call.arguments.path as string, projectPath)
         const result = await api.fs.readFile(filePath)
         if (typeof result === 'object' && 'error' in result) {
           // Attempt fuzzy suggestion from the parent directory
@@ -99,11 +100,16 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
           }
           return { toolCallId: call.id, content: result.error, isError: true }
         }
-        return { toolCallId: call.id, content: result as string }
+        const offset = call.arguments.offset !== undefined ? Number(call.arguments.offset) : undefined
+        const limit = call.arguments.limit !== undefined ? Number(call.arguments.limit) : undefined
+        return {
+          toolCallId: call.id,
+          content: formatFileRead(result as string, { offset, limit })
+        }
       }
 
       case 'write_file': {
-        const wPath = call.arguments.path as string
+        const wPath = resolveToolPath(call.arguments.path as string, projectPath)
         const newContent = call.arguments.content as string
         const existing = await api.fs.readFile(wPath)
         const result = await api.fs.writeFile(wPath, newContent)
@@ -122,39 +128,56 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
       }
 
       case 'edit_file': {
-        const path = call.arguments.path as string
+        const path = resolveToolPath(call.arguments.path as string, projectPath)
         const oldStr = call.arguments.old_string as string
         const newStr = call.arguments.new_string as string
+        const replaceAll = Boolean(call.arguments.replace_all)
+        if (!oldStr) {
+          return { toolCallId: call.id, content: 'old_string must not be empty', isError: true }
+        }
+        if (oldStr === newStr) {
+          return { toolCallId: call.id, content: 'old_string and new_string are identical', isError: true }
+        }
         const fileContent = await api.fs.readFile(path)
         if (typeof fileContent === 'object' && 'error' in fileContent) {
           return { toolCallId: call.id, content: fileContent.error, isError: true }
         }
-        const occurrences = (fileContent as string).split(oldStr).length - 1
+        const text = fileContent as string
+        const occurrences = countOccurrences(text, oldStr)
         if (occurrences === 0) {
-          return { toolCallId: call.id, content: 'old_string not found in file', isError: true }
-        }
-        if (occurrences > 1) {
           return {
             toolCallId: call.id,
-            content: `old_string appears ${occurrences} times in file. Provide more surrounding context to make it unique.`,
+            content:
+              'old_string not found in file. Re-read the file and use the exact current text (including whitespace).',
             isError: true
           }
         }
-        const updated = (fileContent as string).replace(oldStr, newStr)
+        if (occurrences > 1 && !replaceAll) {
+          return {
+            toolCallId: call.id,
+            content: `old_string appears ${occurrences} times in file. Provide more surrounding context to make it unique, or set replace_all: true.`,
+            isError: true
+          }
+        }
+        const updated = replaceAll ? text.split(oldStr).join(newStr) : text.replace(oldStr, newStr)
         const writeResult = await api.fs.writeFile(path, updated)
         if ('error' in writeResult) {
           return { toolCallId: call.id, content: writeResult.error!, isError: true }
         }
-                const filename = path.split('/').pop() || path
+        const filename = path.split('/').pop() || path
         return {
           toolCallId: call.id,
-          content: `File edited: ${path}`,
+          content: `File edited: ${path} (${replaceAll ? occurrences : 1} replacement${replaceAll && occurrences > 1 ? 's' : ''})`,
           diffData: { oldText: oldStr, newText: newStr, filename }
         }
       }
 
       case 'list_dir': {
-        const result = await api.fs.listDir(call.arguments.path as string)
+        const dirPath = resolveToolPath(
+          (call.arguments.path as string) || projectPath || '.',
+          projectPath
+        )
+        const result = await api.fs.listDir(dirPath)
         if (Array.isArray(result)) {
           const listing = result.map((e) => `${e.isDirectory ? '[DIR]' : '[FILE]'} ${e.name}`).join('\n')
           return { toolCallId: call.id, content: listing || '(empty)' }
@@ -309,8 +332,11 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
 
       case 'search_files': {
         const pattern = call.arguments.pattern as string
-        const rootPath = (call.arguments.rootPath as string) || projectPath || ''
-        if (!rootPath) return { toolCallId: call.id, content: 'No project path set', isError: true }
+        const rootPath = resolveToolPath(
+          (call.arguments.rootPath as string) || projectPath || '',
+          projectPath
+        )
+        if (!rootPath || rootPath === '.') return { toolCallId: call.id, content: 'No project path set', isError: true }
         const walkResult = await window.api.fs.walk(rootPath)
         if (!Array.isArray(walkResult)) {
           return { toolCallId: call.id, content: (walkResult as { error: string }).error, isError: true }
@@ -334,8 +360,11 @@ export async function executeTool(call: ToolCall, projectPath?: string, signal?:
       case 'grep_search': {
         const query = call.arguments.query as string
         const filePattern = (call.arguments.pattern as string) || ''
-        const grepRoot = (call.arguments.rootPath as string) || projectPath || ''
-        if (!grepRoot) return { toolCallId: call.id, content: 'No project path set', isError: true }
+        const grepRoot = resolveToolPath(
+          (call.arguments.rootPath as string) || projectPath || '',
+          projectPath
+        )
+        if (!grepRoot || grepRoot === '.') return { toolCallId: call.id, content: 'No project path set', isError: true }
         const walkResult2 = await window.api.fs.walk(grepRoot)
         if (!Array.isArray(walkResult2)) {
           return { toolCallId: call.id, content: (walkResult2 as { error: string }).error, isError: true }
