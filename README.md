@@ -13,6 +13,7 @@ A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI
 - **Auto mode** — Multi-model routing based on task complexity and cache optimization.
 - **Open source** — MIT licensed, fully customizable.
 - **Claude Code compatible** — Loads `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, and `~/.agents/` directories.
+- **MCP-native** — Discovers and connects to your existing Model Context Protocol servers (Claude Code, Cursor, or Pawn-managed) so their tools become available to the agent automatically.
 
 ## Installation
 
@@ -62,10 +63,17 @@ pawn
   - **Windows Support**: Zero-dependency PowerShell and `.NET Forms SendKeys` integration.
   - **Linux Support**: Driven via `xdotool`.
   - **High-DPI Normalization**: Normalizes logical coordinate mouse clicks using monitor scale factors.
-- **Browser Use**: Open URLs and automate web interactions.
+- **Browser Use**: A real embedded Chromium view with its own persistent cookie session — the agent navigates, clicks, fills forms, reads page text, and takes screenshots via an accessibility-style element snapshot (no brittle CSS selectors required), with a visible AI cursor so you can watch it work.
 - **Attachments**: Attach images (sent to vision-capable models as real image blocks) and text documents; pasting a large block of text turns it into a removable chip.
-- Permission system with granular user approval dialogs.
+- Permission system with granular user approval dialogs (per tool type, including MCP tools).
 - Queue / Steering send modes.
+- Collapsed-by-default tool call output (Claude Code-style folded rows) to keep the transcript readable.
+
+### Model Context Protocol (MCP)
+- Discovers stdio MCP servers from `~/.claude.json` (Claude Code), project `.mcp.json`, and Pawn's own `~/.pawn/mcp.json` — no need to reconfigure servers you already run for other tools.
+- Discovered tools are merged into the agent's tool list automatically and routed to the right server on call.
+- **Settings → MCP**: add or remove Pawn-managed servers directly from the UI (id, command, args, env), see live connection status and tool counts per server, and enable/disable individual servers.
+- Project-scoped servers override user-scoped ones on id collision; each server is spawned once per project and kept alive for the app session.
 
 ### Providers & Smart Routing
 - OpenAI API format (GPT-4o, o1, etc.) and Claude API format (Claude 3.5 Sonnet, etc.).
@@ -86,6 +94,14 @@ pawn
   - `usage`: Tracks detailed usage tokens (input, output, cache-read, cache-write) and estimated costs.
   - `routines`: Recurring scheduled automation routines.
 
+### Right Panel — Terminal, Files, Git & Diff
+- **Terminal**: a real shell (xterm.js + `node-pty`) per project, split alongside the chat.
+- **Files**: browse the project tree and open/edit files in a built-in editor without leaving Pawn.
+- **Git**: branch, status, and log view for the current project.
+- **Diff**: review every changed file in one place before deciding what to keep.
+- **Browser**: the same embedded browser the agent drives, so you can watch or take over.
+- A live git-status chip in the composer bar shows the current branch and diff stat at a glance, with a popover to switch branches or jump straight into the Git/Diff tabs.
+
 ### Automation
 - Recurring routines on interval / daily / weekly schedules, executed headlessly when every window is closed.
 - **Templates**: daily report, web/price monitor, RSS digest, issue triage, changelog, repo audit — one click to create.
@@ -94,8 +110,12 @@ pawn
 - **Menu bar / tray**: macOS menu bar and Windows system tray with the Pawn logo; left- or right-click opens a multilingual menu (show/hide, open, quit).
 
 ### UI / UX
-- ChatGPT-style layout (sidebar + chat area).
+- ChatGPT-style layout (sidebar + chat area), with a native macOS traffic-light-aware header — the sidebar toggle sits next to the window controls, and double-clicking anywhere in the header maximizes/restores the window.
 - ChatGPT-style composer card: aligned toolbar, attach button, and removable attachment chips.
+- **Command palette** (`Cmd/Ctrl+K`) for quick navigation and actions.
+- **Customizable keyboard shortcuts** (Settings → Shortcuts) — rebind or reset any binding, including the command palette itself.
+- **Sidebar session management**: pin frequently-used sessions, delete sessions or whole projects directly from the Pinned/Recent lists, with active-stream cleanup on delete.
+- **"Open in" launcher**: detects installed editors from 25+ presets (VS Code family, Cursor, Windsurf, Trae, Zed, Nova, the full JetBrains suite, Sublime, BBEdit, Xcode, Android Studio, and more) and shows each app's real icon in the menu.
 - Light / Dark theme (configurable in Settings > Appearance).
 - Responsive layout: Optimized for desktop, tablet, and mobile displays.
 - Rich Markdown rendering with syntax highlighting and code block copy utilities.
@@ -129,6 +149,8 @@ pawn
 - **SQLite (better-sqlite3)** — Local database
 - **react-markdown** + **rehype-highlight** — Markdown rendering
 - **highlight.js** — Code syntax highlighting
+- **@modelcontextprotocol/sdk** — MCP client (stdio transport)
+- **xterm.js** + **node-pty** — Integrated terminal
 
 ## Development
 
@@ -174,13 +196,15 @@ Output goes to the `release/` directory.
 ```
 src/
 ├── main/              # Electron main process (IPC, DB, CSP, window management)
+│   ├── ipc/           # IPC handlers: fs, shell, browser, computer, terminal, mcp, routine, ...
+│   └── mcpManager.ts  # MCP server discovery, lifecycle, and tool calls
 ├── preload/           # Context bridge (secure API exposure)
 └── renderer/          # React app
     └── src/
-        ├── agent/     # Agent loop, tools, smart routing, transcripts
-        ├── components/# UI components
+        ├── agent/     # Agent loop, tools, smart routing, transcripts, MCP tool bridge
+        ├── components/# UI components (chat, right panel, settings, sidebar, ...)
         ├── i18n/      # Translations (en, ko, ja, zh)
-        ├── stores/    # Zustand stores (app, chat, provider, theme, permission)
+        ├── stores/    # Zustand stores (app, chat, provider, theme, permission, mcp, keybindings, ...)
         ├── styles/    # Global CSS with theme variables
         └── types/     # TypeScript definitions
 ```
