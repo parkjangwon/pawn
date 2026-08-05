@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { checkPermission } from '../toolPermission'
 import { usePermissionStore } from '../../stores/permission'
 import { useProviderStore } from '../../stores/provider'
+
+async function waitForPending(n = 1): Promise<void> {
+  await vi.waitFor(() => {
+    expect(usePermissionStore.getState().pending).toHaveLength(n)
+  })
+}
 
 describe('checkPermission', () => {
   beforeEach(() => {
@@ -13,7 +19,7 @@ describe('checkPermission', () => {
 
   it('queues a prompt for risky tools in ask mode', async () => {
     const promise = checkPermission('write_file', { path: '/x' })
-    expect(usePermissionStore.getState().pending).toHaveLength(1)
+    await waitForPending(1)
     usePermissionStore.getState().resolve(usePermissionStore.getState().pending[0].id, true)
     await expect(promise).resolves.toBe(true)
   })

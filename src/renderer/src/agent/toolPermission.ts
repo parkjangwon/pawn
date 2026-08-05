@@ -1,6 +1,7 @@
 import { useProviderStore } from '../stores/provider'
 import { usePermissionStore, type PermissionType } from '../stores/permission'
 import { resolveToolPath } from './pathUtils'
+import { fireHook } from './hooksClient'
 
 export type SafetyLevel = 'safe' | 'risky'
 
@@ -167,9 +168,37 @@ export async function checkPermission(
   callName: string,
   args: Record<string, unknown>,
   signal?: AbortSignal,
-  projectPath?: string
+  projectPath?: string,
+  opts?: { sessionId?: string; cwd?: string }
 ): Promise<boolean> {
   const mode = useProviderStore.getState().permissionMode
+
+  const type = permissionTypeFor(callName)
+
+  const pathArg =
+    typeof args.path === 'string'
+      ? resolveToolPath(args.path, projectPath)
+      : undefined
+  const command = typeof args.command === 'string' ? args.command : undefined
+
+  // PermissionRequest hooks can allow/deny before the UI (and even in YOLO).
+  // Deny always wins over YOLO / auto / session rules.
+  if (!signal?.aborted) {
+    const hookRes = await fireHook({
+      event: 'PermissionRequest',
+      sessionId: opts?.sessionId,
+      projectPath: projectPath || null,
+      cwd: opts?.cwd || projectPath || undefined,
+      payload: {
+        tool_name: callName,
+        tool_input: args,
+        permission_mode: mode
+      }
+    })
+    if (hookRes.decision === 'deny') return false
+    if (hookRes.decision === 'allow') return true
+  }
+
   if (mode === 'yolo') return true
 
   const hidden = typeof document !== 'undefined' && document.hidden === true
@@ -180,14 +209,6 @@ export async function checkPermission(
 
   const safety = TOOL_SAFETY[callName] || 'risky'
   if (mode === 'auto' && safety === 'safe') return true
-
-  const type = permissionTypeFor(callName)
-
-  const pathArg =
-    typeof args.path === 'string'
-      ? resolveToolPath(args.path, projectPath)
-      : undefined
-  const command = typeof args.command === 'string' ? args.command : undefined
 
   if (usePermissionStore.getState().isAllowedByRules(type, { path: pathArg, command })) {
     return true

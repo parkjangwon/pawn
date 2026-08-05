@@ -337,6 +337,22 @@
       "permissionMode": "권한 모드",
       "permissionModeDesc": "에이전트가 권한을 요청하는 방식 제어"
     },
+    "hooksSection": {
+      "title": "훅",
+      "desc": "에이전트 라이프사이클에 스크립트를 연결합니다 (Claude/Codex 호환). 여러 소스는 합쳐지며 같은 명령은 한 번만 실행됩니다. PreToolUse deny는 YOLO에서도 우선합니다.",
+      "enabled": "훅 사용",
+      "enabledDesc": "Claude·Pawn 설정 파일의 라이프사이클 훅 실행",
+      "readClaude": "Claude 설정 읽기",
+      "readClaudeDesc": "~/.claude/settings.json 및 프로젝트 .claude/settings.json",
+      "readPawn": "Pawn 훅 읽기",
+      "readPawnDesc": "~/.pawn/hooks.json 및 프로젝트 .pawn/hooks.json",
+      "stats": "훅 {{total}}개 로드 · {{sources}}",
+      "refresh": "새로고침",
+      "loaded": "로드된 훅",
+      "empty": "훅이 없습니다. ~/.claude/settings.json 또는 ~/.pawn/hooks.json 에 추가하세요.",
+      "saved": "저장됨",
+      "desktopOnly": "훅은 데스크톱 앱에서 동작합니다."
+    },
     "memorySection": {
       "title": "메모리 (자가 학습)",
       "desc": "이 기기에만 남는 장기 지식입니다. 켜 두면 대화에서 선호·프로젝트 사실을 스스로 배우고 다음 턴에 떠올립니다. API 키·비밀번호는 저장하지 않습니다.",

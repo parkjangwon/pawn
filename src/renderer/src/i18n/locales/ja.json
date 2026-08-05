@@ -337,6 +337,22 @@
       "permissionMode": "権限モード",
       "permissionModeDesc": "エージェントの権限リクエスト方法を制御"
     },
+    "hooksSection": {
+      "title": "フック",
+      "desc": "エージェントのライフサイクルでスクリプトを実行します（Claude/Codex 互換）。複数ソースはマージされ、同じコマンドは一度だけ実行。PreToolUse の deny は YOLO でも優先。",
+      "enabled": "フックを使う",
+      "enabledDesc": "Claude / Pawn 設定のライフサイクルフックを実行",
+      "readClaude": "Claude 設定を読む",
+      "readClaudeDesc": "~/.claude/settings.json とプロジェクト .claude/settings.json",
+      "readPawn": "Pawn フックを読む",
+      "readPawnDesc": "~/.pawn/hooks.json とプロジェクト .pawn/hooks.json",
+      "stats": "フック {{total}} 件 · {{sources}}",
+      "refresh": "更新",
+      "loaded": "読み込み済みフック",
+      "empty": "フックがありません。.claude/settings.json または ~/.pawn/hooks.json に追加してください。",
+      "saved": "保存しました",
+      "desktopOnly": "フックはデスクトップアプリで動作します。"
+    },
     "memorySection": {
       "title": "メモリ（自己学習）",
       "desc": "この端末だけの長期知識です。オンにすると会話から好みや事実を学び、次のターンで自動で思い出します。APIキーやパスワードは保存しません。",

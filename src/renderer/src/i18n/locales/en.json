@@ -337,6 +337,22 @@
       "permissionMode": "Permission Mode",
       "permissionModeDesc": "Control how the agent asks for permissions"
     },
+    "hooksSection": {
+      "title": "Hooks",
+      "desc": "Run scripts at agent lifecycle points (Claude/Codex-compatible). Sources merge with dedupe so the same command is not run twice. PreToolUse deny wins even in YOLO.",
+      "enabled": "Use hooks",
+      "enabledDesc": "Fire lifecycle hooks from Claude and Pawn config files",
+      "readClaude": "Read Claude settings",
+      "readClaudeDesc": "~/.claude/settings.json and project .claude/settings.json",
+      "readPawn": "Read Pawn hooks",
+      "readPawnDesc": "~/.pawn/hooks.json and project .pawn/hooks.json",
+      "stats": "{{total}} hooks loaded · {{sources}}",
+      "refresh": "Refresh",
+      "loaded": "Loaded hooks",
+      "empty": "No hooks found. Add them under ~/.claude/settings.json or ~/.pawn/hooks.json.",
+      "saved": "Saved",
+      "desktopOnly": "Hooks run in the desktop app."
+    },
     "memorySection": {
       "title": "Memory (self-learning)",
       "desc": "Long-term knowledge on this device only. When on, the agent learns preferences and project facts, recalls them automatically, and never stores API keys or passwords.",

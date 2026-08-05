@@ -17,6 +17,7 @@ import {
 import { formatToolMessageContent } from '../agent/toolMessage'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
+import { fireHook } from '../agent/hooksClient'
 import { useChangeLedger } from './changeLedger'
 import { usePrefsStore } from './prefs'
 import { useRoutineStore } from './routine'
@@ -317,6 +318,50 @@ async function agentLoop(
     // preamble to callLLM, where it is injected into the messages array.
 
    entries = await loadTranscript(projectId, sessionId)
+
+    // Lifecycle hooks (Claude/Codex-compatible) — SessionStart once per empty transcript.
+    try {
+      const isFresh = entries.filter((e) => e.role === 'user' || e.role === 'assistant').length === 0
+      if (isFresh) {
+        const start = await fireHook({
+          event: 'SessionStart',
+          sessionId,
+          projectPath: projectPath || null,
+          cwd: cwd || projectPath || undefined,
+          payload: { source: 'startup' }
+        })
+        if (start.additionalContext.length) {
+          projectPreamble +=
+            (projectPreamble ? '\n\n' : '') +
+            '--- Hook context ---\n' +
+            start.additionalContext.join('\n')
+        }
+      }
+      const submit = await fireHook({
+        event: 'UserPromptSubmit',
+        sessionId,
+        projectPath: projectPath || null,
+        cwd: cwd || projectPath || undefined,
+        payload: { prompt: userContent.slice(0, 8000) }
+      })
+      if (submit.decision === 'deny') {
+        systemError(
+          projectId,
+          sessionId,
+          submit.reason || i18n.t('chat.errors.hookBlocked', { defaultValue: 'Blocked by hook (UserPromptSubmit)' })
+        )
+        return
+      }
+      if (submit.additionalContext.length) {
+        projectPreamble +=
+          (projectPreamble ? '\n\n' : '') +
+          '--- Hook context ---\n' +
+          submit.additionalContext.join('\n')
+      }
+    } catch {
+      /* hooks optional */
+    }
+
     const imgs = imageAttachments(attachments)
     entries.push({
       role: 'user',
@@ -600,6 +645,20 @@ async function agentLoop(
     if (isCurrent) {
       set(() => ({ isStreaming: false, streamingSessionId: null }))
       window.api.setStreaming?.(false)
+      // Turn finished — Stop hook (advisory; used for notify integrations)
+      if (!aborted) {
+        const project = useAppStore.getState().projects.find((p) => p.id === projectId)
+        const projectPath = project?.paths?.[0]
+        const session = project?.sessions.find((s) => s.id === sessionId)
+        const cwd = session?.path || projectPath || ''
+        void fireHook({
+          event: 'Stop',
+          sessionId,
+          projectPath: projectPath || null,
+          cwd: cwd || undefined,
+          payload: {}
+        })
+      }
       // Auto-capture durable Memory cards from this turn (local heuristic).
       if (!aborted && window.api.memory?.ingestTurn && entries.length > 0) {
         try {
