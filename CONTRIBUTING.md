@@ -46,6 +46,17 @@ npm run dev
 - No `rehype-raw` in markdown rendering
 - CSP headers enforced in production
 - Permission system for sensitive operations
+- **OAuth client secrets must not be committed.** Use `.env` locally and GitHub Actions secrets for release builds (see [.github/OAUTH_SECRETS.md](./.github/OAUTH_SECRETS.md)).
+
+## Service connections (Google / GitHub OAuth)
+
+```bash
+cp .env.example .env
+# fill PAWN_GOOGLE_* and PAWN_GITHUB_*
+npm run dev
+```
+
+Release builds inject the same variables from repo Actions secrets during `npm run build`. Do not hardcode secrets under `src/`.
 
 ## License
 

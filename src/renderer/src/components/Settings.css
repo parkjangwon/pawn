@@ -528,6 +528,118 @@ body.resizing-sidebar .settings-resizer::after {
   margin-top: var(--space-xs);
 }
 
+/* Service connections */
+.conn-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.conn-row {
+  align-items: center;
+}
+
+.conn-brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  flex: 1;
+}
+
+.conn-logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.conn-logo-github {
+  color: var(--text-primary);
+}
+
+.conn-account-badge {
+  margin-left: 8px;
+  vertical-align: middle;
+}
+
+.conn-connect-btn {
+  min-width: 88px;
+}
+
+.conn-cancel-btn {
+  min-width: 88px;
+}
+
+.conn-device-panel {
+  margin-top: 4px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.conn-device-title {
+  font-weight: 600;
+  font-size: var(--font-md);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.conn-device-hint {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.conn-device-code-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.conn-device-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 10px 16px;
+  border-radius: 8px;
+  background: var(--bg-primary);
+  border: 1px dashed var(--border-color);
+  color: var(--text-primary);
+  user-select: all;
+}
+
+.conn-device-link {
+  display: inline-block;
+  margin-top: 10px;
+  font-size: var(--font-sm);
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.conn-device-link:hover {
+  text-decoration: underline;
+}
+
+.conn-msg {
+  padding: 10px 0 4px;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.conn-privacy {
+  padding: 12px 0 4px;
+  margin: 0;
+}
+
 .btn-primary {
   padding: 6px 14px;
   border: none;

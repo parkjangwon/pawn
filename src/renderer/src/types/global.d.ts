@@ -68,6 +68,21 @@ declare global {
         walk: (path: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }>
         copyDir: (src: string, dest: string) => Promise<{ ok?: boolean; error?: string }>
         removeDir: (path: string) => Promise<{ ok?: boolean; error?: string }>
+        readSpreadsheet: (
+          path: string,
+          opts?: { sheet?: string; maxRows?: number; maxCols?: number }
+        ) => Promise<{
+          path?: string
+          format?: string
+          sheet?: string
+          sheets?: string[]
+          rows?: string[][]
+          rowCount?: number
+          colCount?: number
+          truncated?: boolean
+          previewMarkdown?: string
+          error?: string
+        }>
       }
       shell: {
         exec: (
@@ -213,6 +228,45 @@ declare global {
         remove: (id: string) => Promise<{ ok?: boolean }>
         recordResult: (id: string, result: string) => Promise<{ ok?: boolean }>
         onFire: (callback: (routine: Routine) => void) => () => void
+      }
+      connections: {
+        list: () => Promise<Array<{
+          provider: 'google' | 'github'
+          connected: boolean
+          accountLabel?: string
+          scope?: string
+          clientConfigured: boolean
+          updatedAt?: number
+        }>>
+        status: (provider: 'google' | 'github') => Promise<{
+          provider: 'google' | 'github'
+          connected: boolean
+          accountLabel?: string
+          scope?: string
+          clientConfigured: boolean
+          updatedAt?: number
+        }>
+        connect: (provider: 'google' | 'github') => Promise<{
+          ok?: boolean
+          error?: string
+          accountLabel?: string
+          userCode?: string
+          verificationUri?: string
+          cancelled?: boolean
+        }>
+        cancel: (provider: 'google' | 'github') => Promise<{ ok?: boolean; error?: string }>
+        disconnect: (provider: 'google' | 'github') => Promise<{ ok?: boolean; error?: string }>
+        runTool: (
+          name: string,
+          args?: Record<string, unknown>
+        ) => Promise<{ ok?: boolean; text?: string; error?: string }>
+        onProgress: (callback: (payload: {
+          provider: 'google' | 'github'
+          phase: string
+          userCode?: string
+          verificationUri?: string
+          message?: string
+        }) => void) => () => void
       }
       power: {
         setSleepPrevention: (mode: 'off' | 'sleep' | 'display') => Promise<{ ok?: boolean }>

@@ -96,6 +96,42 @@ export async function executeTool(
     }
 
     switch (call.name) {
+      case 'read_spreadsheet': {
+        const filePath = resolveToolPath(call.arguments.path as string, projectPath)
+        if (!api.fs.readSpreadsheet) {
+          return { toolCallId: call.id, content: 'Spreadsheet reading is unavailable in this environment.', isError: true }
+        }
+        const res = await api.fs.readSpreadsheet(filePath, {
+          sheet: call.arguments.sheet ? String(call.arguments.sheet) : undefined,
+          maxRows: call.arguments.max_rows !== undefined ? Number(call.arguments.max_rows) : undefined,
+          maxCols: call.arguments.max_cols !== undefined ? Number(call.arguments.max_cols) : undefined
+        })
+        if (res.error) {
+          return { toolCallId: call.id, content: res.error, isError: true }
+        }
+        const header = [
+          `Spreadsheet: ${res.path}`,
+          `format=${res.format}`,
+          res.sheet ? `sheet=${res.sheet}` : null,
+          res.sheets?.length ? `sheets=[${res.sheets.join(', ')}]` : null,
+          `rows=${res.rowCount} cols=${res.colCount}`,
+          res.truncated ? 'truncated=true (increase max_rows/max_cols carefully)' : 'truncated=false'
+        ].filter(Boolean).join('\n')
+        const body = res.previewMarkdown || ''
+        // Also surface on the Artifacts shelf so humans can re-open the path.
+        try {
+          const { useArtifactsStore } = await import('../stores/artifacts')
+          useArtifactsStore.getState().add({
+            title: filePath.split('/').pop() || filePath,
+            kind: 'table',
+            path: filePath,
+            preview: body.slice(0, 1500),
+            source: 'read_spreadsheet'
+          })
+        } catch { /* ignore */ }
+        return { toolCallId: call.id, content: `${header}\n\n${body}` }
+      }
+
       case 'read_file': {
         const filePath = resolveToolPath(call.arguments.path as string, projectPath)
         const result = await api.fs.readFile(filePath)
@@ -675,7 +711,7 @@ export async function executeTool(
 
       case 'app_open_tab': {
         const tab = String(call.arguments.tab || '')
-        const valid = ['terminal', 'files', 'git', 'browser', 'diff']
+        const valid = ['terminal', 'files', 'git', 'browser', 'diff', 'artifacts']
         if (!valid.includes(tab)) {
           return { toolCallId: call.id, content: `Unknown tab "${tab}". Valid tabs: ${valid.join(', ')}`, isError: true }
         }
@@ -685,7 +721,7 @@ export async function executeTool(
 
       case 'app_close_tab': {
         const tab = String(call.arguments.tab || '')
-        const valid = ['terminal', 'files', 'git', 'browser', 'diff']
+        const valid = ['terminal', 'files', 'git', 'browser', 'diff', 'artifacts']
         if (!valid.includes(tab)) {
           return { toolCallId: call.id, content: `Unknown tab "${tab}". Valid tabs: ${valid.join(', ')}`, isError: true }
         }
@@ -836,6 +872,48 @@ export async function executeTool(
       case 'app_toggle_theme': {
         useThemeStore.getState().toggle()
         return { toolCallId: call.id, content: 'Theme toggled' }
+      }
+
+      case 'google_whoami':
+      case 'google_drive_search':
+      case 'google_drive_read':
+      case 'google_gmail_search':
+      case 'google_gmail_read':
+      case 'google_calendar_list':
+      case 'google_tasks_list':
+      case 'google_sheets_read':
+      case 'google_docs_read':
+      case 'google_slides_read':
+      case 'github_whoami':
+      case 'github_list_repos':
+      case 'github_get_repo':
+      case 'github_list_issues':
+      case 'github_get_issue':
+      case 'github_list_pulls':
+      case 'github_get_pull':
+      case 'github_list_commits':
+      case 'github_get_file':
+      case 'github_search_code':
+      case 'github_search_issues':
+      case 'github_create_issue':
+      case 'github_comment':
+      case 'github_create_pull': {
+        if (!api.connections?.runTool) {
+          return {
+            toolCallId: call.id,
+            content: 'Service connections are only available in the desktop app.',
+            isError: true
+          }
+        }
+        const res = await api.connections.runTool(call.name, call.arguments || {})
+        if (!res?.ok) {
+          return {
+            toolCallId: call.id,
+            content: res?.error || res?.text || `${call.name} failed`,
+            isError: true
+          }
+        }
+        return { toolCallId: call.id, content: res.text || '(empty)' }
       }
 
       default:

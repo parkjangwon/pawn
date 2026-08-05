@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
-import { useRoutineStore } from '../stores/routine'
 import { useMcpStore } from '../stores/mcp'
 import { usePrefsStore } from '../stores/prefs'
 import { useAppStore } from '../stores/app'
@@ -19,7 +18,7 @@ import ConfirmDialog from './ConfirmDialog'
 import NavControls from './NavControls'
 import './Settings.css'
 
-type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'mcp' | 'routines' | 'system' | 'shortcuts' | 'data'
+type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'mcp' | 'connections' | 'system' | 'shortcuts' | 'data'
 type SettingsSkillScope = 'all' | 'project' | 'device' | 'builtin'
 type SourceSignalId =
   | 'project-claude'
@@ -32,7 +31,6 @@ type SourceSignalId =
 type SettingsDeleteTarget =
   | { type: 'provider'; id: string; name: string }
   | { type: 'model'; id: string; name: string }
-  | { type: 'routine'; id: string; name: string }
 
 interface SourceSignal {
   id: SourceSignalId
@@ -56,6 +54,7 @@ const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon:
   { id: 'agent', labelKey: 'settings.agent', groupKey: 'settings.groups.coding', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { id: 'plugins', labelKey: 'settings.plugins', groupKey: 'settings.groups.integration', icon: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' },
   { id: 'mcp', labelKey: 'settings.mcp', groupKey: 'settings.groups.integration', icon: 'M20 7H4a2 2 0 00-2 2v1a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM6 11h.01M20 15H4a2 2 0 00-2 2v1a2 2 0 002 2h16a2 2 0 002-2v-1a2 2 0 00-2-2zM6 19h.01' },
+  { id: 'connections', labelKey: 'settings.connections', groupKey: 'settings.groups.integration', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
   { id: 'system', labelKey: 'settings.system', groupKey: 'settings.groups.system', icon: 'M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z' },
   { id: 'shortcuts', labelKey: 'settings.shortcuts', groupKey: 'settings.groups.system', icon: 'M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM7 8h10M7 12h4' },
   { id: 'data', labelKey: 'settings.data', groupKey: 'settings.groups.general', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
@@ -66,7 +65,6 @@ export default function Settings({
 }: SettingsProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const { theme, set } = useThemeStore()
-  const { routines, runningIds, add: addRoutine, toggle: toggleRoutine, remove: removeRoutine, runNow } = useRoutineStore()
   const { servers: mcpServers, toggleServer: toggleMcpServer } = useMcpStore()
   const { sleepPrevention, setSleepPrevention, taskNotificationsEnabled, setTaskNotificationsEnabled } = usePrefsStore()
   const { bindings: keybindings, setBinding: setKeybinding, reset: resetKeybinding } = useKeybindingsStore()
@@ -111,10 +109,6 @@ export default function Settings({
     /** '' = auto-guess, 'yes' | 'no' = explicit */
     vision: '' as '' | 'yes' | 'no'
   })
-  const [routineForm, setRoutineForm] = useState({
-    name: '', prompt: '', type: 'interval' as 'interval' | 'daily' | 'weekly',
-    minutes: 30, time: '09:00', weekday: 1
-  })
   const [homeDir, setHomeDir] = useState<string>('')
   const [loadedSkills, setLoadedSkills] = useState<LoadedSkill[]>([])
   const [skillsLoading, setSkillsLoading] = useState(false)
@@ -131,6 +125,19 @@ export default function Settings({
   const [mcpAdding, setMcpAdding] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState<SettingsDeleteTarget | null>(null)
   const [pawnPaths, setPawnPaths] = useState<{ configPath: string; dataDir: string } | null>(null)
+  const [connStatus, setConnStatus] = useState<Array<{
+    provider: 'google' | 'github'
+    connected: boolean
+    accountLabel?: string
+    clientConfigured: boolean
+  }>>([])
+  const [connBusy, setConnBusy] = useState<'google' | 'github' | null>(null)
+  const [connMsg, setConnMsg] = useState('')
+  const [deviceAuth, setDeviceAuth] = useState<{
+    provider: 'google' | 'github'
+    userCode: string
+    verificationUri: string
+  } | null>(null)
   const { projects, activeProjectId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const projectPath = activeProject?.paths?.[0] || ''
@@ -298,35 +305,6 @@ export default function Settings({
   }
 
   const languages = [{ code: 'en', label: 'English' }, { code: 'ko', label: '한국어' }, { code: 'ja', label: '日本語' }, { code: 'zh', label: '中文' }]
-
-  const handleAddRoutine = async (): Promise<void> => {
-    if (!routineForm.name.trim() || !routineForm.prompt.trim()) return
-    const [hour, minute] = routineForm.time.split(':').map(Number)
-    const schedule: RoutineSchedule = routineForm.type === 'interval'
-      ? { type: 'interval', minutes: Math.max(1, Number(routineForm.minutes) || 30) }
-      : routineForm.type === 'daily'
-        ? { type: 'daily', hour, minute }
-        : { type: 'weekly', weekday: routineForm.weekday, hour, minute }
-    await addRoutine({ name: routineForm.name, prompt: routineForm.prompt, schedule })
-    setRoutineForm({ name: '', prompt: '', type: 'interval', minutes: 30, time: '09:00', weekday: 1 })
-  }
-
-  const routineScheduleLabel = (scheduleJson: string): string => {
-    try {
-      const s = JSON.parse(scheduleJson) as RoutineSchedule
-      if (s.type === 'interval') return t('settings.routineSection.everyMinutes', { minutes: s.minutes })
-      const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`
-      if (s.type === 'daily') return t('settings.routineSection.dailyAt', { time })
-      return t('settings.routineSection.weeklyAt', { weekday: t(`settings.routineSection.weekdays.${s.weekday}`), time })
-    } catch {
-      return ''
-    }
-  }
-
-  const formatRunTime = (ms: number): string => {
-    if (!ms) return t('settings.routineSection.never')
-    return new Date(ms).toLocaleString(i18n.language)
-  }
 
   // Capture the next key combination while a shortcut row is recording.
   useEffect(() => {
@@ -516,10 +494,94 @@ export default function Settings({
       removeProvider(confirmDelete.id)
     } else if (confirmDelete.type === 'model') {
       removeModel(confirmDelete.id)
-    } else {
-      await removeRoutine(confirmDelete.id)
     }
     setConfirmDelete(null)
+  }
+
+  const refreshConnections = async (): Promise<void> => {
+    if (!window.api.connections) return
+    try {
+      const list = await window.api.connections.list()
+      setConnStatus(list || [])
+    } catch { /* desktop-only */ }
+  }
+
+  useEffect(() => {
+    if (activeSection === 'connections') void refreshConnections()
+  }, [activeSection])
+
+  useEffect(() => {
+    if (!window.api.connections?.onProgress) return
+    return window.api.connections.onProgress((payload) => {
+      if (payload.phase === 'device_code' || payload.phase === 'polling') {
+        if (payload.userCode) {
+          setDeviceAuth({
+            provider: payload.provider,
+            userCode: payload.userCode,
+            verificationUri: payload.verificationUri || 'https://github.com/login/device'
+          })
+        }
+      }
+      if (payload.phase === 'browser' && payload.message) {
+        setConnMsg(payload.message)
+      }
+    })
+  }, [])
+
+  const handleConnect = async (provider: 'google' | 'github'): Promise<void> => {
+    if (!window.api.connections) {
+      setConnMsg(t('settings.connectionsSection.desktopOnly'))
+      return
+    }
+    setConnBusy(provider)
+    setConnMsg(t('settings.connectionsSection.connectingHint'))
+    setDeviceAuth(null)
+    try {
+      const res = await window.api.connections.connect(provider)
+      if (res.cancelled) {
+        setConnMsg(t('settings.connectionsSection.cancelled'))
+      } else if (res.error && res.error !== 'Cancelled') {
+        setConnMsg(res.error)
+      } else if (res.ok) {
+        setConnMsg(t('settings.connectionsSection.connected', { account: res.accountLabel || provider }))
+      }
+      await refreshConnections()
+    } catch (e) {
+      setConnMsg(e instanceof Error ? e.message : String(e))
+    } finally {
+      setConnBusy(null)
+      setDeviceAuth(null)
+    }
+  }
+
+  const handleCancelConnect = async (provider: 'google' | 'github'): Promise<void> => {
+    if (!window.api.connections?.cancel) return
+    await window.api.connections.cancel(provider)
+    setConnMsg(t('settings.connectionsSection.cancelled'))
+    setDeviceAuth(null)
+    // connect() promise will settle and clear connBusy
+  }
+
+  const handleDisconnect = async (provider: 'google' | 'github'): Promise<void> => {
+    if (!window.api.connections) return
+    setConnBusy(provider)
+    setConnMsg('')
+    setDeviceAuth(null)
+    try {
+      await window.api.connections.disconnect(provider)
+      setConnMsg(t('settings.connectionsSection.disconnected', { provider }))
+      await refreshConnections()
+    } finally {
+      setConnBusy(null)
+    }
+  }
+
+  const copyDeviceCode = async (): Promise<void> => {
+    if (!deviceAuth?.userCode) return
+    try {
+      await navigator.clipboard.writeText(deviceAuth.userCode)
+      setConnMsg(t('settings.connectionsSection.codeCopied'))
+    } catch { /* ignore */ }
   }
 
   return (
@@ -949,59 +1011,118 @@ export default function Settings({
           </div>
         )}
 
-        {activeSection === 'routines' && (
+
+        {activeSection === 'connections' && (
           <div className="settings-section">
-            <h2>{t('settings.routineSection.title')}</h2>
-            <p className="settings-desc">{t('settings.routineSection.desc')}</p>
-            <div className="settings-card">
-              <div className="settings-row">
-                <div className="settings-row-info"><span className="settings-row-label">{t('settings.routineSection.addTitle')}</span><span className="settings-row-desc">{t('settings.routineSection.addDesc')}</span></div>
-              </div>
-              <div className="add-form">
-                <input placeholder={t('settings.routineSection.namePlaceholder')} value={routineForm.name} onChange={(e) => setRoutineForm((f) => ({ ...f, name: e.target.value }))} />
-                <input placeholder={t('settings.routineSection.promptPlaceholder')} value={routineForm.prompt} onChange={(e) => setRoutineForm((f) => ({ ...f, prompt: e.target.value }))} />
-                <select value={routineForm.type} onChange={(e) => setRoutineForm((f) => ({ ...f, type: e.target.value as 'interval' | 'daily' | 'weekly' }))}>
-                  <option value="interval">{t('settings.routineSection.type.interval')}</option>
-                  <option value="daily">{t('settings.routineSection.type.daily')}</option>
-                  <option value="weekly">{t('settings.routineSection.type.weekly')}</option>
-                </select>
-                {routineForm.type === 'interval' && (
-                  <input type="number" min={1} value={routineForm.minutes} onChange={(e) => setRoutineForm((f) => ({ ...f, minutes: Number(e.target.value) }))} />
-                )}
-                {routineForm.type !== 'interval' && (
-                  <>
-                    {routineForm.type === 'weekly' && (
-                      <select value={routineForm.weekday} onChange={(e) => setRoutineForm((f) => ({ ...f, weekday: Number(e.target.value) }))}>
-                        {[0, 1, 2, 3, 4, 5, 6].map((w) => (
-                          <option key={w} value={w}>{t(`settings.routineSection.weekdays.${w}`)}</option>
-                        ))}
-                      </select>
-                    )}
-                    <input type="time" value={routineForm.time} onChange={(e) => setRoutineForm((f) => ({ ...f, time: e.target.value }))} />
-                  </>
-                )}
-              </div>
-              <div className="form-actions">
-                <button className="btn-primary" disabled={!routineForm.name.trim() || !routineForm.prompt.trim()} onClick={() => void handleAddRoutine()}>{t('settings.routineSection.add')}</button>
-              </div>
-              <div className="settings-card">
-                {routines.length === 0 && <div className="settings-empty">{t('settings.routineSection.empty')}</div>}
-                {routines.map((r) => (
-                  <div key={r.id} className="settings-row routine-row">
-                    <div className="settings-row-info">
-                      <span className="settings-row-label">{r.name}{runningIds.has(r.id) && <span className="settings-badge"> {t('settings.routineSection.running')}</span>}</span>
-                      <span className="settings-row-desc">{routineScheduleLabel(r.schedule)} · {t('settings.routineSection.nextRun')} {formatRunTime(r.nextRunAt)} · {t('settings.routineSection.lastRun')} {formatRunTime(r.lastRunAt)}</span>
-                      <span className="settings-row-desc">{r.prompt}</span>
-                      {r.lastResult && <span className="settings-row-desc">{t('settings.routineSection.lastResult')} {r.lastResult.slice(0, 140)}</span>}
+            <h2>{t('settings.connectionsSection.title')}</h2>
+            <p className="settings-desc">{t('settings.connectionsSection.desc')}</p>
+
+            <div className="settings-card conn-card">
+              {(['google', 'github'] as const).map((provider) => {
+                const st = connStatus.find((s) => s.provider === provider)
+                const connected = !!st?.connected
+                const ready = st?.clientConfigured !== false
+                const busy = connBusy === provider
+                return (
+                  <div key={provider} className="settings-row conn-row">
+                    <div className="conn-brand">
+                      {provider === 'google' ? (
+                        <span className="conn-logo conn-logo-google" aria-hidden>
+                          <svg width="22" height="22" viewBox="0 0 24 24">
+                            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
+                            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
+                            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" />
+                            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" />
+                          </svg>
+                        </span>
+                      ) : (
+                        <span className="conn-logo conn-logo-github" aria-hidden>
+                          <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+                          </svg>
+                        </span>
+                      )}
+                      <div className="settings-row-info">
+                        <span className="settings-row-label">
+                          {provider === 'google' ? t('settings.connectionsSection.google') : t('settings.connectionsSection.github')}
+                          {connected && (
+                            <span className="settings-badge conn-account-badge">
+                              {st?.accountLabel || t('settings.connectionsSection.statusConnected')}
+                            </span>
+                          )}
+                        </span>
+                        <span className="settings-row-desc">
+                          {connected
+                            ? t('settings.connectionsSection.statusConnectedDesc')
+                            : busy
+                              ? t('settings.connectionsSection.waitingBrowser')
+                              : t('settings.connectionsSection.statusDisconnected')}
+                        </span>
+                      </div>
                     </div>
                     <div className="settings-row-actions">
-                      <button className="test-btn" disabled={runningIds.has(r.id)} onClick={() => void runNow(r.id)}>{t('settings.routineSection.runNow')}</button>
-                      <label className="toggle-switch"><input type="checkbox" checked={r.enabled} onChange={(e) => void toggleRoutine(r.id, e.target.checked)} /><span className="toggle-slider" /></label>
-                      <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'routine', id: r.id, name: r.name })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
+                      {connected ? (
+                        <button
+                          className="test-btn"
+                          disabled={busy}
+                          onClick={() => void handleDisconnect(provider)}
+                        >
+                          {t('settings.connectionsSection.disconnect')}
+                        </button>
+                      ) : busy ? (
+                        <button
+                          className="test-btn conn-cancel-btn"
+                          onClick={() => void handleCancelConnect(provider)}
+                        >
+                          {t('settings.connectionsSection.cancel')}
+                        </button>
+                      ) : (
+                        <button
+                          className={`btn-primary conn-connect-btn conn-connect-${provider}`}
+                          disabled={!ready}
+                          onClick={() => void handleConnect(provider)}
+                        >
+                          {t('settings.connectionsSection.connect')}
+                        </button>
+                      )}
                     </div>
                   </div>
-                ))}
-              </div>
+                )
+              })}
+
+              {deviceAuth && (
+                <div className="conn-device-panel">
+                  <div className="conn-device-title">{t('settings.connectionsSection.deviceTitle')}</div>
+                  <div className="conn-device-hint">
+                    {t('settings.connectionsSection.deviceHint', {
+                      uri: deviceAuth.verificationUri.replace(/^https?:\/\//, '')
+                    })}
+                  </div>
+                  <div className="conn-device-code-row">
+                    <code className="conn-device-code">{deviceAuth.userCode}</code>
+                    <button type="button" className="test-btn" onClick={() => void copyDeviceCode()}>
+                      {t('settings.connectionsSection.copyCode')}
+                    </button>
+                  </div>
+                  <a
+                    className="conn-device-link"
+                    href={deviceAuth.verificationUri}
+                    target="_blank"
+                    rel="noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault()
+                      window.open(deviceAuth.verificationUri, '_blank')
+                    }}
+                  >
+                    {t('settings.connectionsSection.openDevicePage')}
+                  </a>
+                </div>
+              )}
+
+              {connMsg && !deviceAuth && (
+                <div className="conn-msg">{connMsg}</div>
+              )}
+              <p className="settings-row-desc conn-privacy">{t('settings.connectionsSection.privacyNote')}</p>
             </div>
           </div>
         )}
@@ -1132,9 +1253,7 @@ export default function Settings({
           message={
             confirmDelete.type === 'provider'
               ? t('confirmDialog.deleteProviderConfirm')
-              : confirmDelete.type === 'model'
-                ? t('confirmDialog.deleteModelConfirm')
-                : t('confirmDialog.deleteRoutineConfirm')
+              : t('confirmDialog.deleteModelConfirm')
           }
           confirmLabel={t('confirmDialog.confirm')}
           cancelLabel={t('confirmDialog.cancel')}

@@ -212,7 +212,7 @@
     "auto": "自動承認",
     "yolo": "YOLO",
     "askDesc": "各アクションの前に承認を求める",
-    "autoDesc": "定型アクションを自動承認する",
+    "autoDesc": "一般的な操作を自動承認する",
     "yoloDesc": "確認なしで全てのアクションを承認する",
     "deny": "拒否",
     "allow": "許可",
@@ -247,6 +247,7 @@
     "agent": "エージェント",
     "plugins": "プラグイン",
     "mcp": "MCP",
+    "connections": "サービス連携",
     "data": "データ",
     "groups": {
       "general": "一般",
@@ -413,17 +414,41 @@
       "database": "データベース",
       "databaseDesc": "ローカルデータベースを管理"
     },
-    "routines": "ルーティン",
     "system": "システム",
-    "routineSection": {
-      "title": "ルーティン",
-      "desc": "アプリ起動中にバックグラウンドで繰り返し実行されるタスクです。",
-      "addTitle": "新しいルーティン",
-      "addDesc": "専用セッションでプロンプトが自動実行されます。",
+    "connectionsSection": {
+      "title": "サービス連携",
+      "desc": "Google や GitHub を任意で連携すると、この端末上でエージェントが読み取り権限でデータにアクセスできます。トークンはローカルにのみ保存されます。",
+      "google": "Google",
+      "github": "GitHub",
+      "connect": "連携",
+      "connecting": "連携中…",
+      "connectingHint": "ブラウザでサインインを完了してください…",
+      "waitingBrowser": "ブラウザの承認を待っています…",
+      "cancel": "キャンセル",
+      "cancelled": "連携をキャンセルしました",
+      "disconnect": "解除",
+      "statusConnected": "連携済み",
+      "statusConnectedDesc": "サインイン済み。トークンはこの端末にのみ保存されます。",
+      "statusDisconnected": "未連携 — 連携を押してサインイン",
+      "connected": "{{account}} として連携しました",
+      "disconnected": "{{provider}} の連携を解除しました",
+      "desktopOnly": "サービス連携はデスクトップアプリでのみ利用できます。",
+      "deviceTitle": "GitHub にこのコードを入力",
+      "deviceHint": "{{uri}} で下のコードを入力してください（2FA コードではありません）。",
+      "copyCode": "コピー",
+      "codeCopied": "コードをコピーしました",
+      "openDevicePage": "GitHub デバイス承認ページを開く",
+      "privacyNote": "サインイン トークンはこの端末の ~/.pawn にのみ保存され、他のサービスへアップロードされません。"
+    },
+    "automationSection": {
+      "title": "オートメーション",
+      "desc": "アプリ起動中にバックグラウンドで実行される定期タスクです。",
+      "addTitle": "新しいオートメーション",
+      "addDesc": "プロンプトは専用セッションで自動実行されます。",
       "namePlaceholder": "名前（例: 朝のスタンドアップ）",
       "promptPlaceholder": "エージェントに何をさせますか？",
-      "add": "ルーティンを追加",
-      "empty": "ルーティンはまだありません。上から作成してください。",
+      "add": "オートメーションを追加",
+      "empty": "オートメーションはまだありません。上で作成してください。",
       "running": "実行中",
       "runNow": "今すぐ実行",
       "never": "なし",
@@ -477,7 +502,8 @@
       "open-command-palette": "コマンドパレットを開く",
       "open-settings": "設定を開く",
       "new-session": "新規セッション"
-    }
+    },
+    "automations": "オートメーション"
   },
   "projectEdit": {
     "edit": "プロジェクトを編集",
@@ -493,7 +519,6 @@
     "deleteAutomationConfirm": "このオートメーションを削除しますか？この操作は元に戻せません。",
     "deleteProviderConfirm": "このプロバイダーを削除しますか？紐づくモデルが動作しなくなる可能性があります。",
     "deleteModelConfirm": "このモデルを削除しますか？この操作は元に戻せません。",
-    "deleteRoutineConfirm": "このルーティンを削除しますか？この操作は元に戻せません。",
     "clearSessionConfirm": "このセッションのメッセージをすべて削除しますか？この操作は元に戻せません。"
   },
   "chatHeader": {
@@ -531,7 +556,8 @@
       "files": "プロジェクトファイルの閲覧",
       "git": "バージョン管理",
       "browser": "ウェブブラウザ",
-      "diff": "最近のファイル変更"
+      "diff": "最近のファイル変更",
+      "artifacts": "成果物: レポート、表、保存ファイル"
     },
     "addTool": "ツールを追加",
     "selectTool": "ツールを選択",
@@ -562,10 +588,29 @@
       "files": "ファイル",
       "git": "Git",
       "browser": "ブラウザ",
-      "diff": "Diff"
+      "diff": "Diff",
+      "artifacts": "成果物"
     },
     "allToolsOpen": "すべてのツールが開いています",
-    "terminalRestart": "ターミナルを再起動"
+    "terminalRestart": "ターミナルを再起動",
+    "artifacts": {
+      "emptyTitle": "成果物はまだありません",
+      "emptyDesc": "オートメーションのレポートやスプレッドシート読み取り結果がここに集まります。",
+      "count": "{{count}} 件",
+      "clear": "クリア",
+      "open": "開く",
+      "reveal": "場所を開く",
+      "copyPath": "パスをコピー",
+      "kinds": {
+        "report": "レポート",
+        "file": "ファイル",
+        "table": "表",
+        "note": "メモ"
+      },
+      "sources": {
+        "automation": "オートメーション"
+      }
+    }
   },
   "bottomTerminal": {
     "close": "ターミナルを閉じる"
@@ -683,8 +728,8 @@
   },
   "notifications": {
     "taskComplete": "タスク完了",
-    "routineStarted": "ルーチン開始",
-    "routineFinished": "ルーチン完了: {{name}}",
+    "automationStarted": "オートメーション開始",
+    "automationFinished": "オートメーション完了: {{name}}",
     "scriptStarted": "スクリプト開始",
     "scriptFailed": "スクリプト失敗"
   }

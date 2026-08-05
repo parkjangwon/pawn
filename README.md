@@ -51,6 +51,12 @@ pawn
 - macOS 10.12+ or Windows 10/11
 - An OpenAI- or Claude-compatible API key (BYOK)
 
+### Service connections (optional)
+
+In **Settings → Connections**, you can link Google or GitHub so the agent can read your data on this machine. Tokens stay under `~/.pawn` and are never uploaded to a Pawn server.
+
+Maintainers shipping official builds: inject Desktop OAuth client IDs at build time via GitHub Actions secrets — see [.github/OAUTH_SECRETS.md](./.github/OAUTH_SECRETS.md).
+
 ## Features
 
 ### Core Agent & Tools

@@ -75,17 +75,17 @@ export default function AutomationView({
   const scheduleDetail = (scheduleJson: string): string => {
     try {
       const s = JSON.parse(scheduleJson) as RoutineSchedule
-      if (s.type === 'interval') return t('settings.routineSection.everyMinutes', { minutes: s.minutes })
+      if (s.type === 'interval') return t('settings.automationSection.everyMinutes', { minutes: s.minutes })
       const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`
-      if (s.type === 'daily') return t('settings.routineSection.dailyAt', { time })
-      return t('settings.routineSection.weeklyAt', { weekday: t(`settings.routineSection.weekdays.${s.weekday}`), time })
+      if (s.type === 'daily') return t('settings.automationSection.dailyAt', { time })
+      return t('settings.automationSection.weeklyAt', { weekday: t(`settings.automationSection.weekdays.${s.weekday}`), time })
     } catch {
       return ''
     }
   }
 
   const formatRunTime = (ms: number): string => {
-    if (!ms) return t('settings.routineSection.never')
+    if (!ms) return t('settings.automationSection.never')
     return new Date(ms).toLocaleString(i18n.language)
   }
 
@@ -228,8 +228,8 @@ export default function AutomationView({
                 <p className="automation-card-desc">{routine.prompt}</p>
                 <p className="automation-card-meta">
                   {scheduleDetail(routine.schedule)}
-                  {' · '}{t('settings.routineSection.nextRun')} {formatRunTime(routine.nextRunAt)}
-                  {runningIds.has(routine.id) && <span className="settings-badge automation-running-badge"> {t('settings.routineSection.running')}</span>}
+                  {' · '}{t('settings.automationSection.nextRun')} {formatRunTime(routine.nextRunAt)}
+                  {runningIds.has(routine.id) && <span className="settings-badge automation-running-badge"> {t('settings.automationSection.running')}</span>}
                 </p>
                 <div className="automation-card-actions">
                   <button className="test-btn" disabled={runningIds.has(routine.id)} onClick={() => void runNow(routine.id)}>{t('automation.runNow')}</button>
@@ -277,7 +277,7 @@ export default function AutomationView({
                   <div className="automation-field">
                     <label>{t('automation.weekday')}</label>
                     <select value={draft.weekday} onChange={(e) => setDraft((d) => ({ ...d, weekday: e.target.value }))}>
-                      {[0, 1, 2, 3, 4, 5, 6].map((w) => <option key={w} value={w}>{t(`settings.routineSection.weekdays.${w}`)}</option>)}
+                      {[0, 1, 2, 3, 4, 5, 6].map((w) => <option key={w} value={w}>{t(`settings.automationSection.weekdays.${w}`)}</option>)}
                     </select>
                   </div>
                 )}

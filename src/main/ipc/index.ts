@@ -10,6 +10,7 @@ import { registerTerminalIpc } from './terminal'
 import { registerRoutineIpc } from './routine'
 import { registerKeybindingsIpc } from './keybindings'
 import { registerMcpIpc } from './mcp'
+import { registerConnectionsIpc } from './connections'
 
 /** Register every main-process IPC handler in one place. */
 export function registerAllIpc(): void {
@@ -25,4 +26,5 @@ export function registerAllIpc(): void {
   registerRoutineIpc()
   registerKeybindingsIpc()
   registerMcpIpc()
+  registerConnectionsIpc()
 }

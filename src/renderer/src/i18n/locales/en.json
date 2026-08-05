@@ -212,7 +212,7 @@
     "auto": "Auto-approve",
     "yolo": "YOLO",
     "askDesc": "Prompt for approval before each action",
-    "autoDesc": "Automatically approve routine actions",
+    "autoDesc": "Automatically approve common actions",
     "yoloDesc": "Approve all actions without confirmation",
     "deny": "Deny",
     "allow": "Allow",
@@ -247,6 +247,7 @@
     "agent": "Agent",
     "plugins": "Plugins",
     "mcp": "MCP",
+    "connections": "Connections",
     "data": "Data",
     "groups": {
       "general": "General",
@@ -413,17 +414,41 @@
       "database": "Database",
       "databaseDesc": "Manage the local database"
     },
-    "routines": "Routines",
     "system": "System",
-    "routineSection": {
-      "title": "Routines",
+    "connectionsSection": {
+      "title": "Service connections",
+      "desc": "Optionally link Google or GitHub so the agent can read your data on this machine. Tokens stay local — never sent to Pawn servers.",
+      "google": "Google",
+      "github": "GitHub",
+      "connect": "Connect",
+      "connecting": "Connecting…",
+      "connectingHint": "Complete sign-in in the browser…",
+      "waitingBrowser": "Waiting for browser authorization…",
+      "cancel": "Cancel",
+      "cancelled": "Connection cancelled",
+      "disconnect": "Disconnect",
+      "statusConnected": "Connected",
+      "statusConnectedDesc": "Signed in. Tokens are stored only on this device.",
+      "statusDisconnected": "Not connected — click Connect to sign in",
+      "connected": "Connected as {{account}}",
+      "disconnected": "Disconnected {{provider}}",
+      "desktopOnly": "Service connections are only available in the desktop app.",
+      "deviceTitle": "Enter this code on GitHub",
+      "deviceHint": "Open {{uri}} and enter the code below (not a 2FA code).",
+      "copyCode": "Copy",
+      "codeCopied": "Code copied",
+      "openDevicePage": "Open GitHub device page",
+      "privacyNote": "Sign-in tokens are stored only under ~/.pawn on this machine. They are not uploaded or shared with other services."
+    },
+    "automationSection": {
+      "title": "Automations",
       "desc": "Recurring tasks that run in the background while the app is open.",
-      "addTitle": "New routine",
+      "addTitle": "New automation",
       "addDesc": "The prompt runs automatically in a dedicated session.",
       "namePlaceholder": "Name (e.g. Morning standup)",
       "promptPlaceholder": "What should the agent do?",
-      "add": "Add routine",
-      "empty": "No routines yet. Create one above.",
+      "add": "Add automation",
+      "empty": "No automations yet. Create one above.",
       "running": "Running",
       "runNow": "Run now",
       "never": "Never",
@@ -477,7 +502,8 @@
       "open-command-palette": "Open command palette",
       "open-settings": "Open settings",
       "new-session": "New session"
-    }
+    },
+    "automations": "Automations"
   },
   "projectEdit": {
     "edit": "Edit Project",
@@ -493,7 +519,6 @@
     "deleteAutomationConfirm": "Delete this automation? This action cannot be undone.",
     "deleteProviderConfirm": "Delete this provider? Models linked to it may stop working.",
     "deleteModelConfirm": "Delete this model? This action cannot be undone.",
-    "deleteRoutineConfirm": "Delete this routine? This action cannot be undone.",
     "clearSessionConfirm": "Clear all messages in this session? This action cannot be undone."
   },
   "chatHeader": {
@@ -531,7 +556,8 @@
       "files": "Browse project files",
       "git": "Version control",
       "browser": "Web browser",
-      "diff": "Recent file changes"
+      "diff": "Recent file changes",
+      "artifacts": "Deliverables: reports, tables, saved files"
     },
     "addTool": "Add tool",
     "selectTool": "Select a tool",
@@ -562,10 +588,29 @@
       "files": "Files",
       "git": "Git",
       "browser": "Browser",
-      "diff": "Diff"
+      "diff": "Diff",
+      "artifacts": "Artifacts"
     },
     "allToolsOpen": "All tools are open",
-    "terminalRestart": "Restart terminal"
+    "terminalRestart": "Restart terminal",
+    "artifacts": {
+      "emptyTitle": "No deliverables yet",
+      "emptyDesc": "Automation reports and spreadsheet reads show up here so results do not get buried in chat.",
+      "count": "{{count}} items",
+      "clear": "Clear",
+      "open": "Open",
+      "reveal": "Reveal",
+      "copyPath": "Copy path",
+      "kinds": {
+        "report": "Report",
+        "file": "File",
+        "table": "Table",
+        "note": "Note"
+      },
+      "sources": {
+        "automation": "Automation"
+      }
+    }
   },
   "bottomTerminal": {
     "close": "Close terminal"
@@ -683,8 +728,8 @@
   },
   "notifications": {
     "taskComplete": "Task complete",
-    "routineStarted": "Routine started",
-    "routineFinished": "Routine finished: {{name}}",
+    "automationStarted": "Automation started",
+    "automationFinished": "Automation finished: {{name}}",
     "scriptStarted": "Script started",
     "scriptFailed": "Script failed"
   }

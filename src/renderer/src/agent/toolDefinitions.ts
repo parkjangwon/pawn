@@ -34,6 +34,21 @@ export const TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'read_spreadsheet',
+    description:
+      'Read a CSV/TSV/XLSX spreadsheet with hard row/column caps (safe for large files). Returns a markdown table preview plus sheet names. Prefer this over read_file for .csv/.xlsx.',
+    parameters: {
+      type: 'object',
+      properties: {
+        path: { type: 'string', description: 'Spreadsheet path (absolute or project-relative)' },
+        sheet: { type: 'string', description: 'Worksheet name (xlsx only; default first sheet)' },
+        max_rows: { type: 'number', description: 'Max rows to return (default 80, max 200)' },
+        max_cols: { type: 'number', description: 'Max columns to return (default 24, max 50)' }
+      },
+      required: ['path']
+    }
+  },
+  {
     name: 'write_file',
     description: 'Write content to a file. Creates the file if it does not exist. Paths may be absolute or project-relative.',
     parameters: {
@@ -379,30 +394,30 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     name: 'app_open_tab',
-    description: 'Open an app tool surface: terminal (bottom panel), or files/git/browser/diff (right panel). Use this to show the user what you are doing.',
+    description: 'Open an app tool surface: terminal (bottom panel), or files/git/browser/diff/artifacts (right panel). Use this to show the user what you are doing.',
     parameters: {
       type: 'object',
-      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff'], description: 'Which app tool to open (terminal is the bottom panel; others open in the right panel)' } },
+      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff', 'artifacts'], description: 'Which app tool to open (terminal is the bottom panel; others open in the right panel)' } },
       required: ['tab']
     }
   },
   {
     name: 'app_close_tab',
-    description: 'Close an app tool surface: terminal (bottom panel), or files/git/browser/diff (right panel). Closing the browser also discards its current page.',
+    description: 'Close an app tool surface: terminal (bottom panel), or files/git/browser/diff/artifacts (right panel). Closing the browser also discards its current page.',
     parameters: {
       type: 'object',
-      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff'], description: 'Which app tool to close' } },
+      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff', 'artifacts'], description: 'Which app tool to close' } },
       required: ['tab']
     }
   },
   {
     name: 'app_list_automations',
-    description: 'List configured automations (routines) in the app so you can review names, schedules, enabled status, and ids before changing them.',
+    description: 'List configured automations in the app so you can review names, schedules, enabled status, and ids before changing them.',
     parameters: { type: 'object', properties: {} }
   },
   {
     name: 'app_create_automation',
-    description: 'Create a new automation (routine) in the app without writing SQL. Use this when users ask to set up recurring work.',
+    description: 'Create a new automation in the app without writing SQL. Use this when users ask to set up recurring work.',
     parameters: {
       type: 'object',
       properties: {
@@ -451,5 +466,290 @@ export const TOOLS: ToolDefinition[] = [
     name: 'app_toggle_theme',
     description: 'Switch the app between light and dark theme.',
     parameters: { type: 'object', properties: {} }
+  },
+
+  // ── Google (Settings → Connections; read-only scopes) ─────────────
+  {
+    name: 'google_whoami',
+    description: 'Return the connected Google account email/name. Requires Google connection in Settings.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
+    name: 'google_drive_search',
+    description:
+      'Search Google Drive files. query uses Drive query syntax (e.g. "name contains \'report\'" or "mimeType=\'application/vnd.google-apps.spreadsheet\'"). Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Drive search query' },
+        max_results: { type: 'number', description: 'Max files (default 20, max 50)' }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'google_drive_read',
+    description:
+      'Read a Drive file by id. Exports Docs/Sheets/Slides to text/csv when possible. Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        file_id: { type: 'string', description: 'Drive file id' },
+        max_chars: { type: 'number', description: 'Max characters to return (default 40000)' }
+      },
+      required: ['file_id']
+    }
+  },
+  {
+    name: 'google_gmail_search',
+    description:
+      'Search Gmail. query uses Gmail search syntax (e.g. "from:alice newer_than:7d", "subject:invoice"). Returns message ids + metadata. Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Gmail search query' },
+        max_results: { type: 'number', description: 'Max messages (default 10, max 30)' }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'google_gmail_read',
+    description: 'Read a full Gmail message by id (from google_gmail_search). Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: { message_id: { type: 'string', description: 'Gmail message id' } },
+      required: ['message_id']
+    }
+  },
+  {
+    name: 'google_calendar_list',
+    description:
+      'List Google Calendar events. Defaults to primary calendar, from now through +7 days. ISO8601 for time_min/time_max. Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        time_min: { type: 'string', description: 'ISO start (optional)' },
+        time_max: { type: 'string', description: 'ISO end (optional)' },
+        max_results: { type: 'number', description: 'Max events (default 20)' },
+        calendar_id: { type: 'string', description: 'Calendar id (default primary)' }
+      }
+    }
+  },
+  {
+    name: 'google_tasks_list',
+    description:
+      'List Google Task lists, or tasks in a list when task_list_id is set. Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        task_list_id: { type: 'string', description: 'Task list id (omit to list lists)' },
+        max_results: { type: 'number', description: 'Max tasks (default 30)' }
+      }
+    }
+  },
+  {
+    name: 'google_sheets_read',
+    description:
+      'Read a Google Sheet. Pass spreadsheet_id (Drive file id). Omit range to list sheet names; pass range like "Sheet1!A1:D50" for values. Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        spreadsheet_id: { type: 'string', description: 'Spreadsheet file id' },
+        range: { type: 'string', description: 'A1 range (optional)' }
+      },
+      required: ['spreadsheet_id']
+    }
+  },
+  {
+    name: 'google_docs_read',
+    description: 'Read a Google Doc by document_id (Drive file id) as plain text. Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: { document_id: { type: 'string', description: 'Document id' } },
+      required: ['document_id']
+    }
+  },
+  {
+    name: 'google_slides_read',
+    description: 'Read a Google Slides presentation by id as text per slide. Requires Google connection.',
+    parameters: {
+      type: 'object',
+      properties: { presentation_id: { type: 'string', description: 'Presentation id' } },
+      required: ['presentation_id']
+    }
+  },
+
+  // ── GitHub (Settings → Connections) ───────────────────────────────
+  {
+    name: 'github_whoami',
+    description: 'Return the connected GitHub login. Requires GitHub connection in Settings.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
+    name: 'github_list_repos',
+    description: 'List repositories for the connected GitHub user (sorted by recent update). Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        visibility: { type: 'string', enum: ['all', 'public', 'private'], description: 'Filter visibility' },
+        per_page: { type: 'number', description: 'Max repos (default 20)' },
+        affiliation: { type: 'string', description: 'owner,collaborator,organization_member (comma-separated)' }
+      }
+    }
+  },
+  {
+    name: 'github_get_repo',
+    description: 'Get repository metadata. repo is "owner/name". Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: { repo: { type: 'string', description: 'owner/name' } },
+      required: ['repo']
+    }
+  },
+  {
+    name: 'github_list_issues',
+    description: 'List issues (not PRs) for a repo. Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        state: { type: 'string', enum: ['open', 'closed', 'all'], description: 'Issue state' },
+        labels: { type: 'string', description: 'Comma-separated labels' },
+        per_page: { type: 'number', description: 'Max results (default 20)' }
+      },
+      required: ['repo']
+    }
+  },
+  {
+    name: 'github_get_issue',
+    description: 'Get an issue (or PR-as-issue) body and recent comments. Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        number: { type: 'number', description: 'Issue number' }
+      },
+      required: ['repo', 'number']
+    }
+  },
+  {
+    name: 'github_list_pulls',
+    description: 'List pull requests for a repo. Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        state: { type: 'string', enum: ['open', 'closed', 'all'], description: 'PR state' },
+        per_page: { type: 'number', description: 'Max results (default 20)' }
+      },
+      required: ['repo']
+    }
+  },
+  {
+    name: 'github_get_pull',
+    description: 'Get a pull request details and changed files list. Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        number: { type: 'number', description: 'PR number' }
+      },
+      required: ['repo', 'number']
+    }
+  },
+  {
+    name: 'github_list_commits',
+    description: 'List recent commits on a repo (optional branch sha and path). Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        sha: { type: 'string', description: 'Branch or commit SHA' },
+        path: { type: 'string', description: 'Only commits touching this path' },
+        per_page: { type: 'number', description: 'Max results (default 15)' }
+      },
+      required: ['repo']
+    }
+  },
+  {
+    name: 'github_get_file',
+    description: 'Read a file (or list a directory) from a GitHub repo via Contents API. Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        path: { type: 'string', description: 'File or directory path in repo' },
+        ref: { type: 'string', description: 'Branch, tag, or commit (optional)' }
+      },
+      required: ['repo', 'path']
+    }
+  },
+  {
+    name: 'github_search_code',
+    description: 'Search code across GitHub (e.g. "repo:owner/name foo", "language:ts filename:foo"). Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'GitHub code search query' },
+        per_page: { type: 'number', description: 'Max results (default 10)' }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'github_search_issues',
+    description: 'Search issues/PRs (e.g. "repo:owner/name is:open label:bug", "is:pr author:me"). Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'GitHub issues search query' },
+        per_page: { type: 'number', description: 'Max results (default 15)' }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'github_create_issue',
+    description: 'Create a GitHub issue. Requires GitHub connection with repo scope.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        title: { type: 'string', description: 'Issue title' },
+        body: { type: 'string', description: 'Issue body (markdown)' },
+        labels: { type: 'array', items: { type: 'string' }, description: 'Label names' }
+      },
+      required: ['repo', 'title']
+    }
+  },
+  {
+    name: 'github_comment',
+    description: 'Comment on an issue or pull request. Requires GitHub connection with repo scope.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        number: { type: 'number', description: 'Issue/PR number' },
+        body: { type: 'string', description: 'Comment markdown' }
+      },
+      required: ['repo', 'number', 'body']
+    }
+  },
+  {
+    name: 'github_create_pull',
+    description: 'Create a pull request. Requires GitHub connection with repo scope.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        title: { type: 'string', description: 'PR title' },
+        head: { type: 'string', description: 'Head branch (or user:branch)' },
+        base: { type: 'string', description: 'Base branch' },
+        body: { type: 'string', description: 'PR body' },
+        draft: { type: 'boolean', description: 'Create as draft' }
+      },
+      required: ['repo', 'title', 'head', 'base']
+    }
   }
 ]

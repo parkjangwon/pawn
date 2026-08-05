@@ -1,10 +1,26 @@
 import { resolve, join } from 'path'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
-import type { Plugin } from 'vite'
+import { loadEnv, type Plugin } from 'vite'
 import { readdirSync, readFileSync, writeFileSync, statSync, existsSync, mkdirSync, unlinkSync } from 'fs'
 import { loadConfig, saveConfig } from './src/main/config'
 import * as db from './src/main/db'
+
+/** Build-time OAuth clients: .env / process.env / CI secrets → baked into main. */
+function pawnOAuthDefine(mode: string): Record<string, string> {
+  const env = loadEnv(mode, process.cwd(), '')
+  const pick = (key: string): string =>
+    (process.env[key] || env[key] || '').trim()
+  const oauth = {
+    googleClientId: pick('PAWN_GOOGLE_CLIENT_ID'),
+    googleClientSecret: pick('PAWN_GOOGLE_CLIENT_SECRET'),
+    githubClientId: pick('PAWN_GITHUB_CLIENT_ID'),
+    githubClientSecret: pick('PAWN_GITHUB_CLIENT_SECRET')
+  }
+  return {
+    __PAWN_OAUTH__: JSON.stringify(oauth)
+  }
+}
 
 /**
  * The Electron dev server hosts file/db/config APIs and an LLM proxy with no
@@ -220,34 +236,38 @@ function apiProxyPlugin(): Plugin {
   }
 }
 
-export default defineConfig({
-  main: {
-    plugins: [externalizeDepsPlugin()]
-  },
-  preload: {
-    // Sandboxed preloads are loaded as CommonJS by the renderer and cannot
-    // require external packages, so @electron-toolkit/preload must be bundled
-    // in and the output emitted as CJS (see window.ts sandbox: true).
-    plugins: [externalizeDepsPlugin({ exclude: ['@electron-toolkit/preload'] })],
-    build: {
-      rollupOptions: {
-        output: {
-          format: 'cjs',
-          entryFileNames: '[name].cjs'
+export default defineConfig(({ mode }) => {
+  const oauthDefine = pawnOAuthDefine(mode)
+  return {
+    main: {
+      plugins: [externalizeDepsPlugin()],
+      define: oauthDefine
+    },
+    preload: {
+      // Sandboxed preloads are loaded as CommonJS by the renderer and cannot
+      // require external packages, so @electron-toolkit/preload must be bundled
+      // in and the output emitted as CJS (see window.ts sandbox: true).
+      plugins: [externalizeDepsPlugin({ exclude: ['@electron-toolkit/preload'] })],
+      build: {
+        rollupOptions: {
+          output: {
+            format: 'cjs',
+            entryFileNames: '[name].cjs'
+          }
         }
       }
+    },
+    renderer: {
+      resolve: {
+        alias: {
+          '@': resolve('src/renderer/src')
+        }
+      },
+      server: {
+        host: '127.0.0.1',
+        allowedHosts: ['localhost', '127.0.0.1']
+      },
+      plugins: [react(), apiProxyPlugin()]
     }
-  },
-  renderer: {
-    resolve: {
-      alias: {
-        '@': resolve('src/renderer/src')
-      }
-    },
-    server: {
-      host: '127.0.0.1',
-      allowedHosts: ['localhost', '127.0.0.1']
-    },
-    plugins: [react(), apiProxyPlugin()]
   }
 })
