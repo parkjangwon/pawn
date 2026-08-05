@@ -14,6 +14,7 @@ import Settings from './components/Settings'
 import PermissionDialog from './components/PermissionDialog'
 import CommandPalette from './components/CommandPalette'
 import RightPanel from './components/RightPanel'
+import BottomTerminal from './components/BottomTerminal'
 
 interface NavSnapshot {
   showSettings: boolean
@@ -195,27 +196,32 @@ export default function App(): React.JSX.Element {
         onMainViewChange={setMainView}
         onSidebarWidthChange={commitSidebarWidth}
       />
-      <div className="main-column">
-        {mainView === 'chat' ? (
-          <ChatArea
-            onToggleSidebar={toggleSidebar}
-            onOpenSettings={() => setShowSettings(true)}
-            canGoBack={canGoBack}
-            canGoForward={canGoForward}
-            onGoBack={goBack}
-            onGoForward={goForward}
-          />
-        ) : (
-          <AutomationView
-            onToggleSidebar={toggleSidebar}
-            canGoBack={canGoBack}
-            canGoForward={canGoForward}
-            onGoBack={goBack}
-            onGoForward={goForward}
-          />
-        )}
+      <div className="workspace">
+        <div className="workspace-top">
+          <div className="main-column">
+            {mainView === 'chat' ? (
+              <ChatArea
+                onToggleSidebar={toggleSidebar}
+                onOpenSettings={() => setShowSettings(true)}
+                canGoBack={canGoBack}
+                canGoForward={canGoForward}
+                onGoBack={goBack}
+                onGoForward={goForward}
+              />
+            ) : (
+              <AutomationView
+                onToggleSidebar={toggleSidebar}
+                canGoBack={canGoBack}
+                canGoForward={canGoForward}
+                onGoBack={goBack}
+                onGoForward={goForward}
+              />
+            )}
+          </div>
+          <RightPanel />
+        </div>
+        <BottomTerminal />
       </div>
-      <RightPanel />
       {showSettings && (
         <Settings
           onSidebarWidthChange={commitSidebarWidth}

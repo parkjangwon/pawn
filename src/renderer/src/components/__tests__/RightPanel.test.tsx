@@ -12,7 +12,6 @@ vi.mock('react-i18next', async (importOriginal) => {
   }
 })
 
-vi.mock('../TerminalView', () => ({ default: () => <div>TERMINAL_VIEW</div> }))
 vi.mock('../FilesView', () => ({ default: () => <div>FILES_VIEW</div> }))
 vi.mock('../GitView', () => ({ default: () => <div>GIT_VIEW</div> }))
 vi.mock('../BrowserView', () => ({ default: () => <div>BROWSER_VIEW</div> }))
@@ -36,8 +35,26 @@ describe('RightPanel', () => {
 
   it('opens a tool tab on click', () => {
     render(<RightPanel />)
-    fireEvent.click(screen.getByText('rightPanel.tools.terminal'))
-    expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('rightPanel.tools.files'))
+    expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
+  })
+
+  it('routes terminal open/close to the bottom terminal bridges', () => {
+    const openTerminal = vi.fn()
+    const closeTerminal = vi.fn()
+    ;(window as any).__openTerminal = openTerminal
+    ;(window as any).__closeTerminal = closeTerminal
+    render(<RightPanel />)
+    act(() => {
+      ;(window as any).__openRightPanelTab('terminal')
+    })
+    expect(openTerminal).toHaveBeenCalled()
+    expect(screen.queryByText('FILES_VIEW')).not.toBeInTheDocument()
+
+    act(() => {
+      ;(window as any).__closeRightPanelTab('terminal')
+    })
+    expect(closeTerminal).toHaveBeenCalled()
   })
 
   it('does not collapse an already-open panel when a tool is chosen', async () => {
@@ -57,8 +74,8 @@ describe('RightPanel', () => {
     expect(container.querySelector('aside')?.getAttribute('style')).not.toContain('width: 0px')
 
     // Choose a tool from the picker while the panel is already open.
-    fireEvent.click(screen.getByText('rightPanel.tools.terminal'))
-    expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('rightPanel.tools.files'))
+    expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
     // Regression: the panel must not collapse back to width 0.
     expect(container.querySelector('aside')?.getAttribute('style')).not.toContain('width: 0px')
   })
@@ -107,23 +124,23 @@ describe('RightPanel', () => {
 
   it('closing the last tab starts the hide animation', () => {
     const { container } = render(<RightPanel />)
-    fireEvent.click(screen.getByText('rightPanel.tools.terminal'))
-    expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('rightPanel.tools.files'))
+    expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
 
     fireEvent.click(container.querySelector('.rp-tab-close-btn') as HTMLElement)
-    expect(screen.queryByText('TERMINAL_VIEW')).not.toBeInTheDocument()
+    expect(screen.queryByText('FILES_VIEW')).not.toBeInTheDocument()
     expect(container.querySelector('aside')?.className).toContain('closing')
   })
 
-  it('keeps a hidden terminal tab mounted until the tab is closed', () => {
+  it('keeps a hidden tool tab mounted until the tab is closed', () => {
     ;(window as any).api.platform = 'browser'
     const { container } = render(<RightPanel />)
-    fireEvent.click(screen.getByText('rightPanel.tools.terminal'))
-    expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()
+    fireEvent.click(screen.getByText('rightPanel.tools.files'))
+    expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
 
     fireEvent.keyDown(window, { key: 'b', altKey: true, metaKey: true })
     expect(container.querySelector('aside')?.className).toContain('closing')
-    // display:none keeps the subtree mounted, so the PTY session survives.
-    expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()
+    // display:none keeps the subtree mounted so panel state survives hide.
+    expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
   })
 })

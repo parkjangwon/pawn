@@ -166,6 +166,7 @@
     "workWithoutProject": "无项目工作",
     "usageTotalCost": "总费用",
     "toggleRightPanel": "切换右侧面板",
+    "toggleTerminal": "切换终端",
     "usageCacheHitRate": "缓存命中率",
     "openSidebar": "打开侧边栏",
     "navBack": "后退",
@@ -456,6 +457,7 @@
       "cancel": "取消",
       "reset": "重置",
       "toggle-right-panel": "切换右侧面板",
+      "toggle-terminal": "切换终端",
       "toggle-sidebar": "切换侧边栏",
       "open-command-palette": "打开命令面板",
       "open-settings": "打开设置",
@@ -550,6 +552,9 @@
     "allToolsOpen": "所有工具都已打开",
     "terminalRestart": "重启终端"
   },
+  "bottomTerminal": {
+    "close": "关闭终端"
+  },
   "commandPalette": {
     "placeholder": "输入命令...",
     "noResults": "无匹配命令",
@@ -572,6 +577,8 @@
       "openSettingsDesc": "打开应用设置",
       "toggleRightPanel": "切换右侧面板",
       "toggleRightPanelDesc": "显示或隐藏工具面板",
+      "toggleTerminal": "切换终端",
+      "toggleTerminalDesc": "显示或隐藏底部终端面板",
       "toggleSidebar": "切换侧边栏",
       "toggleSidebarDesc": "显示或隐藏项目侧边栏"
     }

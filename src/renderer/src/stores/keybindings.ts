@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 
 export type KeyBindingId =
   | 'toggle-right-panel'
+  | 'toggle-terminal'
   | 'toggle-sidebar'
   | 'open-command-palette'
   | 'open-settings'
@@ -18,6 +19,7 @@ export interface KeyCombo {
 
 export const KEYBINDING_IDS: KeyBindingId[] = [
   'toggle-right-panel',
+  'toggle-terminal',
   'toggle-sidebar',
   'open-command-palette',
   'open-settings',
@@ -26,6 +28,8 @@ export const KEYBINDING_IDS: KeyBindingId[] = [
 
 export const DEFAULT_KEYBINDINGS: Record<KeyBindingId, string> = {
   'toggle-right-panel': 'Alt+Meta+B',
+  // Control+` — same muscle memory as VS Code / most IDE terminal panels.
+  'toggle-terminal': 'Ctrl+`',
   'toggle-sidebar': 'Meta+B',
   'open-command-palette': 'Meta+K',
   'open-settings': 'Meta+,',

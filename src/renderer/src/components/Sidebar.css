@@ -60,6 +60,7 @@ body.resizing-sidebar .sidebar-resizer::after {
 
 /* Width transitions would fight the pointer during a drag. */
 body.resizing-sidebar .sidebar,
+body.resizing-sidebar .workspace,
 body.resizing-sidebar .main-column,
 body.resizing-sidebar .settings-sidebar {
   transition: none;

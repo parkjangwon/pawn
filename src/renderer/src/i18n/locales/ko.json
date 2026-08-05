@@ -166,6 +166,7 @@
     "workWithoutProject": "프로젝트 없이 작업하기",
     "usageTotalCost": "총 비용",
     "toggleRightPanel": "우측 패널 전환",
+    "toggleTerminal": "터미널 전환",
     "usageCacheHitRate": "캐시 적중률",
     "openSidebar": "사이드바 열기",
     "navBack": "뒤로 가기",
@@ -456,6 +457,7 @@
       "cancel": "취소",
       "reset": "초기화",
       "toggle-right-panel": "우측 패널 토글",
+      "toggle-terminal": "터미널 토글",
       "toggle-sidebar": "사이드바 토글",
       "open-command-palette": "명령 팔레트 열기",
       "open-settings": "설정 열기",
@@ -550,6 +552,9 @@
     "allToolsOpen": "모든 도구가 열려 있습니다",
     "terminalRestart": "터미널 재시작"
   },
+  "bottomTerminal": {
+    "close": "터미널 닫기"
+  },
   "commandPalette": {
     "placeholder": "명령어 입력...",
     "noResults": "일치하는 명령어가 없습니다",
@@ -572,6 +577,8 @@
       "openSettingsDesc": "애플리케이션 설정 열기",
       "toggleRightPanel": "우측 패널 토글",
       "toggleRightPanelDesc": "도구 패널 표시/숨기기",
+      "toggleTerminal": "터미널 토글",
+      "toggleTerminalDesc": "하단 터미널 패널 표시/숨기기",
       "toggleSidebar": "사이드바 토글",
       "toggleSidebarDesc": "프로젝트 사이드바 표시/숨기기"
     }

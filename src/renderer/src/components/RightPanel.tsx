@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { useKeybinding } from '../stores/keybindings'
-import TerminalView from './TerminalView'
 import FilesView from './FilesView'
 import GitView from './GitView'
 import BrowserView from './BrowserView'
@@ -10,12 +9,14 @@ import DiffListView from './DiffListView'
 import { openFileInPanel } from '../stores/filesPanel'
 import './RightPanel.css'
 
-type TabId = 'terminal' | 'files' | 'git' | 'browser' | 'diff'
+// Terminal lives in BottomTerminal (Codex-style). Callers that still pass
+// 'terminal' to the open/close bridges are redirected there.
+type TabId = 'files' | 'git' | 'browser' | 'diff'
+type OpenableId = TabId | 'terminal'
 
 const NOOP = (): void => {}
 
 const TOOL_ICONS: Record<TabId, string> = {
-  terminal: 'M4 17l6-6-6-6m8 14h8',
   files: 'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
   git: 'M22 12h-4l-3 9L9 3l-3 9H2',
   browser: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9',
@@ -239,8 +240,14 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Expose open-on-tab to window. Agent browser tools call this so their work
   // happens in front of the user instead of in an off-screen view.
+  // 'terminal' is handled by BottomTerminal — keep the bridge name so older
+  // callers (run-script, agent tools) don't need a separate API.
   useEffect(() => {
-    (window as any).__openRightPanelTab = (id: TabId): void => {
+    (window as any).__openRightPanelTab = (id: OpenableId): void => {
+      if (id === 'terminal') {
+        ;(window as any).__openTerminal?.()
+        return
+      }
       if (closingRef.current) cancelHide()
       if (visibleRef.current && activeTabRef.current === id && openTabsRef.current.includes(id)) return
       // Same guard as openTool: don't collapse an already-visible panel.
@@ -260,7 +267,11 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Expose close-tab to window so the agent can close tool tabs on request.
   useEffect(() => {
-    (window as any).__closeRightPanelTab = (id: TabId): void => {
+    (window as any).__closeRightPanelTab = (id: OpenableId): void => {
+      if (id === 'terminal') {
+        ;(window as any).__closeTerminal?.()
+        return
+      }
       closeTabById(id)
     }
     return () => { delete (window as any).__closeRightPanelTab }
@@ -299,7 +310,6 @@ export default function RightPanel(): React.JSX.Element | null {
     }
 
     switch (activeTab) {
-      case 'terminal': return <TerminalView projectPath={projectPath} />
       case 'files': return <FilesView projectPath={projectPath} />
       case 'git': return <GitView projectPath={projectPath} />
       case 'browser': return <BrowserView />

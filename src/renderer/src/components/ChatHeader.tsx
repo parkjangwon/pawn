@@ -74,6 +74,7 @@ export default function ChatHeader({
   const { t } = useTranslation()
   const bindings = useKeybindingsStore((s) => s.bindings)
   const panelShortcut = formatCombo(bindings['toggle-right-panel'])
+  const terminalShortcut = formatCombo(bindings['toggle-terminal'])
   const sidebarShortcut = formatCombo(bindings['toggle-sidebar'])
 
   const [showScriptMenu, setShowScriptMenu] = useState(false)
@@ -268,6 +269,11 @@ export default function ChatHeader({
           )}
         </div>
 
+        <button className="sidebar-toggle-btn terminal-toggle" onClick={() => (window as any).__toggleTerminal?.()} aria-label={t('contextBar.toggleTerminal')} title={`${t('contextBar.toggleTerminal')} (${terminalShortcut})`}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M4 17l6-6-6-6m8 14h8" />
+          </svg>
+        </button>
         <button className="sidebar-toggle-btn right-panel-toggle" onClick={() => (window as any).__toggleRightPanel?.()} aria-label={t('contextBar.toggleRightPanel')} title={`${t('contextBar.toggleRightPanel')} (${panelShortcut})`}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2" />
