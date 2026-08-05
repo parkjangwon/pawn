@@ -16,6 +16,7 @@ import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/ski
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
 import { useSidebarResize } from '../hooks/useSidebarResize'
 import ConfirmDialog from './ConfirmDialog'
+import NavControls from './NavControls'
 import './Settings.css'
 
 type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'mcp' | 'routines' | 'system' | 'shortcuts' | 'data'
@@ -41,8 +42,11 @@ interface SourceSignal {
 }
 
 interface SettingsProps {
-  onClose: () => void
   onSidebarWidthChange: (width: number) => void
+  canGoBack: boolean
+  canGoForward: boolean
+  onGoBack: () => void
+  onGoForward: () => void
 }
 
 const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon: string }[] = [
@@ -57,7 +61,9 @@ const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon:
   { id: 'data', labelKey: 'settings.data', groupKey: 'settings.groups.general', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
 ]
 
-export default function Settings({ onClose, onSidebarWidthChange }: SettingsProps): React.JSX.Element {
+export default function Settings({
+  onSidebarWidthChange, canGoBack, canGoForward, onGoBack, onGoForward
+}: SettingsProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const { theme, set } = useThemeStore()
   const { routines, runningIds, add: addRoutine, toggle: toggleRoutine, remove: removeRoutine, runNow } = useRoutineStore()
@@ -502,12 +508,13 @@ export default function Settings({ onClose, onSidebarWidthChange }: SettingsProp
               <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" />
             </svg>
           </button>
-          <button className="settings-header-back" onClick={onClose} aria-label={t('settings.backToApp')} title={t('settings.backToApp')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
-          </button>
+          <NavControls canGoBack={canGoBack} canGoForward={canGoForward} onBack={onGoBack} onForward={onGoForward} />
         </div>
       </div>
       <div className="settings-sidebar">
+        <div className="settings-sidebar-top-row">
+          <span className="sidebar-logo">Pawn</span>
+        </div>
         <div className="settings-nav">
           {groups.map((group) => (
             <div key={group} className="settings-nav-group">

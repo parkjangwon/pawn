@@ -168,6 +168,8 @@
     "toggleRightPanel": "切换右侧面板",
     "usageCacheHitRate": "缓存命中率",
     "openSidebar": "打开侧边栏",
+    "navBack": "后退",
+    "navForward": "前进",
     "usageCacheWrite": "缓存写入",
     "usageOutput": "输出",
     "usageInput": "输入",
@@ -232,7 +234,6 @@
   },
   "settings": {
     "title": "设置",
-    "backToApp": "返回应用",
     "toggleNav": "切换设置侧边栏",
     "searchPlaceholder": "搜索设置...",
     "appearance": "外观",

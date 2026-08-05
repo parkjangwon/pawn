@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useLayoutEffect } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
 import { useEffectiveTheme, useThemeStore } from './stores/theme'
 import { useAppStore } from './stores/app'
 import { useProviderStore } from './stores/provider'
@@ -14,6 +14,18 @@ import Settings from './components/Settings'
 import PermissionDialog from './components/PermissionDialog'
 import CommandPalette from './components/CommandPalette'
 import RightPanel from './components/RightPanel'
+
+interface NavSnapshot {
+  showSettings: boolean
+  mainView: 'chat' | 'automations'
+  projectId: string | null
+  sessionId: string | null
+}
+
+interface NavState {
+  list: NavSnapshot[]
+  index: number
+}
 
 export default function App(): React.JSX.Element {
   const theme = useEffectiveTheme()
@@ -67,7 +79,61 @@ export default function App(): React.JSX.Element {
     else toggleSidebar()
   }, [showSettings, toggleSidebar])
 
-  const { projects, activeProjectId, addSession } = useAppStore()
+  const { projects, activeProjectId, activeSessionId, addSession } = useAppStore()
+
+  // Browser-style back/forward history over the app's top-level "location":
+  // which view is showing, which project/session is focused, and whether
+  // Settings is open. Every genuine navigation (not one replayed by back()/
+  // forward() themselves) pushes a new entry, truncating any forward branch.
+  const [nav, setNav] = useState<NavState>(() => ({
+    list: [{ showSettings: false, mainView: 'chat', projectId: activeProjectId, sessionId: activeSessionId }],
+    index: 0
+  }))
+  const isReplayingNavRef = useRef(false)
+
+  useEffect(() => {
+    if (isReplayingNavRef.current) { isReplayingNavRef.current = false; return }
+    setNav((prev) => {
+      const current = prev.list[prev.index]
+      if (
+        current.showSettings === showSettings &&
+        current.mainView === mainView &&
+        current.projectId === activeProjectId &&
+        current.sessionId === activeSessionId
+      ) {
+        return prev
+      }
+      const snapshot: NavSnapshot = { showSettings, mainView, projectId: activeProjectId, sessionId: activeSessionId }
+      const list = [...prev.list.slice(0, prev.index + 1), snapshot]
+      return { list, index: list.length - 1 }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showSettings, mainView, activeProjectId, activeSessionId])
+
+  const applyNavSnapshot = useCallback((snapshot: NavSnapshot) => {
+    isReplayingNavRef.current = true
+    setShowSettings(snapshot.showSettings)
+    setMainView(snapshot.mainView)
+    if (snapshot.projectId) useAppStore.getState().setActiveProject(snapshot.projectId)
+    if (snapshot.sessionId) useAppStore.getState().setActiveSession(snapshot.sessionId)
+  }, [])
+
+  const goBack = useCallback(() => {
+    if (nav.index <= 0) return
+    const nextIndex = nav.index - 1
+    applyNavSnapshot(nav.list[nextIndex])
+    setNav((prev) => ({ ...prev, index: nextIndex }))
+  }, [nav, applyNavSnapshot])
+
+  const goForward = useCallback(() => {
+    if (nav.index >= nav.list.length - 1) return
+    const nextIndex = nav.index + 1
+    applyNavSnapshot(nav.list[nextIndex])
+    setNav((prev) => ({ ...prev, index: nextIndex }))
+  }, [nav, applyNavSnapshot])
+
+  const canGoBack = nav.index > 0
+  const canGoForward = nav.index < nav.list.length - 1
 
   // In Electron the main process forwards shortcuts from whichever webContents
   // has focus; renderer-side handlers are only for dev:web (no main process).
@@ -89,18 +155,26 @@ export default function App(): React.JSX.Element {
     })
   }, [toggleActiveSidebar, activeProjectId, addSession])
 
-  // Escape closes modals.
+  // Escape closes modals. Cmd+[ / Cmd+] mirror the header's back/forward
+  // buttons — the modifier means this never collides with typing literal
+  // bracket characters in a focused input.
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         if (showCommandPalette) setShowCommandPalette(false)
         if (showSettings) setShowSettings(false)
+      } else if (e.metaKey && e.key === '[') {
+        e.preventDefault()
+        goBack()
+      } else if (e.metaKey && e.key === ']') {
+        e.preventDefault()
+        goForward()
       }
     }
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [showSettings, showCommandPalette])
+  }, [showSettings, showCommandPalette, goBack, goForward])
 
   // Bridge for the command palette (and anything else that needs it).
   useEffect(() => {
@@ -123,13 +197,34 @@ export default function App(): React.JSX.Element {
       />
       <div className="main-column">
         {mainView === 'chat' ? (
-          <ChatArea onToggleSidebar={toggleSidebar} onOpenSettings={() => setShowSettings(true)} />
+          <ChatArea
+            onToggleSidebar={toggleSidebar}
+            onOpenSettings={() => setShowSettings(true)}
+            canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            onGoBack={goBack}
+            onGoForward={goForward}
+          />
         ) : (
-          <AutomationView onToggleSidebar={toggleSidebar} />
+          <AutomationView
+            onToggleSidebar={toggleSidebar}
+            canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            onGoBack={goBack}
+            onGoForward={goForward}
+          />
         )}
       </div>
       <RightPanel />
-      {showSettings && <Settings onClose={() => setShowSettings(false)} onSidebarWidthChange={commitSidebarWidth} />}
+      {showSettings && (
+        <Settings
+          onSidebarWidthChange={commitSidebarWidth}
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
+          onGoBack={goBack}
+          onGoForward={goForward}
+        />
+      )}
       {showCommandPalette && (
         <CommandPalette
           onClose={() => setShowCommandPalette(false)}

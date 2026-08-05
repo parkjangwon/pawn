@@ -168,6 +168,8 @@
     "toggleRightPanel": "Toggle right panel",
     "usageCacheHitRate": "Cache hit rate",
     "openSidebar": "Open sidebar",
+    "navBack": "Back",
+    "navForward": "Forward",
     "usageCacheWrite": "Cache write",
     "usageOutput": "Output",
     "usageInput": "Input",
@@ -232,7 +234,6 @@
   },
   "settings": {
     "title": "Settings",
-    "backToApp": "Back to App",
     "toggleNav": "Toggle Settings Sidebar",
     "searchPlaceholder": "Search settings...",
     "appearance": "Appearance",

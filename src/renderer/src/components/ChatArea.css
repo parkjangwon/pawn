@@ -1161,7 +1161,11 @@
 .chat-header-left {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  /* Matches the settings/automation headers' icon-cluster gap so the
+     back/forward buttons land at the same x position across all three
+     screens; the title gets its own extra margin below to keep its old
+     spacing from the icons. */
+  gap: var(--space-xs);
   min-width: 0;
 }
 
@@ -1170,6 +1174,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  margin-left: var(--space-xs);
 }
 
 .chat-header-title {

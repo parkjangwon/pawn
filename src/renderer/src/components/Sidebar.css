@@ -11,7 +11,6 @@
   left: 0;
   z-index: 10;
   overflow: hidden;
-  border-right: 1px solid var(--border-color);
   transition: transform 0.2s var(--ease-spring);
 }
 
@@ -39,9 +38,10 @@
   -webkit-app-region: no-drag;
 }
 
-/* Seamless handle: no visible divider by default — the sidebar's own border
-   is the boundary. A hairline accent appears on hover / while dragging so the
-   resize affordance stays discoverable without looking like a control. */
+/* Seamless handle: no visible divider by default — the sidebar/main background
+   contrast is the boundary. A hairline accent appears on hover / while
+   dragging so the resize affordance stays discoverable without looking like
+   a control. Matches the settings nav's resizer for a consistent feel. */
 .sidebar-resizer::after {
   content: '';
   position: absolute;
