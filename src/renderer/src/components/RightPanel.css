@@ -4,8 +4,10 @@
   flex-shrink: 0;
   margin-top: var(--app-header-height);
   height: calc(100% - var(--app-header-height));
-  background: var(--bg-primary);
-  border-left: 1px solid var(--border-color);
+  /* bg-secondary (same tint as the sidebars) gives the resizer a resting-state
+     boundary via color contrast instead of a static border line — matching
+     the sidebar/settings-nav pattern instead of a visible-until-hover border. */
+  background: var(--bg-secondary);
   position: relative;
   overflow: hidden;
   transition: width 0.2s var(--ease-spring), min-width 0.2s var(--ease-spring);
@@ -24,8 +26,8 @@
   touch-action: none;
 }
 
-/* Seamless handle: the panel's border-left is the boundary; a hairline accent
-   only shows on hover / while dragging. */
+/* Seamless handle: no visible divider by default; a hairline accent only
+   shows on hover / while dragging. Matches the sidebar/settings resizers. */
 .rp-resizer::after {
   content: '';
   position: absolute;

@@ -22,6 +22,10 @@ import './ChatArea.css'
 interface ChatAreaProps {
   onToggleSidebar: () => void
   onOpenSettings: () => void
+  canGoBack: boolean
+  canGoForward: boolean
+  onGoBack: () => void
+  onGoForward: () => void
 }
 
 // Long sessions render only the tail; scrolling to the top reveals older
@@ -29,7 +33,9 @@ interface ChatAreaProps {
 const DEFAULT_VISIBLE_MESSAGES = 300
 const EARLIER_BATCH = 300
 
-export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaProps): React.JSX.Element {
+export default function ChatArea({
+  onToggleSidebar, onOpenSettings, canGoBack, canGoForward, onGoBack, onGoForward
+}: ChatAreaProps): React.JSX.Element {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>(() => useProviderStore.getState().defaultSendMode)
@@ -487,6 +493,10 @@ export default function ChatArea({ onToggleSidebar, onOpenSettings }: ChatAreaPr
         projectName={activeProject?.name}
         gitBranch={gitBranch}
         projectPath={effectivePath}
+        canGoBack={canGoBack}
+        canGoForward={canGoForward}
+        onGoBack={onGoBack}
+        onGoForward={onGoForward}
       />
       {!activeSession || messages.length === 0 ? (
         <WelcomeScreen

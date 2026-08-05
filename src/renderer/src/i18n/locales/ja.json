@@ -168,6 +168,8 @@
     "toggleRightPanel": "右パネルを切り替え",
     "usageCacheHitRate": "キャッシュヒット率",
     "openSidebar": "サイドバーを開く",
+    "navBack": "戻る",
+    "navForward": "進む",
     "usageCacheWrite": "キャッシュ書き込み",
     "usageOutput": "出力",
     "usageInput": "入力",
@@ -232,7 +234,6 @@
   },
   "settings": {
     "title": "設定",
-    "backToApp": "アプリに戻る",
     "toggleNav": "設定サイドバーの表示切替",
     "searchPlaceholder": "設定を検索...",
     "appearance": "外観",

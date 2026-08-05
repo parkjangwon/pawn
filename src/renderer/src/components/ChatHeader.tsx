@@ -1,12 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
+import NavControls from './NavControls'
 
 interface ChatHeaderProps {
   onToggleSidebar: () => void
   projectName?: string
   gitBranch?: string | null
   projectPath?: string
+  canGoBack: boolean
+  canGoForward: boolean
+  onGoBack: () => void
+  onGoForward: () => void
 }
 
 interface ScriptItem {
@@ -63,7 +68,9 @@ const APP_PRESETS: OpenAppItem[] = [
   { id: 'finder', label: 'Show in Finder', appName: 'Finder' }
 ]
 
-export default function ChatHeader({ onToggleSidebar, projectName, gitBranch, projectPath }: ChatHeaderProps): React.JSX.Element {
+export default function ChatHeader({
+  onToggleSidebar, projectName, gitBranch, projectPath, canGoBack, canGoForward, onGoBack, onGoForward
+}: ChatHeaderProps): React.JSX.Element {
   const { t } = useTranslation()
   const bindings = useKeybindingsStore((s) => s.bindings)
   const panelShortcut = formatCombo(bindings['toggle-right-panel'])
@@ -212,6 +219,7 @@ export default function ChatHeader({ onToggleSidebar, projectName, gitBranch, pr
             <line x1="9" y1="3" x2="9" y2="21" />
           </svg>
         </button>
+        <NavControls canGoBack={canGoBack} canGoForward={canGoForward} onBack={onGoBack} onForward={onGoForward} />
         <div className="chat-header-title-block">
           <span className="chat-header-title">{projectName || t('contextBar.noProject')}</span>
           {gitBranch && <span className="chat-header-branch">• {gitBranch}</span>}

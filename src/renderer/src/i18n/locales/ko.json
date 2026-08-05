@@ -168,6 +168,8 @@
     "toggleRightPanel": "우측 패널 전환",
     "usageCacheHitRate": "캐시 적중률",
     "openSidebar": "사이드바 열기",
+    "navBack": "뒤로 가기",
+    "navForward": "앞으로 가기",
     "usageCacheWrite": "캐시 기록",
     "usageOutput": "출력",
     "usageInput": "입력",
@@ -232,7 +234,6 @@
   },
   "settings": {
     "title": "설정",
-    "backToApp": "앱으로 돌아가기",
     "toggleNav": "설정 사이드바 토글",
     "searchPlaceholder": "설정 검색...",
     "appearance": "외관",

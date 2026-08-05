@@ -58,7 +58,7 @@
   display: flex;
   flex-direction: column;
   padding: 0 var(--space-md) var(--space-md) var(--space-md);
-  padding-top: calc(var(--app-header-height) + 8px);
+  padding-top: var(--app-header-height);
   overflow-y: auto;
   overflow-x: hidden;
   /* Not a drag region: its box spans the full height starting at y:0 (the
@@ -67,6 +67,16 @@
      buttons that sit in that same top strip. The header itself already
      provides drag/double-click-maximize. */
   transition: width 0.2s var(--ease-spring), min-width 0.2s var(--ease-spring), padding-left 0.2s var(--ease-spring), padding-right 0.2s var(--ease-spring);
+}
+
+/* Mirrors the main sidebar's logo row (.sidebar-top-row) so the nav list
+   below starts at the same y as the main sidebar's project list — horizontal
+   padding is already provided by .settings-sidebar itself. */
+.settings-sidebar-top-row {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  flex-shrink: 0;
 }
 
 /* Drag handle between the Settings nav and the content — same seamless

@@ -3,12 +3,17 @@ import { useTranslation } from 'react-i18next'
 import { useRoutineStore } from '../stores/routine'
 import { useAppStore } from '../stores/app'
 import ConfirmDialog from './ConfirmDialog'
+import NavControls from './NavControls'
 import './AutomationView.css'
 
 type TriggerType = 'interval' | 'daily' | 'weekly'
 
 interface AutomationViewProps {
   onToggleSidebar: () => void
+  canGoBack: boolean
+  canGoForward: boolean
+  onGoBack: () => void
+  onGoForward: () => void
 }
 
 interface DraftState {
@@ -22,7 +27,9 @@ interface DraftState {
   projectId: string
 }
 
-export default function AutomationView({ onToggleSidebar }: AutomationViewProps): React.JSX.Element {
+export default function AutomationView({
+  onToggleSidebar, canGoBack, canGoForward, onGoBack, onGoForward
+}: AutomationViewProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const { routines, add, toggle, remove, runNow, runningIds, refresh } = useRoutineStore()
   const { projects, activeProjectId } = useAppStore()
@@ -156,6 +163,7 @@ export default function AutomationView({ onToggleSidebar }: AutomationViewProps)
             <line x1="9" y1="3" x2="9" y2="21" />
           </svg>
         </button>
+        <NavControls canGoBack={canGoBack} canGoForward={canGoForward} onBack={onGoBack} onForward={onGoForward} />
         <div className="chat-header-spacer" />
         <span className="automation-import-msg">{importMsg}</span>
         <button className="automation-tool-btn" onClick={() => void importAutomations()} title={t('automation.import')}>{t('automation.import')}</button>
