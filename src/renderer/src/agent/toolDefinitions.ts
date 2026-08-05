@@ -194,6 +194,104 @@ export const TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'git_pr_ready',
+    description:
+      'Local "ready for PR" pack: branch, status, commits vs base, diff stat, remote GitHub repo guess, and a checklist. Prefer this before github_create_pull. Does not open a PR.',
+    parameters: {
+      type: 'object',
+      properties: {
+        base: {
+          type: 'string',
+          description: 'Base branch to compare against (default: origin default or main)'
+        },
+        cwd: { type: 'string', description: 'Repo root (optional)' }
+      }
+    }
+  },
+  {
+    name: 'run_checks',
+    description:
+      'Detect and run project quality checks (typecheck/test/lint) from package.json scripts, go.mod, Cargo.toml, or pytest. Prefer this after edits instead of guessing shell commands. kind=all runs typecheck then test then lint and stops on first failure.',
+    parameters: {
+      type: 'object',
+      properties: {
+        kind: {
+          type: 'string',
+          description: 'all | typecheck | test | lint | build (default all)'
+        },
+        timeout: {
+          type: 'number',
+          description: 'Timeout seconds per command (default 120, max 600)'
+        },
+        cwd: { type: 'string', description: 'Project root (optional)' }
+      }
+    }
+  },
+  {
+    name: 'codebase_search',
+    description:
+      'Symbol-aware local search: finds likely definitions (function/class/type/const/…) and references for a name or phrase under the project. Prefer this to locate symbols before grep_search; use grep_search for arbitrary regex/text.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Symbol or phrase to find' },
+        path_glob: {
+          type: 'string',
+          description: 'Optional glob to limit files (e.g. "src/**/*.ts")'
+        },
+        max_results: { type: 'number', description: 'Max hits (default 40)' },
+        rootPath: { type: 'string', description: 'Root to search (optional)' }
+      },
+      required: ['query']
+    }
+  },
+  {
+    name: 'write_artifact',
+    description:
+      'Write a file under <project>/artifacts/ (reports, notes, exports). Creates the directory if needed. Prefer this for durable agent outputs the user can browse later.',
+    parameters: {
+      type: 'object',
+      properties: {
+        name: {
+          type: 'string',
+          description: 'Relative path under artifacts/, e.g. "notes/summary.md" or "report.md"'
+        },
+        content: { type: 'string', description: 'File contents' }
+      },
+      required: ['name', 'content']
+    }
+  },
+  {
+    name: 'list_artifacts',
+    description: 'List files in <project>/artifacts/ (optional subdir).',
+    parameters: {
+      type: 'object',
+      properties: {
+        subdir: { type: 'string', description: 'Optional subdirectory under artifacts/' }
+      }
+    }
+  },
+  {
+    name: 'terminal_list',
+    description: 'List embedded terminal sessions and buffer sizes. Use before terminal_read.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
+    name: 'terminal_read',
+    description:
+      'Read recent output from an embedded terminal session (ANSI stripped). Use when the user says a command failed in the terminal panel or you need the last shell output without re-running.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Terminal id from terminal_list. If omitted, reads the first available session.'
+        },
+        max_chars: { type: 'number', description: 'Max characters from the end of the buffer (default 20000)' }
+      }
+    }
+  },
+  {
     name: 'git_diff',
     description:
       'Show git diff. Default is working tree vs HEAD (staged + unstaged). Set staged:true for index-only (--cached). Use path to scope to a file or directory.',
@@ -322,6 +420,71 @@ export const TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { url: { type: 'string', description: 'URL to open' } },
       required: ['url']
+    }
+  },
+  {
+    name: 'web_fetch',
+    description:
+      'Fetch a public web page or API URL with an adaptive reader (Phase 0 platform APIs → header/identity grid → Jina Reader). Prefer this over shell curl and over browser_* for reading public articles, docs, Reddit/X/HN/YouTube/Wikipedia/arXiv/GitHub public pages, or when a plain fetch is blocked. Returns extracted text wrapped as untrusted content. Not a login/paywall bypass. If must_invoke_browser is set, escalate with browser_navigate + browser_read_text.',
+    parameters: {
+      type: 'object',
+      properties: {
+        url: { type: 'string', description: 'URL to fetch (http/https). Bare domains get https://.' },
+        max_attempts: {
+          type: 'number',
+          description: 'Max HTTP grid attempts (default 12). Lower for quick probes.'
+        },
+        device_class: {
+          type: 'string',
+          description: 'auto | desktop | mobile (default auto)'
+        },
+        include_trace: {
+          type: 'boolean',
+          description: 'Include attempt trace for debugging (default false)'
+        }
+      },
+      required: ['url']
+    }
+  },
+  {
+    name: 'web_research',
+    description:
+      'Multi-source public research for a topic: discovers URLs (DuckDuckGo HTML, HN Algolia, Wikipedia) and/or uses seed urls, then fetches each with web_fetch. Use when the user asks to research, investigate, survey opinions, find sources, or gather material on a topic — do not invent citations; call this (or web_fetch) first. Returns combined untrusted excerpts from public sources only.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Research topic / search query (optional if urls are provided)'
+        },
+        urls: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional seed URLs to fetch in addition to discovered sources'
+        },
+        max_sources: {
+          type: 'number',
+          description: 'Max pages to fetch (default 5, max 12)'
+        },
+        include_search: {
+          type: 'boolean',
+          description: 'Discover URLs via public search (default true when query is set)'
+        }
+      },
+      required: []
+    }
+  },
+  {
+    name: 'web_search',
+    description:
+      'Search the public web (DuckDuckGo HTML + Hacker News + Wikipedia). Returns titles, URLs, snippets — not full page text. Prefer web_search to discover URLs, then web_fetch for content. Faster and cheaper than web_research when you only need links.',
+    parameters: {
+      type: 'object',
+      properties: {
+        query: { type: 'string', description: 'Search query' },
+        max_results: { type: 'number', description: 'Max results (default 10, max 20)' }
+      },
+      required: ['query']
     }
   },
   {
@@ -659,6 +822,19 @@ export const TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'github_review_pull',
+    description:
+      'Full PR review pack: description, commits, existing reviews, CI checks, file patches (truncated), and a review checklist. Prefer this when the user asks to review a PR. Requires GitHub connection.',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name' },
+        number: { type: 'number', description: 'PR number' }
+      },
+      required: ['repo', 'number']
+    }
+  },
+  {
     name: 'github_list_commits',
     description: 'List recent commits on a repo (optional branch sha and path). Requires GitHub connection.',
     parameters: {
@@ -721,6 +897,33 @@ export const TOOLS: ToolDefinition[] = [
         labels: { type: 'array', items: { type: 'string' }, description: 'Label names' }
       },
       required: ['repo', 'title']
+    }
+  },
+  {
+    name: 'github_draft_issue',
+    description:
+      'Draft a structured bug/feature issue (summary, steps, expected/actual, environment, context). Default create=false returns markdown only. Set create=true with repo to open on GitHub. Use after terminal_read / browser_screenshot / computer_screenshot when filing a bug — put observations in context (images cannot be uploaded via API).',
+    parameters: {
+      type: 'object',
+      properties: {
+        repo: { type: 'string', description: 'owner/name (required if create=true)' },
+        title: { type: 'string', description: 'Issue title' },
+        summary: { type: 'string', description: 'Short summary' },
+        steps: { type: 'string', description: 'Steps to reproduce' },
+        expected: { type: 'string', description: 'Expected behavior' },
+        actual: { type: 'string', description: 'Actual behavior' },
+        environment: { type: 'string', description: 'OS, app version, etc.' },
+        context: {
+          type: 'string',
+          description: 'Logs, terminal excerpts, screenshot descriptions, stack traces'
+        },
+        labels: { type: 'array', items: { type: 'string' }, description: 'Label names' },
+        create: {
+          type: 'boolean',
+          description: 'If true, create the issue on GitHub (default false = draft only)'
+        }
+      },
+      required: ['title']
     }
   },
   {

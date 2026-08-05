@@ -411,6 +411,52 @@ describe('browser tools', () => {
   })
 })
 
+describe('research tools', () => {
+  const researchApi = {
+    fetch: vi.fn(),
+    research: vi.fn()
+  }
+
+  beforeEach(() => {
+    researchApi.fetch.mockReset()
+    researchApi.research.mockReset()
+    ;(window as any).api = {
+      ...(window as any).api,
+      research: researchApi
+    }
+    useProviderStore.setState({ permissionMode: 'yolo' })
+  })
+
+  it('web_fetch returns research text', async () => {
+    researchApi.fetch.mockResolvedValue({
+      ok: true,
+      text: 'ok=true\n\n[BEGIN UNTRUSTED WEB CONTENT]\nHello\n[END UNTRUSTED WEB CONTENT]'
+    })
+    const result = await executeTool(call('web_fetch', { url: 'https://example.com' }))
+    expect(result.isError).toBeFalsy()
+    expect(result.content).toContain('Hello')
+    expect(researchApi.fetch).toHaveBeenCalledWith(
+      'https://example.com',
+      expect.objectContaining({ deviceClass: 'auto' })
+    )
+  })
+
+  it('web_research requires query or urls', async () => {
+    const result = await executeTool(call('web_research', {}))
+    expect(result.isError).toBe(true)
+    expect(result.content).toMatch(/query|urls/i)
+  })
+
+  it('web_research passes query', async () => {
+    researchApi.research.mockResolvedValue({ ok: true, text: '# Research: AI\nok=1' })
+    const result = await executeTool(call('web_research', { query: 'AI agents', max_sources: 3 }))
+    expect(result.content).toContain('Research')
+    expect(researchApi.research).toHaveBeenCalledWith(
+      expect.objectContaining({ query: 'AI agents', maxSources: 3 })
+    )
+  })
+})
+
 describe('app tools', () => {
   beforeEach(() => {
     useProviderStore.setState({ permissionMode: 'yolo' })
