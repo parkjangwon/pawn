@@ -7,9 +7,13 @@ import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
 import {
   route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute, clearSessionRoute,
   noteProviderFailure, noteProviderSuccess, refreshMeasuredPricing,
+  markVisionIncapable, isVisionCapabilityError,
   type RouteDecision
 } from '../agent/router'
-import { compactTranscript, estimateTokens, TRANSCRIPT_VERSION, type TranscriptEntry, type StoredTranscript } from '../agent/transcript'
+import {
+  compactTranscript, estimateTokens, transcriptNeedsVision, TRANSCRIPT_VERSION,
+  type TranscriptEntry, type StoredTranscript
+} from '../agent/transcript'
 import { formatToolMessageContent } from '../agent/toolMessage'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
@@ -330,6 +334,8 @@ async function agentLoop(
       let result: LlmResult | null = null
       let decision: RouteDecision | null = null
 
+      const needsVision = transcriptNeedsVision(entries)
+
       // Try up to MAX_ROUTE_ATTEMPTS distinct models before failing the turn.
       for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; attempt++) {
         if (signal.aborted) break
@@ -341,13 +347,14 @@ async function agentLoop(
           // of retrying the same tier a third time.
           escalate: escalate + (transientFailures >= 2 ? 1 : 0),
           exclude: excluded,
-          newTurn: round === 1
+          newTurn: round === 1,
+          needsVision
         })
         if (!decision) break
 
         // Surface why the router picked this model (escalation, fallback,
-        // downgrade, context limits) in the usage diagnostics panel.
-        if (/escalat|fell back|downgrade|context too small/.test(decision.reason)) {
+        // downgrade, context limits, vision) in the usage diagnostics panel.
+        if (/escalat|fell back|downgrade|context too small|vision/.test(decision.reason)) {
           useUsageStore.getState().noteDiagnostic(
             sessionId,
             'info',
@@ -368,7 +375,11 @@ async function agentLoop(
             decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal
          })
           noteProviderSuccess(decision.provider.id)
-          setSessionRoute(sessionId, decision.key, decision.tier, estimateTokens(entries))
+          // Vision-only fallbacks must not steal sticky from the text model
+          // (DeepSeek coding + Gemini image turn → next text turn stays DeepSeek).
+          if (!decision.ephemeral) {
+            setSessionRoute(sessionId, decision.key, decision.tier, estimateTokens(entries))
+          }
           useUsageStore.getState().noteRoute(
             sessionId,
             decision.model.label || decision.model.modelId,
@@ -377,9 +388,12 @@ async function agentLoop(
           useUsageStore.getState().record(sessionId, decision.model, result.usage)
 
           // Tag the message bubble with the model that produced it so the UI
-          // can show "answered by <model>" in auto mode.
+          // can show "answered by <model>" in auto mode — also when vision
+          // fallback switched away from the pinned text model.
           const { routingMode } = useProviderStore.getState()
-          if (routingMode === 'auto' && currentMessageContent(projectId, sessionId, assistantMsgId).trim()) {
+          const showModel = (routingMode === 'auto' || decision.ephemeral)
+            && currentMessageContent(projectId, sessionId, assistantMsgId).trim()
+          if (showModel) {
             useAppStore.getState().updateMessageModel(
               projectId, sessionId, assistantMsgId,
               decision.model.label || decision.model.modelId
@@ -413,10 +427,23 @@ async function agentLoop(
           // text around would leave a confusing duplicate next to the retry.
           useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
           const message = err instanceof Error ? err.message : String(err)
-          // Only transient failures (network, 429, 5xx, overloaded) cool the
-          // provider down; a bad key or unknown model is permanent and should
-          // not punish the provider's other models.
-          if ((err as { transient?: boolean }).transient !== false) {
+
+          // Image-incapable models: remember for the session and free the retry
+          // budget for a real vision model (don't treat as provider-wide outage).
+          if (needsVision && isVisionCapabilityError(err)) {
+            markVisionIncapable(decision.key)
+            useUsageStore.getState().noteDiagnostic(
+              sessionId,
+              'info',
+              i18n.t('chat.diagnostics.visionFallback', {
+                model: decision.model.label || decision.model.modelId
+              })
+            )
+            transientFailures = 0
+          } else if ((err as { transient?: boolean }).transient !== false) {
+            // Only transient failures (network, 429, 5xx, overloaded) cool the
+            // provider down; a bad key or unknown model is permanent and should
+            // not punish the provider's other models.
             transientFailures++
             noteProviderFailure(decision.provider.id)
           } else {
@@ -431,7 +458,13 @@ async function agentLoop(
       }
 
       if (!decision) {
-        systemError(projectId, sessionId, i18n.t('chat.errors.noUsableModel'))
+        systemError(
+          projectId,
+          sessionId,
+          needsVision
+            ? i18n.t('chat.errors.noVisionModel')
+            : i18n.t('chat.errors.noUsableModel')
+        )
         break
       }
       if (!result) break

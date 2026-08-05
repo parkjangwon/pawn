@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   estimateTokens, compactTranscript, toClaudeMessages, toOpenAIMessages, sanitizeForSend,
+  transcriptNeedsVision,
   type TranscriptEntry
 } from '../transcript'
 
@@ -214,5 +215,25 @@ describe('sanitizeForSend', () => {
     const out = sanitizeForSend(entries)
     expect(out).toHaveLength(2)
     expect(out[1]).toEqual(entries[1])
+  })
+})
+
+describe('transcriptNeedsVision', () => {
+  it('is false for text-only transcripts', () => {
+    expect(transcriptNeedsVision([user('hello')])).toBe(false)
+  })
+
+  it('detects user image attachments', () => {
+    expect(transcriptNeedsVision([{
+      role: 'user',
+      content: 'look',
+      attachments: [{ kind: 'image', dataUrl: 'data:image/png;base64,AA' }]
+    }])).toBe(true)
+  })
+
+  it('detects screenshot tool results', () => {
+    expect(transcriptNeedsVision([
+      { role: 'tool', toolCallId: 's1', name: 'computer_screenshot', content: 'data:image/png;base64,AA' }
+    ])).toBe(true)
   })
 })

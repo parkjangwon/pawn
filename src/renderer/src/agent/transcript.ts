@@ -42,6 +42,19 @@ export interface TranscriptImageAttachment {
   name?: string
 }
 
+/** True when the transcript carries any image the model must actually "see". */
+export function transcriptNeedsVision(entries: TranscriptEntry[]): boolean {
+  for (const e of entries) {
+    if (e.role === 'user' && e.attachments?.some((a) => a.kind === 'image' && !!a.dataUrl)) {
+      return true
+    }
+    if (e.role === 'tool' && typeof e.content === 'string' && e.content.startsWith('data:image/')) {
+      return true
+    }
+  }
+  return false
+}
+
 export const TRANSCRIPT_VERSION = 2
 
 export interface StoredTranscript {

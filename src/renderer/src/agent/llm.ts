@@ -55,7 +55,7 @@ export function withConversationCacheAnchors(
  * that is not OpenAI itself.
  */
 export function supportsReasoningEffort(modelId: string): boolean {
-  return /(^|\/)(o[1-4](-|$)|gpt-5|deepseek-reasoner|qwq)/i.test(modelId)
+  return /(^|\/)(o[1-4](-|$)|gpt-5|deepseek-v4|deepseek-reasoner|qwq|grok-4)/i.test(modelId)
 }
 
 /**

@@ -69,6 +69,96 @@
   text-decoration: underline;
 }
 
+/* User-attached / inline screenshots (data:image markdown). */
+.markdown-body .md-inline-image {
+  display: block;
+  max-width: min(100%, 420px);
+  max-height: 360px;
+  width: auto;
+  height: auto;
+  margin: 8px 0 4px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  object-fit: contain;
+  background: var(--bg-secondary);
+  cursor: zoom-in;
+  transition: transform 0.15s var(--ease-spring, ease), box-shadow 0.15s ease, border-color 0.15s ease;
+  outline: none;
+}
+
+.markdown-body .md-inline-image:hover {
+  transform: scale(1.02);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.14);
+  border-color: var(--text-muted);
+}
+
+.markdown-body .md-inline-image:focus-visible {
+  box-shadow: 0 0 0 2px var(--focus-ring);
+  border-color: var(--text-secondary);
+}
+
+/* Fullscreen image viewer (portaled to body). */
+.md-image-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px 24px;
+  background: rgba(0, 0, 0, 0.72);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: mdLightboxIn 0.15s ease;
+  cursor: zoom-out;
+}
+
+@keyframes mdLightboxIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.md-image-lightbox-img {
+  max-width: min(96vw, 1400px);
+  max-height: min(90vh, 1000px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 10px;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.45);
+  background: var(--bg-primary, #111);
+  cursor: default;
+  user-select: none;
+  -webkit-user-drag: none;
+}
+
+.md-image-lightbox-close {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  z-index: 10001;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.md-image-lightbox-close:hover {
+  background: rgba(255, 255, 255, 0.22);
+}
+
+.md-image-lightbox-close:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+
 .markdown-body table {
   border-collapse: collapse;
   width: 100%;

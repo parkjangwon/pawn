@@ -10,7 +10,7 @@ import {
   KEYBINDING_IDS, DEFAULT_KEYBINDINGS, comboToString, formatCombo,
   useKeybindingsStore, type KeyBindingId
 } from '../stores/keybindings'
-import { guessPricing, type ApiFormat, type ModelPricing, type Provider } from '../types/provider'
+import { guessPricing, guessSupportsVision, type ApiFormat, type ModelPricing, type Provider } from '../types/provider'
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
@@ -86,9 +86,10 @@ export default function Settings({
   }, [])
 
   const {
-    providers, models, routingMode, defaultSendMode, permissionMode,
+    providers, models, routingMode, defaultSendMode, permissionMode, visionModelId,
     addProvider, removeProvider, updateProvider,
-    addModel, removeModel, setRoutingMode, setDefaultSendMode, setPermissionMode
+    addModel, removeModel, updateModel, setRoutingMode, setDefaultSendMode, setPermissionMode,
+    setVisionModel
   } = useProviderStore()
 
   const [activeSection, setActiveSection] = useState<SettingsSection>('appearance')
@@ -106,7 +107,9 @@ export default function Settings({
   })
   const [modelForm, setModelForm] = useState({
     providerId: '', modelId: '', label: '', tier: 'mid' as 'low' | 'mid' | 'high',
-    input: '', output: '', cacheRead: '', cacheWrite: '', contextWindow: ''
+    input: '', output: '', cacheRead: '', cacheWrite: '', contextWindow: '',
+    /** '' = auto-guess, 'yes' | 'no' = explicit */
+    vision: '' as '' | 'yes' | 'no'
   })
   const [routineForm, setRoutineForm] = useState({
     name: '', prompt: '', type: 'interval' as 'interval' | 'daily' | 'weekly',
@@ -134,6 +137,7 @@ export default function Settings({
 
   const applyModelIdGuess = (modelId: string): void => {
     const guess = guessPricing(modelId)
+    const visionGuess = guessSupportsVision(modelId)
     setModelForm((f) => ({
       ...f,
       modelId,
@@ -142,9 +146,18 @@ export default function Settings({
       output: guess ? String(guess.output) : f.output,
       cacheRead: guess ? String(guess.cacheRead) : f.cacheRead,
       cacheWrite: guess ? String(guess.cacheWrite) : f.cacheWrite,
-      contextWindow: guess ? String(guess.contextWindow) : f.contextWindow
+      contextWindow: guess ? String(guess.contextWindow) : f.contextWindow,
+      // Only auto-fill vision when the user has not set it explicitly yet.
+      vision: f.vision === '' && visionGuess !== undefined
+        ? (visionGuess ? 'yes' : 'no')
+        : f.vision
     }))
   }
+
+  const visionCandidates = useMemo(
+    () => models.filter((m) => m.enabled && m.supportsVision !== false),
+    [models]
+  )
 
   const handleAddFromPreset = (preset: ProviderPreset, apiKey: string): void => {
     if (!preset.localNoKey && !apiKey.trim()) return
@@ -165,7 +178,8 @@ export default function Settings({
         useProviderStore.getState().addModel({
           id: '', providerId: created.id, modelId: m.modelId, label: m.label, tier: m.tier, enabled: true,
           pricing: guess ? { input: guess.input, output: guess.output, cacheRead: guess.cacheRead, cacheWrite: guess.cacheWrite } : undefined,
-          contextWindow: guess?.contextWindow
+          contextWindow: guess?.contextWindow,
+          supportsVision: guessSupportsVision(m.modelId)
         })
       }
     }
@@ -203,6 +217,11 @@ export default function Settings({
       input !== undefined && output !== undefined
         ? { input, output, cacheRead: cacheRead ?? input * 0.1, cacheWrite: cacheWrite ?? input * 1.25 }
         : undefined
+    const supportsVision = modelForm.vision === 'yes'
+      ? true
+      : modelForm.vision === 'no'
+        ? false
+        : guessSupportsVision(modelForm.modelId.trim())
     addModel({
       id: '',
       providerId: modelForm.providerId,
@@ -211,9 +230,13 @@ export default function Settings({
       tier: modelForm.tier,
       enabled: true,
       pricing,
-      contextWindow: num(modelForm.contextWindow)
+      contextWindow: num(modelForm.contextWindow),
+      supportsVision
     })
-    setModelForm({ providerId: '', modelId: '', label: '', tier: 'mid', input: '', output: '', cacheRead: '', cacheWrite: '', contextWindow: '' })
+    setModelForm({
+      providerId: '', modelId: '', label: '', tier: 'mid',
+      input: '', output: '', cacheRead: '', cacheWrite: '', contextWindow: '', vision: ''
+    })
     setShowAddModel(false)
   }
 
@@ -645,20 +668,55 @@ export default function Settings({
             <h2>{t('settings.modelSection.title')}</h2>
             <p className="settings-desc">{t('settings.modelSection.desc')}</p>
             <div className="settings-card">
-              {models.map((m) => (
-                <div key={m.id} className="settings-row">
-                  <div className="settings-row-info">
-                    <span className="settings-row-label">{m.label || m.modelId}</span>
-                    <span className="settings-row-desc">
-                      {providers.find((p) => p.id === m.providerId)?.name} / {m.tier}
-                      {m.pricing
-                        ? t('settings.modelSection.pricingFormat', { input: m.pricing.input, output: m.pricing.output })
-                        : t('settings.modelSection.pricingUnknown')}
-                    </span>
+              {models.map((m) => {
+                const visionState = m.supportsVision === true ? 'yes' : m.supportsVision === false ? 'no' : 'auto'
+                return (
+                  <div key={m.id} className="settings-row model-row">
+                    <div className="settings-row-info">
+                      <span className="settings-row-label">
+                        {m.label || m.modelId}
+                        {m.supportsVision === true && (
+                          <span className="settings-badge vision-badge vision-yes" title={t('settings.modelSection.visionYes')}>
+                            {t('settings.modelSection.visionBadge')}
+                          </span>
+                        )}
+                        {m.supportsVision === false && (
+                          <span className="settings-badge vision-badge vision-no" title={t('settings.modelSection.visionNo')}>
+                            {t('settings.modelSection.visionTextOnly')}
+                          </span>
+                        )}
+                      </span>
+                      <span className="settings-row-desc">
+                        {providers.find((p) => p.id === m.providerId)?.name} / {m.tier}
+                        {m.pricing
+                          ? t('settings.modelSection.pricingFormat', { input: m.pricing.input, output: m.pricing.output })
+                          : t('settings.modelSection.pricingUnknown')}
+                      </span>
+                    </div>
+                    <div className="settings-row-actions">
+                      <select
+                        className="vision-select"
+                        value={visionState}
+                        aria-label={t('settings.modelSection.visionLabel')}
+                        title={t('settings.modelSection.visionHint')}
+                        onChange={(e) => {
+                          const v = e.target.value
+                          updateModel(m.id, {
+                            supportsVision: v === 'yes' ? true : v === 'no' ? false : undefined
+                          })
+                        }}
+                      >
+                        <option value="auto">{t('settings.modelSection.visionAuto')}</option>
+                        <option value="yes">{t('settings.modelSection.visionYes')}</option>
+                        <option value="no">{t('settings.modelSection.visionNo')}</option>
+                      </select>
+                      <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'model', id: m.id, name: m.label || m.modelId })}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+                      </button>
+                    </div>
                   </div>
-                  <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'model', id: m.id, name: m.label || m.modelId })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
-                </div>
-              ))}
+                )
+              })}
               {models.length === 0 && <div className="settings-empty">{t('settings.modelSection.empty')}</div>}
             </div>
             {showAddModel ? (
@@ -667,6 +725,13 @@ export default function Settings({
                 <input placeholder={t('settings.modelSection.modelIdPlaceholder')} value={modelForm.modelId} onChange={(e) => applyModelIdGuess(e.target.value)} />
                 <input placeholder={t('settings.modelSection.displayNamePlaceholder')} value={modelForm.label} onChange={(e) => setModelForm({ ...modelForm, label: e.target.value })} />
                 <select value={modelForm.tier} onChange={(e) => setModelForm({ ...modelForm, tier: e.target.value as 'low' | 'mid' | 'high' })}><option value="low">{t('settings.modelSection.tierLow')}</option><option value="mid">{t('settings.modelSection.tierMid')}</option><option value="high">{t('settings.modelSection.tierHigh')}</option></select>
+                <label className="settings-field-label">{t('settings.modelSection.visionLabel')}</label>
+                <select value={modelForm.vision} onChange={(e) => setModelForm({ ...modelForm, vision: e.target.value as '' | 'yes' | 'no' })}>
+                  <option value="">{t('settings.modelSection.visionAuto')}</option>
+                  <option value="yes">{t('settings.modelSection.visionYes')}</option>
+                  <option value="no">{t('settings.modelSection.visionNo')}</option>
+                </select>
+                <div className="settings-row-desc">{t('settings.modelSection.visionHint')}</div>
                 <div className="settings-row-desc" style={{ marginTop: 4 }}>{t('settings.modelSection.pricingDesc')}</div>
                 <div className="pricing-grid">
                   <input placeholder={t('settings.modelSection.priceInput')} type="number" step="0.01" value={modelForm.input} onChange={(e) => setModelForm({ ...modelForm, input: e.target.value })} />
@@ -691,6 +756,30 @@ export default function Settings({
               <div className="settings-row">
                 <div className="settings-row-info"><span className="settings-row-label">{t('settings.agentSection.routing')}</span><span className="settings-row-desc">{t('settings.agentSection.routingDesc')}</span></div>
                 <div className="theme-toggle"><button className={routingMode === 'auto' ? 'active' : ''} onClick={() => setRoutingMode('auto')}>{t('statusBar.auto')}</button><button className={routingMode === 'manual' ? 'active' : ''} onClick={() => setRoutingMode('manual')}>{t('statusBar.manual')}</button></div>
+              </div>
+              <div className="settings-row settings-row-stack">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">{t('settings.agentSection.visionFallback')}</span>
+                  <span className="settings-row-desc">{t('settings.agentSection.visionFallbackDesc')}</span>
+                </div>
+                <select
+                  className="vision-fallback-select"
+                  value={visionModelId || ''}
+                  onChange={(e) => setVisionModel(e.target.value || null)}
+                >
+                  <option value="">{t('settings.agentSection.visionFallbackAuto')}</option>
+                  {visionCandidates.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.label || m.modelId}
+                      {providers.find((p) => p.id === m.providerId) ? ` · ${providers.find((p) => p.id === m.providerId)!.name}` : ''}
+                    </option>
+                  ))}
+                </select>
+                {visionCandidates.length === 0 && (
+                  <div className="settings-row-desc vision-fallback-warn">
+                    {t('settings.agentSection.visionFallbackEmpty')}
+                  </div>
+                )}
               </div>
               <div className="settings-row">
                 <div className="settings-row-info"><span className="settings-row-label">{t('settings.agentSection.sendMode')}</span><span className="settings-row-desc">{t('settings.agentSection.sendModeDesc')}</span></div>
