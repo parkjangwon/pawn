@@ -346,8 +346,15 @@
 
 .message.user .message-content {
   background: var(--user-bubble);
+  border: 1px solid transparent;
   border-radius: var(--radius-lg);
   padding: var(--space-md) var(--space-lg);
+}
+
+/* Dark: give user bubbles a hairline edge so they separate from the canvas */
+.app.dark .message.user .message-content {
+  border-color: var(--border-color);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.03);
 }
 
 .message.assistant .message-content {
@@ -404,6 +411,22 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
+/* Dark composer: stronger edge + soft lift (reads like ChatGPT/Copilot input card) */
+.app.dark .chat-input-container {
+  border-color: var(--border-strong, var(--border-color));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 28px rgba(0, 0, 0, 0.35);
+}
+
+.app.dark .chat-input-container:focus-within {
+  border-color: rgba(255, 255, 255, 0.28);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.45);
+}
+
+.app.dark .message-model-label {
+  opacity: 0.85;
+  color: var(--text-muted);
+}
+
 /* Context bar (project, branch, model chips) */
 .context-bar {
   display: flex;
@@ -433,10 +456,29 @@
   font-size: 11px;
   color: var(--text-muted);
   background: var(--bg-secondary);
-  border: none;
+  border: 1px solid transparent;
   cursor: default;
   transition: all 0.15s;
   white-space: nowrap;
+}
+
+/* Dark composer chips: raised gray pills so they don't melt into the input card */
+.app.dark .context-chip {
+  background: #3a3a3c;
+  border-color: #525256;
+  color: var(--text-secondary);
+}
+
+.app.dark .context-chip.project-chip,
+.app.dark .context-chip.git-chip,
+.app.dark .context-chip.model-chip {
+  color: var(--text-primary);
+}
+
+.app.dark .context-chip.project-chip:hover,
+.app.dark .context-chip.git-chip:hover {
+  background: #48484a;
+  border-color: #6e6e73;
 }
 
 .context-chip svg {
@@ -672,6 +714,8 @@
 /* Project picker dropdown */
 .context-chip-wrapper {
   position: relative;
+  display: inline-flex;
+  align-items: center;
 }
 
 .project-picker {
@@ -772,9 +816,10 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: var(--space-sm);
   padding-top: var(--space-xs);
-  flex-wrap: wrap;
-  row-gap: 6px;
+  flex-wrap: nowrap;
+  min-height: 32px;
 }
 
 .attachment-bar {
@@ -831,13 +876,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
-  height: 26px;
+  width: 28px;
+  height: 28px;
   border: none;
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
   cursor: pointer;
+  flex-shrink: 0;
 }
 
 .attach-btn:hover {
@@ -848,16 +894,30 @@
 .input-actions-left {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
+  gap: 6px;
+  flex-shrink: 0;
+  min-width: 0;
 }
 
 .input-actions-right {
   display: flex;
   align-items: center;
-  gap: var(--space-sm);
-  flex-wrap: wrap;
+  gap: 6px;
+  flex-wrap: nowrap;
   justify-content: flex-end;
   min-width: 0;
+  flex: 1;
+}
+
+/* Keep 큐 / YOLO / model pickers on one row (wrapper was block and could stack) */
+.input-actions-left .context-chip-wrapper,
+.input-actions-right .context-chip-wrapper {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  position: relative;
+  flex-shrink: 0;
+  max-width: 100%;
 }
 
 /* Permission chip */
@@ -865,14 +925,41 @@
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 8px;
-  border-radius: 4px;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border-radius: 6px;
   font-size: 11px;
-  border: none;
+  line-height: 1;
+  border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s;
   background: var(--bg-secondary);
   color: var(--text-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.app.dark .perm-chip {
+  background: #3a3a3c;
+  border-color: #525256;
+}
+
+.app.dark .perm-chip.perm-yolo {
+  background: rgba(255, 107, 107, 0.16);
+  border-color: rgba(255, 107, 107, 0.35);
+  color: #ff8a8a;
+}
+
+.app.dark .perm-chip.perm-ask {
+  background: rgba(255, 214, 10, 0.12);
+  border-color: rgba(255, 214, 10, 0.28);
+}
+
+.app.dark .perm-chip.perm-auto {
+  background: rgba(245, 245, 247, 0.1);
+  border-color: rgba(245, 245, 247, 0.22);
+  color: var(--text-primary);
 }
 
 .perm-chip:hover {
@@ -902,6 +989,11 @@
 /* Model chip button */
 .model-chip-btn {
   cursor: pointer !important;
+  height: 28px;
+  box-sizing: border-box;
+  padding: 0 8px;
+  border-radius: 6px;
+  line-height: 1;
 }
 
 .model-chip-btn:hover {
@@ -1021,6 +1113,19 @@
   align-items: center;
   justify-content: center;
   width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.input-action-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 /* Cache diagnostics — explains *why* the cache hit rate is what it is. */
@@ -1039,6 +1144,7 @@
   gap: 6px;
   font-size: var(--font-xs);
   line-height: 1.4;
+  color: var(--text-muted);
 }
 
 .usage-diagnostic .diagnostic-icon {
@@ -1047,21 +1153,12 @@
   text-align: center;
 }
 
-.usage-diagnostic.warn,
-.usage-diagnostic.info {
-  color: var(--text-muted);
-  height: 28px;
-  border: none;
-  border-radius: var(--radius-sm);
-  background: none;
-  color: var(--text-muted);
-  cursor: pointer;
-  transition: all 0.15s;
+.usage-diagnostic.warn {
+  color: var(--warning, #f59e0b);
 }
 
-.input-action-btn:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
+.usage-diagnostic.info {
+  color: var(--text-muted);
 }
 
 .mode-select {
@@ -1085,10 +1182,10 @@
   border-radius: 50%;
   border: none;
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent, #fff);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s;
+  transition: background 0.15s, opacity 0.15s, color 0.15s;
 }
 
 .send-btn:hover:not(:disabled) {
@@ -1096,8 +1193,35 @@
 }
 
 .send-btn:disabled {
-  opacity: 0.3;
+  opacity: 0.45;
   cursor: default;
+}
+
+/* Dark: light disc + dark arrow (same rule as primary buttons) */
+.app.dark .send-btn {
+  background: #f5f5f7;
+  color: #1c1c1e;
+}
+
+.app.dark .send-btn:hover:not(:disabled) {
+  background: #ffffff;
+}
+
+.app.dark .send-btn:disabled {
+  background: #3a3a3c;
+  color: #8e8e93;
+  opacity: 1;
+}
+
+.app.dark .model-chip-btn {
+  color: var(--text-primary);
+  background: #3a3a3c;
+  border-color: #525256;
+}
+
+.app.dark .model-chip-btn:hover {
+  background: #48484a;
+  border-color: #6e6e73;
 }
 
 .stop-btn {

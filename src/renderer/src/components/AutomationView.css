@@ -34,23 +34,50 @@
   margin-bottom: var(--space-xs);
 }
 
+.automation-page-head h3 {
+  font-size: var(--font-xl);
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.automation-templates .automation-page-head {
+  margin-bottom: var(--space-sm);
+}
+
+.automation-templates .automation-page-head h3 {
+  color: var(--text-primary);
+  opacity: 1;
+}
+
 /* Empty-state hero */
 .automation-hero {
   text-align: center;
   padding: var(--space-2xl) var(--space-lg);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background: var(--bg-secondary);
+  background: var(--bg-elevated, var(--bg-secondary));
   margin-bottom: var(--space-lg);
+}
+
+.app.dark .automation-hero {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong, var(--border-color));
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .automation-hero-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  color: var(--accent);
-  opacity: 0.85;
+  color: var(--text-secondary);
+  opacity: 0.9;
   margin-bottom: var(--space-sm);
+}
+
+.app.dark .automation-hero-icon {
+  color: var(--text-primary);
+  opacity: 0.75;
 }
 
 .automation-hero h3 {
@@ -85,16 +112,26 @@
 .automation-card {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
-  background: var(--bg-primary);
+  background: var(--bg-elevated, var(--bg-primary));
   padding: var(--space-md) var(--space-lg);
   transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
   display: flex;
   flex-direction: column;
 }
 
+.app.dark .automation-card {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong, var(--border-color));
+}
+
 .automation-card:hover {
-  border-color: var(--accent);
+  border-color: var(--text-muted);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+}
+
+.app.dark .automation-card:hover {
+  border-color: #6e6e73;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
 .automation-card.example {
@@ -142,7 +179,13 @@
 
 .automation-running-badge {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent, #fff);
+}
+
+.app.dark .automation-running-badge {
+  background: #f5f5f7;
+  color: #1c1c1e;
+  border-color: transparent;
 }
 
 .automation-card-actions {
@@ -167,13 +210,23 @@
 .automation-modal {
   width: min(560px, calc(100vw - 40px));
   max-height: calc(100vh - 80px);
-  background: var(--bg-primary);
+  background: var(--bg-elevated, var(--bg-primary));
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
+}
+
+.app.dark .automation-modal {
+  background: #262628;
+  border-color: var(--border-strong, #48484a);
+  box-shadow: var(--shadow-elevated);
+}
+
+.app.dark .automation-modal-backdrop {
+  background: rgba(0, 0, 0, 0.62);
 }
 
 .automation-modal-head {
@@ -235,8 +288,8 @@
 .automation-field textarea,
 .automation-field select {
   width: 100%;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  border: 1px solid var(--control-border, var(--border-color));
+  background: var(--control-bg, var(--bg-secondary));
   color: var(--text-primary);
   border-radius: var(--radius-md);
   padding: 8px 12px;
@@ -249,6 +302,24 @@
 .automation-field textarea:focus,
 .automation-field select:focus {
   border-color: var(--focus-ring);
+}
+
+.app.dark .automation-field input,
+.app.dark .automation-field textarea,
+.app.dark .automation-field select {
+  background: #1c1c1e;
+  border-color: var(--control-border);
+  color: var(--text-primary);
+}
+
+.app.dark .automation-field select option {
+  background: #1c1c1e;
+  color: #f5f5f7;
+}
+
+.app.dark .automation-field input::placeholder,
+.app.dark .automation-field textarea::placeholder {
+  color: #8e8e93;
 }
 
 
@@ -300,6 +371,29 @@
   color: var(--text-primary);
 }
 
+.app.dark .automation-tool-btn {
+  background: var(--control-bg);
+  border-color: var(--control-border);
+  color: var(--text-primary);
+}
+
+.app.dark .automation-tool-btn:hover {
+  background: var(--bg-hover);
+  border-color: #6e6e73;
+}
+
+.app.dark .automation-card .settings-badge {
+  background: #3a3a3c;
+  color: var(--text-primary);
+  border: 1px solid var(--border-strong, #48484a);
+}
+
+.app.dark .automation-card .test-btn {
+  background: var(--control-bg);
+  border-color: var(--control-border);
+  color: var(--text-primary);
+}
+
 .automation-import-msg {
   font-size: var(--font-xs);
   color: var(--text-muted);
@@ -308,10 +402,6 @@
 
 .automation-templates {
   margin-bottom: var(--space-lg);
-}
-
-.automation-templates .automation-page-head {
-  margin-bottom: var(--space-sm);
 }
 
 @media (max-width: 900px) {
