@@ -47,4 +47,27 @@ describe('matchesKeybinding', () => {
     expect(matchesKeybinding('toggle-right-panel', input())).toBe(false)
     expect(matchesKeybinding('toggle-right-panel', input({ key: 'l', code: 'KeyL' }))).toBe(true)
   })
+
+  it('matches progressive close-layer on Meta+W / Ctrl+W', () => {
+    expect(
+      matchesKeybinding('close-layer', {
+        key: 'w',
+        code: 'KeyW',
+        alt: false,
+        control: false,
+        meta: true,
+        shift: false
+      })
+    ).toBe(true)
+    expect(
+      matchesKeybinding('close-layer', {
+        key: 'w',
+        code: 'KeyW',
+        alt: false,
+        control: true,
+        meta: false,
+        shift: false
+      })
+    ).toBe(true)
+  })
 })

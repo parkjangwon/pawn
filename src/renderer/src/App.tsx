@@ -152,6 +152,44 @@ export default function App(): React.JSX.Element {
   }, [isBrowserMode, startNewChat]))
   useKeybinding('toggle-sidebar', useCallback(() => { if (isBrowserMode) toggleActiveSidebar() }, [isBrowserMode, toggleActiveSidebar]))
 
+  /**
+   * Progressive close (Cmd/Ctrl+W): dismiss the top UI layer first, like
+   * browser tabs. Only when nothing remains does the main window close
+   * (macOS app may stay docked; full quit is Cmd+Q with optional confirm).
+   */
+  const closeLayer = useCallback((): boolean => {
+    if (showCommandPalette) {
+      setShowCommandPalette(false)
+      return true
+    }
+    if (showSettings) {
+      setShowSettings(false)
+      return true
+    }
+    try {
+      if ((window as any).__popRightPanelLayer?.() === true) return true
+    } catch { /* ignore */ }
+    try {
+      if ((window as any).__closeTerminalIfOpen?.() === true) return true
+    } catch { /* ignore */ }
+    if (mainView === 'automations') {
+      setMainView('chat')
+      return true
+    }
+    const sessionId = useAppStore.getState().activeSessionId
+    if (sessionId) {
+      useAppStore.getState().setActiveSession(null)
+      return true
+    }
+    return false
+  }, [showCommandPalette, showSettings, mainView])
+
+  const handleCloseLayer = useCallback(() => {
+    if (closeLayer()) return
+    // Nothing left to dismiss — close the window (not full app quit).
+    void window.api?.window?.close?.()
+  }, [closeLayer])
+
   // Electron: main-process forwarding dispatches every bound action here.
   useEffect(() => {
     return window.api?.onAppShortcut?.((id) => {
@@ -162,9 +200,15 @@ export default function App(): React.JSX.Element {
         setShowSettings(false)
         setMainView('chat')
         startNewChat()
+      } else if (id === 'close-layer') {
+        handleCloseLayer()
       }
     })
-  }, [toggleActiveSidebar, startNewChat])
+  }, [toggleActiveSidebar, startNewChat, handleCloseLayer])
+
+  useKeybinding('close-layer', useCallback(() => {
+    if (isBrowserMode) handleCloseLayer()
+  }, [isBrowserMode, handleCloseLayer]))
 
   // Escape closes modals. Cmd+[ / Cmd+] mirror the header's back/forward
   // buttons — the modifier means this never collides with typing literal

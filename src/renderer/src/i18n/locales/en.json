@@ -337,6 +337,27 @@
       "permissionMode": "Permission Mode",
       "permissionModeDesc": "Control how the agent asks for permissions"
     },
+    "memorySection": {
+      "title": "Memory (self-learning)",
+      "desc": "Long-term knowledge on this device only. When on, the agent learns preferences and project facts, recalls them automatically, and never stores API keys or passwords.",
+      "enabled": "Use Memory",
+      "enabledDesc": "Learn from chats, recall on later turns — no extra setup",
+      "stats": "{{total}} memories · ~/.pawn/memory.db",
+      "export": "Export",
+      "import": "Import",
+      "clearAll": "Clear all",
+      "clearConfirm": "Delete every memory on this device? This cannot be undone.",
+      "cleared": "All memories cleared",
+      "saved": "Saved",
+      "imported": "Imported {{n}} memories",
+      "browser": "Your memories",
+      "filterPlaceholder": "Search…",
+      "refresh": "Refresh",
+      "empty": "Nothing yet. Chat normally, or say “remember this…”.",
+      "forget": "Forget",
+      "desktopOnly": "Memory is available in the desktop app.",
+      "pin": "Pin"
+    },
     "pluginSection": {
       "title": "Plugins",
       "desc": "Manage plugins and integrations",
@@ -485,7 +506,9 @@
       "trayEnabled": "Show in menu bar",
       "trayEnabledDesc": "Keep a Pawn icon in the system tray / menu bar (right-click for menu)",
       "taskNotifications": "Task complete notification",
-      "taskNotificationsDesc": "Show a notification once when a turn finishes (chat replies and coding work) while Pawn is in the background."
+      "taskNotificationsDesc": "Show a notification once when a turn finishes (chat replies and coding work) while Pawn is in the background.",
+      "confirmQuit": "Confirm before quitting",
+      "confirmQuitDesc": "Ask for confirmation when quitting with ⌘Q / Ctrl+Q or the tray Quit item. You can also uncheck “Don’t ask again” on the quit dialog."
     },
     "shortcuts": "Shortcuts",
     "shortcutSection": {
@@ -502,7 +525,15 @@
       "toggle-sidebar": "Toggle sidebar",
       "open-command-palette": "Open command palette",
       "open-settings": "Open settings",
-      "new-session": "New session"
+      "new-session": "New session",
+      "close-layer": "Close layer (panel / session / window)"
+    },
+    "quitDialog": {
+      "message": "Quit Pawn?",
+      "detail": "Any running agent turn will be cancelled.",
+      "quit": "Quit",
+      "cancel": "Cancel",
+      "dontAsk": "Don't ask again"
     },
     "automations": "Automations"
   },

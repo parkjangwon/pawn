@@ -44,7 +44,9 @@ const DEFAULT_KEYBINDINGS: Record<string, string> = {
   'toggle-sidebar': 'Meta+B',
   'open-command-palette': 'Meta+K',
   'open-settings': 'Meta+,',
-  'new-session': 'Meta+N'
+  'new-session': 'Meta+N',
+  // Progressive close: layers first, then window (not full app quit — use Cmd+Q).
+  'close-layer': 'Meta+W'
 }
 
 /** Actions the main process can forward on behalf of the renderer. */
@@ -54,7 +56,8 @@ export const SHORTCUT_ACTIONS = [
   'toggle-sidebar',
   'open-command-palette',
   'open-settings',
-  'new-session'
+  'new-session',
+  'close-layer'
 ] as const
 
 export function setKeybinding(id: string, combo: string): void {

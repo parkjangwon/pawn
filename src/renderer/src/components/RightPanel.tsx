@@ -50,10 +50,12 @@ export default function RightPanel(): React.JSX.Element | null {
   const visibleRef = useRef(visible)
   const activeTabRef = useRef<TabId | null>(activeTab)
   const closingRef = useRef(closing)
+  const showPickerRef = useRef(showPicker)
   useEffect(() => { openTabsRef.current = openTabs }, [openTabs])
   useEffect(() => { visibleRef.current = visible }, [visible])
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
   useEffect(() => { closingRef.current = closing }, [closing])
+  useEffect(() => { showPickerRef.current = showPicker }, [showPicker])
   useEffect(() => () => {
     if (hideTimer.current) window.clearTimeout(hideTimer.current)
     document.body.classList.remove('resizing-right-panel')
@@ -276,8 +278,30 @@ export default function RightPanel(): React.JSX.Element | null {
       }
       closeTabById(id)
     }
-    return () => { delete (window as any).__closeRightPanelTab }
-  }, [])
+    /** Progressive Cmd+W: close picker → active tab → whole panel. Returns true if something closed. */
+    ;(window as any).__popRightPanelLayer = (): boolean => {
+      if (closingRef.current) return true
+      if (!visibleRef.current) return false
+      if (showPickerRef.current) {
+        setShowPicker(false)
+        return true
+      }
+      if (activeTabRef.current && openTabsRef.current.includes(activeTabRef.current)) {
+        closeTabById(activeTabRef.current)
+        return true
+      }
+      if (openTabsRef.current.length > 0) {
+        closeTabById(openTabsRef.current[openTabsRef.current.length - 1])
+        return true
+      }
+      requestHide()
+      return true
+    }
+    return () => {
+      delete (window as any).__closeRightPanelTab
+      delete (window as any).__popRightPanelLayer
+    }
+  }, [requestHide])
 
   useEffect(() => {
     (window as any).__openFileInPanel = (path: string): void => {

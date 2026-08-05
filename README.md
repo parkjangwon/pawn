@@ -2,15 +2,16 @@
 
 [한국어 버전 (Korean Version)](./README.ko.md)
 
-AI Coding Agent GUI — Code, Browse, Automate.
+AI Coding Agent GUI — Code, Browse, Automate, **Remember**.
 
-A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI, OpenCode's BYOK, and Claude Desktop's browser use. No harness, no lock-in — bring your own keys, install your own plugins, build your own agent.
+A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI, OpenCode's BYOK, and Claude Desktop's browser use. No harness, no lock-in — bring your own keys, install your own plugins, build your own agent. Long-term **Memory** stays on your machine and personalizes the agent over time.
 
 ## Philosophy
 
 - **No harness** — Pure canvas. Users install plugins/skills they need. Built-in tools stay thin capabilities, not a fixed research product pipeline.
 - **BYOK** — Register any OpenAI or Claude compatible API endpoint.
 - **Auto mode** — Multi-model routing based on task complexity and cache optimization.
+- **Local-first Memory** — Preferences and project facts live in `~/.pawn/memory.db` only. Never sent to a Pawn cloud.
 - **Open source** — MIT licensed, fully customizable.
 - **Claude Code compatible** — Loads `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, and `~/.agents/` directories.
 - **MCP-native** — Discovers and connects to your existing Model Context Protocol servers (Claude Code, Cursor, or Pawn-managed) so their tools become available to the agent automatically.
@@ -37,6 +38,7 @@ pawn
 - **macOS** — `Pawn-<version>-universal.dmg` (Apple Silicon + Intel). Open the `.dmg` and drag **Pawn** into Applications.
   - First launch: right-click → **Open**, then confirm in the Gatekeeper dialog (the build is unsigned).
 - **Windows** — `Pawn-<version>-x64-setup.exe` (Intel/AMD) or `Pawn-<version>-arm64-setup.exe` (ARM). Double-click to run the installer.
+- **Linux** — `.AppImage` / `.deb` from Releases (or build with `npm run dist:linux`).
 
 ### Installing skills & plugins
 
@@ -46,12 +48,13 @@ pawn
 - **Plugins** — project-scoped into `<project>/.claude/plugins/`, user-global via Claude Code's plugin install (or `~/.claude/plugins/` with an `installed_plugins.json` entry).
 - All installed skills are visible and toggleable in **Settings → Plugins**.
 
-Skills are **catalog entries**: the agent sees a short summary and must call `load_skill` for full instructions. Built-in tools (`web_fetch`, `run_checks`, …) are always in the tool list and do not require a skill install.
+Skills are **catalog entries**: the agent sees a short summary and must call `load_skill` for full instructions. Built-in tools (`web_fetch`, `memory_search`, `run_checks`, …) are always in the tool list and do not require a skill install.
 
 ### Requirements
 
-- macOS 10.12+ or Windows 10/11
+- macOS 10.12+, Windows 10/11, or Linux (packaged builds)
 - An OpenAI- or Claude-compatible API key (BYOK)
+- Node `^20.19.0 || >=22.12.0` if building from source
 
 ### Service connections (optional)
 
@@ -69,11 +72,12 @@ Maintainers: inject Desktop OAuth client IDs at release build time via GitHub Ac
 
 ### Core agent loop
 
-- Tool-calling agent loop (up to 25 rounds per turn).
+- Tool-calling agent loop (up to **50** rounds per turn; identical tool-call loops are stopped early).
 - Permission system with granular user approval dialogs (per tool type, including MCP tools).
 - Queue / Steering send modes.
 - Collapsed-by-default tool call output (Claude Code-style folded rows) to keep the transcript readable.
 - **Attachments**: images (vision-capable models as real image blocks) and text documents; large pastes become removable chips; double-click lightbox for images.
+- Transcript compaction when context fills up (cache-stable history in SQLite).
 
 ### Built-in agent tools (no extra plugins)
 
@@ -95,6 +99,26 @@ Thin tools that expand what the agent can do. They are not a separate product UI
 | `terminal_list` / `terminal_read` | Read recent output from the embedded terminal panel |
 | `update_plan` | Session task checklist for multi-step work |
 
+#### Long-term Memory (self-learning)
+
+Local durable **knowledge cards** — preferences, project facts, procedures, decisions, people notes. Stored only on this machine in `~/.pawn/memory.db` (SQLite + FTS5 + local hash embeddings). Never leaves your device; API keys, tokens, and passwords are redacted or rejected on save.
+
+| Tool | Purpose |
+|------|---------|
+| `memory_search` | Hybrid search (full-text + local embeddings) over saved cards |
+| `memory_save` | Save a durable card (agent or user) |
+| `memory_list` | Browse / filter stored cards |
+| `memory_update` / `memory_forget` | Correct or delete cards |
+
+Also built in:
+
+- **Auto-capture** after each agent turn (heuristic extraction from recent messages; multilingual remember cues).
+- **Turn injection** of top matching cards into the agent preamble (labeled **untrusted** background data — not instructions).
+- **Settings → Agent → Memory**: one on/off switch, export/import/clear, and a personal memory list (search, pin, forget). Capture and turn injection stay on automatically when Memory is enabled.
+- Scopes: **user** (global) and **project**; pinned cards rank higher on recall.
+
+Example: *“Remember: always use pnpm in this monorepo”* → saved → later turns inject that preference without re-explaining.
+
 #### Public web (built-in research engine)
 
 No API keys. Public content only — not a login/paywall bypass. Adapted from [insane-search](https://github.com/fivetaku/insane-search) (MIT).
@@ -113,8 +137,8 @@ If you also install an external “insane-search” skill under Claude Code / `~
 
 #### Browser & computer
 
-- **Browser Use**: embedded Chromium with its own cookie session — navigate, snapshot, click, fill, read text, screenshot, with a visible AI cursor.
-- **Computer Use**: cross-platform desktop automation (screenshot as vision, click/type/keypress).
+- **Browser Use**: embedded Chromium with its own cookie session — navigate, snapshot, click, fill, read text, screenshot, with a visible AI cursor (`browser_*`).
+- **Computer Use**: cross-platform desktop automation (screenshot as vision, click/type/keypress via `computer_*`).
   - macOS: `cliclick` + AppleScript fallback
   - Windows: PowerShell / `.NET Forms SendKeys`
   - Linux: `xdotool`
@@ -130,9 +154,15 @@ If you also install an external “insane-search” skill under Claude Code / `~
 
 Results appear in chat — no separate mailbox or PR product surface.
 
-#### App control
+#### App control & skills
 
-Open/close right-panel tabs, model/permission/reasoning/theme, list/create automations — via `app_*` tools.
+| Tool | Purpose |
+|------|---------|
+| `app_open_tab` / `app_close_tab` | Right-panel tabs (terminal, files, git, browser, diff, …) |
+| `app_set_model` / `app_set_permission_mode` / `app_set_reasoning` / `app_toggle_theme` | Session UI controls |
+| `app_list_automations` / `app_create_automation` | Automations from chat |
+| `load_skill` | Load full skill text from the catalog |
+| `install_skill` | Install skill/plugin from a git URL |
 
 ### Model Context Protocol (MCP)
 
@@ -153,10 +183,21 @@ Open/close right-panel tabs, model/permission/reasoning/theme, list/create autom
   - **Failover & cooldown** — transient cooldown (5s–120s) on failing providers.
   - **Vision fallback** — image messages route to a vision-capable model when needed.
 
-### Local database & persistence
+### Local data (`~/.pawn`)
 
-- **SQLite** (`better-sqlite3`, WAL) for local storage.
-- **Schemas**: `projects` & `sessions`, `messages`, `transcripts` (cache-stable history), `usage` (tokens & estimated cost), `routines`.
+Everything durable stays on your machine:
+
+| Path | Purpose |
+|------|---------|
+| `~/.pawn/pawn.db` | Projects, sessions, messages, transcripts, usage, routines |
+| `~/.pawn/memory.db` | Long-term Memory cards (separate from chat history) |
+| `~/.pawn/config.toml` | App settings (including quit confirmation) |
+| `~/.pawn/mcp.json` | Pawn-managed MCP servers |
+| `~/.pawn/reports/` | Automation deliverables |
+| `~/.pawn/installers/` | Cached install packages from `npx` |
+
+- **SQLite** (`better-sqlite3`, WAL) for both app DB and Memory.
+- **Transcripts** are kept separate from UI messages so prompt-cache prefixes stay stable across provider API calls.
 
 ### Right panel — Terminal, Files, Git, Diff, Artifacts & Browser
 
@@ -179,9 +220,11 @@ Open/close right-panel tabs, model/permission/reasoning/theme, list/create autom
 ### UI / UX
 
 - ChatGPT-style layout (sidebar + chat), native macOS traffic-light-aware header.
-- Composer card with attach button and removable chips.
+- Composer card with attach button and removable chips; dark-mode control contrast tuned for readability.
 - **Command palette** (`Cmd/Ctrl+K`).
-- **Customizable shortcuts** (Settings → Shortcuts) — palette, terminal, panels, sidebar.
+- **Customizable shortcuts** (Settings → Shortcuts) — palette, terminal, panels, sidebar, progressive close.
+- **Progressive close** (`Cmd/Ctrl+W` / close-layer): dismiss overlays → panel → window layers in order instead of quitting blindly.
+- **Quit confirmation** (`Cmd/Ctrl+Q`) with “don’t ask again”; toggle under Settings → System.
 - **Sidebar sessions**: pin, delete sessions/projects; active-stream cleanup on delete.
 - **"Open in" launcher**: 25+ editor presets with real app icons.
 - Light / Dark theme; responsive layout; rich Markdown + copy; streaming cursor; auto-scroll.
@@ -202,6 +245,7 @@ Open/close right-panel tabs, model/permission/reasoning/theme, list/create autom
 - Content Security Policy (CSP).
 - Interactive permission requests for sensitive local operations.
 - Research fetch SSRF guards (blocks private/loopback targets by default).
+- Memory redaction of secrets; injected Memory/web text treated as **untrusted data**.
 - Sandbox support (configurable).
 
 ## Tech stack
@@ -212,7 +256,7 @@ Open/close right-panel tabs, model/permission/reasoning/theme, list/create autom
 - **Vite** (via electron-vite) — Build tooling
 - **Zustand** — State management with persistence
 - **i18next** — Internationalization
-- **SQLite (better-sqlite3)** — Local database
+- **SQLite (better-sqlite3)** — Local database + Memory
 - **react-markdown** + **rehype-highlight** — Markdown rendering
 - **highlight.js** — Code syntax highlighting
 - **@modelcontextprotocol/sdk** — MCP client (stdio transport)
@@ -267,15 +311,17 @@ Output goes to the `release/` directory.
 src/
 ├── main/              # Electron main process (IPC, DB, CSP, window management)
 │   ├── connections/   # Google/GitHub OAuth (local tokens) + API tools
+│   ├── memory/        # Long-term Memory engine (SQLite FTS, embed, extract, store)
 │   ├── research/      # Public-web engine (web_search / web_fetch / web_research)
-│   ├── ipc/           # fs, shell, browser, computer, terminal, mcp, connections, research, …
+│   ├── ipc/           # fs, shell, browser, computer, terminal, mcp, memory, research, …
+│   ├── quit.ts        # Cmd+Q confirm + before-quit
 │   ├── spreadsheet.ts # CSV/XLSX read with caps
 │   └── mcpManager.ts  # MCP discovery, lifecycle, tool calls
 ├── preload/           # Context bridge (secure API exposure)
 └── renderer/          # React app
     └── src/
         ├── agent/     # Agent loop, tool definitions/executor, routing, transcripts, MCP
-        ├── components/# UI (chat, right panel, settings, artifacts, sidebar, …)
+        ├── components/# UI (chat, settings, Memory panel, right panel, sidebar, …)
         ├── i18n/      # en, ko, ja, zh
         ├── stores/    # Zustand (app, chat, provider, artifacts, mcp, keybindings, …)
         ├── styles/    # Global CSS + theme tokens

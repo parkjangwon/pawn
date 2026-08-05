@@ -34,6 +34,8 @@ export interface PawnConfig {
     defaultSendMode?: string
     sleepPrevention?: string
     trayEnabled?: boolean
+    /** When true (default), confirm before quitting (Cmd+Q / tray Quit). */
+    confirmQuit?: boolean
     windowState?: {
       x?: number
       y?: number

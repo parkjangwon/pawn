@@ -7,6 +7,7 @@ import { setTrayEnabled, setTrayLanguage, trayEnabled } from '../tray'
 import { setAppStreaming } from '../streamingState'
 import { getPawnDir } from '../config'
 import { getMainWindow } from '../window'
+import { isConfirmQuitEnabled, setConfirmQuitEnabled } from '../quit'
 
 /** Modern (10.7+) ICNS chunk types that embed a PNG directly, smallest-first
  *  — a menu-row icon never needs more than ~64-128px, and skipping the large
@@ -81,6 +82,20 @@ export function registerMiscIpc(): void {
   })
 
   handleTrusted('app:getVersion', async () => app.getVersion())
+
+  /** Close the main window only (macOS dock app stays alive). Used by progressive Cmd+W. */
+  handleTrusted('window:close', async () => {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) win.close()
+    return { ok: true }
+  })
+
+  handleTrusted('prefs:getConfirmQuit', async () => isConfirmQuitEnabled())
+
+  handleTrusted('prefs:setConfirmQuit', async (_, enabled: boolean) => {
+    setConfirmQuitEnabled(enabled === true)
+    return { ok: true, confirmQuit: isConfirmQuitEnabled() }
+  })
 
   handleTrusted('tray:getEnabled', async () => trayEnabled())
   handleTrusted('tray:setEnabled', async (_, enabled: boolean) => {

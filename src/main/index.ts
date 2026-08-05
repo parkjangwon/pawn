@@ -8,6 +8,8 @@ import { startRoutineServices, stopRoutineServices } from './ipc/routine'
 import { initKeybindings, registerShortcutForwarding } from './ipc/keybindings'
 import { closeDb } from './db'
 import { createTray, destroyTray, trayEnabled } from './tray'
+import { forceAllowQuit, registerQuitConfirm } from './quit'
+import { closeMemoryDb } from './memory'
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err)
@@ -19,6 +21,7 @@ process.on('unhandledRejection', (reason) => {
 // Two instances would open the same SQLite database from separate processes,
 // which can corrupt the WAL; focus the existing window instead.
 if (!app.requestSingleInstanceLock()) {
+  forceAllowQuit()
   app.quit()
 } else {
   app.on('second-instance', () => {
@@ -59,6 +62,7 @@ app.whenReady().then(() => {
 
   registerAllIpc()
   initKeybindings()
+  registerQuitConfirm()
   startRoutineServices()
 
   app.on('will-quit', () => {
@@ -69,6 +73,7 @@ app.whenReady().then(() => {
     killAllMcpServers()
     stopRoutineServices()
     destroyTray()
+    closeMemoryDb()
     closeDb()
   })
 

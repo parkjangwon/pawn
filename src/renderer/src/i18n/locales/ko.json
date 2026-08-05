@@ -337,6 +337,27 @@
       "permissionMode": "권한 모드",
       "permissionModeDesc": "에이전트가 권한을 요청하는 방식 제어"
     },
+    "memorySection": {
+      "title": "메모리 (자가 학습)",
+      "desc": "이 기기에만 남는 장기 지식입니다. 켜 두면 대화에서 선호·프로젝트 사실을 스스로 배우고 다음 턴에 떠올립니다. API 키·비밀번호는 저장하지 않습니다.",
+      "enabled": "메모리 사용",
+      "enabledDesc": "대화에서 배우고, 다음에도 알아서 기억합니다",
+      "stats": "메모리 {{total}}개 · ~/.pawn/memory.db",
+      "export": "내보내기",
+      "import": "가져오기",
+      "clearAll": "모두 삭제",
+      "clearConfirm": "이 기기의 모든 메모리를 삭제할까요? 되돌릴 수 없습니다.",
+      "cleared": "모든 메모리를 삭제했습니다",
+      "saved": "저장됨",
+      "imported": "메모리 {{n}}개를 가져왔습니다",
+      "browser": "내 메모리",
+      "filterPlaceholder": "검색…",
+      "refresh": "새로고침",
+      "empty": "아직 없어요. 평소처럼 대화하거나 “기억해…”라고 말해 보세요.",
+      "forget": "잊기",
+      "desktopOnly": "메모리는 데스크톱 앱에서 사용할 수 있습니다.",
+      "pin": "고정"
+    },
     "pluginSection": {
       "title": "플러그인",
       "desc": "플러그인 및 통합 관리",
@@ -485,7 +506,9 @@
       "trayEnabled": "메뉴바에 표시",
       "trayEnabledDesc": "시스템 트레이/메뉴바에 Pawn 아이콘을 유지합니다 (우클릭 메뉴 지원)",
       "taskNotifications": "작업 완료 알림",
-      "taskNotificationsDesc": "Pawn이 백그라운드에 있을 때 턴(채팅 응답·코딩 작업)이 끝나면 OS 알림을 한 번 표시합니다."
+      "taskNotificationsDesc": "Pawn이 백그라운드에 있을 때 턴(채팅 응답·코딩 작업)이 끝나면 OS 알림을 한 번 표시합니다.",
+      "confirmQuit": "종료 전 확인",
+      "confirmQuitDesc": "⌘Q / Ctrl+Q 또는 트레이 종료로 앱을 끌 때 확인합니다. 종료 대화상자의 “다시 묻지 않기”로도 끌 수 있습니다."
     },
     "shortcuts": "단축키",
     "shortcutSection": {
@@ -502,7 +525,15 @@
       "toggle-sidebar": "사이드바 토글",
       "open-command-palette": "명령 팔레트 열기",
       "open-settings": "설정 열기",
-      "new-session": "새 세션"
+      "new-session": "새 세션",
+      "close-layer": "레이어 닫기 (패널 / 세션 / 창)"
+    },
+    "quitDialog": {
+      "message": "Pawn을 종료할까요?",
+      "detail": "실행 중인 에이전트 작업이 있으면 취소됩니다.",
+      "quit": "종료",
+      "cancel": "취소",
+      "dontAsk": "다시 묻지 않기"
     },
     "automations": "자동화"
   },

@@ -12,6 +12,7 @@ import { registerKeybindingsIpc } from './keybindings'
 import { registerMcpIpc } from './mcp'
 import { registerConnectionsIpc } from './connections'
 import { registerResearchIpc } from './research'
+import { registerMemoryIpc } from './memory'
 
 /** Register every main-process IPC handler in one place. */
 export function registerAllIpc(): void {
@@ -29,4 +30,5 @@ export function registerAllIpc(): void {
   registerMcpIpc()
   registerConnectionsIpc()
   registerResearchIpc()
+  registerMemoryIpc()
 }

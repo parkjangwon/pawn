@@ -16,6 +16,7 @@ import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../util
 import { useSidebarResize } from '../hooks/useSidebarResize'
 import ConfirmDialog from './ConfirmDialog'
 import NavControls from './NavControls'
+import MemorySettingsPanel from './MemorySettingsPanel'
 import './Settings.css'
 
 type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'mcp' | 'connections' | 'system' | 'shortcuts' | 'data'
@@ -66,7 +67,14 @@ export default function Settings({
   const { t, i18n } = useTranslation()
   const { theme, set } = useThemeStore()
   const { servers: mcpServers, toggleServer: toggleMcpServer } = useMcpStore()
-  const { sleepPrevention, setSleepPrevention, taskNotificationsEnabled, setTaskNotificationsEnabled } = usePrefsStore()
+  const {
+    sleepPrevention,
+    setSleepPrevention,
+    taskNotificationsEnabled,
+    setTaskNotificationsEnabled,
+    confirmQuit,
+    setConfirmQuit
+  } = usePrefsStore()
   const { bindings: keybindings, setBinding: setKeybinding, reset: resetKeybinding } = useKeybindingsStore()
   const [recording, setRecording] = useState<KeyBindingId | null>(null)
   const [trayVisible, setTrayVisible] = useState(true)
@@ -856,6 +864,10 @@ export default function Settings({
                 </div>
               </div>
             </div>
+
+            <h3 className="settings-subsection-title">{t('settings.memorySection.title')}</h3>
+            <p className="settings-desc">{t('settings.memorySection.desc')}</p>
+            <MemorySettingsPanel />
           </div>
         )}
 
@@ -1162,6 +1174,20 @@ export default function Settings({
                       setTrayVisible(next)
                       void window.api.tray?.setEnabled(next).catch(() => {})
                     }}
+                  />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">{t('settings.systemSection.confirmQuit')}</span>
+                  <span className="settings-row-desc">{t('settings.systemSection.confirmQuitDesc')}</span>
+                </div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={confirmQuit}
+                    onChange={(e) => setConfirmQuit(e.target.checked)}
                   />
                   <span className="toggle-slider" />
                 </label>
