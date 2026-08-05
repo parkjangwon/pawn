@@ -1,8 +1,13 @@
 .markdown-body {
   font-size: var(--font-lg);
-  line-height: 1.25;
+  line-height: 1.6;
   color: var(--text-primary);
   word-break: break-word;
+  /* .message-content sets white-space: pre-wrap for plain text; react-markdown's
+     output has whitespace-only text nodes between block tags (e.g. between <li>
+     and <p> in loose lists), and pre-wrap renders those as real line breaks —
+     splitting list markers from their text. Reset to normal for parsed markdown. */
+  white-space: normal;
 }
 
 .markdown-body p {
@@ -30,7 +35,12 @@
 }
 
 .markdown-body li {
-  margin: 1px 0;
+  margin: 3px 0;
+  line-height: 1.5;
+}
+
+.markdown-body li p {
+  margin: 0;
 }
 
 .markdown-body blockquote {
