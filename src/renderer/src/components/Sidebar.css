@@ -11,6 +11,7 @@
   left: 0;
   z-index: 10;
   overflow: hidden;
+  border-right: 1px solid var(--border-color);
   transition: transform 0.2s var(--ease-spring);
 }
 
@@ -21,6 +22,54 @@
 .sidebar .sidebar-item,
 .sidebar input {
   -webkit-app-region: no-drag;
+}
+
+/* Resize handle — drag the right edge to change the sidebar width. */
+.sidebar-resizer {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 12px;
+  cursor: col-resize;
+  z-index: 20;
+  background: transparent;
+  touch-action: none;
+  user-select: none;
+  -webkit-app-region: no-drag;
+}
+
+/* Seamless handle: no visible divider by default — the sidebar's own border
+   is the boundary. A hairline accent appears on hover / while dragging so the
+   resize affordance stays discoverable without looking like a control. */
+.sidebar-resizer::after {
+  content: '';
+  position: absolute;
+  right: 5.5px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.sidebar-resizer:hover::after,
+body.resizing-sidebar .sidebar-resizer::after {
+  background: var(--text-muted);
+}
+
+/* Width transitions would fight the pointer during a drag. */
+body.resizing-sidebar .sidebar,
+body.resizing-sidebar .main-column,
+body.resizing-sidebar .settings-sidebar {
+  transition: none;
+}
+
+@media (max-width: 768px) {
+  /* On mobile the sidebar is a full overlay drawer — resizing is meaningless. */
+  .sidebar-resizer {
+    display: none;
+  }
 }
 
 .traffic-light-spacer {
@@ -388,7 +437,7 @@
 .rename-input {
   flex: 1;
   padding: 1px 4px;
-  border: 1px solid var(--accent);
+  border: 1px solid var(--focus-ring);
   border-radius: 3px;
   background: var(--bg-primary);
   color: var(--text-primary);

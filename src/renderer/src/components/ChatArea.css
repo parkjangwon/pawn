@@ -399,7 +399,7 @@
 }
 
 .chat-input-container:focus-within {
-  border-color: var(--accent);
+  border-color: var(--focus-ring);
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.08);
 }
 
@@ -1074,9 +1074,6 @@
   outline: none;
 }
 
-.mode-select:focus {
-  border-color: var(--accent);
-}
 
 .send-btn {
   display: flex;

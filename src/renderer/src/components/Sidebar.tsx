@@ -4,6 +4,7 @@ import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useRoutineStore } from '../stores/routine'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
+import { useSidebarResize } from '../hooks/useSidebarResize'
 import ProjectEditDialog from './ProjectEditDialog'
 import ConfirmDialog from './ConfirmDialog'
 import './Sidebar.css'
@@ -14,11 +15,12 @@ interface SidebarProps {
   open?: boolean
   mainView: 'chat' | 'automations'
   onMainViewChange: (view: 'chat' | 'automations') => void
+  onSidebarWidthChange: (width: number) => void
 }
 
 const GENERAL_PROJECT_ID = '__general__'
 
-export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMainViewChange }: SidebarProps): React.JSX.Element {
+export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMainViewChange, onSidebarWidthChange }: SidebarProps): React.JSX.Element {
   const { t } = useTranslation()
   const {
     projects,
@@ -44,6 +46,10 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
   useEffect(() => { try { const s = localStorage.getItem('pawn-pinned-sessions'); if (s) setPinnedSessions(new Set(JSON.parse(s))) } catch {} }, [])
+
+  // Shared with the Settings nav: same width, same localStorage key, and the
+  // width is committed through App so both stay in sync.
+  const attachResizer = useSidebarResize(onSidebarWidthChange)
 
   // Surface live info for recent sessions that only exist in the DB so far;
   // counts/previews then update as soon as the store has their history.
@@ -189,6 +195,9 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`}>
+      {/* Drag handle for resizing the sidebar width */}
+      <div className="sidebar-resizer" ref={attachResizer} role="separator" aria-orientation="vertical" />
+
       {/* Traffic light safe area + logo */}
       <div className="traffic-light-spacer" />
       <div className="sidebar-top-row">

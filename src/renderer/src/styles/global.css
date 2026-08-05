@@ -2,6 +2,7 @@
   --sidebar-width: 244px;
   --titlebar-height: 0px;
   --app-header-height: 48px;
+  --focus-ring: rgba(0, 0, 0, 0.25);
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -30,7 +31,7 @@
 }
 
 *:focus-visible {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
   border-radius: 4px;
 }
@@ -125,6 +126,7 @@ body {
   --accent: #2c2c2c;
   --accent-hover: #1a1a1a;
   --accent-subtle: rgba(44, 44, 44, 0.08);
+  --focus-ring: rgba(0, 0, 0, 0.25);
   --user-bubble: #f0f0f0;
   --danger: #ef4444;
   --warning: #f59e0b;
@@ -145,6 +147,7 @@ body {
   --accent: #ececec;
   --accent-hover: #ffffff;
   --accent-subtle: rgba(236, 236, 236, 0.1);
+  --focus-ring: rgba(255, 255, 255, 0.32);
   --user-bubble: #2f2f2f;
   --danger: #ef4444;
   --warning: #f59e0b;

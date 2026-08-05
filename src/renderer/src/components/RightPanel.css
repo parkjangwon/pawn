@@ -24,7 +24,8 @@
   touch-action: none;
 }
 
-/* Thin visible line in the middle of the resizer */
+/* Seamless handle: the panel's border-left is the boundary; a hairline accent
+   only shows on hover / while dragging. */
 .rp-resizer::after {
   content: '';
   position: absolute;
@@ -32,11 +33,13 @@
   top: 0;
   bottom: 0;
   width: 1px;
-  background: var(--border-color);
+  background: transparent;
+  transition: background 0.15s;
 }
 
-.rp-resizer:hover::after {
-  background: var(--accent);
+.rp-resizer:hover::after,
+body.resizing-right-panel .rp-resizer::after {
+  background: var(--text-muted);
 }
 
 /* Tab bar */

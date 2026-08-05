@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect } from 'react'
 import { useEffectiveTheme, useThemeStore } from './stores/theme'
 import { useAppStore } from './stores/app'
 import { useProviderStore } from './stores/provider'
@@ -6,6 +6,7 @@ import { usePrefsStore } from './stores/prefs'
 import { useRoutineStore } from './stores/routine'
 import { useMcpStore } from './stores/mcp'
 import { useKeybindingsStore, useKeybinding } from './stores/keybindings'
+import { readStoredSidebarWidth, persistSidebarWidth, clampSidebarWidth } from './hooks/useSidebarResize'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
 import AutomationView from './components/AutomationView'
@@ -23,6 +24,19 @@ export default function App(): React.JSX.Element {
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('pawn-sidebar-open') !== 'false' } catch { return true }
   })
+
+  // Sidebar width is a single app-wide preference shared by the main sidebar
+  // and the Settings nav. Apply the stored value before first paint; drag
+  // handles in either place commit back through this callback.
+  useLayoutEffect(() => {
+    document.documentElement.style.setProperty('--sidebar-width', `${readStoredSidebarWidth()}px`)
+  }, [])
+
+  const commitSidebarWidth = useCallback((width: number) => {
+    const clamped = clampSidebarWidth(width)
+    persistSidebarWidth(clamped)
+    document.documentElement.style.setProperty('--sidebar-width', `${clamped}px`)
+  }, [])
 
   // Initialize data from backend on mount
   useEffect(() => {
@@ -105,6 +119,7 @@ export default function App(): React.JSX.Element {
         open={sidebarOpen}
         mainView={mainView}
         onMainViewChange={setMainView}
+        onSidebarWidthChange={commitSidebarWidth}
       />
       <div className="main-column">
         {mainView === 'chat' ? (
@@ -114,7 +129,7 @@ export default function App(): React.JSX.Element {
         )}
       </div>
       <RightPanel />
-      {showSettings && <Settings onClose={() => setShowSettings(false)} />}
+      {showSettings && <Settings onClose={() => setShowSettings(false)} onSidebarWidthChange={commitSidebarWidth} />}
       {showCommandPalette && (
         <CommandPalette
           onClose={() => setShowCommandPalette(false)}
