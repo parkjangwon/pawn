@@ -248,8 +248,9 @@
 .automation-field input:focus,
 .automation-field textarea:focus,
 .automation-field select:focus {
-  border-color: var(--accent);
+  border-color: var(--focus-ring);
 }
+
 
 .automation-field-hint {
   font-size: var(--font-xs);

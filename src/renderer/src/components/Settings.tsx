@@ -14,6 +14,7 @@ import { guessPricing, type ApiFormat, type ModelPricing, type Provider } from '
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
+import { useSidebarResize } from '../hooks/useSidebarResize'
 import ConfirmDialog from './ConfirmDialog'
 import './Settings.css'
 
@@ -41,6 +42,7 @@ interface SourceSignal {
 
 interface SettingsProps {
   onClose: () => void
+  onSidebarWidthChange: (width: number) => void
 }
 
 const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon: string }[] = [
@@ -55,7 +57,7 @@ const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon:
   { id: 'data', labelKey: 'settings.data', groupKey: 'settings.groups.general', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
 ]
 
-export default function Settings({ onClose }: SettingsProps): React.JSX.Element {
+export default function Settings({ onClose, onSidebarWidthChange }: SettingsProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
   const { theme, set } = useThemeStore()
   const { routines, runningIds, add: addRoutine, toggle: toggleRoutine, remove: removeRoutine, runNow } = useRoutineStore()
@@ -65,6 +67,9 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
   const [recording, setRecording] = useState<KeyBindingId | null>(null)
   const [trayVisible, setTrayVisible] = useState(true)
   const [navOpen, setNavOpen] = useState(true)
+
+  // Same drag-to-resize behavior (and width) as the main sidebar.
+  const attachResizer = useSidebarResize(onSidebarWidthChange)
 
   // App.tsx's toggle-sidebar shortcut routes here while Settings is open,
   // since the main sidebar it would otherwise toggle is hidden behind this
@@ -517,6 +522,8 @@ export default function Settings({ onClose }: SettingsProps): React.JSX.Element 
           ))}
         </div>
       </div>
+
+      <div className="settings-resizer" ref={attachResizer} role="separator" aria-orientation="vertical" />
 
       <div className="settings-content">
         {activeSection === 'appearance' && (

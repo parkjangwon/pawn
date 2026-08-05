@@ -51,7 +51,10 @@ export default function RightPanel(): React.JSX.Element | null {
   useEffect(() => { visibleRef.current = visible }, [visible])
   useEffect(() => { activeTabRef.current = activeTab }, [activeTab])
   useEffect(() => { closingRef.current = closing }, [closing])
-  useEffect(() => () => { if (hideTimer.current) window.clearTimeout(hideTimer.current) }, [])
+  useEffect(() => () => {
+    if (hideTimer.current) window.clearTimeout(hideTimer.current)
+    document.body.classList.remove('resizing-right-panel')
+  }, [])
 
   const { projects, activeProjectId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
@@ -178,6 +181,7 @@ export default function RightPanel(): React.JSX.Element | null {
       isResizing.current = true
       // Width transitions would fight the pointer, making the drag feel springy.
       panelRef.current.style.transition = 'none'
+      document.body.classList.add('resizing-right-panel')
       document.body.style.cursor = 'col-resize'
       document.body.style.userSelect = 'none'
 
@@ -192,6 +196,7 @@ export default function RightPanel(): React.JSX.Element | null {
         isResizing.current = false
         customizedWidth.current = true
         if (panelRef.current) panelRef.current.style.transition = ''
+        document.body.classList.remove('resizing-right-panel')
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
         if (panelRef.current) {

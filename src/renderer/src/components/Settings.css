@@ -69,6 +69,41 @@
   transition: width 0.2s var(--ease-spring), min-width 0.2s var(--ease-spring), padding-left 0.2s var(--ease-spring), padding-right 0.2s var(--ease-spring);
 }
 
+/* Drag handle between the Settings nav and the content — same seamless
+   behavior as the main sidebar: invisible by default, hairline accent on
+   hover / while dragging. Sits in the flex row so it always tracks the nav
+   width, and it stays below the fixed header (which owns drag regions). */
+.settings-resizer {
+  position: relative;
+  flex-shrink: 0;
+  width: 12px;
+  cursor: col-resize;
+  touch-action: none;
+  user-select: none;
+  z-index: 30;
+  background: transparent;
+}
+
+.settings-resizer::after {
+  content: '';
+  position: absolute;
+  left: 5.5px;
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.settings-resizer:hover::after,
+body.resizing-sidebar .settings-resizer::after {
+  background: var(--text-muted);
+}
+
+.settings-page.nav-collapsed .settings-resizer {
+  display: none;
+}
+
 .settings-page.nav-collapsed .settings-sidebar {
   width: 0;
   min-width: 0;
@@ -99,8 +134,9 @@
 }
 
 .settings-search-input:focus {
-  border-color: var(--accent);
+  border-color: var(--focus-ring);
 }
+
 
 .settings-nav-group {
   display: flex;
@@ -277,8 +313,9 @@
 }
 
 .settings-content select:focus {
-  border-color: var(--accent);
+  border-color: var(--focus-ring);
 }
+
 
 /* Toggle switch */
 .toggle-switch {
@@ -404,8 +441,9 @@
 .add-form input:focus,
 .add-form select:focus,
 .add-form textarea:focus {
-  border-color: var(--accent);
+  border-color: var(--focus-ring);
 }
+
 
 .mcp-env-input {
   font-family: 'SF Mono', 'Fira Code', monospace;
@@ -651,8 +689,9 @@
 }
 
 .plugin-search-input:focus {
-  border-color: var(--accent);
+  border-color: var(--focus-ring);
 }
+
 
 .plugin-kind {
   display: inline-flex;
@@ -680,6 +719,9 @@
   .settings-sidebar {
     width: 200px;
     min-width: 200px;
+  }
+  .settings-resizer {
+    display: none;
   }
   .settings-content {
     padding: var(--space-lg) var(--space-md);

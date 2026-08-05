@@ -34,11 +34,23 @@ beforeEach(() => {
   })
   useChatStore.setState({ isStreaming: false, streamingSessionId: null })
   try { localStorage.removeItem('pawn-pinned-sessions') } catch {}
+  try { localStorage.removeItem('pawn-sidebar-width') } catch {}
+  document.documentElement.style.removeProperty('--sidebar-width')
+  document.body.classList.remove('resizing-sidebar')
+  document.body.style.cursor = ''
+  document.body.style.userSelect = ''
 })
 
-function renderSidebar(): ReturnType<typeof render> {
+function renderSidebar(props: { onSidebarWidthChange?: (width: number) => void } = {}): ReturnType<typeof render> {
   return render(
-    <Sidebar onOpenSettings={noop} onToggle={noop} open mainView="chat" onMainViewChange={noop} />
+    <Sidebar
+      onOpenSettings={noop}
+      onToggle={noop}
+      open
+      mainView="chat"
+      onMainViewChange={noop}
+      onSidebarWidthChange={props.onSidebarWidthChange || noop}
+    />
   )
 }
 
@@ -110,5 +122,36 @@ describe('Sidebar — session deletion', () => {
 
     expect(stopStreaming).not.toHaveBeenCalled()
     expect(useAppStore.getState().projects[0].sessions.find((s) => s.id === targetId)).toBeUndefined()
+  })
+})
+
+describe('Sidebar — width resizing', () => {
+  it('drags the resizer to widen the sidebar and reports the new width', () => {
+    const onWidthChange = vi.fn()
+    renderSidebar({ onSidebarWidthChange: onWidthChange })
+    const resizer = document.querySelector('.sidebar-resizer') as HTMLElement
+    expect(resizer).not.toBeNull()
+
+    fireEvent.pointerDown(resizer, { clientX: 300 })
+    fireEvent.pointerMove(document, { clientX: 360 })
+    fireEvent.pointerUp(document)
+
+    expect(onWidthChange).toHaveBeenCalledWith(304)
+    expect(document.documentElement.style.getPropertyValue('--sidebar-width')).toBe('304px')
+    expect(document.body.classList.contains('resizing-sidebar')).toBe(false)
+    expect(document.body.style.cursor).toBe('')
+  })
+
+  it('clamps the sidebar width to its minimum bound', () => {
+    const onWidthChange = vi.fn()
+    renderSidebar({ onSidebarWidthChange: onWidthChange })
+    const resizer = document.querySelector('.sidebar-resizer') as HTMLElement
+
+    fireEvent.pointerDown(resizer, { clientX: 300 })
+    fireEvent.pointerMove(document, { clientX: -500 })
+    fireEvent.pointerUp(document)
+
+    expect(onWidthChange).toHaveBeenCalledWith(200)
+    expect(document.documentElement.style.getPropertyValue('--sidebar-width')).toBe('200px')
   })
 })

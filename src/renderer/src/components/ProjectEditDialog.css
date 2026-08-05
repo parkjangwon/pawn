@@ -82,8 +82,9 @@
 }
 
 .ped-name-input:focus {
-  border-color: var(--accent);
+  border-color: var(--focus-ring);
 }
+
 
 .ped-paths {
   display: flex;
