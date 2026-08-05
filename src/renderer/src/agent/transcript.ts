@@ -42,13 +42,24 @@ export interface TranscriptImageAttachment {
   name?: string
 }
 
+/** Extract a data-URL image from tool content (optionally preceded by text meta). */
+export function extractImageDataUrl(content: string): string | null {
+  if (!content) return null
+  if (content.startsWith('data:image/')) {
+    const m = content.match(/^data:image\/[a-zA-Z+.-]+;base64,[A-Za-z0-9+/=\s]+/)
+    return m ? m[0].replace(/\s+/g, '') : content.split(/\s/)[0] || null
+  }
+  const m = content.match(/data:image\/[a-zA-Z+.-]+;base64,[A-Za-z0-9+/=]+/)
+  return m ? m[0] : null
+}
+
 /** True when the transcript carries any image the model must actually "see". */
 export function transcriptNeedsVision(entries: TranscriptEntry[]): boolean {
   for (const e of entries) {
     if (e.role === 'user' && e.attachments?.some((a) => a.kind === 'image' && !!a.dataUrl)) {
       return true
     }
-    if (e.role === 'tool' && typeof e.content === 'string' && e.content.startsWith('data:image/')) {
+    if (e.role === 'tool' && typeof e.content === 'string' && extractImageDataUrl(e.content)) {
       return true
     }
   }
@@ -199,21 +210,26 @@ export function toClaudeMessages(entries: TranscriptEntry[]): Array<Record<strin
       continue
     }
 
-    const isImage = typeof e.content === 'string' && e.content.startsWith('data:image/')
+    const dataUrl = typeof e.content === 'string' ? extractImageDataUrl(e.content) : null
     let blockContent: unknown = e.content
-    if (isImage) {
-      const match = e.content.match(/^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/)
+    if (dataUrl) {
+      const match = dataUrl.match(/^data:(image\/[a-zA-Z+.-]+);base64,(.+)$/)
+      const meta = e.content
+        .replace(dataUrl, '')
+        .replace(/\n+/g, ' ')
+        .trim()
       if (match) {
-        blockContent = [
-          {
-            type: 'image',
-            source: {
-              type: 'base64',
-              media_type: match[1],
-              data: match[2]
-            }
+        const blocks: Array<Record<string, unknown>> = []
+        if (meta) blocks.push({ type: 'text', text: meta })
+        blocks.push({
+          type: 'image',
+          source: {
+            type: 'base64',
+            media_type: match[1],
+            data: match[2]
           }
-        ]
+        })
+        blockContent = blocks
       }
     }
 
@@ -268,15 +284,20 @@ export function toOpenAIMessages(entries: TranscriptEntry[]): Array<Record<strin
       continue
     }
     
-    const isImage = typeof e.content === 'string' && e.content.startsWith('data:image/')
-    if (isImage) {
-      out.push({ role: 'tool', tool_call_id: e.toolCallId, content: 'Screenshot captured and attached.' })
+    const dataUrl = typeof e.content === 'string' ? extractImageDataUrl(e.content) : null
+    if (dataUrl) {
+      const meta = e.content.replace(dataUrl, '').replace(/\n+/g, ' ').trim()
+      out.push({
+        role: 'tool',
+        tool_call_id: e.toolCallId,
+        content: meta || 'Screenshot captured and attached. Coords use image space (top-left).'
+      })
       out.push({
         role: 'user',
         content: [
           {
             type: 'image_url',
-            image_url: { url: e.content }
+            image_url: { url: dataUrl }
           }
         ]
       })

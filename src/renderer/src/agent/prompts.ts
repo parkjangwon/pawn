@@ -33,8 +33,15 @@ Batch independent read-only tools in one turn — they run in parallel.
 - Prefer web tools for **reading public content**; browser_* for **interaction**; GitHub/Google connections for private/authenticated data.
 
 ## Browser / computer / app control
-- Embedded browser: browser_navigate → browser_snapshot → click/fill/eval. Snapshot after navigation or DOM-changing clicks.
-- Computer use (desktop): screenshot is vision-attached; click coordinates are top-left origin.
+- Embedded browser: browser_navigate → browser_snapshot → click/fill/eval. Snapshot after navigation or DOM-changing clicks. Prefer browser_* for web UIs inside the app.
+- **Computer use (full desktop OS)**:
+  1. computer_screenshot (vision) → read image size meta → computer_click/drag/scroll/type/keypress
+  2. Coordinates are **image space, top-left origin** (from the last screenshot) unless coord_space=screen
+  3. After UI changes: computer_screenshot again or return_screenshot=true on the action
+  4. Double-click: clicks=2. Right-click: button=right. Hotkeys: computer_keypress "cmd+c" / "ctrl+v"
+  5. Large paste: computer_clipboard set + keypress paste. Wait with computer_wait after animations
+  6. Multi-monitor: computer_displays then screenshot display_id=…
+  7. macOS needs Accessibility + Screen Recording + often \`brew install cliclick\`
 - App control: app_open_tab / app_close_tab for terminal, files, git, browser, diff; app_set_model, app_set_permission_mode, app_set_reasoning, app_toggle_theme; automations via app_list/create_automation.
 - load_skill loads full skill text when listed skills are needed.
 

@@ -1,0 +1,5 @@
+export { takeScreenshot, listDisplays } from './screenshot'
+export { mouseClick, mouseMove, mouseDrag, mouseScroll } from './mouse'
+export { typeText, keypress } from './keyboard'
+export { clipboardRead, clipboardWrite } from './clipboard'
+export { imageToLogical, sleep } from './platform'
