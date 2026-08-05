@@ -30,6 +30,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     removeProject,
     setActiveProject,
     addSession,
+    startNewChat,
     removeSession,
     setActiveSession,
     updateSessionTitle,
@@ -66,21 +67,12 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   }, [initialized])
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'project' | 'session'; id: string; projectId?: string; name: string } | null>(null)
 
-  // Ensure general project exists
-  const ensureGeneral = (): string => {
-    const existing = projects.find((p) => p.id === GENERAL_PROJECT_ID)
-    if (existing) return GENERAL_PROJECT_ID
-    addProject('General', [])
-    // The addProject sets activeProjectId, but we need to return the ID
-    // Since addProject generates the ID internally, we use a known ID
-    // Actually let's just use the GENERAL_PROJECT_ID directly
-    return GENERAL_PROJECT_ID
-  }
-
+  // Always start a blank chat with no real project selected — even if a project
+  // is currently active. Project-scoped sessions are created via the + button
+  // on that project row.
   const handleNewSession = (): void => {
     onMainViewChange('chat')
-    const targetProjectId = activeProjectId || ensureGeneral()
-    addSession(targetProjectId)
+    startNewChat()
   }
 
   const toggleProject = (id: string): void => {

@@ -40,6 +40,13 @@ interface AppState {
   updateProjectName: (projectId: string, name: string) => void
   updateProjectPaths: (projectId: string, paths: string[]) => void
   addSession: (projectId: string, title?: string, opts?: { focus?: boolean }) => string
+  /** Ensure the hidden “no project” bucket exists; returns its id (`__general__`). */
+  ensureGeneralProject: () => string
+  /**
+   * Sidebar / shortcut “New chat”: always start unbound from any real project
+   * (sessions under `__general__`). Project-scoped sessions use addSession(projectId).
+   */
+  startNewChat: (title?: string) => string
   removeSession: (projectId: string, sessionId: string) => void
   setActiveSession: (id: string) => void
   loadMessages: (projectId: string, sessionId: string) => Promise<void>
@@ -145,6 +152,18 @@ export const useAppStore = create<AppState>((set, get) => ({
     }))
     window.api.db.addSession(id, projectId, session.title, '').catch(() => {})
     return id
+  },
+
+  ensureGeneralProject: () => {
+    const GENERAL = '__general__'
+    if (get().projects.some((p) => p.id === GENERAL)) return GENERAL
+    get().addProject('General', [], GENERAL)
+    return GENERAL
+  },
+
+  startNewChat: (title) => {
+    const projectId = get().ensureGeneralProject()
+    return get().addSession(projectId, title)
   },
 
   removeSession: (projectId, sessionId) => {

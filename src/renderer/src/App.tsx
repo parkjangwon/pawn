@@ -80,7 +80,7 @@ export default function App(): React.JSX.Element {
     else toggleSidebar()
   }, [showSettings, toggleSidebar])
 
-  const { projects, activeProjectId, activeSessionId, addSession } = useAppStore()
+  const { projects, activeProjectId, activeSessionId, startNewChat } = useAppStore()
 
   // Browser-style back/forward history over the app's top-level "location":
   // which view is showing, which project/session is focused, and whether
@@ -143,7 +143,13 @@ export default function App(): React.JSX.Element {
   // Bindable keyboard shortcuts.
   useKeybinding('open-command-palette', useCallback(() => { if (isBrowserMode) setShowCommandPalette(true) }, [isBrowserMode]))
   useKeybinding('open-settings', useCallback(() => { if (isBrowserMode) setShowSettings((v) => !v) }, [isBrowserMode]))
-  useKeybinding('new-session', useCallback(() => { if (isBrowserMode && activeProjectId) addSession(activeProjectId) }, [isBrowserMode, activeProjectId, addSession]))
+  useKeybinding('new-session', useCallback(() => {
+    if (isBrowserMode) {
+      setShowSettings(false)
+      setMainView('chat')
+      startNewChat()
+    }
+  }, [isBrowserMode, startNewChat]))
   useKeybinding('toggle-sidebar', useCallback(() => { if (isBrowserMode) toggleActiveSidebar() }, [isBrowserMode, toggleActiveSidebar]))
 
   // Electron: main-process forwarding dispatches every bound action here.
@@ -152,9 +158,13 @@ export default function App(): React.JSX.Element {
       if (id === 'toggle-sidebar') toggleActiveSidebar()
       else if (id === 'open-command-palette') setShowCommandPalette(true)
       else if (id === 'open-settings') setShowSettings((v) => !v)
-      else if (id === 'new-session') { if (activeProjectId) addSession(activeProjectId) }
+      else if (id === 'new-session') {
+        setShowSettings(false)
+        setMainView('chat')
+        startNewChat()
+      }
     })
-  }, [toggleActiveSidebar, activeProjectId, addSession])
+  }, [toggleActiveSidebar, startNewChat])
 
   // Escape closes modals. Cmd+[ / Cmd+] mirror the header's back/forward
   // buttons — the modifier means this never collides with typing literal
@@ -235,6 +245,7 @@ export default function App(): React.JSX.Element {
         <CommandPalette
           onClose={() => setShowCommandPalette(false)}
           onOpenSettings={() => setShowSettings(true)}
+          onMainViewChange={setMainView}
         />
       )}
       <PermissionDialog />
