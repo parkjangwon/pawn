@@ -6,6 +6,7 @@ export type SafetyLevel = 'safe' | 'risky'
 
 export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   read_file: 'safe',
+  read_spreadsheet: 'safe',
   list_dir: 'safe',
   load_skill: 'safe',
   search_files: 'safe',
@@ -41,7 +42,33 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   app_set_model: 'safe',
   app_set_reasoning: 'safe',
   app_toggle_theme: 'safe',
-  app_set_permission_mode: 'risky'
+  app_set_permission_mode: 'risky',
+  // Google (read-only)
+  google_whoami: 'safe',
+  google_drive_search: 'safe',
+  google_drive_read: 'safe',
+  google_gmail_search: 'safe',
+  google_gmail_read: 'safe',
+  google_calendar_list: 'safe',
+  google_tasks_list: 'safe',
+  google_sheets_read: 'safe',
+  google_docs_read: 'safe',
+  google_slides_read: 'safe',
+  // GitHub
+  github_whoami: 'safe',
+  github_list_repos: 'safe',
+  github_get_repo: 'safe',
+  github_list_issues: 'safe',
+  github_get_issue: 'safe',
+  github_list_pulls: 'safe',
+  github_get_pull: 'safe',
+  github_list_commits: 'safe',
+  github_get_file: 'safe',
+  github_search_code: 'safe',
+  github_search_issues: 'safe',
+  github_create_issue: 'risky',
+  github_comment: 'risky',
+  github_create_pull: 'risky'
 }
 
 export type PermissionMode = 'ask' | 'auto' | 'yolo'
@@ -73,7 +100,31 @@ function permissionTypeFor(callName: string): PermissionType {
     app_set_permission_mode: 'app',
     app_set_reasoning: 'app',
     app_toggle_theme: 'app',
-    install_skill: 'app'
+    install_skill: 'app',
+    google_whoami: 'file_read',
+    google_drive_search: 'file_read',
+    google_drive_read: 'file_read',
+    google_gmail_search: 'file_read',
+    google_gmail_read: 'file_read',
+    google_calendar_list: 'file_read',
+    google_tasks_list: 'file_read',
+    google_sheets_read: 'file_read',
+    google_docs_read: 'file_read',
+    google_slides_read: 'file_read',
+    github_whoami: 'file_read',
+    github_list_repos: 'file_read',
+    github_get_repo: 'file_read',
+    github_list_issues: 'file_read',
+    github_get_issue: 'file_read',
+    github_list_pulls: 'file_read',
+    github_get_pull: 'file_read',
+    github_list_commits: 'file_read',
+    github_get_file: 'file_read',
+    github_search_code: 'file_read',
+    github_search_issues: 'file_read',
+    github_create_issue: 'shell_exec',
+    github_comment: 'shell_exec',
+    github_create_pull: 'shell_exec'
   }
   return map[callName] || 'file_read'
 }

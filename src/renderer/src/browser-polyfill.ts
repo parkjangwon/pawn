@@ -56,7 +56,8 @@ if (typeof window !== 'undefined' && !window.api) {
         return await fsPost('walk', { path }) as Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }
       },
       copyDir: async () => ({ error: 'Not available in browser mode' }),
-      removeDir: async () => ({ error: 'Not available in browser mode' })
+      removeDir: async () => ({ error: 'Not available in browser mode' }),
+      readSpreadsheet: async () => ({ error: 'Not available in browser mode' })
     },
     shell: {
       exec: async (command: string, cwd?: string, timeoutMs?: number) => {
@@ -104,6 +105,23 @@ if (typeof window !== 'undefined' && !window.api) {
       getEnabled: async () => true,
       setEnabled: async () => ({ ok: true }),
       setLanguage: async () => ({ ok: true })
+    },
+
+    connections: {
+      list: async () => [
+        { provider: 'google' as const, connected: false, clientConfigured: true },
+        { provider: 'github' as const, connected: false, clientConfigured: true }
+      ],
+      status: async (provider: 'google' | 'github') => ({
+        provider,
+        connected: false,
+        clientConfigured: true
+      }),
+      connect: async () => ({ error: 'Connections require the desktop app' }),
+      cancel: async () => ({ ok: true }),
+      disconnect: async () => ({ ok: true }),
+      runTool: async () => ({ ok: false, error: 'Connections require the desktop app' }),
+      onProgress: () => () => {}
     },
 
     // Config (TOML via HTTP)

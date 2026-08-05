@@ -7,11 +7,20 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag (e.g. v0.1.0)'
+        description: 'Release tag (e.g. v0.4.0)'
         required: true
 
 permissions:
   contents: write
+
+# Do not run on pull_request — secrets must never be exposed to forks.
+# OAuth desktop credentials are injected only during `npm run build`.
+
+env:
+  PAWN_GOOGLE_CLIENT_ID: ${{ secrets.PAWN_GOOGLE_CLIENT_ID }}
+  PAWN_GOOGLE_CLIENT_SECRET: ${{ secrets.PAWN_GOOGLE_CLIENT_SECRET }}
+  PAWN_GITHUB_CLIENT_ID: ${{ secrets.PAWN_GITHUB_CLIENT_ID }}
+  PAWN_GITHUB_CLIENT_SECRET: ${{ secrets.PAWN_GITHUB_CLIENT_SECRET }}
 
 jobs:
   build-mac:
@@ -27,10 +36,18 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Require OAuth client IDs
+        run: |
+          if [ -z "$PAWN_GOOGLE_CLIENT_ID" ] || [ -z "$PAWN_GITHUB_CLIENT_ID" ]; then
+            echo "::error::Set repo Actions secrets PAWN_GOOGLE_CLIENT_ID and PAWN_GITHUB_CLIENT_ID (and secrets) before releasing."
+            exit 1
+          fi
+          echo "OAuth client IDs present (values not printed)."
+
       - name: Install deps
         run: npm ci || npm install
 
-      - name: Build app
+      - name: Build app (injects OAuth via define)
         run: npm run build
 
       - name: Package macOS (universal dmg)
@@ -60,12 +77,21 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Require OAuth client IDs
+        shell: bash
+        run: |
+          if [ -z "$PAWN_GOOGLE_CLIENT_ID" ] || [ -z "$PAWN_GITHUB_CLIENT_ID" ]; then
+            echo "::error::Set repo Actions secrets PAWN_GOOGLE_CLIENT_ID and PAWN_GITHUB_CLIENT_ID (and secrets) before releasing."
+            exit 1
+          fi
+          echo "OAuth client IDs present (values not printed)."
+
       - name: Install deps
         run: npm ci || npm install
         env:
           GYP_MSVS_VERSION: '2022'
 
-      - name: Build app
+      - name: Build app (injects OAuth via define)
         run: npm run build
 
       - name: Package Windows (nsis x64 + arm64)

@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { useAppStore } from './app'
 import { useChatStore } from './chat'
+import { useArtifactsStore, openArtifactsPanel } from './artifacts'
 import { uid } from '../utils/uid'
 import i18n from '../i18n'
 
@@ -21,19 +22,28 @@ const ROUTINE_IDLE_TIMEOUT = 10 * 60 * 1000
 // StrictMode double-mounts effects in dev; the fire listener must register once.
 let routineListenerRegistered = false
 
-/** Deliverable: write the finished routine output into ~/.pawn/reports/<name>/. */
-async function saveRoutineReport(routine: Routine, result: string): Promise<string | null> {
+/** Deliverable: write finished automation output to ~/.pawn/reports/<name>/. */
+async function saveAutomationReport(routine: Routine, result: string): Promise<string | null> {
   try {
     const home = await window.api.fs.homeDir()
     if (typeof home !== 'string' || !home) return null
-    const safeName = routine.name.replace(/[^\w가-힣.-]+/g, '_').slice(0, 60) || 'routine'
+    const safeName = routine.name.replace(/[^\w가-힣.-]+/g, '_').slice(0, 60) || 'automation'
     const dir = `${home}/.pawn/reports/${safeName}`
     await window.api.fs.mkdir(dir)
     const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
     const path = `${dir}/${stamp}.md`
     const body = `# ${routine.name}\n\n- Ran: ${new Date().toISOString()}\n- Schedule: ${routine.schedule}\n\n${result}`
     const write = await window.api.fs.writeFile(path, body)
-    return write && write.error ? null : path
+    if (write && write.error) return null
+    useArtifactsStore.getState().add({
+      title: routine.name,
+      kind: 'report',
+      path,
+      preview: result.slice(0, 1500),
+      source: i18n.t('rightPanel.artifacts.sources.automation')
+    })
+    openArtifactsPanel()
+    return path
   } catch {
     return null
   }
@@ -93,7 +103,7 @@ export async function runRoutine(routine: Routine): Promise<void> {
   }
 
   useRoutineStore.setState((s) => ({ runningIds: new Set(s.runningIds).add(routine.id) }))
-  window.api.notification?.send?.(i18n.t('notifications.routineStarted'), routine.name)?.catch?.(() => {})
+  window.api.notification?.send?.(i18n.t('notifications.automationStarted'), routine.name)?.catch?.(() => {})
 
   try {
     useChatStore.getState().sendMessage(bound.projectId, bound.sessionId, routine.prompt, 'queue')
@@ -105,9 +115,9 @@ export async function runRoutine(routine: Routine): Promise<void> {
     const lastAssistant = [...(session?.messages || [])].reverse().find((m) => m.role === 'assistant')
     const result = lastAssistant?.content?.trim() || 'Task completed.'
     void window.api.routine?.recordResult?.(routine.id, result.slice(0, 2000))?.catch?.(() => {})
-    const reportPath = await saveRoutineReport(routine, result)
+    const reportPath = await saveAutomationReport(routine, result)
     const note = reportPath ? `\nReport: ${reportPath}` : ''
-    window.api.notification?.send?.(i18n.t('notifications.routineFinished', { name: routine.name }), (result + note).slice(0, 200))?.catch?.(() => {})
+    window.api.notification?.send?.(i18n.t('notifications.automationFinished', { name: routine.name }), (result + note).slice(0, 200))?.catch?.(() => {})
   } finally {
     useRoutineStore.setState((s) => {
       const next = new Set(s.runningIds)
@@ -175,3 +185,6 @@ export const useRoutineStore = create<RoutineState>((set, get) => ({
     if (routine) await runRoutine(routine)
   }
 }))
+
+/** Preferred public name — DB/IPC stay `routine` for compatibility. */
+export const useAutomationStore = useRoutineStore

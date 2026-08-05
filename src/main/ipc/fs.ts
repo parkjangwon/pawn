@@ -3,6 +3,7 @@ import { handleTrusted } from './trust'
 import { join, relative } from 'path'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync, rmdirSync } from 'fs'
 import { cp, rm } from 'fs/promises'
+import { readSpreadsheet } from '../spreadsheet'
 
 const WALK_IGNORE = new Set([
   'node_modules',
@@ -407,6 +408,16 @@ export function registerFsIpc(): void {
       await rm(dirPath, { recursive: true, force: true })
       walkCache.clear()
       return { ok: true }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  // Bounded CSV / XLSX read for agent tools (row/col caps inside readSpreadsheet).
+  handleTrusted('fs:readSpreadsheet', async (_, filePath: string, opts?: { sheet?: string; maxRows?: number; maxCols?: number }) => {
+    if (typeof filePath !== 'string' || !filePath.trim()) return { error: 'Invalid path' }
+    try {
+      return await readSpreadsheet(filePath.trim(), opts || {})
     } catch (err) {
       return { error: String(err) }
     }

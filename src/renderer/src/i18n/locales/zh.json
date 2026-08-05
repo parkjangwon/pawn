@@ -212,7 +212,7 @@
     "auto": "自动批准",
     "yolo": "YOLO",
     "askDesc": "每次操作前请求批准",
-    "autoDesc": "自动批准常规操作",
+    "autoDesc": "自动批准常见操作",
     "yoloDesc": "无需确认即批准所有操作",
     "deny": "拒绝",
     "allow": "允许",
@@ -247,6 +247,7 @@
     "agent": "代理",
     "plugins": "插件",
     "mcp": "MCP",
+    "connections": "服务连接",
     "data": "数据",
     "groups": {
       "general": "通用",
@@ -413,17 +414,41 @@
       "database": "数据库",
       "databaseDesc": "管理本地数据库"
     },
-    "routines": "定时任务",
     "system": "系统",
-    "routineSection": {
-      "title": "定时任务",
-      "desc": "应用打开时在后台定期执行的任务。",
-      "addTitle": "新建任务",
+    "connectionsSection": {
+      "title": "服务连接",
+      "desc": "可选择连接 Google 或 GitHub，以便代理在本机以只读权限访问你的数据。令牌仅保存在本地，不会发往 Pawn 服务器。",
+      "google": "Google",
+      "github": "GitHub",
+      "connect": "连接",
+      "connecting": "连接中…",
+      "connectingHint": "请在浏览器中完成登录…",
+      "waitingBrowser": "等待浏览器授权…",
+      "cancel": "取消",
+      "cancelled": "已取消连接",
+      "disconnect": "断开",
+      "statusConnected": "已连接",
+      "statusConnectedDesc": "已登录。令牌仅存储在本设备。",
+      "statusDisconnected": "未连接 — 点击连接以登录",
+      "connected": "已以 {{account}} 连接",
+      "disconnected": "已断开 {{provider}}",
+      "desktopOnly": "服务连接仅在桌面应用中可用。",
+      "deviceTitle": "在 GitHub 输入此代码",
+      "deviceHint": "打开 {{uri}} 并输入下方代码（不是两步验证码）。",
+      "copyCode": "复制",
+      "codeCopied": "已复制代码",
+      "openDevicePage": "打开 GitHub 设备授权页",
+      "privacyNote": "登录令牌仅保存在本机 ~/.pawn 下，不会上传或共享给其他服务。"
+    },
+    "automationSection": {
+      "title": "自动化",
+      "desc": "应用打开时在后台运行的重复任务。",
+      "addTitle": "新建自动化",
       "addDesc": "提示词会在专用会话中自动运行。",
-      "namePlaceholder": "名称（例如：晨会）",
+      "namePlaceholder": "名称（例如：早会）",
       "promptPlaceholder": "希望代理做什么？",
-      "add": "添加任务",
-      "empty": "还没有定时任务。在上方创建一个。",
+      "add": "添加自动化",
+      "empty": "还没有自动化。请在上方创建。",
       "running": "运行中",
       "runNow": "立即运行",
       "never": "从未",
@@ -477,7 +502,8 @@
       "open-command-palette": "打开命令面板",
       "open-settings": "打开设置",
       "new-session": "新建会话"
-    }
+    },
+    "automations": "自动化"
   },
   "projectEdit": {
     "edit": "编辑项目",
@@ -490,10 +516,9 @@
   "confirmDialog": {
     "confirm": "确认",
     "cancel": "取消",
-    "deleteAutomationConfirm": "确定要删除此自动化吗？此操作无法撤销。",
+    "deleteAutomationConfirm": "确定删除此自动化吗？此操作无法撤销。",
     "deleteProviderConfirm": "确定要删除此提供商吗？其关联模型可能会不可用。",
     "deleteModelConfirm": "确定要删除此模型吗？此操作无法撤销。",
-    "deleteRoutineConfirm": "确定要删除此例程吗？此操作无法撤销。",
     "clearSessionConfirm": "确定要清空此会话的全部消息吗？此操作无法撤销。"
   },
   "chatHeader": {
@@ -531,7 +556,8 @@
       "files": "浏览项目文件",
       "git": "版本控制",
       "browser": "网页浏览器",
-      "diff": "最近的文件更改"
+      "diff": "最近的文件更改",
+      "artifacts": "产出: 报告、表格、已保存文件"
     },
     "addTool": "添加工具",
     "selectTool": "选择工具",
@@ -562,10 +588,29 @@
       "files": "文件",
       "git": "Git",
       "browser": "浏览器",
-      "diff": "Diff"
+      "diff": "Diff",
+      "artifacts": "产出"
     },
     "allToolsOpen": "所有工具都已打开",
-    "terminalRestart": "重启终端"
+    "terminalRestart": "重启终端",
+    "artifacts": {
+      "emptyTitle": "还没有产出",
+      "emptyDesc": "自动化报告与表格读取结果会显示在这里，避免淹没在聊天里。",
+      "count": "{{count}} 项",
+      "clear": "清空",
+      "open": "打开",
+      "reveal": "在文件夹中显示",
+      "copyPath": "复制路径",
+      "kinds": {
+        "report": "报告",
+        "file": "文件",
+        "table": "表格",
+        "note": "备注"
+      },
+      "sources": {
+        "automation": "自动化"
+      }
+    }
   },
   "bottomTerminal": {
     "close": "关闭终端"
@@ -683,8 +728,8 @@
   },
   "notifications": {
     "taskComplete": "任务完成",
-    "routineStarted": "例行任务开始",
-    "routineFinished": "例行任务完成: {{name}}",
+    "automationStarted": "自动化已开始",
+    "automationFinished": "自动化完成: {{name}}",
     "scriptStarted": "脚本开始",
     "scriptFailed": "脚本失败"
   }

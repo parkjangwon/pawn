@@ -212,7 +212,7 @@
     "auto": "자동 승인",
     "yolo": "YOLO",
     "askDesc": "각 작업 전에 승인 요청",
-    "autoDesc": "일상적인 작업을 자동 승인",
+    "autoDesc": "일반적인 작업을 자동 승인",
     "yoloDesc": "확인 없이 모든 작업 승인",
     "deny": "거부",
     "allow": "허용",
@@ -247,6 +247,7 @@
     "agent": "에이전트",
     "plugins": "플러그인",
     "mcp": "MCP",
+    "connections": "서비스 연동",
     "data": "데이터",
     "groups": {
       "general": "일반",
@@ -413,17 +414,41 @@
       "database": "데이터베이스",
       "databaseDesc": "로컬 데이터베이스 관리"
     },
-    "routines": "루틴",
     "system": "시스템",
-    "routineSection": {
-      "title": "루틴",
-      "desc": "앱이 켜져 있는 동안 백그라운드에서 반복 실행되는 작업입니다.",
-      "addTitle": "새 루틴",
+    "connectionsSection": {
+      "title": "서비스 연동",
+      "desc": "Google·GitHub를 선택적으로 연결하면 이 기기에서 에이전트가 읽기 권한으로 데이터를 볼 수 있습니다. 토큰은 로컬에만 저장됩니다.",
+      "google": "Google",
+      "github": "GitHub",
+      "connect": "연결",
+      "connecting": "연결 중…",
+      "connectingHint": "브라우저에서 로그인을 완료하세요…",
+      "waitingBrowser": "브라우저 승인 대기 중…",
+      "cancel": "취소",
+      "cancelled": "연결이 취소되었습니다",
+      "disconnect": "연결 해제",
+      "statusConnected": "연결됨",
+      "statusConnectedDesc": "로그인됨. 토큰은 이 기기에만 저장됩니다.",
+      "statusDisconnected": "연결 안 됨 — 연결을 눌러 로그인하세요",
+      "connected": "{{account}}(으)로 연결됨",
+      "disconnected": "{{provider}} 연결 해제됨",
+      "desktopOnly": "서비스 연동은 데스크톱 앱에서만 사용할 수 있습니다.",
+      "deviceTitle": "GitHub에 이 코드를 입력하세요",
+      "deviceHint": "{{uri}} 에서 아래 코드를 입력하세요 (2차 인증 코드가 아닙니다).",
+      "copyCode": "복사",
+      "codeCopied": "코드를 복사했습니다",
+      "openDevicePage": "GitHub 기기 승인 페이지 열기",
+      "privacyNote": "로그인 토큰은 이 기기의 ~/.pawn 아래에만 저장되며, 다른 서비스로 업로드되지 않습니다."
+    },
+    "automationSection": {
+      "title": "자동화",
+      "desc": "앱이 열려 있는 동안 백그라운드에서 실행되는 반복 작업입니다.",
+      "addTitle": "새 자동화",
       "addDesc": "프롬프트가 전용 세션에서 자동으로 실행됩니다.",
-      "namePlaceholder": "이름 (예: 아침 스크럼)",
+      "namePlaceholder": "이름 (예: 아침 스탠드업)",
       "promptPlaceholder": "에이전트가 무엇을 할까요?",
-      "add": "루틴 추가",
-      "empty": "아직 루틴이 없습니다. 위에서 만들어 보세요.",
+      "add": "자동화 추가",
+      "empty": "자동화가 없습니다. 위에서 만들어 보세요.",
       "running": "실행 중",
       "runNow": "지금 실행",
       "never": "없음",
@@ -477,7 +502,8 @@
       "open-command-palette": "명령 팔레트 열기",
       "open-settings": "설정 열기",
       "new-session": "새 세션"
-    }
+    },
+    "automations": "자동화"
   },
   "projectEdit": {
     "edit": "프로젝트 편집",
@@ -493,7 +519,6 @@
     "deleteAutomationConfirm": "이 자동화를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
     "deleteProviderConfirm": "이 프로바이더를 삭제하시겠습니까? 연결된 모델이 동작하지 않을 수 있습니다.",
     "deleteModelConfirm": "이 모델을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
-    "deleteRoutineConfirm": "이 루틴을 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.",
     "clearSessionConfirm": "이 세션의 모든 메시지를 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다."
   },
   "chatHeader": {
@@ -531,7 +556,8 @@
       "files": "프로젝트 파일 탐색",
       "git": "버전 관리",
       "browser": "웹 브라우저",
-      "diff": "최근 파일 변경"
+      "diff": "최근 파일 변경",
+      "artifacts": "산출물: 리포트, 표, 저장된 파일"
     },
     "addTool": "도구 추가",
     "selectTool": "도구 선택",
@@ -562,10 +588,29 @@
       "files": "파일",
       "git": "Git",
       "browser": "브라우저",
-      "diff": "Diff"
+      "diff": "Diff",
+      "artifacts": "산출물"
     },
     "allToolsOpen": "모든 도구가 열려 있습니다",
-    "terminalRestart": "터미널 재시작"
+    "terminalRestart": "터미널 재시작",
+    "artifacts": {
+      "emptyTitle": "아직 산출물이 없습니다",
+      "emptyDesc": "자동화 리포트와 스프레드시트 읽기 결과가 여기 모여 채팅에 묻히지 않습니다.",
+      "count": "{{count}}개",
+      "clear": "비우기",
+      "open": "열기",
+      "reveal": "위치 열기",
+      "copyPath": "경로 복사",
+      "kinds": {
+        "report": "리포트",
+        "file": "파일",
+        "table": "표",
+        "note": "메모"
+      },
+      "sources": {
+        "automation": "자동화"
+      }
+    }
   },
   "bottomTerminal": {
     "close": "터미널 닫기"
@@ -683,8 +728,8 @@
   },
   "notifications": {
     "taskComplete": "작업 완료",
-    "routineStarted": "루틴 시작",
-    "routineFinished": "루틴 완료: {{name}}",
+    "automationStarted": "자동화 시작",
+    "automationFinished": "자동화 완료: {{name}}",
     "scriptStarted": "스크립트 시작",
     "scriptFailed": "스크립트 실패"
   }

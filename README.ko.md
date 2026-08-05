@@ -51,6 +51,12 @@ pawn
 - macOS 10.12+ 또는 Windows 10/11
 - OpenAI 또는 Claude 호환 API 키 (BYOK)
 
+### 서비스 연동 (선택)
+
+**설정 → 서비스 연동**에서 Google·GitHub를 연결하면 에이전트가 이 기기에서 읽기 권한으로 데이터를 볼 수 있습니다. 토큰은 `~/.pawn`에만 저장되며 Pawn 서버로 올라가지 않습니다.
+
+공식 빌드를 배포하는 경우 Desktop OAuth Client ID는 빌드 시 GitHub Actions secrets로 주입합니다 — [.github/OAUTH_SECRETS.md](./.github/OAUTH_SECRETS.md).
+
 ## 주요 기능
 
 ### 코어 에이전트 및 도구 (Tools)

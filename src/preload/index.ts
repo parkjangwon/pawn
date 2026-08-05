@@ -24,7 +24,9 @@ const api = {
     homeDir: () => ipcRenderer.invoke('fs:homeDir'),
     walk: (path: string) => ipcRenderer.invoke('fs:walk', path),
     copyDir: (src: string, dest: string) => ipcRenderer.invoke('fs:copyDir', src, dest),
-    removeDir: (path: string) => ipcRenderer.invoke('fs:removeDir', path)
+    removeDir: (path: string) => ipcRenderer.invoke('fs:removeDir', path),
+    readSpreadsheet: (path: string, opts?: { sheet?: string; maxRows?: number; maxCols?: number }) =>
+      ipcRenderer.invoke('fs:readSpreadsheet', path, opts)
   },
 
   // Shell
@@ -164,6 +166,32 @@ const api = {
       const handler = (_event: unknown, routine: unknown) => callback(routine)
       ipcRenderer.on('routine:fire', handler)
       return () => { ipcRenderer.removeListener('routine:fire', handler) }
+    }
+  },
+  connections: {
+    list: () => ipcRenderer.invoke('connections:list'),
+    status: (provider: string) => ipcRenderer.invoke('connections:status', provider),
+    connect: (provider: string) => ipcRenderer.invoke('connections:connect', provider),
+    cancel: (provider: string) => ipcRenderer.invoke('connections:cancel', provider),
+    disconnect: (provider: string) => ipcRenderer.invoke('connections:disconnect', provider),
+    runTool: (name: string, args?: Record<string, unknown>) =>
+      ipcRenderer.invoke('connections:runTool', name, args || {}),
+    onProgress: (callback: (payload: {
+      provider: string
+      phase: string
+      userCode?: string
+      verificationUri?: string
+      message?: string
+    }) => void) => {
+      const handler = (_event: unknown, payload: {
+        provider: string
+        phase: string
+        userCode?: string
+        verificationUri?: string
+        message?: string
+      }) => callback(payload)
+      ipcRenderer.on('connections:progress', handler)
+      return () => { ipcRenderer.removeListener('connections:progress', handler) }
     }
   },
 
