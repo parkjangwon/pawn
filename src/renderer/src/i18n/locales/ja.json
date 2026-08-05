@@ -440,7 +440,9 @@
       "sleepSystem": "スリープ防止",
       "sleepDisplay": "スリープ+画面防止",
       "trayEnabled": "メニューバーに表示",
-      "trayEnabledDesc": "システムトレイ/メニューバーにPawnアイコンを表示します（右クリックメニュー対応）"
+      "trayEnabledDesc": "システムトレイ/メニューバーにPawnアイコンを表示します（右クリックメニュー対応）",
+      "taskNotifications": "タスク完了通知",
+      "taskNotificationsDesc": "Pawn がバックグラウンドにあるとき、ターン（チャット返信・コーディング作業）完了時に OS 通知を 1 回表示します。"
     },
     "shortcuts": "ショートカット",
     "shortcutSection": {
@@ -655,5 +657,12 @@
     "undoing": "戻しています…",
     "reverted": "{{count}} ファイルを戻しました",
     "failed": "元に戻せませんでした"
+  },
+  "notifications": {
+    "taskComplete": "タスク完了",
+    "routineStarted": "ルーチン開始",
+    "routineFinished": "ルーチン完了: {{name}}",
+    "scriptStarted": "スクリプト開始",
+    "scriptFailed": "スクリプト失敗"
   }
 }

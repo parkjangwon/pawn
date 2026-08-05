@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { useAppStore } from './app'
 import { useChatStore } from './chat'
 import { uid } from '../utils/uid'
+import i18n from '../i18n'
 
 interface RoutineState {
   routines: Routine[]
@@ -92,7 +93,7 @@ export async function runRoutine(routine: Routine): Promise<void> {
   }
 
   useRoutineStore.setState((s) => ({ runningIds: new Set(s.runningIds).add(routine.id) }))
-  window.api.notification?.send?.('Routine started', routine.name)?.catch?.(() => {})
+  window.api.notification?.send?.(i18n.t('notifications.routineStarted'), routine.name)?.catch?.(() => {})
 
   try {
     useChatStore.getState().sendMessage(bound.projectId, bound.sessionId, routine.prompt, 'queue')
@@ -106,7 +107,7 @@ export async function runRoutine(routine: Routine): Promise<void> {
     void window.api.routine?.recordResult?.(routine.id, result.slice(0, 2000))?.catch?.(() => {})
     const reportPath = await saveRoutineReport(routine, result)
     const note = reportPath ? `\nReport: ${reportPath}` : ''
-    window.api.notification?.send?.(`Routine finished: ${routine.name}`, (result + note).slice(0, 200))?.catch?.(() => {})
+    window.api.notification?.send?.(i18n.t('notifications.routineFinished', { name: routine.name }), (result + note).slice(0, 200))?.catch?.(() => {})
   } finally {
     useRoutineStore.setState((s) => {
       const next = new Set(s.runningIds)

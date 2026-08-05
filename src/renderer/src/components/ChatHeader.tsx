@@ -192,9 +192,9 @@ export default function ChatHeader({ onToggleSidebar, projectName, gitBranch, pr
     setRunningScript(name)
     const res = await window.api.workspace.runScript(projectPath, name, packageManager)
     if (res.error) {
-      window.api.notification?.send('Script failed', res.error)
+      window.api.notification?.send(t('notifications.scriptFailed'), res.error)
     } else {
-      window.api.notification?.send('Script started', `${packageManager} run ${name}`)
+      window.api.notification?.send(t('notifications.scriptStarted'), `${packageManager} run ${name}`)
       try { (window as any).__openRightPanelTab?.('terminal') } catch {}
     }
     setRunningScript(null)

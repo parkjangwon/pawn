@@ -440,7 +440,9 @@
       "sleepSystem": "防止休眠",
       "sleepDisplay": "防休眠+屏幕",
       "trayEnabled": "在菜单栏中显示",
-      "trayEnabledDesc": "在系统托盘/菜单栏保留 Pawn 图标（支持右键菜单）"
+      "trayEnabledDesc": "在系统托盘/菜单栏保留 Pawn 图标（支持右键菜单）",
+      "taskNotifications": "任务完成通知",
+      "taskNotificationsDesc": "当 Pawn 处于后台时，每轮任务（聊天回复或编码工作）完成后显示一次系统通知。"
     },
     "shortcuts": "快捷键",
     "shortcutSection": {
@@ -655,5 +657,12 @@
     "undoing": "正在撤销…",
     "reverted": "已撤销 {{count}} 个文件",
     "failed": "撤销失败"
+  },
+  "notifications": {
+    "taskComplete": "任务完成",
+    "routineStarted": "例行任务开始",
+    "routineFinished": "例行任务完成: {{name}}",
+    "scriptStarted": "脚本开始",
+    "scriptFailed": "脚本失败"
   }
 }

@@ -6,6 +6,7 @@ import { handleTrusted, isTrustedSender } from './trust'
 import { setTrayEnabled, setTrayLanguage, trayEnabled } from '../tray'
 import { setAppStreaming } from '../streamingState'
 import { getPawnDir } from '../config'
+import { getMainWindow } from '../window'
 
 /** Modern (10.7+) ICNS chunk types that embed a PNG directly, smallest-first
  *  — a menu-row icon never needs more than ~64-128px, and skipping the large
@@ -100,7 +101,15 @@ export function registerMiscIpc(): void {
 
   handleTrusted('notification:send', async (_, title: string, body: string) => {
     if (Notification.isSupported()) {
-      new Notification({ title, body }).show()
+      const notification = new Notification({ title, body })
+      notification.on('click', () => {
+        const win = getMainWindow()
+        if (!win || win.isDestroyed()) return
+        if (win.isMinimized()) win.restore()
+        win.show()
+        win.focus()
+      })
+      notification.show()
     }
     return { ok: true }
   })
