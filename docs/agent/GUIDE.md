@@ -171,17 +171,18 @@ SSRF guards block private/loopback by default. Fetched text wrapped as untrusted
 - **Linux:** `xdotool`
 - Prefer vision-capable model (or router vision fallback) for screenshots
 
-### 5.6 Google & GitHub (Settings → Connections)
+### 5.6 Service connections (Settings → Connections)
 
 Tokens only under `~/.pawn`. No separate inbox UI — tools in chat.
 
-| Area | Tools (summary) |
-|------|-----------------|
-| Google (read-only) | Drive, Gmail, Calendar, Tasks, Docs, Sheets, Slides, `google_whoami` |
-| GitHub (read) | repos, issues, PRs, **`github_review_pull`**, commits, files, search |
-| GitHub (write) | create/draft issue, comment, create PR (confirm in ask mode) |
+| Provider | Auth | Tools (summary) |
+|----------|------|-----------------|
+| Google | OAuth | Drive, Gmail, Calendar, Tasks, Docs, Sheets, Slides, `google_whoami` (read-only) |
+| GitHub | OAuth | repos, issues, PRs, **`github_review_pull`**, commits, files, search; create/draft issue, comment, create PR |
+| GitLab | PAT (base URL + token) | projects, issues, merge requests, commits, files, search, create issue, comment, create MR |
+| AWS CodeCommit | IAM keys | repos, branches, commits, files |
 
-Maintainers: inject Desktop OAuth client IDs at release via Actions secrets — [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md). Privacy: [PRIVACY.md](../../PRIVACY.md).
+Maintainers: inject Desktop OAuth client IDs (Google/GitHub) at release via Actions secrets — [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md). GitLab/CodeCommit use PAT/IAM credentials entered in Settings — no OAuth client needed. Privacy: [PRIVACY.md](../../PRIVACY.md).
 
 ### 5.7 App control & skills
 
@@ -254,7 +255,7 @@ npm run pack         # directory only
 ```
 src/
 ├── main/              # Electron main (IPC, DB, window)
-│   ├── connections/   # Google/GitHub OAuth + tools
+│   ├── connections/   # Google/GitHub OAuth + GitLab/CodeCommit PAT + tools
 │   ├── memory/        # Memory engine
 │   ├── hooks/         # Lifecycle hooks
 │   ├── computer/      # Desktop computer-use
@@ -288,7 +289,7 @@ Electron, React 19, TypeScript, electron-vite, Zustand, i18next, better-sqlite3,
 | Wire MCP | Edit `~/.pawn/mcp.json` or Settings → MCP; or reuse Claude `.mcp.json` |
 | Add hooks | Edit `~/.pawn/hooks.json` or Claude `settings.json` `hooks`; merge rules apply |
 | Memory on/off / export | Settings → Agent → Memory; DB at `~/.pawn/memory.db` |
-| Connect Google/GitHub | Settings → Connections; tokens in `~/.pawn` only |
+| Connect services (Google/GitHub/GitLab/CodeCommit) | Settings → Connections; OAuth or PAT/IAM, tokens in `~/.pawn` only |
 | Build from source | Node version + `npm install` + `npm run dev` / `npm run check` |
 | Debug tool deny | Check permission mode, Hooks PreToolUse deny, MCP server status |
 

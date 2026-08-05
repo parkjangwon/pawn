@@ -20,7 +20,7 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 - **计算机操控** — 桌面鼠标、键盘、截图、剪贴板（`computer_*`）
 - **记忆** — 本地长期 Memory（`~/.pawn/memory.db`），随使用个性化
 - **Hooks** — 兼容 Claude/Codex 的生命周期钩子（Claude + Pawn 配置合并去重）
-- **连接** — 设置 → 连接 中可选 Google / GitHub 工具（令牌仅本地）
+- **连接** — 设置 → 连接 中可选 Google / GitHub（OAuth）与 GitLab / AWS CodeCommit（PAT）工具（令牌仅本地）
 - **扩展** — MCP、Claude Code 技能/插件、`CLAUDE.md` / `AGENTS.md`、自动化、托盘
 - **路由** — 多模型自动路由、缓存稳定、DeepSeek thinking + 视觉回退
 

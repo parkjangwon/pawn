@@ -20,7 +20,7 @@ Pawn はまた別のクラウド囲い込み IDE ではありません。OpenAI 
 - **コンピュータ操作** — デスクトップのマウス・キーボード・スクショ・クリップボード（`computer_*`）
 - **記憶** — ローカル長期 Memory（`~/.pawn/memory.db`）で使うほどパーソナライズ
 - **Hooks** — Claude/Codex 互換ライフサイクルフック（Claude + Pawn 設定をマージ・重複排除）
-- **連携** — 設定 → 接続で Google / GitHub ツール（トークンはローカルのみ）
+- **連携** — 設定 → 接続で Google / GitHub（OAuth）と GitLab / AWS CodeCommit（PAT）ツール（トークンはローカルのみ）
 - **拡張** — MCP、Claude Code スキル/プラグイン、`CLAUDE.md` / `AGENTS.md`、自動化、トレイ
 - **ルーティング** — マルチモデル自動ルーティング、キャッシュ安定、DeepSeek thinking + ビジョンフォールバック
 

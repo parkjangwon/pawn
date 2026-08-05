@@ -114,10 +114,14 @@ npm install -g @parkjangwon/pawn && pawn
   - Windows: PowerShell / Linux: `xdotool`
   - 截图建议使用视觉模型或路由回退
 
-### Google / GitHub
+### 服务连接（Google / GitHub / GitLab / CodeCommit）
 
 **设置 → 连接**。令牌仅存 `~/.pawn`。  
-Google 只读；GitHub 读 + 可选写。OAuth 构建见 [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md)。
+- Google（OAuth）只读：Drive/Gmail/Calendar/Tasks/Docs/Sheets/Slides  
+- GitHub（OAuth）：读取 + 可选写（Issue/PR 评论、创建 PR 等）  
+- GitLab（PAT）：项目/Issue/MR/提交/文件/搜索 + 创建 Issue、评论、创建 MR  
+- AWS CodeCommit（IAM）：仓库/分支/提交/文件  
+Google/GitHub 的 OAuth 构建见 [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md)；GitLab/CodeCommit 在设置中直接填 PAT/IAM，无需 OAuth 客户端。
 
 ### 应用控制
 
@@ -184,7 +188,7 @@ src/renderer/src/  # agent、components、stores、i18n
 | MCP | `~/.pawn/mcp.json` 或设置 UI |
 | Hooks | `~/.pawn/hooks.json` 或 Claude settings |
 | Memory | 设置 → Agent → Memory；`memory.db` |
-| OAuth | 设置 → Connections |
+| 服务连接 | 设置 → Connections（Google/GitHub OAuth、GitLab/CodeCommit PAT） |
 | 源码构建 | 正确 Node 版本 + `npm install` + `npm run check` |
 | 工具被拒 | 权限模式、PreToolUse deny、MCP 状态 |
 

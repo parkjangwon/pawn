@@ -114,11 +114,14 @@ npm install -g @parkjangwon/pawn && pawn
   - Windows: PowerShell / Linux: `xdotool`
   - 비전 모델(또는 라우터 폴백) 권장
 
-### Google·GitHub
+### 서비스 연동 (Google·GitHub·GitLab·CodeCommit)
 
 **설정 → 서비스 연동**. 토큰 `~/.pawn`만. 채팅 툴로 사용.  
-Google 읽기 전용(Drive/Gmail/Calendar/Tasks/Docs/Sheets/Slides). GitHub 읽기+선택 쓰기(이슈/PR 등).  
-OAuth 빌드: [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md).
+- Google(OAuth) 읽기 전용: Drive/Gmail/Calendar/Tasks/Docs/Sheets/Slides  
+- GitHub(OAuth): 읽기 + 선택 쓰기(이슈/PR 리뷰·코멘트·PR 생성 등)  
+- GitLab(PAT): 프로젝트/이슈/MR/커밋/파일/검색 + 이슈 생성·코멘트·MR 생성  
+- AWS CodeCommit(IAM): 저장소/브랜치/커밋/파일  
+Google·GitHub OAuth 빌드: [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md). GitLab·CodeCommit은 설정에서 PAT/IAM 입력(별도 OAuth 불필요).
 
 ### 앱 제어
 
@@ -185,7 +188,7 @@ src/renderer/src/  # agent, components, stores, i18n
 | MCP | `~/.pawn/mcp.json` 또는 설정 UI |
 | 훅 | `~/.pawn/hooks.json` 또는 Claude settings |
 | Memory | 설정 → Agent → Memory; `memory.db` |
-| OAuth | 설정 → Connections |
+| 서비스 연동 | 설정 → Connections (Google/GitHub OAuth, GitLab/CodeCommit PAT) |
 | 소스 빌드 | Node 버전 + `npm install` + `npm run check` |
 | 툴 거부 | 권한 모드, PreToolUse deny, MCP 상태 |
 

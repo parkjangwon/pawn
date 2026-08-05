@@ -20,7 +20,7 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 - **Computer use** — Desktop mouse, keyboard, screenshot, and clipboard (`computer_*`)
 - **Remember** — Local long-term Memory (`~/.pawn/memory.db`) that personalizes the agent over time
 - **Hooks** — Claude/Codex-compatible lifecycle hooks (Claude + Pawn configs merge with dedupe)
-- **Connect** — Optional Google & GitHub tools via Settings → Connections (tokens stay local)
+- **Connect** — Optional Google & GitHub OAuth + GitLab & AWS CodeCommit (PAT) tools via Settings → Connections (tokens stay local)
 - **Extend** — MCP servers, Claude Code skills/plugins, `CLAUDE.md` / `AGENTS.md`, automations, tray
 - **Route** — Multi-model auto routing, cache-aware stickiness, DeepSeek thinking + vision fallback
 

@@ -114,10 +114,14 @@ npm install -g @parkjangwon/pawn && pawn
   - Windows: PowerShell / Linux: `xdotool`
   - スクショにはビジョンモデル（またはルータのフォールバック）推奨
 
-### Google / GitHub
+### サービス接続（Google / GitHub / GitLab / CodeCommit）
 
 **設定 → 接続**。トークンは `~/.pawn` のみ。  
-Google は読み取り専用；GitHub は読み取り + 任意書き込み。OAuth ビルド: [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md)。
+- Google（OAuth）読み取り専用: Drive / Gmail / Calendar / Tasks / Docs / Sheets / Slides  
+- GitHub（OAuth）: 読み取り + 任意書き込み（Issue/PR コメント、PR 作成など）  
+- GitLab（PAT）: プロジェクト/Issue/MR/コミット/ファイル/検索 + Issue 作成・コメント・MR 作成  
+- AWS CodeCommit（IAM）: リポジトリ/ブランチ/コミット/ファイル  
+Google/GitHub の OAuth ビルド: [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md)。GitLab/CodeCommit は設定で PAT/IAM を入力（OAuth 不要）。
 
 ### アプリ制御
 
@@ -184,7 +188,7 @@ src/renderer/src/  # agent, components, stores, i18n
 | MCP | `~/.pawn/mcp.json` または設定 UI |
 | Hooks | `~/.pawn/hooks.json` または Claude settings |
 | Memory | 設定 → Agent → Memory；`memory.db` |
-| OAuth | 設定 → Connections |
+| サービス接続 | 設定 → Connections（Google/GitHub OAuth、GitLab/CodeCommit PAT） |
 | ソースビルド | 正しい Node + `npm install` + `npm run check` |
 | ツール拒否 | 権限モード、PreToolUse deny、MCP 状態 |
 

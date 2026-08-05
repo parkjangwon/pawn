@@ -20,7 +20,7 @@ Pawn은 또 하나의 클라우드 락인 IDE가 아닙니다. OpenAI·Claude �
 - **컴퓨터 사용** — 데스크톱 마우스·키보드·스크린샷·클립보드 (`computer_*`)
 - **기억** — 로컬 장기 Memory (`~/.pawn/memory.db`)로 시간이 지날수록 개인화
 - **훅** — Claude/Codex 호환 라이프사이클 훅 (Claude + Pawn 설정 merge·중복 제거)
-- **연동** — 설정 → 서비스 연동으로 Google·GitHub 툴 (토큰은 로컬만)
+- **연동** — 설정 → 서비스 연동으로 Google·GitHub(OAuth) 및 GitLab·AWS CodeCommit(PAT) 툴 (토큰은 로컬만)
 - **확장** — MCP, Claude Code 스킬/플러그인, `CLAUDE.md` / `AGENTS.md`, 자동화, 트레이
 - **라우팅** — 멀티 모델 자동 라우팅, 캐시 안정, DeepSeek thinking + 비전 폴백
 
