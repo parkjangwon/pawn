@@ -5,6 +5,9 @@ import { getMainWindow } from '../window'
 import { clampDim, pickShell } from '../terminal'
 
 const terminals = new Map<string, IPty>()
+/** Rolling output buffer per terminal (for agent terminal_read). */
+const terminalBuffers = new Map<string, string>()
+const MAX_BUFFER_CHARS = 80_000
 
 function isTrustedSender(event: { sender: WebContents }): boolean {
   const win = getMainWindow()
@@ -17,12 +20,19 @@ function getPtyOrReply(event: IpcMainEvent, id: string): IPty | undefined {
   return pty
 }
 
+function appendBuffer(id: string, data: string): void {
+  const prev = terminalBuffers.get(id) || ''
+  const next = prev + data
+  terminalBuffers.set(id, next.length > MAX_BUFFER_CHARS ? next.slice(-MAX_BUFFER_CHARS) : next)
+}
+
 /** Kill every live PTY; called on app quit. */
 export function killAllTerminals(): void {
   terminals.forEach((pty) => {
     try { pty.kill() } catch {}
   })
   terminals.clear()
+  terminalBuffers.clear()
 }
 
 export function registerTerminalIpc(): void {
@@ -52,14 +62,60 @@ export function registerTerminalIpc(): void {
     }
 
     terminals.set(id, pty)
+    terminalBuffers.set(id, '')
     pty.onData((data) => {
+      appendBuffer(id, data)
       for (const win of BrowserWindow.getAllWindows()) {
         if (win.isDestroyed()) continue
         try { win.webContents.send('terminal:data', id, data) } catch {}
       }
     })
-    pty.onExit(() => { terminals.delete(id) })
+    pty.onExit(() => {
+      terminals.delete(id)
+      // keep buffer briefly so agent can still read after exit; drop after dispose
+    })
     return { ok: true }
+  })
+
+  ipcMain.handle('terminal:list', (event) => {
+    if (!isTrustedSender(event)) return { ok: false, error: 'Invalid request', terminals: [] }
+    const list = Array.from(terminals.keys()).map((id) => ({
+      id,
+      bufferChars: (terminalBuffers.get(id) || '').length,
+      alive: true
+    }))
+    // Also surface buffers whose PTY exited but buffer remains
+    Array.from(terminalBuffers.entries()).forEach(([id, buf]) => {
+      if (!terminals.has(id) && buf) {
+        list.push({ id, bufferChars: buf.length, alive: false })
+      }
+    })
+    return { ok: true, terminals: list }
+  })
+
+  ipcMain.handle('terminal:readBuffer', (event, id: string, maxChars?: number) => {
+    if (!isTrustedSender(event) || typeof id !== 'string') {
+      return { ok: false, error: 'Invalid request' }
+    }
+    const buf = terminalBuffers.get(id)
+    if (buf === undefined) {
+      return {
+        ok: false,
+        error: `No terminal buffer for id=${id}. Open a terminal panel first, or pass a known id from terminal_list.`
+      }
+    }
+    const cap = Math.min(Math.max(Number(maxChars) || 20_000, 500), MAX_BUFFER_CHARS)
+    const text = buf.length > cap ? buf.slice(-cap) : buf
+    // Strip common ANSI CSI sequences for agent readability
+    const plain = text.replace(/\x1b\[[0-9;?]*[ -/]*[@-~]/g, '').replace(/\x1b\][^\x07]*\x07/g, '')
+    return {
+      ok: true,
+      id,
+      alive: terminals.has(id),
+      text: plain,
+      rawChars: buf.length,
+      returnedChars: plain.length
+    }
   })
 
   ipcMain.on('terminal:write', (event, id, data) => {
@@ -83,5 +139,6 @@ export function registerTerminalIpc(): void {
       try { pty.kill() } catch {}
       terminals.delete(id)
     }
+    terminalBuffers.delete(id)
   })
 }

@@ -142,6 +142,9 @@ const api = {
     write: (id: string, data: string) => ipcRenderer.send('terminal:write', id, data),
     resize: (id: string, cols: number, rows: number) => ipcRenderer.send('terminal:resize', id, cols, rows),
     dispose: (id: string) => ipcRenderer.send('terminal:dispose', id),
+    list: () => ipcRenderer.invoke('terminal:list'),
+    readBuffer: (id: string, maxChars?: number) =>
+      ipcRenderer.invoke('terminal:readBuffer', id, maxChars),
     onData: (callback: (id: string, data: string) => void) => {
       const handler = (_event: unknown, id: string, data: string) => callback(id, data)
       ipcRenderer.on('terminal:data', handler)
@@ -219,6 +222,37 @@ const api = {
       ipcRenderer.invoke('mcp:addServer', scope, projectPath, id, input),
     removeServer: (scope: 'user' | 'project', projectPath: string | undefined, id: string) =>
       ipcRenderer.invoke('mcp:removeServer', scope, projectPath, id)
+  },
+
+  /** Built-in public-web research (insane-search port) — not browser automation. */
+  research: {
+    fetch: (
+      url: string,
+      opts?: {
+        timeoutMs?: number
+        maxAttempts?: number | null
+        enablePhase0?: boolean
+        enableJina?: boolean
+        deviceClass?: 'auto' | 'desktop' | 'mobile'
+        maxContentChars?: number
+        includeTrace?: boolean
+      }
+    ) => ipcRenderer.invoke('research:fetch', url, opts || {}),
+    research: (input: {
+      query?: string
+      urls?: string[]
+      maxSources?: number
+      includeSearch?: boolean
+      timeoutMs?: number
+      maxAttempts?: number
+    }) => ipcRenderer.invoke('research:research', input || {}),
+    search: (input: {
+      query?: string
+      maxResults?: number
+      timeoutMs?: number
+      includeHn?: boolean
+      includeWiki?: boolean
+    }) => ipcRenderer.invoke('research:search', input || {})
   }
 }
 

@@ -77,6 +77,8 @@ pawn
   - **Linux 제어**: `xdotool` 연동을 지원합니다.
   - **고해상도(High-DPI) 보정**: 윈도우 스케일 팩터를 반영하여 클릭 정밀도를 보정합니다.
 - **브라우저 제어 (Browser Use)**: 자체 쿠키 세션이 유지되는 실제 임베드 Chromium 브라우저를 사용합니다 — 접근성(accessibility) 스타일의 요소 스냅샷 기반으로 탐색/클릭/입력/텍스트 읽기/스크린샷을 수행하므로 깨지기 쉬운 CSS 셀렉터가 필요 없고, 화면에 보이는 AI 커서로 동작을 직접 지켜볼 수 있습니다.
+- **웹 리서치 (내장)**: `web_search`(링크) / `web_fetch`·`web_research`(본문)로 공개 웹을 API 키 없이 읽습니다. [insane-search](https://github.com/fivetaku/insane-search) (MIT) 기반.
+- **코딩 루프 헬퍼**: `codebase_search`, `run_checks`, `git_pr_ready`, `github_review_pull`, `github_draft_issue`, `write_artifact`/`list_artifacts`, `terminal_list`/`terminal_read`.
 - **첨부 (Attachments)**: 이미지(비전 모델에 실제 이미지 블록으로 전송)와 텍스트 문서를 첨부할 수 있고, 대량 텍스트를 붙여넣으면 제거 가능한 칩으로 변환됩니다. 이미지는 더블클릭 라이트박스로 확대할 수 있습니다.
 - **Google / GitHub 툴**: 선택 연동 계정용 채팅 툴 ([서비스 연동](#서비스-연동-선택)). 별도 제품 화면이 아니라 대화에 결과가 표시됩니다.
 - 민감한 작업에 대한 세분화된 사용자 승인 권한 시스템 (MCP 도구 포함, 도구 유형별로 세분화).
@@ -231,3 +233,5 @@ src/
 ## 라이선스
 
 MIT — [LICENSE](./LICENSE). 선택 OAuth 연동 관련: [PRIVACY.md](./PRIVACY.md).
+
+공개 웹 리서치 엔진은 [insane-search](https://github.com/fivetaku/insane-search) (MIT, © 2026 fivetaku)를 TypeScript로 이식·적용했습니다.

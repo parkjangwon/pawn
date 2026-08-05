@@ -419,6 +419,170 @@ export async function githubComment(opts: {
   return { ok: true, text: `Comment posted on #${num}\n${c.html_url || `id=${c.id}`}` }
 }
 
+/** Full PR review pack: metadata, files, patch samples, reviews, check runs. */
+export async function githubReviewPull(repo: string, number: number): Promise<GithubToolResult> {
+  const t = await tokenOrErr()
+  if (!('token' in t)) return t
+  const pr = parseRepo(repo)
+  if (!pr) return { ok: false, text: '', error: 'repo must be owner/name' }
+  const num = clampInt(number, 0, 1, 1_000_000_000)
+
+  const [pullRes, filesRes, reviewsRes, commitsRes] = await Promise.all([
+    gh(`/repos/${pr.owner}/${pr.repo}/pulls/${num}`, t.token),
+    gh(`/repos/${pr.owner}/${pr.repo}/pulls/${num}/files?per_page=100`, t.token),
+    gh(`/repos/${pr.owner}/${pr.repo}/pulls/${num}/reviews?per_page=20`, t.token),
+    gh(`/repos/${pr.owner}/${pr.repo}/pulls/${num}/commits?per_page=20`, t.token)
+  ])
+  if (!pullRes.ok) {
+    return { ok: false, text: '', error: errMsg(pullRes.status, pullRes.body, 'get PR failed') }
+  }
+  const p = pullRes.body as Record<string, unknown>
+  const headSha = (p.head as { sha?: string })?.sha
+
+  let checksText = ''
+  if (headSha) {
+    const checks = await gh(
+      `/repos/${pr.owner}/${pr.repo}/commits/${headSha}/check-runs?per_page=30`,
+      t.token,
+      { headers: { Accept: 'application/vnd.github+json' } }
+    )
+    if (checks.ok) {
+      const runs = ((checks.body as { check_runs?: Array<Record<string, unknown>> })?.check_runs || [])
+      if (runs.length) {
+        checksText =
+          '\n## Checks\n' +
+          runs
+            .map(
+              (c) =>
+                `- ${c.name}: ${c.status}/${c.conclusion || 'pending'} ${c.html_url ? String(c.html_url) : ''}`
+            )
+            .join('\n')
+      }
+    }
+  }
+
+  const files = filesRes.ok ? ((filesRes.body as Array<Record<string, unknown>>) || []) : []
+  const fileLines = files.map((f) => {
+    const patch = typeof f.patch === 'string' ? f.patch : ''
+    const patchPreview =
+      patch.length > 1200 ? patch.slice(0, 1200) + '\n…(patch truncated)' : patch
+    return [
+      `### ${f.filename} (${f.status} +${f.additions}/-${f.deletions})`,
+      patchPreview ? '```diff\n' + patchPreview + '\n```' : '(binary or no patch)'
+    ].join('\n')
+  })
+
+  const reviews = reviewsRes.ok ? ((reviewsRes.body as Array<Record<string, unknown>>) || []) : []
+  const reviewLines = reviews
+    .map((r) => {
+      const user = (r.user as { login?: string })?.login || ''
+      return `- ${user}: ${r.state} — ${String(r.body || '').slice(0, 200)}`
+    })
+    .join('\n')
+
+  const commits = commitsRes.ok ? ((commitsRes.body as Array<Record<string, unknown>>) || []) : []
+  const commitLines = commits
+    .map((c) => {
+      const msg = ((c.commit as { message?: string })?.message || '').split('\n')[0]
+      return `- ${String(c.sha).slice(0, 7)} ${msg}`
+    })
+    .join('\n')
+
+  const guide = [
+    '',
+    '## Review checklist (for the agent)',
+    '- [ ] Correctness / edge cases',
+    '- [ ] Security (injection, auth, secrets)',
+    '- [ ] Tests or manual verification notes',
+    '- [ ] Breaking API / migration',
+    '- [ ] Leave github_comment with findings (or approve verbally to user)'
+  ].join('\n')
+
+  return {
+    ok: true,
+    text: truncate(
+      [
+        `# PR Review Pack #${p.number} ${p.title}`,
+        `repo: ${pr.owner}/${pr.repo}`,
+        `state: ${p.state}${p.merged ? ' merged' : ''}${p.draft ? ' draft' : ''}`,
+        `user: ${(p.user as { login?: string })?.login}`,
+        `head: ${(p.head as { label?: string })?.label} → ${(p.base as { label?: string })?.label}`,
+        `url: ${p.html_url}`,
+        `mergeable: ${p.mergeable}`,
+        `additions: ${p.additions} deletions: ${p.deletions} changed_files: ${p.changed_files}`,
+        '',
+        '## Description',
+        String(p.body || '(no body)'),
+        commitLines ? `\n## Commits\n${commitLines}` : '',
+        reviewLines ? `\n## Existing reviews\n${reviewLines}` : '',
+        checksText,
+        '',
+        '## Files & patches',
+        fileLines.join('\n\n') || '(no files)',
+        guide
+      ].join('\n')
+    )
+  }
+}
+
+/** Build a structured issue body; optionally create on GitHub. */
+export async function githubDraftIssue(opts: {
+  repo: string
+  title: string
+  summary?: string
+  steps?: string
+  expected?: string
+  actual?: string
+  environment?: string
+  context?: string
+  labels?: string[]
+  create?: boolean
+}): Promise<GithubToolResult> {
+  const title = (opts.title || '').trim()
+  if (!title) return { ok: false, text: '', error: 'title is required' }
+  const body = [
+    '## Summary',
+    opts.summary?.trim() || '(fill in)',
+    '',
+    opts.steps?.trim() ? `## Steps to reproduce\n${opts.steps.trim()}\n` : null,
+    opts.expected?.trim() ? `## Expected\n${opts.expected.trim()}\n` : null,
+    opts.actual?.trim() ? `## Actual\n${opts.actual.trim()}\n` : null,
+    opts.environment?.trim() ? `## Environment\n${opts.environment.trim()}\n` : null,
+    opts.context?.trim()
+      ? `## Context\n${opts.context.trim()}\n\n_Note: screenshots/logs may be summarized in text; attach images in the GitHub UI if needed._\n`
+      : null,
+    '---',
+    '_Drafted by Pawn agent_'
+  ]
+    .filter(Boolean)
+    .join('\n')
+
+  if (!opts.create) {
+    return {
+      ok: true,
+      text: [
+        `# Issue draft (not created)`,
+        `repo: ${opts.repo || '(set repo)'}`,
+        `title: ${title}`,
+        opts.labels?.length ? `labels: ${opts.labels.join(', ')}` : null,
+        '',
+        body,
+        '',
+        'Call again with create:true and repo to open on GitHub, or edit and use github_create_issue.'
+      ]
+        .filter(Boolean)
+        .join('\n')
+    }
+  }
+
+  return githubCreateIssue({
+    repo: opts.repo,
+    title,
+    body,
+    labels: opts.labels
+  })
+}
+
 export async function githubCreatePull(opts: {
   repo: string
   title: string
@@ -458,11 +622,13 @@ export type GithubToolName =
   | 'github_get_issue'
   | 'github_list_pulls'
   | 'github_get_pull'
+  | 'github_review_pull'
   | 'github_list_commits'
   | 'github_get_file'
   | 'github_search_code'
   | 'github_search_issues'
   | 'github_create_issue'
+  | 'github_draft_issue'
   | 'github_comment'
   | 'github_create_pull'
 
@@ -499,6 +665,8 @@ export async function runGithubTool(
       })
     case 'github_get_pull':
       return githubGetPull(String(args.repo ?? ''), Number(args.number))
+    case 'github_review_pull':
+      return githubReviewPull(String(args.repo ?? ''), Number(args.number))
     case 'github_list_commits':
       return githubListCommits({
         repo: String(args.repo ?? ''),
@@ -522,6 +690,19 @@ export async function runGithubTool(
         title: String(args.title ?? ''),
         body: args.body ? String(args.body) : undefined,
         labels: Array.isArray(args.labels) ? args.labels.map(String) : undefined
+      })
+    case 'github_draft_issue':
+      return githubDraftIssue({
+        repo: String(args.repo ?? ''),
+        title: String(args.title ?? ''),
+        summary: args.summary ? String(args.summary) : undefined,
+        steps: args.steps ? String(args.steps) : undefined,
+        expected: args.expected ? String(args.expected) : undefined,
+        actual: args.actual ? String(args.actual) : undefined,
+        environment: args.environment ? String(args.environment) : undefined,
+        context: args.context ? String(args.context) : undefined,
+        labels: Array.isArray(args.labels) ? args.labels.map(String) : undefined,
+        create: args.create === true
       })
     case 'github_comment':
       return githubComment({

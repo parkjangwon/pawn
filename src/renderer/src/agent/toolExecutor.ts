@@ -12,6 +12,10 @@ import { applyEdit } from './editUtils'
 import { useChangeLedger } from '../stores/changeLedger'
 import { usePlanStore } from '../stores/plan'
 import type { ToolCall, ToolResult } from './toolDefinitions'
+import { runProjectChecks } from './runChecks'
+import { searchCodebase } from './codebaseSearch'
+import { gitPrReady } from './gitPrReady'
+import { listArtifacts, writeArtifact } from './artifacts'
 
 async function requireBrowser(): Promise<{ agent: BrowserAgent } | { error: string }> {
   const agent = getBrowserAgent()
@@ -352,6 +356,134 @@ export async function executeTool(
         return { toolCallId: call.id, content: `Plan updated (${next.length} items):\n${lines.join('\n')}` }
       }
 
+      case 'git_pr_ready': {
+        const cwd = resolveToolPath(
+          (call.arguments.cwd as string) || projectPath || undefined,
+          projectPath
+        )
+        const workDir = !cwd || cwd === '.' ? projectPath : cwd
+        if (!workDir) {
+          return { toolCallId: call.id, content: 'No project path set', isError: true }
+        }
+        const base = call.arguments.base ? String(call.arguments.base) : undefined
+        const text = await gitPrReady(workDir, base)
+        return { toolCallId: call.id, content: text }
+      }
+
+      case 'run_checks': {
+        const cwd = resolveToolPath(
+          (call.arguments.cwd as string) || projectPath || undefined,
+          projectPath
+        )
+        const workDir = !cwd || cwd === '.' ? projectPath : cwd
+        if (!workDir) {
+          return { toolCallId: call.id, content: 'No project path set', isError: true }
+        }
+        const kindRaw = String(call.arguments.kind || 'all')
+        const kind = (['all', 'typecheck', 'test', 'lint', 'build'].includes(kindRaw)
+          ? kindRaw
+          : 'all') as 'all' | 'typecheck' | 'test' | 'lint' | 'build'
+        const timeout = call.arguments.timeout !== undefined ? Number(call.arguments.timeout) : 120
+        const text = await runProjectChecks(workDir, kind, timeout)
+        return { toolCallId: call.id, content: text }
+      }
+
+      case 'codebase_search': {
+        const root = resolveToolPath(
+          (call.arguments.rootPath as string) || projectPath || '',
+          projectPath
+        )
+        if (!root || root === '.') {
+          return { toolCallId: call.id, content: 'No project path set', isError: true }
+        }
+        const text = await searchCodebase(root, String(call.arguments.query || ''), {
+          maxResults:
+            call.arguments.max_results !== undefined ? Number(call.arguments.max_results) : undefined,
+          pathGlob: call.arguments.path_glob ? String(call.arguments.path_glob) : undefined
+        })
+        return { toolCallId: call.id, content: text, isError: text.startsWith('query is required') }
+      }
+
+      case 'write_artifact': {
+        if (!projectPath) {
+          return { toolCallId: call.id, content: 'No project path set', isError: true }
+        }
+        const name = String(call.arguments.name || '')
+        const content = String(call.arguments.content ?? '')
+        const res = await writeArtifact(projectPath, name, content)
+        if (!res.ok) return { toolCallId: call.id, content: res.error || 'write failed', isError: true }
+        return { toolCallId: call.id, content: `Wrote artifact: ${res.path}` }
+      }
+
+      case 'list_artifacts': {
+        if (!projectPath) {
+          return { toolCallId: call.id, content: 'No project path set', isError: true }
+        }
+        const sub = call.arguments.subdir ? String(call.arguments.subdir) : ''
+        return { toolCallId: call.id, content: await listArtifacts(projectPath, sub) }
+      }
+
+      case 'terminal_list': {
+        if (!api.terminal?.list) {
+          return {
+            toolCallId: call.id,
+            content: 'Terminal list is only available in the desktop app.',
+            isError: true
+          }
+        }
+        const res = await api.terminal.list()
+        if (!res.ok) return { toolCallId: call.id, content: res.error || 'list failed', isError: true }
+        const terms = res.terminals || []
+        if (!terms.length) {
+          return {
+            toolCallId: call.id,
+            content: 'No terminal sessions. Open the terminal panel first.'
+          }
+        }
+        return {
+          toolCallId: call.id,
+          content: terms
+            .map((t) => `- id=${t.id} alive=${t.alive} bufferChars=${t.bufferChars}`)
+            .join('\n')
+        }
+      }
+
+      case 'terminal_read': {
+        if (!api.terminal?.readBuffer) {
+          return {
+            toolCallId: call.id,
+            content: 'Terminal read is only available in the desktop app.',
+            isError: true
+          }
+        }
+        let id = call.arguments.id ? String(call.arguments.id) : ''
+        if (!id && api.terminal.list) {
+          const listed = await api.terminal.list()
+          id = listed.terminals?.[0]?.id || ''
+        }
+        if (!id) {
+          return {
+            toolCallId: call.id,
+            content: 'No terminal id. Open a terminal or pass id from terminal_list.',
+            isError: true
+          }
+        }
+        const res = await api.terminal.readBuffer(
+          id,
+          call.arguments.max_chars !== undefined ? Number(call.arguments.max_chars) : undefined
+        )
+        if (!res.ok) return { toolCallId: call.id, content: res.error || 'read failed', isError: true }
+        return {
+          toolCallId: call.id,
+          content: [
+            `terminal id=${res.id} alive=${res.alive}`,
+            `returnedChars=${res.returnedChars} rawChars=${res.rawChars}`,
+            '',
+            res.text || '(empty buffer)'
+          ].join('\n')
+        }
+      }
+
       case 'git_log': {
         const cwd = resolveToolPath(
           (call.arguments.cwd as string) || projectPath || undefined,
@@ -564,6 +696,91 @@ export async function executeTool(
       case 'browser_open_external': {
         await api.browser.open(call.arguments.url as string)
         return { toolCallId: call.id, content: `Opened in the system browser: ${call.arguments.url}` }
+      }
+
+      case 'web_fetch': {
+        if (!api.research?.fetch) {
+          return {
+            toolCallId: call.id,
+            content: 'Research tools are only available in the desktop app.',
+            isError: true
+          }
+        }
+        const url = String(call.arguments.url || '').trim()
+        if (!url) {
+          return { toolCallId: call.id, content: 'url is required', isError: true }
+        }
+        const res = await api.research.fetch(url, {
+          maxAttempts:
+            call.arguments.max_attempts !== undefined ? Number(call.arguments.max_attempts) : undefined,
+          deviceClass: (['auto', 'desktop', 'mobile'].includes(String(call.arguments.device_class))
+            ? String(call.arguments.device_class)
+            : 'auto') as 'auto' | 'desktop' | 'mobile',
+          includeTrace: call.arguments.include_trace === true
+        })
+        return {
+          toolCallId: call.id,
+          content: res.text || res.error || 'Empty research response',
+          isError: !res.ok && !res.text
+        }
+      }
+
+      case 'web_research': {
+        if (!api.research?.research) {
+          return {
+            toolCallId: call.id,
+            content: 'Research tools are only available in the desktop app.',
+            isError: true
+          }
+        }
+        const query = call.arguments.query !== undefined ? String(call.arguments.query) : ''
+        const urls = Array.isArray(call.arguments.urls)
+          ? (call.arguments.urls as unknown[]).map(String)
+          : undefined
+        if (!query.trim() && (!urls || !urls.length)) {
+          return {
+            toolCallId: call.id,
+            content: 'Provide query and/or urls for web_research.',
+            isError: true
+          }
+        }
+        const res = await api.research.research({
+          query: query.trim() || undefined,
+          urls,
+          maxSources:
+            call.arguments.max_sources !== undefined ? Number(call.arguments.max_sources) : undefined,
+          includeSearch:
+            call.arguments.include_search !== undefined
+              ? call.arguments.include_search === true
+              : undefined
+        })
+        return {
+          toolCallId: call.id,
+          content: res.text || res.error || 'Empty research response',
+          isError: !res.ok && !res.text
+        }
+      }
+
+      case 'web_search': {
+        if (!api.research?.search) {
+          return {
+            toolCallId: call.id,
+            content: 'Web search is only available in the desktop app.',
+            isError: true
+          }
+        }
+        const q = String(call.arguments.query || '').trim()
+        if (!q) return { toolCallId: call.id, content: 'query is required', isError: true }
+        const res = await api.research.search({
+          query: q,
+          maxResults:
+            call.arguments.max_results !== undefined ? Number(call.arguments.max_results) : undefined
+        })
+        return {
+          toolCallId: call.id,
+          content: res.text || res.error || 'Empty search response',
+          isError: !res.ok && !res.text
+        }
       }
 
       case 'load_skill': {
@@ -891,11 +1108,13 @@ export async function executeTool(
       case 'github_get_issue':
       case 'github_list_pulls':
       case 'github_get_pull':
+      case 'github_review_pull':
       case 'github_list_commits':
       case 'github_get_file':
       case 'github_search_code':
       case 'github_search_issues':
       case 'github_create_issue':
+      case 'github_draft_issue':
       case 'github_comment':
       case 'github_create_pull': {
         if (!api.connections?.runTool) {

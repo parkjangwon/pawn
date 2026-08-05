@@ -217,6 +217,23 @@ declare global {
         write: (id: string, data: string) => void
         resize: (id: string, cols: number, rows: number) => void
         dispose: (id: string) => void
+        list: () => Promise<{
+          ok?: boolean
+          error?: string
+          terminals?: Array<{ id: string; bufferChars: number; alive: boolean }>
+        }>
+        readBuffer: (
+          id: string,
+          maxChars?: number
+        ) => Promise<{
+          ok?: boolean
+          error?: string
+          id?: string
+          alive?: boolean
+          text?: string
+          rawChars?: number
+          returnedChars?: number
+        }>
         onData: (callback: (id: string, data: string) => void) => () => void
       }
       onAppShortcut: (callback: (name: string) => void) => () => void
@@ -300,6 +317,57 @@ declare global {
           projectPath: string | undefined,
           id: string
         ) => Promise<{ ok: boolean; error?: string }>
+      }
+      research: {
+        fetch: (
+          url: string,
+          opts?: {
+            timeoutMs?: number
+            maxAttempts?: number | null
+            enablePhase0?: boolean
+            enableJina?: boolean
+            deviceClass?: 'auto' | 'desktop' | 'mobile'
+            maxContentChars?: number
+            includeTrace?: boolean
+          }
+        ) => Promise<{
+          ok?: boolean
+          text?: string
+          error?: string
+          finalUrl?: string
+          verdict?: string
+          mustInvokeBrowser?: boolean
+          platform?: string
+          title?: string
+        }>
+        research: (input: {
+          query?: string
+          urls?: string[]
+          maxSources?: number
+          includeSearch?: boolean
+          timeoutMs?: number
+          maxAttempts?: number
+        }) => Promise<{
+          ok?: boolean
+          text?: string
+          error?: string
+          sourceCount?: number
+          okCount?: number
+          discoveredUrls?: string[]
+        }>
+        search: (input: {
+          query?: string
+          maxResults?: number
+          timeoutMs?: number
+          includeHn?: boolean
+          includeWiki?: boolean
+        }) => Promise<{
+          ok?: boolean
+          text?: string
+          error?: string
+          hitCount?: number
+          hits?: Array<{ title: string; url: string; snippet?: string; source: string }>
+        }>
       }
     }
   }

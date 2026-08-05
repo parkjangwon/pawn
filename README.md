@@ -77,6 +77,8 @@ Maintainers: inject Desktop OAuth client IDs at release build time via GitHub Ac
   - **Linux Support**: Driven via `xdotool`.
   - **High-DPI Normalization**: Normalizes logical coordinate mouse clicks using monitor scale factors.
 - **Browser Use**: A real embedded Chromium view with its own persistent cookie session — the agent navigates, clicks, fills forms, reads page text, and takes screenshots via an accessibility-style element snapshot (no brittle CSS selectors required), with a visible AI cursor so you can watch it work.
+- **Web research** (built-in): `web_search` (links), `web_fetch` / `web_research` (page text) without a separate API key — Phase 0 platform routes + adaptive fetch grid + Jina. Adapted from [insane-search](https://github.com/fivetaku/insane-search) (MIT).
+- **Coding loop helpers**: `codebase_search` (symbol-aware), `run_checks` (typecheck/test/lint detection), `git_pr_ready`, `github_review_pull`, `github_draft_issue`, `write_artifact` / `list_artifacts`, `terminal_list` / `terminal_read`.
 - **Attachments**: Attach images (sent to vision-capable models as real image blocks) and text documents; pasting a large block of text turns it into a removable chip. Images open in a double-click lightbox.
 - **Google / GitHub tools**: optional connected-account tools (see [Service connections](#service-connections-optional)); results appear in chat, not as a separate product surface.
 - Permission system with granular user approval dialogs (per tool type, including MCP tools).
@@ -214,6 +216,7 @@ Output goes to the `release/` directory.
 src/
 ├── main/              # Electron main process (IPC, DB, CSP, window management)
 │   ├── connections/   # Google/GitHub OAuth (local tokens) + API tools for the agent
+│   ├── research/      # Public-web research engine (web_fetch / web_research)
 │   ├── ipc/           # IPC: fs, shell, browser, computer, terminal, mcp, connections, routine, ...
 │   ├── spreadsheet.ts # CSV/XLSX read with caps
 │   └── mcpManager.ts  # MCP server discovery, lifecycle, and tool calls
@@ -231,3 +234,5 @@ src/
 ## License
 
 MIT — see [LICENSE](./LICENSE). Privacy practices for optional OAuth: [PRIVACY.md](./PRIVACY.md).
+
+Public-web research engine adapted from [insane-search](https://github.com/fivetaku/insane-search) (MIT, © 2026 fivetaku).
