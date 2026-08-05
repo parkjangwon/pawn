@@ -4,7 +4,7 @@
 
 AI 코딩 에이전트 GUI — 코딩, 웹 서핑, 컴퓨터 자동화, **기억(Memory)**.
 
-Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, Claude Desktop의 브라우저 사용을 하나로 결합한 데스크톱 앱입니다. 종속성·락인 없이 API 키를 등록하고, 플러그인을 설치하며, 자신만의 에이전트를 만듭니다. **장기 메모리**는 이 기기에만 남아 시간이 지날수록 에이전트를 개인화합니다.
+Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, Claude Desktop의 브라우저 사용을 하나로 결합한 데스크톱 앱입니다. 종속성·락인 없이 API 키를 등록하고, 플러그인을 설치하며, 자신만의 에이전트를 만듭니다. **장기 메모리**는 이 기기에만 남아 시간이 지날수록 에이전트를 개인화합니다. **훅**(Claude/Codex 호환)으로 외부 스크립트·연동을 에이전트 루프에 붙입니다.
 
 ## 철학
 
@@ -12,8 +12,9 @@ Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, Claude Desktop의 브라
 - **BYOK** — OpenAI 또는 Claude 호환 규격의 모든 API 엔드포인트 등록.
 - **Auto mode** — 작업 난이도·프롬프트 캐시 최적화 기반 멀티 모델 라우팅.
 - **로컬 우선 Memory** — 선호·프로젝트 사실은 `~/.pawn/memory.db`에만 저장. Pawn 클라우드로 나가지 않음.
+- **라이프사이클 훅** — Claude/Codex 호환 `hooks` 설정. Claude+Pawn 소스 merge·중복 제거. 정책 deny는 YOLO보다 우선.
 - **Open source** — MIT, 완전한 커스터마이징.
-- **Claude Code 호환** — `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, `~/.agents/` 로드.
+- **Claude Code 호환** — `CLAUDE.md`, `AGENTS.md`, skills/rules, `~/.agents/`, Claude `settings.json` 훅.
 - **MCP 네이티브** — Claude Code, Cursor, Pawn에서 등록한 Model Context Protocol 서버 자동 탐색·연결.
 
 ## 설치
@@ -98,6 +99,28 @@ pawn
 | `write_artifact` / `list_artifacts` | `<프로젝트>/artifacts/` 에 산출물 저장 |
 | `terminal_list` / `terminal_read` | 패널 터미널 최근 출력 읽기 |
 | `update_plan` | 멀티스텝 작업 체크리스트 |
+
+#### 에이전트 훅 (라이프사이클)
+
+알림·정책 게이트·외부 연동용 Claude/Codex 호환 훅. 소스는 **합집합 merge**, **명령/URL 중복 제거**(같은 스크립트 이중 실행 방지):
+
+| 소스 | 경로 |
+|------|------|
+| Claude 유저 | `~/.claude/settings.json` → `hooks` |
+| Claude 프로젝트 | `<프로젝트>/.claude/settings.json` → `hooks` |
+| Pawn 유저 | `~/.pawn/hooks.json` |
+| Pawn 프로젝트 | `<프로젝트>/.pawn/hooks.json` |
+
+| 이벤트 | 시점 |
+|--------|------|
+| `SessionStart` | 빈 트랜스크립트의 첫 턴 |
+| `UserPromptSubmit` | 사용자 메시지마다 (턴 차단 가능) |
+| `PreToolUse` | 툴 실행 전 (YOLO에서도 deny 가능) |
+| `PermissionRequest` | Ask 다이얼로그 전 (UI 없이 allow/deny) |
+| `PostToolUse` | 툴 완료 후 (권고) |
+| `Stop` | 턴 정상 종료 |
+
+핸들러: `command`(stdin JSON) | `http`(POST JSON). matcher 별칭: `Bash`→`shell_exec`, `Write`/`Edit`→ write/edit. **deny 우선**. UI: **설정 → 에이전트 → 훅**. 옵션: `~/.pawn/hooks-settings.json`.
 
 #### 장기 메모리 (자가 학습)
 
@@ -184,6 +207,8 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 |------|------|
 | `~/.pawn/pawn.db` | 프로젝트·세션·메시지·트랜스크립트·사용량·루틴 |
 | `~/.pawn/memory.db` | 장기 메모리 카드 (채팅 히스토리와 분리) |
+| `~/.pawn/hooks.json` | Pawn 유저 라이프사이클 훅 (Claude 호환 스키마) |
+| `~/.pawn/hooks-settings.json` | 훅 on/off · 소스 토글 |
 | `~/.pawn/config.toml` | 앱 설정 (종료 확인 포함) |
 | `~/.pawn/mcp.json` | Pawn 관리 MCP 서버 |
 | `~/.pawn/reports/` | 자동화 산출물 |
@@ -225,6 +250,7 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 - 컨텍스트 격리 + contextBridge (`nodeIntegration: false`).
 - CSP, 민감 작업 승인, 리서치 fetch SSRF 가드.
 - Memory 시크릿 마스킹; 주입된 Memory/웹 본문은 **untrusted data**.
+- 훅은 메인 프로세스에서만 실행; PreToolUse/PermissionRequest **deny**는 YOLO에서도 강제.
 - 설정 가능 샌드박스.
 
 ## 기술 스택
@@ -277,8 +303,9 @@ src/
 ├── main/              # Electron 메인 (IPC, DB, CSP, 윈도우)
 │   ├── connections/   # Google/GitHub OAuth + API 툴
 │   ├── memory/        # 장기 메모리 엔진 (SQLite FTS, embed, extract, store)
+│   ├── hooks/         # 라이프사이클 훅 (Claude/Codex 호환 load + run)
 │   ├── research/      # 공개 웹 엔진 (web_search / web_fetch / web_research)
-│   ├── ipc/           # fs, shell, browser, terminal, mcp, memory, research, …
+│   ├── ipc/           # fs, shell, browser, terminal, mcp, memory, hooks, research, …
 │   ├── quit.ts        # Cmd+Q 확인 + before-quit
 │   ├── spreadsheet.ts
 │   └── mcpManager.ts

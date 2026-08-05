@@ -4,7 +4,7 @@
 
 AI Coding Agent GUI — Code, Browse, Automate, **Remember**.
 
-A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI, OpenCode's BYOK, and Claude Desktop's browser use. No harness, no lock-in — bring your own keys, install your own plugins, build your own agent. Long-term **Memory** stays on your machine and personalizes the agent over time.
+A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI, OpenCode's BYOK, and Claude Desktop's browser use. No harness, no lock-in — bring your own keys, install your own plugins, build your own agent. Long-term **Memory** stays on your machine and personalizes the agent over time. **Hooks** (Claude/Codex-compatible) connect the agent loop to your own scripts and integrations.
 
 ## Philosophy
 
@@ -12,8 +12,9 @@ A desktop application that combines the best of Cursor's auto mode, ChatGPT's UI
 - **BYOK** — Register any OpenAI or Claude compatible API endpoint.
 - **Auto mode** — Multi-model routing based on task complexity and cache optimization.
 - **Local-first Memory** — Preferences and project facts live in `~/.pawn/memory.db` only. Never sent to a Pawn cloud.
+- **Lifecycle hooks** — Claude/Codex-compatible `hooks` config; Claude + Pawn sources merge with dedupe. Policy denials beat YOLO.
 - **Open source** — MIT licensed, fully customizable.
-- **Claude Code compatible** — Loads `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, and `~/.agents/` directories.
+- **Claude Code compatible** — Loads `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, `~/.agents/`, and Claude `settings.json` hooks.
 - **MCP-native** — Discovers and connects to your existing Model Context Protocol servers (Claude Code, Cursor, or Pawn-managed) so their tools become available to the agent automatically.
 
 ## Installation
@@ -98,6 +99,28 @@ Thin tools that expand what the agent can do. They are not a separate product UI
 | `write_artifact` / `list_artifacts` | Durable notes/reports under `<project>/artifacts/` |
 | `terminal_list` / `terminal_read` | Read recent output from the embedded terminal panel |
 | `update_plan` | Session task checklist for multi-step work |
+
+#### Agent hooks (lifecycle)
+
+Claude/Codex-compatible lifecycle hooks for notifications, policy gates, and external systems. Sources **merge** (not replace) with **command/url dedupe** so the same script is not double-fired:
+
+| Source | Path |
+|--------|------|
+| Claude user | `~/.claude/settings.json` → `hooks` |
+| Claude project | `<project>/.claude/settings.json` → `hooks` |
+| Pawn user | `~/.pawn/hooks.json` |
+| Pawn project | `<project>/.pawn/hooks.json` |
+
+| Event | When |
+|-------|------|
+| `SessionStart` | First turn of an empty transcript |
+| `UserPromptSubmit` | Each user message (can block the turn) |
+| `PreToolUse` | Before a tool runs (can deny even in YOLO) |
+| `PermissionRequest` | Before the Ask dialog (can allow/deny without UI) |
+| `PostToolUse` | After a tool finishes (advisory) |
+| `Stop` | End of a completed turn |
+
+Handlers: `type: "command"` (stdin JSON) or `type: "http"` (POST JSON). Tool matchers accept Claude aliases (`Bash` → `shell_exec`, `Write`/`Edit` → write/edit tools). **Deny wins** over YOLO/auto. UI: **Settings → Agent → Hooks** (on/off, Claude/Pawn sources, loaded list). Options: `~/.pawn/hooks-settings.json`.
 
 #### Long-term Memory (self-learning)
 
@@ -191,6 +214,8 @@ Everything durable stays on your machine:
 |------|---------|
 | `~/.pawn/pawn.db` | Projects, sessions, messages, transcripts, usage, routines |
 | `~/.pawn/memory.db` | Long-term Memory cards (separate from chat history) |
+| `~/.pawn/hooks.json` | Pawn user lifecycle hooks (Claude-compatible shape) |
+| `~/.pawn/hooks-settings.json` | Hooks master switch / source toggles |
 | `~/.pawn/config.toml` | App settings (including quit confirmation) |
 | `~/.pawn/mcp.json` | Pawn-managed MCP servers |
 | `~/.pawn/reports/` | Automation deliverables |
@@ -246,6 +271,7 @@ Everything durable stays on your machine:
 - Interactive permission requests for sensitive local operations.
 - Research fetch SSRF guards (blocks private/loopback targets by default).
 - Memory redaction of secrets; injected Memory/web text treated as **untrusted data**.
+- Hooks run in the main process only; PreToolUse/PermissionRequest **deny** is enforced even in YOLO.
 - Sandbox support (configurable).
 
 ## Tech stack
@@ -312,6 +338,7 @@ src/
 ├── main/              # Electron main process (IPC, DB, CSP, window management)
 │   ├── connections/   # Google/GitHub OAuth (local tokens) + API tools
 │   ├── memory/        # Long-term Memory engine (SQLite FTS, embed, extract, store)
+│   ├── hooks/         # Lifecycle hooks (Claude/Codex-compatible load + run)
 │   ├── research/      # Public-web engine (web_search / web_fetch / web_research)
 │   ├── ipc/           # fs, shell, browser, computer, terminal, mcp, memory, research, …
 │   ├── quit.ts        # Cmd+Q confirm + before-quit

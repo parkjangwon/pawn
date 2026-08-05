@@ -88,10 +88,17 @@ describe('matchesGlob', () => {
   })
 })
 
+async function waitForPending(n = 1): Promise<void> {
+  await vi.waitFor(() => {
+    expect(usePermissionStore.getState().pending).toHaveLength(n)
+  })
+}
+
 describe('permission gating', () => {
   it('denies when the user rejects in ask mode', async () => {
     fsMock.writeFile.mockResolvedValue({ ok: true })
     const promise = executeTool(call('write_file', { path: '/x.ts', content: 'c' }))
+    await waitForPending(1)
     const pending = usePermissionStore.getState().pending[0]
     expect(pending.type).toBe('file_write')
     usePermissionStore.getState().resolve(pending.id, false)
@@ -105,7 +112,7 @@ describe('permission gating', () => {
     const controller = new AbortController()
     fsMock.writeFile.mockResolvedValue({ ok: true })
     const promise = executeTool(call('write_file', { path: '/x.ts', content: 'c' }), undefined, controller.signal)
-    expect(usePermissionStore.getState().pending).toHaveLength(1)
+    await waitForPending(1)
 
     controller.abort()
     const result = await promise
@@ -137,7 +144,7 @@ describe('permission gating', () => {
     fsMock.readFile.mockResolvedValue('old')
     fsMock.writeFile.mockResolvedValue({ ok: true })
     const promise = executeTool(call('write_file', { path: '/x.ts', content: 'c' }))
-    expect(usePermissionStore.getState().pending).toHaveLength(1)
+    await waitForPending(1)
     usePermissionStore.getState().resolve(usePermissionStore.getState().pending[0].id, true)
     const result = await promise
     expect(result.content).toContain('File written')

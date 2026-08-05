@@ -291,10 +291,17 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-primary);
 }
 
-.memory-settings {
+.memory-settings,
+.hooks-settings {
   display: flex;
   flex-direction: column;
   gap: var(--space-md);
+}
+
+.hooks-cmd {
+  font-size: var(--font-xs);
+  word-break: break-all;
+  color: var(--text-secondary);
 }
 
 .memory-stats {

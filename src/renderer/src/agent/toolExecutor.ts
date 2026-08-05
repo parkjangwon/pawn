@@ -5,6 +5,7 @@ import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
 import { useRoutineStore } from '../stores/routine'
 import { checkPermission } from './toolPermission'
+import { fireHook } from './hooksClient'
 import { isMcpToolName, callMcpTool } from './mcp'
 import { uid } from '../utils/uid'
 import { resolveToolPath, formatFileRead } from './pathUtils'
@@ -88,17 +89,81 @@ export async function executeTool(
     }
   }
 
+  // PreToolUse hooks — can deny even in YOLO (policy / external integrations).
+  if (!signal?.aborted) {
+    const pre = await fireHook({
+      event: 'PreToolUse',
+      sessionId: ctx?.sessionId,
+      projectPath: projectPath || null,
+      cwd: projectPath || undefined,
+      payload: {
+        tool_name: call.name,
+        tool_use_id: call.id,
+        tool_input: call.arguments
+      }
+    })
+    if (pre.decision === 'deny') {
+      return {
+        toolCallId: call.id,
+        content: `Blocked by hook (PreToolUse): ${pre.reason || call.name}`,
+        isError: true
+      }
+    }
+  }
+
   // Check permission before execution
-  const permitted = await checkPermission(call.name, call.arguments, signal, projectPath)
+  const permitted = await checkPermission(call.name, call.arguments, signal, projectPath, {
+    sessionId: ctx?.sessionId,
+    cwd: projectPath
+  })
   if (!permitted) {
     return { toolCallId: call.id, content: `Permission denied: ${call.name}`, isError: true }
   }
 
   try {
+    let result: ToolResult
     if (isMcpToolName(call.name)) {
-      return await callMcpTool(call.id, call.name, call.arguments, projectPath)
+      result = await callMcpTool(call.id, call.name, call.arguments, projectPath)
+    } else {
+      result = await executeToolBody(call, projectPath, signal, ctx, api)
     }
 
+    // PostToolUse — advisory; never undoes side effects
+    if (!signal?.aborted && window.api?.hooks?.run) {
+      void fireHook({
+        event: 'PostToolUse',
+        sessionId: ctx?.sessionId,
+        projectPath: projectPath || null,
+        cwd: projectPath || undefined,
+        payload: {
+          tool_name: call.name,
+          tool_use_id: call.id,
+          tool_input: call.arguments,
+          tool_response: {
+            content: String(result.content || '').slice(0, 8000),
+            isError: result.isError === true
+          }
+        }
+      })
+    }
+    return result
+  } catch (err) {
+    return {
+      toolCallId: call.id,
+      content: `Tool error (${call.name}): ${String(err)}`,
+      isError: true
+    }
+  }
+}
+
+async function executeToolBody(
+  call: ToolCall,
+  projectPath: string | undefined,
+  _signal: AbortSignal | undefined,
+  ctx: ToolExecContext | undefined,
+  api: typeof window.api
+): Promise<ToolResult> {
+  try {
     switch (call.name) {
       case 'read_spreadsheet': {
         const filePath = resolveToolPath(call.arguments.path as string, projectPath)

@@ -17,6 +17,7 @@ import { useSidebarResize } from '../hooks/useSidebarResize'
 import ConfirmDialog from './ConfirmDialog'
 import NavControls from './NavControls'
 import MemorySettingsPanel from './MemorySettingsPanel'
+import HooksSettingsPanel from './HooksSettingsPanel'
 import './Settings.css'
 
 type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'mcp' | 'connections' | 'system' | 'shortcuts' | 'data'
@@ -868,6 +869,10 @@ export default function Settings({
             <h3 className="settings-subsection-title">{t('settings.memorySection.title')}</h3>
             <p className="settings-desc">{t('settings.memorySection.desc')}</p>
             <MemorySettingsPanel />
+
+            <h3 className="settings-subsection-title">{t('settings.hooksSection.title')}</h3>
+            <p className="settings-desc">{t('settings.hooksSection.desc')}</p>
+            <HooksSettingsPanel />
           </div>
         )}
 

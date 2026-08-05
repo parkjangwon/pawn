@@ -289,6 +289,21 @@ const api = {
     export: () => ipcRenderer.invoke('memory:export'),
     import: (items: unknown[], projectId?: string | null) =>
       ipcRenderer.invoke('memory:import', items, projectId)
+  },
+
+  /** Agent lifecycle hooks (Claude/Codex-compatible). */
+  hooks: {
+    settings: () => ipcRenderer.invoke('hooks:settings'),
+    setSettings: (partial: Record<string, unknown>) =>
+      ipcRenderer.invoke('hooks:setSettings', partial),
+    list: (projectPath?: string | null) => ipcRenderer.invoke('hooks:list', projectPath ?? null),
+    run: (input: {
+      event: string
+      sessionId?: string
+      projectPath?: string | null
+      cwd?: string
+      payload?: Record<string, unknown>
+    }) => ipcRenderer.invoke('hooks:run', input || {})
   }
 }
 

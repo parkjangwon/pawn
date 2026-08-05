@@ -337,6 +337,22 @@
       "permissionMode": "权限模式",
       "permissionModeDesc": "控制代理请求权限的方式"
     },
+    "hooksSection": {
+      "title": "钩子",
+      "desc": "在代理生命周期运行脚本（兼容 Claude/Codex）。多来源合并并去重，相同命令只执行一次。PreToolUse 拒绝在 YOLO 下仍生效。",
+      "enabled": "使用钩子",
+      "enabledDesc": "执行 Claude 与 Pawn 配置中的生命周期钩子",
+      "readClaude": "读取 Claude 设置",
+      "readClaudeDesc": "~/.claude/settings.json 与项目 .claude/settings.json",
+      "readPawn": "读取 Pawn 钩子",
+      "readPawnDesc": "~/.pawn/hooks.json 与项目 .pawn/hooks.json",
+      "stats": "已加载 {{total}} 个钩子 · {{sources}}",
+      "refresh": "刷新",
+      "loaded": "已加载钩子",
+      "empty": "未找到钩子。请添加到 ~/.claude/settings.json 或 ~/.pawn/hooks.json。",
+      "saved": "已保存",
+      "desktopOnly": "钩子仅在桌面应用中运行。"
+    },
     "memorySection": {
       "title": "记忆（自我学习）",
       "desc": "仅保存在本机的长期知识。开启后会从对话中学习偏好与项目事实，并在后续自动回忆。不会保存 API 密钥或密码。",

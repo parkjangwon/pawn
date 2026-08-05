@@ -376,6 +376,50 @@ declare global {
           hits?: Array<{ title: string; url: string; snippet?: string; source: string }>
         }>
       }
+      /** Agent lifecycle hooks (Claude/Codex-compatible). */
+      hooks?: {
+        settings: () => Promise<{
+          enabled: boolean
+          readClaude: boolean
+          readPawn: boolean
+        }>
+        setSettings: (partial: {
+          enabled?: boolean
+          readClaude?: boolean
+          readPawn?: boolean
+        }) => Promise<{
+          enabled: boolean
+          readClaude: boolean
+          readPawn: boolean
+        }>
+        list: (projectPath?: string | null) => Promise<{
+          settings: { enabled: boolean; readClaude: boolean; readPawn: boolean }
+          hooks: Array<{
+            id: string
+            event: string
+            matcher: string
+            type: string
+            commandOrUrl: string
+            source: string
+          }>
+          bySource: Record<string, number>
+          byEvent: Record<string, number>
+        }>
+        run: (input: {
+          event: string
+          sessionId?: string
+          projectPath?: string | null
+          cwd?: string
+          payload?: Record<string, unknown>
+        }) => Promise<{
+          ok: boolean
+          decision: string
+          reason?: string
+          additionalContext: string[]
+          ran: number
+          errors: string[]
+        }>
+      }
       /** Long-term local Memory (self-learning knowledge cards). */
       memory?: {
         settings: () => Promise<{
