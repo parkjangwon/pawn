@@ -2,9 +2,16 @@
   margin: 4px 0;
   border-radius: 8px;
   border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
+  background: var(--bg-elevated, var(--bg-secondary));
   overflow: hidden;
   font-size: 12px;
+}
+
+/* Dark: lift tool rows off the canvas so folded rows don't read as empty voids */
+.app.dark .tool-message {
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .tool-message-header {
@@ -51,18 +58,33 @@
 
 .tool-status.ok {
   background: rgba(34, 197, 94, 0.12);
-  color: #22c55e;
+  color: var(--success, #22c55e);
 }
 
 .tool-status.error {
   background: rgba(239, 68, 68, 0.12);
-  color: #ef4444;
+  color: var(--danger, #ef4444);
 }
 
 .tool-status.running {
   background: rgba(59, 130, 246, 0.12);
   color: #3b82f6;
   animation: tool-pulse 1.4s ease-in-out infinite;
+}
+
+.app.dark .tool-status.ok {
+  background: rgba(48, 209, 88, 0.18);
+  color: #30d158;
+}
+
+.app.dark .tool-status.error {
+  background: rgba(255, 107, 107, 0.18);
+  color: #ff8a8a;
+}
+
+.app.dark .tool-status.running {
+  background: rgba(96, 165, 250, 0.18);
+  color: #60a5fa;
 }
 
 @keyframes tool-pulse {
@@ -81,9 +103,20 @@
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   max-height: 240px;
   overflow-y: auto;
+}
+
+.app.dark .tool-name {
+  color: var(--text-secondary);
+  opacity: 1;
+}
+
+.app.dark .tool-icon,
+.app.dark .tool-chevron {
+  opacity: 0.72;
+  color: var(--text-secondary);
 }
 
 .tool-show-more {

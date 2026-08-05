@@ -230,6 +230,17 @@
   line-height: 1.5;
 }
 
+/* Dark: code panels sit on elevated surface with a real border (Copilot-like) */
+.app.dark .code-block-wrapper pre {
+  background: #161618;
+  color: #e6e6e8;
+  border: 1px solid var(--border-color);
+}
+
+.app.dark .code-block-wrapper {
+  border-color: var(--border-color);
+}
+
 .code-block-wrapper pre code {
   font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
   background: none;

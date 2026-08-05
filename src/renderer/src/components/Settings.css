@@ -284,11 +284,18 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--accent);
 }
 
+.app.dark .settings-badge {
+  background: #3a3a3c;
+  color: #f5f5f7;
+  border: 1px solid #525256;
+}
+
 /* Theme toggle */
 .theme-toggle {
   display: flex;
   gap: 4px;
-  background: var(--bg-secondary);
+  background: var(--control-bg, var(--bg-secondary));
+  border: 1px solid var(--control-border, var(--border-color));
   border-radius: var(--radius-sm);
   padding: 2px;
 }
@@ -305,17 +312,29 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .theme-toggle button.active {
-  background: var(--bg-primary);
+  background: var(--bg-elevated, var(--bg-primary));
   color: var(--text-primary);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.app.dark .theme-toggle {
+  background: #0e0e10;
+  border-color: var(--border-strong, #48484a);
+}
+
+.app.dark .theme-toggle button.active {
+  /* Inverted selected pill: light fill + dark label (clear vs track) */
+  background: #f5f5f7;
+  color: #1c1c1e;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
 }
 
 /* Select */
 .settings-content select {
   padding: 5px 10px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--control-border, var(--border-color));
   border-radius: var(--radius-sm);
-  background: var(--bg-secondary);
+  background: var(--control-bg, var(--bg-secondary));
   color: var(--text-primary);
   font-size: var(--font-sm);
   outline: none;
@@ -324,6 +343,22 @@ body.resizing-sidebar .settings-resizer::after {
 
 .settings-content select:focus {
   border-color: var(--focus-ring);
+}
+
+.app.dark .settings-content select,
+.app.dark .add-form select,
+.app.dark .add-form input,
+.app.dark .add-form textarea,
+.app.dark .vision-fallback-select,
+.app.dark .vision-select {
+  background: var(--control-bg);
+  border-color: var(--control-border);
+  color: var(--text-primary);
+}
+
+.app.dark .settings-content select option {
+  background: #1c1c1e;
+  color: #f5f5f7;
 }
 
 /* Model list: vision capability controls */
@@ -404,6 +439,7 @@ body.resizing-sidebar .settings-resizer::after {
   cursor: pointer;
   inset: 0;
   background: var(--border-color);
+  border: 1px solid transparent;
   border-radius: 10px;
   transition: 0.2s;
 }
@@ -414,18 +450,42 @@ body.resizing-sidebar .settings-resizer::after {
   height: 16px;
   width: 16px;
   left: 2px;
-  bottom: 2px;
+  bottom: 1px;
   background: white;
   border-radius: 50%;
   transition: 0.2s;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .toggle-switch input:checked + .toggle-slider {
   background: var(--accent);
+  border-color: transparent;
 }
 
 .toggle-switch input:checked + .toggle-slider::before {
   transform: translateX(16px);
+  background: var(--on-accent, #fff);
+}
+
+/* Dark: track and knob must never both be pure white */
+.app.dark .toggle-slider {
+  background: #3a3a3c;
+  border-color: #525256;
+}
+
+.app.dark .toggle-slider::before {
+  background: #f5f5f7;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+}
+
+.app.dark .toggle-switch input:checked + .toggle-slider {
+  background: #f5f5f7;
+  border-color: #f5f5f7;
+}
+
+.app.dark .toggle-switch input:checked + .toggle-slider::before {
+  background: #1c1c1e;
+  box-shadow: none;
 }
 
 /* Test button */
@@ -645,14 +705,31 @@ body.resizing-sidebar .settings-resizer::after {
   border: none;
   border-radius: var(--radius-sm);
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent, #fff);
   font-size: var(--font-md);
+  font-weight: 500;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, filter 0.15s;
 }
 
-.btn-primary:hover {
-  opacity: 0.9;
+.btn-primary:hover:not(:disabled) {
+  opacity: 0.92;
+}
+
+.btn-primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+/* Dark: light filled button needs dark label (was white-on-white / invisible) */
+.app.dark .btn-primary {
+  background: #f5f5f7;
+  color: #1c1c1e;
+}
+
+.app.dark .btn-primary:hover:not(:disabled) {
+  background: #ffffff;
+  opacity: 1;
 }
 
 .btn-cancel {
@@ -663,6 +740,28 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
+}
+
+.app.dark .btn-cancel {
+  background: var(--control-bg);
+  border-color: var(--control-border);
+  color: var(--text-primary);
+}
+
+.app.dark .btn-cancel:hover {
+  background: var(--bg-hover);
+}
+
+.app.dark .test-btn {
+  background: var(--control-bg);
+  border-color: var(--control-border);
+  color: var(--text-secondary);
+}
+
+.app.dark .test-btn:hover:not(:disabled) {
+  border-color: #a1a1aa;
+  color: var(--text-primary);
+  background: var(--bg-hover);
 }
 
 .btn-action {
