@@ -77,29 +77,50 @@ function httpsGetJson(url) {
   })
 }
 
-function downloadFile(url, dest) {
+/** Follow GitHub release-asset redirects (302 → release-assets.githubusercontent.com). */
+function downloadFile(url, dest, redirectsLeft = 10) {
   return new Promise((resolve, reject) => {
     const file = createWriteStream(dest)
+    const cleanup = (err) => {
+      file.destroy()
+      reject(err)
+    }
     const req = https.get(
       url,
       {
         headers: { 'User-Agent': USER_AGENT }
       },
       (res) => {
-        if (res.statusCode !== 200) {
+        const code = res.statusCode || 0
+        // GitHub / CDN chain: 301/302/303/307/308
+        if (code >= 300 && code < 400 && res.headers.location) {
           res.resume()
           file.destroy()
-          reject(new Error(`Download failed with HTTP ${res.statusCode}`))
+          if (redirectsLeft <= 0) {
+            reject(new Error('Download failed: too many redirects'))
+            return
+          }
+          let next
+          try {
+            next = new URL(res.headers.location, url).href
+          } catch {
+            reject(new Error(`Download failed: invalid redirect to ${res.headers.location}`))
+            return
+          }
+          downloadFile(next, dest, redirectsLeft - 1).then(resolve, reject)
+          return
+        }
+        if (code !== 200) {
+          res.resume()
+          file.destroy()
+          reject(new Error(`Download failed with HTTP ${code}`))
           return
         }
         res.pipe(file)
         file.on('finish', () => file.close(() => resolve()))
       }
     )
-    req.on('error', (err) => {
-      file.destroy()
-      reject(err)
-    })
+    req.on('error', cleanup)
     file.on('error', (err) => {
       req.destroy()
       reject(err)
