@@ -440,7 +440,9 @@
       "sleepSystem": "Prevent sleep",
       "sleepDisplay": "Prevent sleep + screen",
       "trayEnabled": "Show in menu bar",
-      "trayEnabledDesc": "Keep a Pawn icon in the system tray / menu bar (right-click for menu)"
+      "trayEnabledDesc": "Keep a Pawn icon in the system tray / menu bar (right-click for menu)",
+      "taskNotifications": "Task complete notification",
+      "taskNotificationsDesc": "Show a notification once when a turn finishes (chat replies and coding work) while Pawn is in the background."
     },
     "shortcuts": "Shortcuts",
     "shortcutSection": {
@@ -655,5 +657,12 @@
     "undoing": "Reverting…",
     "reverted": "Reverted {{count}} file(s)",
     "failed": "Revert failed"
+  },
+  "notifications": {
+    "taskComplete": "Task complete",
+    "routineStarted": "Routine started",
+    "routineFinished": "Routine finished: {{name}}",
+    "scriptStarted": "Script started",
+    "scriptFailed": "Script failed"
   }
 }

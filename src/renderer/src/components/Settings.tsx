@@ -62,7 +62,7 @@ export default function Settings({ onClose, onSidebarWidthChange }: SettingsProp
   const { theme, set } = useThemeStore()
   const { routines, runningIds, add: addRoutine, toggle: toggleRoutine, remove: removeRoutine, runNow } = useRoutineStore()
   const { servers: mcpServers, toggleServer: toggleMcpServer } = useMcpStore()
-  const { sleepPrevention, setSleepPrevention } = usePrefsStore()
+  const { sleepPrevention, setSleepPrevention, taskNotificationsEnabled, setTaskNotificationsEnabled } = usePrefsStore()
   const { bindings: keybindings, setBinding: setKeybinding, reset: resetKeybinding } = useKeybindingsStore()
   const [recording, setRecording] = useState<KeyBindingId | null>(null)
   const [trayVisible, setTrayVisible] = useState(true)
@@ -922,6 +922,17 @@ export default function Settings({ onClose, onSidebarWidthChange }: SettingsProp
                   <button className={sleepPrevention === 'sleep' ? 'active' : ''} onClick={() => setSleepPrevention('sleep')}>{t('settings.systemSection.sleepSystem')}</button>
                   <button className={sleepPrevention === 'display' ? 'active' : ''} onClick={() => setSleepPrevention('display')}>{t('settings.systemSection.sleepDisplay')}</button>
                 </div>
+              </div>
+              <div className="settings-row">
+                <div className="settings-row-info"><span className="settings-row-label">{t('settings.systemSection.taskNotifications')}</span><span className="settings-row-desc">{t('settings.systemSection.taskNotificationsDesc')}</span></div>
+                <label className="toggle-switch">
+                  <input
+                    type="checkbox"
+                    checked={taskNotificationsEnabled}
+                    onChange={(e) => setTaskNotificationsEnabled(e.target.checked)}
+                  />
+                  <span className="toggle-slider" />
+                </label>
               </div>
               <div className="settings-row">
                 <div className="settings-row-info"><span className="settings-row-label">{t('settings.systemSection.trayEnabled')}</span><span className="settings-row-desc">{t('settings.systemSection.trayEnabledDesc')}</span></div>

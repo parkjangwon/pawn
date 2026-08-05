@@ -5,13 +5,17 @@ export type SleepPreventionMode = 'off' | 'sleep' | 'display'
 interface PrefsState {
   /** Whether the system is kept awake, and how aggressively. */
   sleepPrevention: SleepPreventionMode
+  /** Whether to notify once when a turn (chat reply or coding work) completes. */
+  taskNotificationsEnabled: boolean
   initialized: boolean
   init: () => Promise<void>
   setSleepPrevention: (mode: SleepPreventionMode) => void
+  setTaskNotificationsEnabled: (enabled: boolean) => void
 }
 
 export const usePrefsStore = create<PrefsState>((set, get) => ({
   sleepPrevention: 'off',
+  taskNotificationsEnabled: true,
   initialized: false,
 
   init: async () => {
@@ -19,10 +23,14 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
     set({ initialized: true })
     try {
       const cfg = await window.api.config.load() as Record<string, unknown>
-      const saved = (cfg as { settings?: { sleepPrevention?: string } }).settings?.sleepPrevention
-      const mode: SleepPreventionMode = saved === 'sleep' || saved === 'display' ? saved : 'off'
-      set({ sleepPrevention: mode })
-      void window.api.power?.setSleepPrevention?.(mode)
+      const settings = (cfg as { settings?: { sleepPrevention?: string; taskNotificationsEnabled?: boolean; taskNotifications?: string } }).settings
+      const sleepMode: SleepPreventionMode = settings?.sleepPrevention === 'sleep' || settings?.sleepPrevention === 'display' ? settings.sleepPrevention : 'off'
+      // Migrate the old three-way string mode: only 'off' meant disabled.
+      const enabled = typeof settings?.taskNotificationsEnabled === 'boolean'
+        ? settings.taskNotificationsEnabled
+        : settings?.taskNotifications !== 'off'
+      set({ sleepPrevention: sleepMode, taskNotificationsEnabled: enabled })
+      void window.api.power?.setSleepPrevention?.(sleepMode)
     } catch {
       // Desktop-only feature; keep the OS policy untouched.
     }
@@ -32,5 +40,10 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
     set({ sleepPrevention: mode })
     window.api.config.save({ settings: { sleepPrevention: mode } }).catch(() => {})
     void window.api.power?.setSleepPrevention?.(mode)
+  },
+
+  setTaskNotificationsEnabled: (enabled) => {
+    set({ taskNotificationsEnabled: enabled })
+    window.api.config.save({ settings: { taskNotificationsEnabled: enabled } }).catch(() => {})
   }
 }))

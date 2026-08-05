@@ -14,6 +14,8 @@ import { formatToolMessageContent } from '../agent/toolMessage'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
 import { useChangeLedger } from './changeLedger'
+import { usePrefsStore } from './prefs'
+import { useRoutineStore } from './routine'
 import type { ModelTier } from '../types/provider'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildDisplayContent, buildTranscriptText, imageAttachments, stripDisplayImages, type ChatAttachment } from '../utils/attachments'
@@ -262,7 +264,6 @@ async function agentLoop(
   const controller = new AbortController()
   abortController = controller
   const signal = controller.signal
-  let usedTools = false
   useChangeLedger.getState().beginTurn(sessionId, projectId, userContent)
 
   try {
@@ -462,8 +463,6 @@ async function agentLoop(
         break
       }
 
-      usedTools = true
-
       // --- Tool execution: safe calls in parallel, risky ones serially so their
       // permission prompts queue up one at a time.
       const safe: ToolCall[] = []
@@ -538,9 +537,16 @@ async function agentLoop(
     if (isCurrent) {
       set(() => ({ isStreaming: false, streamingSessionId: null }))
       window.api.setStreaming?.(false)
-      // Notify only after tool-using turns (coding work), not every short chat reply.
-      if (!aborted && usedTools) {
-        window.api.notification.send('Pawn', 'Task complete').catch(() => {})
+      // One notification per completed turn (chat reply or coding work), only
+      // when the user isn't watching the app. Routine runs are skipped here —
+      // the routine store notifies on its own.
+      if (!aborted && usePrefsStore.getState().taskNotificationsEnabled) {
+        const runningRoutine = useRoutineStore.getState().routines.find(
+          (r) => r.sessionId === sessionId && useRoutineStore.getState().runningIds.has(r.id)
+        )
+        if (!runningRoutine && !document.hasFocus()) {
+          window.api.notification.send('Pawn', i18n.t('notifications.taskComplete')).catch(() => {})
+        }
       }
       // Drain the queue even after a manual stop: queued messages were
       // explicitly scheduled and must not wait for the next user input.

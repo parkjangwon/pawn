@@ -440,7 +440,9 @@
       "sleepSystem": "절전 방지",
       "sleepDisplay": "절전+화면 방지",
       "trayEnabled": "메뉴바에 표시",
-      "trayEnabledDesc": "시스템 트레이/메뉴바에 Pawn 아이콘을 유지합니다 (우클릭 메뉴 지원)"
+      "trayEnabledDesc": "시스템 트레이/메뉴바에 Pawn 아이콘을 유지합니다 (우클릭 메뉴 지원)",
+      "taskNotifications": "작업 완료 알림",
+      "taskNotificationsDesc": "Pawn이 백그라운드에 있을 때 턴(채팅 응답·코딩 작업)이 끝나면 OS 알림을 한 번 표시합니다."
     },
     "shortcuts": "단축키",
     "shortcutSection": {
@@ -655,5 +657,12 @@
     "undoing": "되돌리는 중…",
     "reverted": "{{count}}개 파일 되돌림",
     "failed": "되돌리기 실패"
+  },
+  "notifications": {
+    "taskComplete": "작업 완료",
+    "routineStarted": "루틴 시작",
+    "routineFinished": "루틴 완료: {{name}}",
+    "scriptStarted": "스크립트 시작",
+    "scriptFailed": "스크립트 실패"
   }
 }
