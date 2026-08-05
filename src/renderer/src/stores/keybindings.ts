@@ -8,6 +8,7 @@ export type KeyBindingId =
   | 'open-command-palette'
   | 'open-settings'
   | 'new-session'
+  | 'close-layer'
 
 export interface KeyCombo {
   alt: boolean
@@ -23,7 +24,8 @@ export const KEYBINDING_IDS: KeyBindingId[] = [
   'toggle-sidebar',
   'open-command-palette',
   'open-settings',
-  'new-session'
+  'new-session',
+  'close-layer'
 ]
 
 export const DEFAULT_KEYBINDINGS: Record<KeyBindingId, string> = {
@@ -33,7 +35,10 @@ export const DEFAULT_KEYBINDINGS: Record<KeyBindingId, string> = {
   'toggle-sidebar': 'Meta+B',
   'open-command-palette': 'Meta+K',
   'open-settings': 'Meta+,',
-  'new-session': 'Meta+N'
+  'new-session': 'Meta+N',
+  // Progressive dismiss (palette → panel tabs → terminal → session → window).
+  // Full app quit remains Cmd+Q with optional confirmation.
+  'close-layer': 'Meta+W'
 }
 
 const MODIFIERS = new Set(['Alt', 'Control', 'Ctrl', 'Meta', 'Command', 'Shift'])

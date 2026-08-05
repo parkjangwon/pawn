@@ -154,10 +154,18 @@ export default function BottomTerminal(): React.JSX.Element {
     ;(window as any).__toggleTerminal = toggleVisible
     ;(window as any).__openTerminal = open
     ;(window as any).__closeTerminal = requestHide
+    /** Progressive Cmd+W: hide terminal only if open. */
+    ;(window as any).__closeTerminalIfOpen = (): boolean => {
+      if (closingRef.current) return true
+      if (!visibleRef.current) return false
+      requestHide()
+      return true
+    }
     return () => {
       delete (window as any).__toggleTerminal
       delete (window as any).__openTerminal
       delete (window as any).__closeTerminal
+      delete (window as any).__closeTerminalIfOpen
     }
   }, [toggleVisible, open, requestHide])
 

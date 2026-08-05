@@ -2,22 +2,23 @@
 
 [English Version](./README.md)
 
-AI 코딩 에이전트 GUI — 코딩, 웹 서핑, 컴퓨터 자동화.
+AI 코딩 에이전트 GUI — 코딩, 웹 서핑, 컴퓨터 자동화, **기억(Memory)**.
 
-Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, 그리고 Claude Desktop의 브라우저 사용 기능을 하나로 결합한 데스크톱 애플리케이션입니다. 종속성이나 제약 없이 원하는 API 키를 등록하고, 플러그인을 설치하며, 자신만의 에이전트를 빌드할 수 있습니다.
+Cursor의 Auto 모드, ChatGPT의 UI, OpenCode의 BYOK, Claude Desktop의 브라우저 사용을 하나로 결합한 데스크톱 앱입니다. 종속성·락인 없이 API 키를 등록하고, 플러그인을 설치하며, 자신만의 에이전트를 만듭니다. **장기 메모리**는 이 기기에만 남아 시간이 지날수록 에이전트를 개인화합니다.
 
 ## 철학
 
-- **No harness (제약 없는 환경)** — 순수한 캔버스를 제공합니다. 필요한 스킬·플러그인만 설치하면 됩니다. 내장 툴은 **얇은 능력**이며, 고정된 딥리서치 제품 파이프라인이 아닙니다.
-- **BYOK (개인 키 제공)** — OpenAI 또는 Claude 호환 규격의 모든 API 엔드포인트를 자유롭게 등록합니다.
-- **Auto mode (자동 모드)** — 작업 난이도 및 프롬프트 캐시 최적화에 기반한 멀티 모델 라우팅.
-- **Open source (오픈 소스)** — MIT 라이선스, 완전한 커스터마이징.
-- **Claude Code 호환** — `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, `~/.agents/` 를 로드합니다.
-- **MCP 네이티브** — Claude Code, Cursor, Pawn에서 등록한 Model Context Protocol 서버를 자동 탐색·연결합니다.
+- **No harness (제약 없는 환경)** — 순수한 캔버스. 필요한 스킬·플러그인만 설치. 내장 툴은 **얇은 능력**이며, 고정된 딥리서치 제품 파이프라인이 아닙니다.
+- **BYOK** — OpenAI 또는 Claude 호환 규격의 모든 API 엔드포인트 등록.
+- **Auto mode** — 작업 난이도·프롬프트 캐시 최적화 기반 멀티 모델 라우팅.
+- **로컬 우선 Memory** — 선호·프로젝트 사실은 `~/.pawn/memory.db`에만 저장. Pawn 클라우드로 나가지 않음.
+- **Open source** — MIT, 완전한 커스터마이징.
+- **Claude Code 호환** — `CLAUDE.md`, `AGENTS.md`, `.claude/skills/`, `.claude/rules/`, `.agent/`, `~/.agents/` 로드.
+- **MCP 네이티브** — Claude Code, Cursor, Pawn에서 등록한 Model Context Protocol 서버 자동 탐색·연결.
 
 ## 설치
 
-[릴리스 페이지](https://github.com/parkjangwon/pawn/releases/latest)에서 플랫폼별 최신 버전을 받거나, 터미널에서 한 줄로 실행할 수 있습니다.
+[릴리스 페이지](https://github.com/parkjangwon/pawn/releases/latest)에서 플랫폼별 최신 버전을 받거나, 터미널에서 한 줄로 실행합니다.
 
 ### 간편 설치 (권장)
 
@@ -37,6 +38,7 @@ pawn
 - **macOS** — `Pawn-<version>-universal.dmg` (Apple Silicon + Intel). `.dmg`를 열어 **Pawn**을 응용 프로그램으로 드래그.
   - 첫 실행: 우클릭 → **열기** 후 Gatekeeper 승인 (서명되지 않은 빌드).
 - **Windows** — `Pawn-<version>-x64-setup.exe` (Intel/AMD) 또는 `Pawn-<version>-arm64-setup.exe` (ARM).
+- **Linux** — 릴리스의 `.AppImage` / `.deb` (또는 `npm run dist:linux`로 빌드).
 
 ### 스킬 & 플러그인 설치
 
@@ -46,12 +48,13 @@ pawn
 - **플러그인** — 프로젝트: `.claude/plugins/`, 사용자: Claude Code 플러그인 또는 `~/.claude/plugins/` + `installed_plugins.json`.
 - 설치 목록은 **설정 → 플러그인**에서 켜고 끌 수 있습니다.
 
-스킬은 **카탈로그 항목**입니다. 에이전트는 요약만 보고, 전문은 `load_skill`로 읽습니다. 내장 툴(`web_fetch`, `run_checks` 등)은 스킬 설치 없이도 항상 도구 목록에 있습니다.
+스킬은 **카탈로그 항목**입니다. 에이전트는 요약만 보고, 전문은 `load_skill`로 읽습니다. 내장 툴(`web_fetch`, `memory_search`, `run_checks` 등)은 스킬 설치 없이도 항상 도구 목록에 있습니다.
 
 ### 요구 사항
 
-- macOS 10.12+ 또는 Windows 10/11
+- macOS 10.12+, Windows 10/11, 또는 Linux (패키지 빌드)
 - OpenAI 또는 Claude 호환 API 키 (BYOK)
+- 소스 빌드 시 Node `^20.19.0 || >=22.12.0`
 
 ### 서비스 연동 (선택)
 
@@ -69,11 +72,12 @@ pawn
 
 ### 코어 에이전트 루프
 
-- 도구 호출 루프 (턴당 최대 25 라운드).
+- 도구 호출 루프 (턴당 최대 **50** 라운드; 동일 툴 호출 루프는 조기 중단).
 - 도구 유형별 승인 다이얼로그 (MCP 포함).
 - 큐 / 조향(Steering) 전송 모드.
 - 도구 결과 기본 접힘 (Claude Code 스타일).
 - **첨부**: 이미지(비전 모델 이미지 블록)·텍스트 문서, 대량 붙여넣기 칩, 이미지 라이트박스.
+- 컨텍스트가 차면 트랜스크립트 압축 (SQLite에 캐시 안정 히스토리 유지).
 
 ### 내장 에이전트 툴 (플러그인 불필요)
 
@@ -95,6 +99,26 @@ pawn
 | `terminal_list` / `terminal_read` | 패널 터미널 최근 출력 읽기 |
 | `update_plan` | 멀티스텝 작업 체크리스트 |
 
+#### 장기 메모리 (자가 학습)
+
+선호·프로젝트 사실·절차·결정·인물 메모 등 **내구성 있는 지식 카드**. 이 기기 `~/.pawn/memory.db`에만 저장(SQLite + FTS5 + 로컬 해시 임베딩 하이브리드 검색). 클라우드로 나가지 않으며, 저장 시 API 키·토큰·비밀번호는 마스킹되거나 거부됩니다.
+
+| 도구 | 용도 |
+|------|------|
+| `memory_search` | 저장된 카드 하이브리드 검색 (전문 + 로컬 임베딩) |
+| `memory_save` | 카드 저장 (에이전트 또는 사용자) |
+| `memory_list` | 목록/필터 |
+| `memory_update` / `memory_forget` | 수정·삭제 |
+
+추가로:
+
+- 턴 종료 후 **자동 캡처** (최근 메시지 휴리스틱 추출, 다국어 “기억해” 단서 포함).
+- 관련 카드 **턴 주입** (preamble에 **untrusted** 배경 데이터로 표시 — 명령이 아님).
+- **설정 → 에이전트 → 메모리**: on/off 하나, 내보내기·가져오기·전체 삭제, 그리고 내 메모리 목록(검색·고정·잊기). 켜 두면 자동 캡처·턴 주입은 알아서 동작.
+- 스코프: **user**(전역) / **project**; 고정(pin) 카드는 회상 시 우선.
+
+예: *“기억해: 이 모노레포에서는 항상 pnpm 써”* → 저장 → 이후 턴에 다시 설명하지 않아도 주입.
+
 #### 공개 웹 (내장 리서치 엔진)
 
 API 키 없음. **공개 콘텐츠만** — 로그인·페이월 우회가 아닙니다. [insane-search](https://github.com/fivetaku/insane-search) (MIT) 기반.
@@ -113,8 +137,12 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 
 #### 브라우저 · 컴퓨터
 
-- **브라우저**: 쿠키 세션이 유지되는 임베드 Chromium — 탐색·스냅샷·클릭·입력·텍스트·스크린샷, AI 커서 표시.
-- **컴퓨터 제어**: 스크린샷(비전)·클릭·타이핑·키 입력 (macOS cliclick/osascript, Windows PowerShell, Linux xdotool, High-DPI 보정).
+- **브라우저**: 쿠키 세션이 유지되는 임베드 Chromium — 탐색·스냅샷·클릭·입력·텍스트·스크린샷, AI 커서 (`browser_*`).
+- **컴퓨터 제어**: 스크린샷(비전)·클릭·타이핑·키 입력 (`computer_*`).
+  - macOS: cliclick / osascript
+  - Windows: PowerShell / .NET Forms
+  - Linux: xdotool
+  - High-DPI 좌표 보정
 
 #### Google · GitHub (설정 → 서비스 연동)
 
@@ -126,9 +154,15 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 
 결과는 채팅에만 표시됩니다.
 
-#### 앱 제어
+#### 앱 제어 · 스킬
 
-`app_*` 로 우측 패널 탭, 모델·권한·추론·테마, 자동화 목록/생성.
+| 툴 | 용도 |
+|----|------|
+| `app_open_tab` / `app_close_tab` | 우측 패널 탭 |
+| `app_set_model` / `app_set_permission_mode` / `app_set_reasoning` / `app_toggle_theme` | 세션 UI |
+| `app_list_automations` / `app_create_automation` | 채팅에서 자동화 |
+| `load_skill` | 카탈로그 스킬 전문 로드 |
+| `install_skill` | git URL에서 스킬/플러그인 설치 |
 
 ### Model Context Protocol (MCP)
 
@@ -142,10 +176,21 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 - OpenAI / Claude API 규격 및 커스텀 OpenAI 호환 엔드포인트.
 - **스마트 모델 라우터**: 난이도 휴리스틱, 캐시 인지 라우팅, 실패 시 에스컬레이션, 프로바이더 쿨다운, 비전 폴백.
 
-### 로컬 DB · 영속성
+### 로컬 데이터 (`~/.pawn`)
 
-- **SQLite** (`better-sqlite3`, WAL).
-- `projects` / `sessions` / `messages` / `transcripts`(캐시 안정 히스토리) / `usage` / `routines`.
+지속 데이터는 모두 이 기기에만 둡니다.
+
+| 경로 | 용도 |
+|------|------|
+| `~/.pawn/pawn.db` | 프로젝트·세션·메시지·트랜스크립트·사용량·루틴 |
+| `~/.pawn/memory.db` | 장기 메모리 카드 (채팅 히스토리와 분리) |
+| `~/.pawn/config.toml` | 앱 설정 (종료 확인 포함) |
+| `~/.pawn/mcp.json` | Pawn 관리 MCP 서버 |
+| `~/.pawn/reports/` | 자동화 산출물 |
+| `~/.pawn/installers/` | `npx` 설치 패키지 캐시 |
+
+- **SQLite** (`better-sqlite3`, WAL) — 앱 DB와 Memory 모두.
+- **트랜스크립트**는 UI 메시지와 분리해 프로바이더 호출 시 프롬프트 캐시 prefix를 안정적으로 유지합니다.
 
 ### 우측 패널 — 터미널, 파일, Git, Diff, Artifacts, 브라우저
 
@@ -162,7 +207,10 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 ### UI / UX
 
 - ChatGPT 스타일 레이아웃, macOS 트래픽 라이트 헤더.
+- 컴포저·컨트롤 다크 모드 대비 개선.
 - **커맨드 팔레트** (`Cmd/Ctrl+K`), **단축키 설정**.
+- **단계적 닫기** (`Cmd/Ctrl+W` / close-layer): 오버레이 → 패널 → 창 순으로 닫음.
+- **종료 확인** (`Cmd/Ctrl+Q`) + “다시 묻지 않기” (설정 → 시스템에서 토글).
 - 사이드바 핀/삭제, “열기” 에디터 런처 (25+ 프리셋).
 - 라이트/다크, 리치 마크다운, 스트리밍, i18n (한/영/일/중).
 
@@ -175,7 +223,9 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 ### 보안
 
 - 컨텍스트 격리 + contextBridge (`nodeIntegration: false`).
-- CSP, 민감 작업 승인, 리서치 fetch SSRF 가드, 설정 가능 샌드박스.
+- CSP, 민감 작업 승인, 리서치 fetch SSRF 가드.
+- Memory 시크릿 마스킹; 주입된 Memory/웹 본문은 **untrusted data**.
+- 설정 가능 샌드박스.
 
 ## 기술 스택
 
@@ -226,15 +276,17 @@ npm run pack        # 설치 프로그램 없이 디렉터리만
 src/
 ├── main/              # Electron 메인 (IPC, DB, CSP, 윈도우)
 │   ├── connections/   # Google/GitHub OAuth + API 툴
+│   ├── memory/        # 장기 메모리 엔진 (SQLite FTS, embed, extract, store)
 │   ├── research/      # 공개 웹 엔진 (web_search / web_fetch / web_research)
-│   ├── ipc/           # fs, shell, browser, terminal, mcp, connections, research, …
+│   ├── ipc/           # fs, shell, browser, terminal, mcp, memory, research, …
+│   ├── quit.ts        # Cmd+Q 확인 + before-quit
 │   ├── spreadsheet.ts
 │   └── mcpManager.ts
 ├── preload/           # contextBridge
 └── renderer/          # React
     └── src/
         ├── agent/     # 에이전트 루프, 툴 정의/실행, 라우터, MCP
-        ├── components/
+        ├── components/# UI (채팅, 설정, Memory 패널, 우측 패널, …)
         ├── i18n/
         ├── stores/
         ├── styles/

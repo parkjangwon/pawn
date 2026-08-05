@@ -48,7 +48,7 @@ interface AppState {
    */
   startNewChat: (title?: string) => string
   removeSession: (projectId: string, sessionId: string) => void
-  setActiveSession: (id: string) => void
+  setActiveSession: (id: string | null) => void
   loadMessages: (projectId: string, sessionId: string) => Promise<void>
   addMessage: (projectId: string, sessionId: string, message: Message) => void
   updateMessageContent: (
@@ -185,6 +185,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   setActiveSession: (id) => {
     set({ activeSessionId: id })
     // Trigger lazy message load for the activated session
+    if (!id) return
     const state = get()
     const project = state.projects.find((p) => p.sessions.some((s) => s.id === id))
     if (project && !state.loadedSessions.has(id)) {

@@ -270,6 +270,9 @@ async function agentLoop(
   const signal = controller.signal
   useChangeLedger.getState().beginTurn(sessionId, projectId, userContent)
 
+  // Hoisted so finally can auto-capture Memory from this turn's transcript.
+  let entries: TranscriptEntry[] = []
+
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
     const projectPath = project?.paths?.[0]
@@ -296,10 +299,24 @@ async function agentLoop(
        // Missing CLAUDE.md / skills is normal; keep the base layer.
      }
    }
+    // Long-term Memory injection (local, optional)
+    try {
+      if (window.api.memory?.injectBlock) {
+        const mem = await window.api.memory.injectBlock({
+          query: userContent.slice(0, 500),
+          projectId: projectId && projectId !== '__general__' ? projectId : null
+        })
+        if (mem && String(mem).trim()) {
+          projectPreamble += (projectPreamble ? '\n\n' : '') + String(mem)
+        }
+      }
+    } catch {
+      // Memory optional
+    }
     // systemLayers stays [SYSTEM_PROMPT] only — project context is passed as
     // preamble to callLLM, where it is injected into the messages array.
 
-   let entries = await loadTranscript(projectId, sessionId)
+   entries = await loadTranscript(projectId, sessionId)
     const imgs = imageAttachments(attachments)
     entries.push({
       role: 'user',
@@ -583,6 +600,27 @@ async function agentLoop(
     if (isCurrent) {
       set(() => ({ isStreaming: false, streamingSessionId: null }))
       window.api.setStreaming?.(false)
+      // Auto-capture durable Memory cards from this turn (local heuristic).
+      if (!aborted && window.api.memory?.ingestTurn && entries.length > 0) {
+        try {
+          const recent = entries
+            .filter((e): e is Extract<TranscriptEntry, { role: 'user' | 'assistant' }> =>
+              e.role === 'user' || e.role === 'assistant'
+            )
+            .slice(-12)
+            .map((e) => ({
+              role: e.role,
+              content: typeof e.content === 'string' ? e.content : ''
+            }))
+          void window.api.memory.ingestTurn({
+            projectId: projectId && projectId !== '__general__' ? projectId : null,
+            sessionId,
+            messages: recent
+          })
+        } catch {
+          /* non-fatal */
+        }
+      }
       // One notification per completed turn (chat reply or coding work), only
       // when the user isn't watching the app. Routine runs are skipped here —
       // the routine store notifies on its own.

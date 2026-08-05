@@ -337,6 +337,27 @@
       "permissionMode": "权限模式",
       "permissionModeDesc": "控制代理请求权限的方式"
     },
+    "memorySection": {
+      "title": "记忆（自我学习）",
+      "desc": "仅保存在本机的长期知识。开启后会从对话中学习偏好与项目事实，并在后续自动回忆。不会保存 API 密钥或密码。",
+      "enabled": "使用记忆",
+      "enabledDesc": "从对话中学习，下次自动想起 — 无需额外设置",
+      "stats": "记忆 {{total}} 条 · ~/.pawn/memory.db",
+      "export": "导出",
+      "import": "导入",
+      "clearAll": "全部清除",
+      "clearConfirm": "删除本机全部记忆？此操作无法撤销。",
+      "cleared": "已清除全部记忆",
+      "saved": "已保存",
+      "imported": "已导入 {{n}} 条记忆",
+      "browser": "我的记忆",
+      "filterPlaceholder": "搜索…",
+      "refresh": "刷新",
+      "empty": "还没有内容。正常聊天，或说“记住…”。",
+      "forget": "忘记",
+      "desktopOnly": "记忆功能仅在桌面应用中可用。",
+      "pin": "置顶"
+    },
     "pluginSection": {
       "title": "插件",
       "desc": "管理插件和集成",
@@ -485,7 +506,9 @@
       "trayEnabled": "在菜单栏中显示",
       "trayEnabledDesc": "在系统托盘/菜单栏保留 Pawn 图标（支持右键菜单）",
       "taskNotifications": "任务完成通知",
-      "taskNotificationsDesc": "当 Pawn 处于后台时，每轮任务（聊天回复或编码工作）完成后显示一次系统通知。"
+      "taskNotificationsDesc": "当 Pawn 处于后台时，每轮任务（聊天回复或编码工作）完成后显示一次系统通知。",
+      "confirmQuit": "退出前确认",
+      "confirmQuitDesc": "使用 ⌘Q / Ctrl+Q 或托盘“退出”关闭应用时询问确认。也可在退出对话框中勾选“不再询问”。"
     },
     "shortcuts": "快捷键",
     "shortcutSection": {
@@ -502,7 +525,15 @@
       "toggle-sidebar": "切换侧边栏",
       "open-command-palette": "打开命令面板",
       "open-settings": "打开设置",
-      "new-session": "新建会话"
+      "new-session": "新建会话",
+      "close-layer": "关闭图层（面板 / 会话 / 窗口）"
+    },
+    "quitDialog": {
+      "message": "要退出 Pawn 吗？",
+      "detail": "若有正在运行的代理任务将被取消。",
+      "quit": "退出",
+      "cancel": "取消",
+      "dontAsk": "不再询问"
     },
     "automations": "自动化"
   },

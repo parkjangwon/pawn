@@ -1,27 +1,30 @@
 .permission-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgba(0, 0, 0, 0.55);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
+  padding: 24px;
+  box-sizing: border-box;
 }
 
 .permission-dialog {
-  width: 420px;
-  max-width: 90vw;
+  width: min(560px, 100%);
+  max-width: 100%;
   background: var(--bg-primary);
+  border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
 }
 
 .permission-dialog h3 {
   font-size: var(--font-xl);
   font-weight: 600;
   color: var(--text-primary);
-  margin-bottom: var(--space-md);
+  margin: 0 0 var(--space-md);
 }
 
 .permission-type {
@@ -36,55 +39,121 @@
 .permission-desc {
   font-size: var(--font-lg);
   color: var(--text-primary);
-  margin-bottom: var(--space-md);
+  margin: 0 0 var(--space-md);
   line-height: 1.5;
 }
 
 .permission-details {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-color);
+  background: var(--control-bg, var(--bg-secondary));
+  border: 1px solid var(--control-border, var(--border-color));
   border-radius: var(--radius-sm);
   padding: var(--space-md);
   font-size: var(--font-sm);
   color: var(--text-secondary);
   overflow-x: auto;
-  margin-bottom: var(--space-lg);
+  margin: 0 0 var(--space-lg);
   white-space: pre-wrap;
-  word-break: break-all;
+  word-break: break-word;
+  max-height: min(40vh, 280px);
+  line-height: 1.45;
 }
 
 .permission-actions {
   display: flex;
-  gap: var(--space-sm);
+  flex-direction: column;
+  gap: 12px;
+}
+
+.permission-actions-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
   justify-content: flex-end;
 }
 
+.permission-actions-primary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.permission-actions-primary.has-secondary {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+}
+
 .permission-actions button {
-  padding: var(--space-sm) var(--space-lg);
+  padding: 9px 16px;
   border-radius: var(--radius-md);
   font-size: var(--font-md);
   font-weight: 500;
   cursor: pointer;
   border: none;
-  transition: opacity 0.15s;
+  white-space: nowrap;
+  flex: 0 0 auto;
+  line-height: 1.3;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
 }
 
 .permission-actions button:hover {
-  opacity: 0.85;
+  opacity: 0.92;
+}
+
+.permission-actions button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .deny-btn {
-  background: var(--bg-hover);
+  background: var(--control-bg, var(--bg-secondary));
   color: var(--text-primary);
+  border: 1px solid var(--control-border, var(--border-color)) !important;
 }
 
+.deny-btn:hover {
+  background: var(--bg-hover);
+  opacity: 1;
+}
+
+/* Filled primary — must use --on-accent (dark theme accent is light gray) */
 .allow-btn {
   background: var(--accent);
-  color: #fff;
+  color: var(--on-accent, #fff);
+  min-width: 72px;
+  font-weight: 600;
+}
+
+.allow-btn:hover {
+  background: var(--accent-hover, var(--accent));
+  opacity: 1;
 }
 
 .session-btn {
   background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--border-color) !important;
+  color: var(--text-primary);
+  border: 1px solid var(--control-border, var(--border-color)) !important;
+}
+
+.session-btn:hover {
+  background: var(--bg-hover);
+  opacity: 1;
+}
+
+/* Dark: ensure outlined buttons stay readable on near-black surfaces */
+.app.dark .permission-dialog {
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.65);
+}
+
+.app.dark .deny-btn,
+.app.dark .session-btn {
+  background: var(--control-bg, #2c2c2e);
+  border-color: var(--control-border, #48484a) !important;
+  color: var(--text-primary);
+}
+
+.app.dark .allow-btn {
+  background: var(--accent);
+  color: var(--on-accent, #1c1c1e);
 }

@@ -158,6 +158,16 @@ const api = {
     return () => { ipcRenderer.removeListener('app:shortcut', handler) }
   },
 
+  window: {
+    close: () => ipcRenderer.invoke('window:close')
+  },
+
+  prefs: {
+    getConfirmQuit: () => ipcRenderer.invoke('prefs:getConfirmQuit') as Promise<boolean>,
+    setConfirmQuit: (enabled: boolean) =>
+      ipcRenderer.invoke('prefs:setConfirmQuit', enabled) as Promise<{ ok?: boolean; confirmQuit?: boolean }>
+  },
+
   routine: {
     list: () => ipcRenderer.invoke('routine:list'),
     add: (input: unknown) => ipcRenderer.invoke('routine:add', input),
@@ -253,6 +263,32 @@ const api = {
       includeHn?: boolean
       includeWiki?: boolean
     }) => ipcRenderer.invoke('research:search', input || {})
+  },
+
+  /** Long-term local Memory (self-learning knowledge cards). */
+  memory: {
+    settings: () => ipcRenderer.invoke('memory:settings'),
+    setSettings: (partial: Record<string, unknown>) => ipcRenderer.invoke('memory:setSettings', partial),
+    save: (input: Record<string, unknown>) => ipcRenderer.invoke('memory:save', input),
+    update: (id: string, patch: Record<string, unknown>) => ipcRenderer.invoke('memory:update', id, patch),
+    forget: (id: string) => ipcRenderer.invoke('memory:forget', id),
+    forgetMany: (ids: string[]) => ipcRenderer.invoke('memory:forgetMany', ids),
+    clear: (opts?: { projectId?: string | null; scope?: string }) =>
+      ipcRenderer.invoke('memory:clear', opts || {}),
+    search: (input: Record<string, unknown>) => ipcRenderer.invoke('memory:search', input),
+    list: (input?: Record<string, unknown>) => ipcRenderer.invoke('memory:list', input || {}),
+    get: (id: string) => ipcRenderer.invoke('memory:get', id),
+    stats: () => ipcRenderer.invoke('memory:stats'),
+    injectBlock: (opts: { query?: string; projectId?: string | null }) =>
+      ipcRenderer.invoke('memory:injectBlock', opts || {}),
+    ingestTurn: (input: {
+      projectId?: string | null
+      sessionId?: string
+      messages?: Array<{ role: string; content: string }>
+    }) => ipcRenderer.invoke('memory:ingestTurn', input || {}),
+    export: () => ipcRenderer.invoke('memory:export'),
+    import: (items: unknown[], projectId?: string | null) =>
+      ipcRenderer.invoke('memory:import', items, projectId)
   }
 }
 

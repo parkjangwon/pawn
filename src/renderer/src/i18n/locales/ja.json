@@ -337,6 +337,27 @@
       "permissionMode": "権限モード",
       "permissionModeDesc": "エージェントの権限リクエスト方法を制御"
     },
+    "memorySection": {
+      "title": "メモリ（自己学習）",
+      "desc": "この端末だけの長期知識です。オンにすると会話から好みや事実を学び、次のターンで自動で思い出します。APIキーやパスワードは保存しません。",
+      "enabled": "メモリを使う",
+      "enabledDesc": "会話から学び、次回も自動で思い出す — 追加設定不要",
+      "stats": "メモリ {{total}} 件 · ~/.pawn/memory.db",
+      "export": "エクスポート",
+      "import": "インポート",
+      "clearAll": "すべて削除",
+      "clearConfirm": "この端末のメモリをすべて削除しますか？元に戻せません。",
+      "cleared": "すべてのメモリを削除しました",
+      "saved": "保存しました",
+      "imported": "メモリ {{n}} 件をインポートしました",
+      "browser": "あなたのメモリ",
+      "filterPlaceholder": "検索…",
+      "refresh": "更新",
+      "empty": "まだありません。普通に話すか、「覚えて…」と伝えてください。",
+      "forget": "忘れる",
+      "desktopOnly": "メモリはデスクトップアプリで利用できます。",
+      "pin": "固定"
+    },
     "pluginSection": {
       "title": "プラグイン",
       "desc": "プラグインと統合を管理",
@@ -485,7 +506,9 @@
       "trayEnabled": "メニューバーに表示",
       "trayEnabledDesc": "システムトレイ/メニューバーにPawnアイコンを表示します（右クリックメニュー対応）",
       "taskNotifications": "タスク完了通知",
-      "taskNotificationsDesc": "Pawn がバックグラウンドにあるとき、ターン（チャット返信・コーディング作業）完了時に OS 通知を 1 回表示します。"
+      "taskNotificationsDesc": "Pawn がバックグラウンドにあるとき、ターン（チャット返信・コーディング作業）完了時に OS 通知を 1 回表示します。",
+      "confirmQuit": "終了前に確認する",
+      "confirmQuitDesc": "⌘Q / Ctrl+Q またはトレイの終了でアプリを閉じるときに確認します。終了ダイアログの「今後表示しない」でもオフにできます。"
     },
     "shortcuts": "ショートカット",
     "shortcutSection": {
@@ -502,7 +525,15 @@
       "toggle-sidebar": "サイドバーの切り替え",
       "open-command-palette": "コマンドパレットを開く",
       "open-settings": "設定を開く",
-      "new-session": "新規セッション"
+      "new-session": "新規セッション",
+      "close-layer": "レイヤーを閉じる（パネル / セッション / ウィンドウ）"
+    },
+    "quitDialog": {
+      "message": "Pawn を終了しますか？",
+      "detail": "実行中のエージェント作業がある場合はキャンセルされます。",
+      "quit": "終了",
+      "cancel": "キャンセル",
+      "dontAsk": "今後表示しない"
     },
     "automations": "オートメーション"
   },

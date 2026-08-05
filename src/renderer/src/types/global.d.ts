@@ -297,6 +297,13 @@ declare global {
         set: (id: string, combo: string) => Promise<{ ok?: boolean }>
         setPaused: (paused: boolean) => Promise<{ ok?: boolean }>
       }
+      window: {
+        close: () => Promise<{ ok?: boolean }>
+      }
+      prefs: {
+        getConfirmQuit: () => Promise<boolean>
+        setConfirmQuit: (enabled: boolean) => Promise<{ ok?: boolean; confirmQuit?: boolean }>
+      }
       mcp: {
         listTools: (projectPath?: string) => Promise<McpServerStatus[]>
         status: (projectPath?: string) => Promise<McpServerStatus[]>
@@ -369,6 +376,135 @@ declare global {
           hits?: Array<{ title: string; url: string; snippet?: string; source: string }>
         }>
       }
+      /** Long-term local Memory (self-learning knowledge cards). */
+      memory?: {
+        settings: () => Promise<{
+          enabled: boolean
+          autoCapture: boolean
+          injectOnTurn: boolean
+          injectLimit: number
+          injectMaxChars: number
+          requireMinConfidence: number
+        }>
+        setSettings: (partial: {
+          enabled?: boolean
+          autoCapture?: boolean
+          injectOnTurn?: boolean
+          injectLimit?: number
+          injectMaxChars?: number
+          requireMinConfidence?: number
+        }) => Promise<{
+          enabled: boolean
+          autoCapture: boolean
+          injectOnTurn: boolean
+          injectLimit: number
+          injectMaxChars: number
+          requireMinConfidence: number
+        }>
+        save: (input: {
+          content: string
+          title?: string
+          kind?: string
+          scope?: string
+          projectId?: string | null
+          tags?: string[]
+          source?: 'user' | 'agent' | 'auto' | 'import'
+          confidence?: number
+          pinned?: boolean
+        }) => Promise<{
+          ok: boolean
+          memory?: MemoryRecordDto
+          error?: string
+          deduped?: boolean
+        }>
+        update: (
+          id: string,
+          patch: {
+            content?: string
+            title?: string
+            kind?: string
+            scope?: string
+            projectId?: string | null
+            tags?: string[]
+            confidence?: number
+            pinned?: boolean
+            enabled?: boolean
+          }
+        ) => Promise<{ ok: boolean; memory?: MemoryRecordDto; error?: string }>
+        forget: (id: string) => Promise<{ ok: boolean; error?: string }>
+        forgetMany: (ids: string[]) => Promise<{ ok: boolean; deleted: number }>
+        clear: (opts?: {
+          projectId?: string | null
+          scope?: string
+        }) => Promise<{ ok: boolean; deleted: number }>
+        search: (input: {
+          query: string
+          projectId?: string | null
+          kind?: string
+          scope?: string
+          limit?: number
+          includeDisabled?: boolean
+        }) => Promise<
+          Array<
+            MemoryRecordDto & {
+              score: number
+              why: string
+            }
+          >
+        >
+        list: (input?: {
+          projectId?: string | null
+          kind?: string
+          scope?: string
+          limit?: number
+          offset?: number
+          query?: string
+        }) => Promise<{ items: MemoryRecordDto[]; total: number }>
+        get: (id: string) => Promise<MemoryRecordDto | null>
+        stats: () => Promise<{
+          total: number
+          pinned: number
+          byKind: Record<string, number>
+          byScope: Record<string, number>
+        }>
+        injectBlock: (opts?: {
+          query?: string
+          projectId?: string | null
+        }) => Promise<string>
+        ingestTurn: (input: {
+          projectId?: string | null
+          sessionId?: string
+          messages?: Array<{ role: string; content: string }>
+        }) => Promise<{
+          ok: boolean
+          saved: MemoryRecordDto[]
+          skipped: number
+          error?: string
+        }>
+        export: () => Promise<MemoryRecordDto[]>
+        import: (
+          items: unknown[],
+          projectId?: string | null
+        ) => Promise<{ ok: boolean; imported: number; skipped: number }>
+      }
     }
+  }
+
+  interface MemoryRecordDto {
+    id: string
+    scope: string
+    projectId: string | null
+    kind: string
+    title: string
+    content: string
+    tags: string[]
+    source: string
+    confidence: number
+    pinned: boolean
+    enabled: boolean
+    hitCount: number
+    createdAt: number
+    updatedAt: number
+    lastUsedAt: number | null
   }
 }
