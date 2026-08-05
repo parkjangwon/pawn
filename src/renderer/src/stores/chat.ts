@@ -7,11 +7,12 @@ import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
 import {
   route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute, clearSessionRoute,
   noteProviderFailure, noteProviderSuccess, refreshMeasuredPricing,
-  markVisionIncapable, isVisionCapabilityError,
+  markVisionIncapable, isVisionCapabilityError, describeVisionRouteFailure,
   type RouteDecision
 } from '../agent/router'
 import {
-  compactTranscript, estimateTokens, transcriptNeedsVision, TRANSCRIPT_VERSION,
+  compactTranscript, estimateTokens, transcriptNeedsVision, extractImageDataUrl,
+  TRANSCRIPT_VERSION,
   type TranscriptEntry, type StoredTranscript
 } from '../agent/transcript'
 import { formatToolMessageContent } from '../agent/toolMessage'
@@ -396,7 +397,7 @@ async function agentLoop(
       let result: LlmResult | null = null
       let decision: RouteDecision | null = null
 
-      const needsVision = transcriptNeedsVision(entries)
+      let needsVision = transcriptNeedsVision(entries)
 
       // Try up to MAX_ROUTE_ATTEMPTS distinct models before failing the turn.
       for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; attempt++) {
@@ -412,6 +413,29 @@ async function agentLoop(
           newTurn: round === 1,
           needsVision
         })
+        // No vision model: demote screenshots to text stubs and continue on
+        // DeepSeek/text models instead of killing the whole computer-use turn.
+        if (!decision && needsVision) {
+          entries = demoteVisionPayloadsToText(entries)
+          needsVision = false
+          useUsageStore.getState().noteDiagnostic(
+            sessionId,
+            'warn',
+            i18n.t('chat.diagnostics.visionDemoted', {
+              defaultValue:
+                'No vision model available — continuing with text-only screenshot stubs. Set a Vision fallback (e.g. Gemini) under Settings → Agent.'
+            })
+          )
+          decision = route({
+            sessionId,
+            entries,
+            complexity,
+            escalate: escalate + (transientFailures >= 2 ? 1 : 0),
+            exclude: excluded,
+            newTurn: round === 1,
+            needsVision: false
+          })
+        }
         if (!decision) break
 
         // Surface why the router picked this model (escalation, fallback,
@@ -503,10 +527,13 @@ async function agentLoop(
           useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
           const message = err instanceof Error ? err.message : String(err)
 
-          // Image-incapable models: remember for the session and free the retry
-          // budget for a real vision model (don't treat as provider-wide outage).
+          // Image-incapable models: free the retry budget for a real vision model.
+          // Never session-ban models explicitly marked Vision (Gemini etc.) — broad
+          // API errors used to lock the whole session into "no vision model".
           if (needsVision && isVisionCapabilityError(err)) {
-            markVisionIncapable(decision.key)
+            if (decision.model.supportsVision !== true) {
+              markVisionIncapable(decision.key)
+            }
             useUsageStore.getState().noteDiagnostic(
               sessionId,
               'info',
@@ -533,13 +560,20 @@ async function agentLoop(
       }
 
       if (!decision) {
-        systemError(
-          projectId,
-          sessionId,
-          needsVision
-            ? i18n.t('chat.errors.noVisionModel')
-            : i18n.t('chat.errors.noUsableModel')
-        )
+        if (needsVision) {
+          const code = describeVisionRouteFailure()
+          const detailKey =
+            code === 'fallback_disabled'
+              ? 'chat.errors.noVisionFallbackDisabled'
+              : code === 'fallback_provider_off'
+                ? 'chat.errors.noVisionFallbackProvider'
+                : code === 'no_vision_models'
+                  ? 'chat.errors.noVisionModel'
+                  : 'chat.errors.noVisionModel'
+          systemError(projectId, sessionId, i18n.t(detailKey))
+        } else {
+          systemError(projectId, sessionId, i18n.t('chat.errors.noUsableModel'))
+        }
         break
       }
       if (!result) break
@@ -553,7 +587,12 @@ async function agentLoop(
         role: 'assistant',
         content: result.text,
         ...(hasTools ? { toolCalls: result.toolCalls } : {}),
-        ...(result.thinking.length > 0 ? { thinking: result.thinking } : {})
+        ...(result.thinking.length > 0 ? { thinking: result.thinking } : {}),
+        // DeepSeek: always persist reasoning with tool calls (even "") so the
+        // next request can satisfy "reasoning_content must be passed back".
+        ...(hasTools || result.reasoningContent
+          ? { reasoningContent: result.reasoningContent || '' }
+          : {})
       })
 
       if (!hasTools) {
@@ -713,15 +752,46 @@ const TOOL_RESULT_CAPS: Record<string, number> = {
 }
 const DEFAULT_TOOL_RESULT_CAP = 12_000
 
+/** Replace image data-URLs with short text so a text-only model can continue. */
+export function demoteVisionPayloadsToText(entries: TranscriptEntry[]): TranscriptEntry[] {
+  return entries.map((e) => {
+    if (e.role === 'tool' && typeof e.content === 'string') {
+      const url = extractImageDataUrl(e.content)
+      if (!url) return e
+      const meta = e.content.replace(url, '').replace(/\n+/g, ' ').trim()
+      return {
+        ...e,
+        content: meta
+          ? `${meta}\n[screenshot image omitted — no vision model; describe UI from context or retry after setting Vision fallback]`
+          : '[screenshot image omitted — no vision model; set Vision fallback in Settings → Agent]'
+      }
+    }
+    if (e.role === 'user' && e.attachments?.length) {
+      const { attachments: _a, ...rest } = e
+      return {
+        ...rest,
+        content:
+          (e.content || '') +
+          '\n[user image attachment omitted — no vision model available]'
+      }
+    }
+    return e
+  })
+}
+
 /** Cap tool payloads fed back into the transcript / LLM. */
 export function truncateToolResult(
   result: { content: string; name?: string },
   toolNameOrMax?: string | number,
   maybeMax?: number
 ): string {
-  // Screenshots are data URLs consumed as vision; keep full content for the image path.
-  if (typeof result.content === 'string' && result.content.startsWith('data:image/')) {
-    return result.content
+  // Screenshots are data URLs (optionally with meta lines before the data: URL).
+  // Never truncate — corruption makes vision fail and bloated base64 breaks routing.
+  if (typeof result.content === 'string') {
+    const c = result.content
+    if (c.startsWith('data:image/') || extractImageDataUrl(c)) {
+      return c
+    }
   }
   let toolName = result.name
   let maxLen = DEFAULT_TOOL_RESULT_CAP

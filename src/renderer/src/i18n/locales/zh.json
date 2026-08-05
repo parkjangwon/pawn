@@ -70,13 +70,16 @@
       "coldStart": "冷启动 — 缓存已过期，需要重新写入。",
       "compacted": "上下文压缩已执行 — 正在重新写入缓存。",
       "routing": "路由: {{model}} — {{reason}}",
-      "visionFallback": "{{model}} 无法处理图像 — 正在切换到视觉模型。"
+      "visionFallback": "{{model}} 无法处理图像 — 正在切换到视觉模型。",
+      "visionDemoted": "无可用视觉模型，已将截图降级为文字说明。完整 computer use 请在设置 → 代理中指定 Vision 回退（如 Gemini）。"
     },
     "errors": {
       "noProvider": "未配置提供商或模型。请打开设置 → 提供商，然后设置 → 模型。",
       "allAttemptsFailed": "所有模型尝试均失败。最后错误: {{error}}",
       "noUsableModel": "没有可用模型。请检查提供商已启用并已连接模型。",
-      "noVisionModel": "消息包含图像，但没有可用的视觉模型。请在设置 → 模型中开启 Vision，或在设置 → 代理中指定视觉回退模型。",
+      "noVisionModel": "此轮需要图像，但没有可用的视觉模型。请在设置 → 模型中将 Gemini/GPT-4o/Claude 标为 Vision，启用对应提供商，并在设置 → 代理中指定视觉回退。",
+      "noVisionFallbackDisabled": "视觉回退模型已禁用。请在设置 → 模型中重新启用，或在设置 → 代理中选择其他 Vision 模型。",
+      "noVisionFallbackProvider": "视觉回退模型的提供商已关闭或不存在。请在设置 → 提供商中启用 Google/OpenAI/Claude。",
       "toolLoop": "检测到工具循环: 相同的调用({{names}})重复了{{rounds}}轮，已停止。",
       "maxRounds": "{{rounds}}轮工具调用后仍未得到最终答案，已停止。",
       "agentError": "代理循环错误: {{error}}",

@@ -88,13 +88,15 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     id: 'deepseek',
     name: 'DeepSeek',
     apiFormat: 'openai',
-    baseUrl: 'https://api.deepseek.com/v1',
+    // Official OpenAI-compatible endpoint (thinking mode + tools).
+    // https://api-docs.deepseek.com/
+    baseUrl: 'https://api.deepseek.com',
     keyHint: 'platform.deepseek.com/api_keys',
     // https://api-docs.deepseek.com/quick_start/pricing/ (2026-08)
-    // Legacy deepseek-chat / deepseek-reasoner retired ~2026-07.
+    // V4: thinking mode on by default; agent must echo reasoning_content with tools.
     models: [
-      model('deepseek-v4-pro', 'DeepSeek V4 Pro', 'high'),
-      model('deepseek-v4-flash', 'DeepSeek V4 Flash', 'mid')
+      model('deepseek-v4-pro', 'DeepSeek V4 Pro (thinking)', 'high'),
+      model('deepseek-v4-flash', 'DeepSeek V4 Flash (thinking)', 'mid')
     ]
   },
   {

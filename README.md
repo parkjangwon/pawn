@@ -208,6 +208,7 @@ Results appear in chat — no separate mailbox or PR product surface.
 - OpenAI API format (GPT-4o, o1, etc.) and Claude API format (Claude 3.5 Sonnet, etc.).
 - Custom endpoints (any OpenAI-compatible API).
 - API key authentication.
+- **DeepSeek (first-class agent fit)** — preset for `deepseek-v4-flash` / `deepseek-v4-pro` with official thinking mode (`thinking` + `reasoning_effort`), stream `reasoning_content`, and **mandatory replay** of that field on every tool-loop request (avoids DeepSeek HTTP 400). Pair with a Vision fallback (e.g. Gemini) for screenshots / computer use.
 - **Smart Model Router**:
   - **Complexity heuristics** — `simple` \| `medium` \| `complex` from local signals.
   - **Cache-aware routing** — balances cache write cost vs token savings before mid-session switches.

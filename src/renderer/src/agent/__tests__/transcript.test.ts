@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   estimateTokens, compactTranscript, toClaudeMessages, toOpenAIMessages, sanitizeForSend,
-  transcriptNeedsVision,
+  transcriptNeedsVision, stripStaleVisionPayloads,
   type TranscriptEntry
 } from '../transcript'
 
@@ -152,6 +152,45 @@ describe('toOpenAIMessages', () => {
     expect(toOpenAIMessages([{ role: 'assistant', content: '' }])).toEqual([])
   })
 
+  it('echoes reasoning_content for DeepSeek-style tool loops when enabled', () => {
+    const out = toOpenAIMessages(
+      [
+        user('calc'),
+        {
+          role: 'assistant',
+          content: '',
+          reasoningContent: 'I should open calculator',
+          toolCalls: [{ id: 't1', name: 'computer_click', arguments: { x: 1, y: 2 } }]
+        }
+      ],
+      { echoReasoningContent: true }
+    )
+    expect(out[1]).toMatchObject({
+      role: 'assistant',
+      content: null,
+      reasoning_content: 'I should open calculator',
+      tool_calls: [
+        {
+          id: 't1',
+          type: 'function',
+          function: { name: 'computer_click', arguments: '{"x":1,"y":2}' }
+        }
+      ]
+    })
+  })
+
+  it('does not echo reasoning_content by default (non-DeepSeek providers)', () => {
+    const out = toOpenAIMessages([
+      {
+        role: 'assistant',
+        content: 'hi',
+        reasoningContent: 'secret chain'
+      }
+    ])
+    expect(out[0]).toEqual({ role: 'assistant', content: 'hi' })
+    expect(out[0]).not.toHaveProperty('reasoning_content')
+  })
+
   it('converts screenshot data URLs into image_url parts', () => {
     const out = toOpenAIMessages([
       { role: 'tool', toolCallId: 's1', name: 'computer_screenshot', content: 'data:image/jpeg;base64,BBBB' }
@@ -231,9 +270,42 @@ describe('transcriptNeedsVision', () => {
     }])).toBe(true)
   })
 
-  it('detects screenshot tool results', () => {
+  it('detects screenshot tool results after the last user message', () => {
     expect(transcriptNeedsVision([
+      user('take a shot'),
       { role: 'tool', toolCallId: 's1', name: 'computer_screenshot', content: 'data:image/png;base64,AA' }
     ])).toBe(true)
+  })
+
+  it('ignores screenshots from earlier turns after a new text user message', () => {
+    expect(transcriptNeedsVision([
+      user('use computer'),
+      { role: 'tool', toolCallId: 's1', name: 'computer_screenshot', content: 'data:image/png;base64,AA' },
+      user('엥?')
+    ])).toBe(false)
+  })
+})
+
+describe('stripStaleVisionPayloads', () => {
+  it('omits data URLs before the last user message', () => {
+    const out = stripStaleVisionPayloads([
+      user('go'),
+      { role: 'tool', toolCallId: 's1', name: 'computer_screenshot', content: 'meta\ndata:image/png;base64,AAAA' },
+      user('next')
+    ])
+    const tool = out[1] as { role: 'tool'; content: string }
+    expect(tool.content).toContain('omitted')
+    expect(tool.content).not.toContain('data:image')
+  })
+})
+
+describe('estimateTokens image sizing', () => {
+  it('does not treat screenshot base64 as millions of tokens', () => {
+    const huge = 'data:image/png;base64,' + 'A'.repeat(500_000)
+    const n = estimateTokens([
+      user('x'),
+      { role: 'tool', toolCallId: 's1', name: 'computer_screenshot', content: huge }
+    ])
+    expect(n).toBeLessThan(5_000)
   })
 })

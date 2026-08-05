@@ -117,14 +117,14 @@ describe('withConversationCacheAnchors', () => {
 })
 
 describe('supportsReasoningEffort', () => {
-  it('accepts reasoning-capable model ids', () => {
-    for (const id of ['o1', 'o4-mini', 'gpt-5', 'deepseek-reasoner', 'provider/o1-pro', 'qwq-32b']) {
+  it('accepts OpenAI-style reasoning_effort model ids', () => {
+    for (const id of ['o1', 'o4-mini', 'gpt-5', 'provider/o1-pro', 'qwq-32b']) {
       expect(supportsReasoningEffort(id), id).toBe(true)
     }
   })
 
-  it('rejects ordinary models', () => {
-    for (const id of ['gpt-4o', 'claude-sonnet-4-5', 'deepseek-chat', 'o1x']) {
+  it('rejects ordinary models and DeepSeek (uses thinking body extras instead)', () => {
+    for (const id of ['gpt-4o', 'claude-sonnet-4-5', 'deepseek-chat', 'deepseek-v4-flash', 'deepseek-reasoner', 'o1x']) {
       expect(supportsReasoningEffort(id), id).toBe(false)
     }
   })
