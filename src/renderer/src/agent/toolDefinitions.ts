@@ -503,7 +503,7 @@ export const TOOLS: ToolDefinition[] = [
   {
     name: 'google_gmail_search',
     description:
-      'Search Gmail. query uses Gmail search syntax (e.g. "from:alice newer_than:7d", "subject:invoice"). Returns message ids + metadata. Requires Google connection.',
+      'Search Gmail (read-only). query uses Gmail search syntax (e.g. "from:alice newer_than:7d", "subject:invoice"). Cannot send mail. Returns message ids + metadata. Requires Google connection.',
     parameters: {
       type: 'object',
       properties: {

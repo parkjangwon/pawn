@@ -41,7 +41,7 @@ export default function ChatArea({
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>(() => useProviderStore.getState().defaultSendMode)
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
-  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, clearMessages, updateProjectName } = useAppStore()
+  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, startNewChat, clearMessages, updateProjectName } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming, queue } = useChatStore()
   const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
@@ -177,13 +177,8 @@ export default function ChatArea({
         id: 'new', label: t('chat.slash.new'), description: t('chat.slash.newDesc'),
         icon: ic(<><path d="M12 5v14" /><path d="M5 12h14" /></>),
         action: () => {
-          let pid = activeProjectId
-          if (!pid) {
-            let g = projects.find((p) => p.id === '__general__')
-            if (!g) { addProject('General', [], '__general__'); g = useAppStore.getState().projects.find((p) => p.id === '__general__') }
-            pid = g?.id || useAppStore.getState().activeProjectId || ''
-          }
-          if (pid) addSession(pid)
+          // Same as sidebar "New chat": never inherit the currently selected project.
+          startNewChat()
         }
       },
       {

@@ -400,13 +400,26 @@ async function agentLoop(
             )
           }
 
-          // Drop the placeholder only if NOTHING was ever shown for it — an
-          // empty bubble next to a tool card is just noise. Check what was
-          // actually displayed, not result.text alone: a reasoning model can
-          // stream substantial "thinking" while result.text (the replayable
-          // final answer) stays empty, and that thinking must not vanish.
-          if (!currentMessageContent(projectId, sessionId, assistantMsgId).trim()) {
-            useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
+          // Empty-bubble policy:
+          // - Intermediate turn with tool calls: drop the blank assistant row
+          //   (tool cards carry the signal).
+          // - Final turn with no tools: never vanish silently — fill a clear
+          //   error so the user knows the model returned nothing.
+          // Prefer what was actually streamed into the bubble (includes cases
+          // where reasoning models stream text that is not mirrored in
+          // result.text alone).
+          const displayed = currentMessageContent(projectId, sessionId, assistantMsgId).trim()
+          const hasTools = result.toolCalls.length > 0
+          if (!displayed) {
+            if (hasTools) {
+              useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
+            } else {
+              const emptyMsg = i18n.t('chat.errors.emptyResponse')
+              useAppStore.getState().updateMessageContent(
+                projectId, sessionId, assistantMsgId, emptyMsg
+              )
+              result = { ...result, text: emptyMsg }
+            }
           }
           lastDecision = decision
           break
