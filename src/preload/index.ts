@@ -228,6 +228,8 @@ const api = {
     list: () => ipcRenderer.invoke('connections:list'),
     status: (provider: string) => ipcRenderer.invoke('connections:status', provider),
     connect: (provider: string) => ipcRenderer.invoke('connections:connect', provider),
+    connectPat: (provider: string, credentials: Record<string, string>) =>
+      ipcRenderer.invoke('connections:connectPat', provider, credentials),
     cancel: (provider: string) => ipcRenderer.invoke('connections:cancel', provider),
     disconnect: (provider: string) => ipcRenderer.invoke('connections:disconnect', provider),
     runTool: (name: string, args?: Record<string, unknown>) =>

@@ -6,29 +6,56 @@ import {
 } from './store'
 import { connectGoogle, disconnectGoogle, getGoogleAccessToken } from './google'
 import { connectGithub, disconnectGithub, getGithubAccessToken } from './github'
+import { connectGitlab, disconnectGitlab, getGitlabAccessToken } from './gitlab'
+import { connectCodeCommit, disconnectCodeCommit } from './codecommit'
 import { beginConnectSession, cancelConnect, endConnectSession, type ConnectHooks } from './session'
-import type { ConnectionProvider, ConnectionStatus } from './types'
+import type {
+  ConnectionProvider,
+  ConnectionStatus,
+  PatCredentials,
+  PatProvider
+} from './types'
+import { ALL_CONNECTION_PROVIDERS, isPatProvider } from './types'
 
-export type { ConnectionProvider, ConnectionStatus }
+export type { ConnectionProvider, ConnectionStatus, PatCredentials, PatProvider }
 export type { ConnectProgress } from './session'
-export { getGoogleAccessToken, getGithubAccessToken, cancelConnect }
+export { getGoogleAccessToken, getGithubAccessToken, getGitlabAccessToken, cancelConnect }
+export { isPatProvider, isConnectionProvider, ALL_CONNECTION_PROVIDERS, PAT_PROVIDERS } from './types'
 
 export function getConnectionStatus(provider: ConnectionProvider): ConnectionStatus {
   const tokens = loadTokens(provider)
-  const clientConfigured =
-    provider === 'google' ? !!getGoogleClientId() : !!getGithubClientId()
+  const isPat = isPatProvider(provider)
+  const clientConfigured = isPat
+    ? true
+    : provider === 'google'
+      ? !!getGoogleClientId()
+      : !!getGithubClientId()
+
+  let hostHint: string | undefined
+  if (provider === 'gitlab' && tokens?.baseUrl) {
+    try {
+      hostHint = new URL(tokens.baseUrl).host
+    } catch {
+      hostHint = tokens.baseUrl
+    }
+  } else if (provider === 'codecommit' && tokens?.region) {
+    hostHint = tokens.region
+  }
+
   return {
     provider,
     connected: !!tokens?.accessToken,
     accountLabel: tokens?.accountLabel,
     scope: tokens?.scope,
     clientConfigured,
-    updatedAt: tokens?.updatedAt
+    authMode: isPat ? 'pat' : 'oauth',
+    updatedAt: tokens?.updatedAt,
+    hostHint
   }
 }
 
 export function listConnectionStatuses(): ConnectionStatus[] {
-  return [getConnectionStatus('google'), getConnectionStatus('github')]
+  return ALL_CONNECTION_PROVIDERS.map(getConnectionStatus)
 }
 
 export async function connectProvider(
@@ -42,6 +69,11 @@ export async function connectProvider(
   verificationUri?: string
   cancelled?: boolean
 }> {
+  if (isPatProvider(provider)) {
+    return {
+      error: `${provider} uses PAT credentials. Call connectWithPat with token fields instead of OAuth connect.`
+    }
+  }
   const signal = hooks.signal || beginConnectSession(provider)
   const full: ConnectHooks = { ...hooks, signal }
   try {
@@ -52,9 +84,20 @@ export async function connectProvider(
   }
 }
 
+export async function connectWithPat(
+  provider: PatProvider,
+  credentials: PatCredentials
+): Promise<{ ok?: boolean; error?: string; accountLabel?: string }> {
+  if (provider === 'gitlab') return connectGitlab(credentials)
+  if (provider === 'codecommit') return connectCodeCommit(credentials)
+  return { error: 'Unknown PAT provider' }
+}
+
 export function disconnectProvider(provider: ConnectionProvider): void {
   if (provider === 'google') disconnectGoogle()
-  else disconnectGithub()
+  else if (provider === 'github') disconnectGithub()
+  else if (provider === 'gitlab') disconnectGitlab()
+  else if (provider === 'codecommit') disconnectCodeCommit()
 }
 
 /** For agent tools — never throw secrets. */
@@ -85,4 +128,6 @@ export async function googleApi(url: string): Promise<{ ok: boolean; status: num
 export function wipeAllConnections(): void {
   clearTokens('google')
   clearTokens('github')
+  clearTokens('gitlab')
+  clearTokens('codecommit')
 }

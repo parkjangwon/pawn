@@ -1440,7 +1440,27 @@ async function executeToolBody(
       case 'github_create_issue':
       case 'github_draft_issue':
       case 'github_comment':
-      case 'github_create_pull': {
+      case 'github_create_pull':
+      case 'gitlab_whoami':
+      case 'gitlab_list_projects':
+      case 'gitlab_get_project':
+      case 'gitlab_list_issues':
+      case 'gitlab_get_issue':
+      case 'gitlab_list_merge_requests':
+      case 'gitlab_get_merge_request':
+      case 'gitlab_list_commits':
+      case 'gitlab_get_file':
+      case 'gitlab_search':
+      case 'gitlab_create_issue':
+      case 'gitlab_comment':
+      case 'gitlab_create_merge_request':
+      case 'codecommit_whoami':
+      case 'codecommit_list_repos':
+      case 'codecommit_get_repo':
+      case 'codecommit_list_branches':
+      case 'codecommit_get_branch':
+      case 'codecommit_list_commits':
+      case 'codecommit_get_file': {
         if (!api.connections?.runTool) {
           return {
             toolCallId: call.id,

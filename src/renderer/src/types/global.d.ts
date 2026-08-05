@@ -346,22 +346,26 @@ declare global {
       }
       connections: {
         list: () => Promise<Array<{
-          provider: 'google' | 'github'
+          provider: 'google' | 'github' | 'gitlab' | 'codecommit'
           connected: boolean
           accountLabel?: string
           scope?: string
           clientConfigured: boolean
+          authMode?: 'oauth' | 'pat'
           updatedAt?: number
+          hostHint?: string
         }>>
-        status: (provider: 'google' | 'github') => Promise<{
-          provider: 'google' | 'github'
+        status: (provider: 'google' | 'github' | 'gitlab' | 'codecommit') => Promise<{
+          provider: 'google' | 'github' | 'gitlab' | 'codecommit'
           connected: boolean
           accountLabel?: string
           scope?: string
           clientConfigured: boolean
+          authMode?: 'oauth' | 'pat'
           updatedAt?: number
+          hostHint?: string
         }>
-        connect: (provider: 'google' | 'github') => Promise<{
+        connect: (provider: 'google' | 'github' | 'gitlab' | 'codecommit') => Promise<{
           ok?: boolean
           error?: string
           accountLabel?: string
@@ -369,14 +373,25 @@ declare global {
           verificationUri?: string
           cancelled?: boolean
         }>
-        cancel: (provider: 'google' | 'github') => Promise<{ ok?: boolean; error?: string }>
-        disconnect: (provider: 'google' | 'github') => Promise<{ ok?: boolean; error?: string }>
+        connectPat: (
+          provider: 'gitlab' | 'codecommit',
+          credentials: {
+            token?: string
+            baseUrl?: string
+            region?: string
+            accessKeyId?: string
+            secretAccessKey?: string
+            sessionToken?: string
+          }
+        ) => Promise<{ ok?: boolean; error?: string; accountLabel?: string }>
+        cancel: (provider: 'google' | 'github' | 'gitlab' | 'codecommit') => Promise<{ ok?: boolean; error?: string }>
+        disconnect: (provider: 'google' | 'github' | 'gitlab' | 'codecommit') => Promise<{ ok?: boolean; error?: string }>
         runTool: (
           name: string,
           args?: Record<string, unknown>
         ) => Promise<{ ok?: boolean; text?: string; error?: string }>
         onProgress: (callback: (payload: {
-          provider: 'google' | 'github'
+          provider: 'google' | 'github' | 'gitlab' | 'codecommit'
           phase: string
           userCode?: string
           verificationUri?: string

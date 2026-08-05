@@ -109,15 +109,19 @@ if (typeof window !== 'undefined' && !window.api) {
 
     connections: {
       list: async () => [
-        { provider: 'google' as const, connected: false, clientConfigured: true },
-        { provider: 'github' as const, connected: false, clientConfigured: true }
+        { provider: 'google' as const, connected: false, clientConfigured: true, authMode: 'oauth' as const },
+        { provider: 'github' as const, connected: false, clientConfigured: true, authMode: 'oauth' as const },
+        { provider: 'gitlab' as const, connected: false, clientConfigured: true, authMode: 'pat' as const },
+        { provider: 'codecommit' as const, connected: false, clientConfigured: true, authMode: 'pat' as const }
       ],
-      status: async (provider: 'google' | 'github') => ({
+      status: async (provider: 'google' | 'github' | 'gitlab' | 'codecommit') => ({
         provider,
         connected: false,
-        clientConfigured: true
+        clientConfigured: true,
+        authMode: (provider === 'gitlab' || provider === 'codecommit' ? 'pat' : 'oauth') as 'oauth' | 'pat'
       }),
       connect: async () => ({ error: 'Connections require the desktop app' }),
+      connectPat: async () => ({ error: 'Connections require the desktop app' }),
       cancel: async () => ({ ok: true }),
       disconnect: async () => ({ ok: true }),
       runTool: async () => ({ ok: false, error: 'Connections require the desktop app' }),

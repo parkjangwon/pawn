@@ -782,9 +782,103 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-primary);
 }
 
-.conn-account-badge {
+.conn-logo-gitlab {
+  background: #fff;
+  border-color: rgba(226, 67, 41, 0.22);
+}
+
+.conn-logo-gitlab img {
+  display: block;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+.conn-logo-codecommit {
+  /* Architecture icon already has a rounded tile */
+  padding: 0;
+  border: none;
+  background: transparent;
+  overflow: hidden;
+}
+
+.conn-logo-codecommit img {
+  display: block;
+  width: 40px;
+  height: 40px;
+  object-fit: cover;
+}
+
+.conn-provider-block + .conn-provider-block {
+  border-top: 1px solid var(--border-color);
+}
+
+.conn-account-badge,
+.conn-pat-badge {
   margin-left: 8px;
   vertical-align: middle;
+}
+
+.conn-pat-badge {
+  opacity: 0.85;
+  font-size: 0.75em;
+}
+
+.conn-pat-panel {
+  margin: 0 0 12px;
+  padding: 14px 16px;
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.conn-pat-title {
+  font-weight: 600;
+  font-size: var(--font-md);
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.conn-pat-hint {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  margin: 0 0 12px;
+  line-height: 1.45;
+}
+
+.conn-pat-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.conn-pat-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.conn-pat-field input {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-md);
+  font-family: inherit;
+}
+
+.conn-pat-field input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.conn-pat-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
 }
 
 .conn-connect-btn {

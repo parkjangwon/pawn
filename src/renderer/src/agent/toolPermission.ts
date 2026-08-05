@@ -92,7 +92,27 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   github_create_issue: 'risky',
   github_draft_issue: 'risky',
   github_comment: 'risky',
-  github_create_pull: 'risky'
+  github_create_pull: 'risky',
+  gitlab_whoami: 'safe',
+  gitlab_list_projects: 'safe',
+  gitlab_get_project: 'safe',
+  gitlab_list_issues: 'safe',
+  gitlab_get_issue: 'safe',
+  gitlab_list_merge_requests: 'safe',
+  gitlab_get_merge_request: 'safe',
+  gitlab_list_commits: 'safe',
+  gitlab_get_file: 'safe',
+  gitlab_search: 'safe',
+  gitlab_create_issue: 'risky',
+  gitlab_comment: 'risky',
+  gitlab_create_merge_request: 'risky',
+  codecommit_whoami: 'safe',
+  codecommit_list_repos: 'safe',
+  codecommit_get_repo: 'safe',
+  codecommit_list_branches: 'safe',
+  codecommit_get_branch: 'safe',
+  codecommit_list_commits: 'safe',
+  codecommit_get_file: 'safe'
 }
 
 export type PermissionMode = 'ask' | 'auto' | 'yolo'
@@ -171,7 +191,27 @@ function permissionTypeFor(callName: string): PermissionType {
     github_create_issue: 'shell_exec',
     github_draft_issue: 'shell_exec',
     github_comment: 'shell_exec',
-    github_create_pull: 'shell_exec'
+    github_create_pull: 'shell_exec',
+    gitlab_whoami: 'file_read',
+    gitlab_list_projects: 'file_read',
+    gitlab_get_project: 'file_read',
+    gitlab_list_issues: 'file_read',
+    gitlab_get_issue: 'file_read',
+    gitlab_list_merge_requests: 'file_read',
+    gitlab_get_merge_request: 'file_read',
+    gitlab_list_commits: 'file_read',
+    gitlab_get_file: 'file_read',
+    gitlab_search: 'file_read',
+    gitlab_create_issue: 'shell_exec',
+    gitlab_comment: 'shell_exec',
+    gitlab_create_merge_request: 'shell_exec',
+    codecommit_whoami: 'file_read',
+    codecommit_list_repos: 'file_read',
+    codecommit_get_repo: 'file_read',
+    codecommit_list_branches: 'file_read',
+    codecommit_get_branch: 'file_read',
+    codecommit_list_commits: 'file_read',
+    codecommit_get_file: 'file_read'
   }
   return map[callName] || 'file_read'
 }
