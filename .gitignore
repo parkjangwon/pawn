@@ -67,6 +67,9 @@ pawn.db*
 
 # AI Agents and Coding Assistants
 docs/
+# Product docs for coding agents (setup / maintenance) — keep published
+!docs/agent/
+!docs/agent/**
 .superset/
 .sisyphus/
 .claude/
