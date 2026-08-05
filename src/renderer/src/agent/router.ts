@@ -20,6 +20,58 @@ import { useProviderStore } from '../stores/provider'
 import { guessPricing, type ModelEntry, type ModelPricing, type ModelTier, type Provider } from '../types/provider'
 import { estimateTokens, type TranscriptEntry } from './transcript'
 
+// Models that refused an image this session — treated as non-vision until restart.
+const visionIncapableKeys = new Set<string>()
+
+export function markVisionIncapable(key: string): void {
+  visionIncapableKeys.add(key)
+}
+
+export function clearVisionIncapable(key?: string): void {
+  if (key) visionIncapableKeys.delete(key)
+  else visionIncapableKeys.clear()
+}
+
+export function isKnownVisionIncapable(key: string): boolean {
+  return visionIncapableKeys.has(key)
+}
+
+/** True when the provider error looks like "this model cannot take images". */
+export function isVisionCapabilityError(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
+  if (!msg) return false
+  const needles = [
+    'vision',
+    'image_url',
+    'image input',
+    'images are not supported',
+    'image not supported',
+    'does not support image',
+    'do not support image',
+    'unsupported image',
+    'invalid image',
+    'multimodal',
+    'media type',
+    'content type.*image',
+    'unable to process.*image',
+    'no.*image.*support',
+    'image.*not.*allowed',
+    'cannot process image',
+    'unknown part type',
+    'invalid content'
+  ]
+  return needles.some((n) => {
+    if (n.includes('.*')) return new RegExp(n).test(msg)
+    return msg.includes(n)
+  })
+}
+
+function canAttemptVision(model: ModelEntry): boolean {
+  if (model.supportsVision === false) return false
+  if (isKnownVisionIncapable(routeKey(model))) return false
+  return true
+}
+
 export type Complexity = 'simple' | 'medium' | 'complex'
 
 const TIER_OF: Record<Complexity, ModelTier> = { simple: 'low', medium: 'mid', complex: 'high' }
@@ -35,6 +87,12 @@ export interface RouteDecision extends RouteTarget {
   key: string
   tier: ModelTier
   reason: string
+  /**
+   * True when this pick was only for an image turn (vision fallback).
+   * Callers should not update session stickiness so text turns stay on the
+   * user's preferred non-vision model (e.g. DeepSeek).
+   */
+  ephemeral?: boolean
 }
 
 export function routeKey(model: ModelEntry): string {
@@ -299,14 +357,28 @@ export interface RouteRequest {
   exclude?: Set<string>
   /** True on the first round of a user turn, when a downgrade may be considered. */
   newTurn?: boolean
+  /** Transcript includes images — prefer vision-capable models / optional fallback. */
+  needsVision?: boolean
 }
 
 /**
  * Resolve the model for the next request. Returns null only when nothing is
- * configured at all; every other failure mode degrades to an adjacent tier or a
- * different provider rather than giving up.
+ * configured at all (or nothing vision-capable when needsVision and no fallback);
+ * every other failure mode degrades to an adjacent tier or a different provider
+ * rather than giving up.
  */
 export function route(req: RouteRequest): RouteDecision | null {
+  const base = routeBase(req)
+  if (!base || !req.needsVision) return base
+  return applyVisionPolicy(req, base)
+}
+
+/**
+ * Core routing without vision overrides. Kept separate so vision fallback can
+ * still use the user's preferred text model as the first attempt when it might
+ * be multimodal.
+ */
+function routeBase(req: RouteRequest): RouteDecision | null {
   const { routingMode, activeModelId } = useProviderStore.getState()
   const all = candidates()
   if (all.length === 0) return null
@@ -390,6 +462,81 @@ export function route(req: RouteRequest): RouteDecision | null {
   return last
     ? { ...last, key: routeKey(last.model), tier: last.model.tier, reason: 'only model available' + (contextLimited ? ' (context too small)' : '') }
     : null
+}
+
+/**
+ * Prefer the model we would have used when it can see images; otherwise fall
+ * back to the optional vision model, then any known-vision model. Does not
+ * silently send images to a known text-only model.
+ */
+function applyVisionPolicy(req: RouteRequest, base: RouteDecision): RouteDecision | null {
+  const exclude = req.exclude || new Set<string>()
+  const promptTokens = estimateTokens(req.entries)
+  const all = candidates()
+  const contextFit = all.filter((c) => fitsContext(c.model, promptTokens))
+  const basePool = contextFit.length > 0 ? contextFit : all
+  const usable = basePool.filter((c) => !exclude.has(routeKey(c.model)))
+  const pool = usable.length > 0 ? usable : basePool
+
+  // 1) Natural pick can try vision (explicit true, or unknown not yet failed).
+  if (!exclude.has(base.key) && canAttemptVision(base.model)) {
+    return base
+  }
+
+  const sticky = sessionRoutes.get(req.sessionId)
+  const warm = sticky && !exclude.has(sticky.key) ? { key: sticky.key, ratio: warmRatio(sticky, promptTokens) } : null
+  const { visionModelId } = useProviderStore.getState()
+
+  // 2) User-preferred vision fallback.
+  if (visionModelId) {
+    const preferred = pool.find((c) => c.model.id === visionModelId)
+    if (preferred && canAttemptVision(preferred.model)) {
+      return {
+        ...preferred,
+        key: routeKey(preferred.model),
+        tier: preferred.model.tier,
+        reason: 'vision fallback (preferred)',
+        ephemeral: true
+      }
+    }
+  }
+
+  // 3) Any model marked vision-capable.
+  const knownVision = rank(
+    pool.filter((c) => c.model.supportsVision === true && canAttemptVision(c.model)),
+    promptTokens,
+    warm
+  )
+  if (knownVision[0]) {
+    const pick = knownVision.find((c) => isProviderAvailable(c.provider.id)) || knownVision[0]
+    return {
+      ...pick,
+      key: routeKey(pick.model),
+      tier: pick.model.tier,
+      reason: 'vision fallback',
+      ephemeral: true
+    }
+  }
+
+  // 4) Unknown-capability models (not explicitly false) as last resort try.
+  const unknown = rank(
+    pool.filter((c) => c.model.supportsVision === undefined && canAttemptVision(c.model)),
+    promptTokens,
+    warm
+  )
+  if (unknown[0]) {
+    const pick = unknown.find((c) => isProviderAvailable(c.provider.id)) || unknown[0]
+    return {
+      ...pick,
+      key: routeKey(pick.model),
+      tier: pick.model.tier,
+      reason: 'vision fallback (try unknown)',
+      ephemeral: true
+    }
+  }
+
+  // Nothing left that can even attempt images.
+  return null
 }
 
 /**

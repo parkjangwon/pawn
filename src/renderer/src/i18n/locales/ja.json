@@ -57,6 +57,8 @@
     "pastedText": "貼り付けたテキスト",
     "attachedImage": "貼り付けた画像",
     "attachedText": "添付ファイル",
+    "imageExpandHint": "ダブルクリックで拡大",
+    "imageLightbox": "拡大画像",
     "copy": "コピー",
     "copied": "コピーしました",
     "thinking": "考え中...",
@@ -67,12 +69,14 @@
     "diagnostics": {
       "coldStart": "コールドスタート — キャッシュが期限切れのため再記録が必要です。",
       "compacted": "コンテキスト圧縮を実行 — キャッシュを再記録します。",
-      "routing": "ルーティング: {{model}} — {{reason}}"
+      "routing": "ルーティング: {{model}} — {{reason}}",
+      "visionFallback": "{{model}} は画像を処理できません — ビジョンモデルに切り替えます。"
     },
     "errors": {
       "noProvider": "プロバイダーまたはモデルが設定されていません。設定 → プロバイダー、設定 → モデルで追加してください。",
       "allAttemptsFailed": "すべてのモデル試行が失敗しました。最後のエラー: {{error}}",
       "noUsableModel": "利用可能なモデルがありません。プロバイダーが有効でモデルが接続されているか確認してください。",
+      "noVisionModel": "メッセージに画像が含まれていますが、ビジョン対応モデルがありません。設定 → モデルで Vision を有効にするか、設定 → エージェントでビジョンフォールバックを指定してください。",
       "toolLoop": "ツールループを検出: 同じ呼び出し({{names}})が{{rounds}}ラウンド繰り返されたため停止します。",
       "maxRounds": "最終回答なしで{{rounds}}ラウンド後に停止しました。",
       "agentError": "エージェントループエラー: {{error}}"
@@ -287,7 +291,7 @@
     },
     "modelSection": {
       "title": "モデル",
-      "desc": "利用可能なモデルを管理",
+      "desc": "利用可能なモデルを管理。画像対応モデルをマークすると、DeepSeek などテキスト専用モデルから自動フォールバックします。",
       "empty": "モデルが設定されていません",
       "add": "モデルを追加",
       "selectProvider": "プロバイダーを選択",
@@ -306,13 +310,24 @@
       "priceCacheWrite": "キャッシュ書き",
       "priceCacheRead": "キャッシュ読み",
       "pricingUnknown": " · 価格不明 — コスト追跡無効",
-      "priceInput": "入力価格"
+      "priceInput": "入力価格",
+      "visionLabel": "ビジョン（画像）",
+      "visionHint": "Vision = 添付画像/スクリーンショット対応。Text only = テキストのみ（ルーターがフォールバック）。Auto = モデルIDから推定。",
+      "visionAuto": "自動",
+      "visionYes": "Vision",
+      "visionNo": "テキストのみ",
+      "visionBadge": "Vision",
+      "visionTextOnly": "Text"
     },
     "agentSection": {
       "title": "エージェント",
       "desc": "エージェントの動作とルーティングを設定",
       "routing": "モデルルーティング",
       "routingDesc": "タスクを最適なモデルに自動ルーティング",
+      "visionFallback": "ビジョンフォールバックモデル",
+      "visionFallbackDesc": "任意。アクティブモデルが画像を扱えないときだけ使います（添付・スクリーンショット）。メインがすでにビジョン対応（例: Gemini）なら自動のままで十分です。",
+      "visionFallbackAuto": "自動 — ビジョン対応モデルから選択",
+      "visionFallbackEmpty": "ビジョン対応モデルがありません。モデル設定で Vision を有効にするか、Gemini/GPT-4o/Claude プリセットを追加してください。",
       "sendMode": "送信モード",
       "sendModeDesc": "エージェントへのメッセージ送信方法を選択",
       "queue": "キュー",

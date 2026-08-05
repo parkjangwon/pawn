@@ -57,6 +57,8 @@
     "pastedText": "粘贴的文本",
     "attachedImage": "粘贴的图片",
     "attachedText": "附件",
+    "imageExpandHint": "双击放大",
+    "imageLightbox": "放大图片",
     "copy": "复制",
     "copied": "已复制",
     "thinking": "思考中...",
@@ -67,12 +69,14 @@
     "diagnostics": {
       "coldStart": "冷启动 — 缓存已过期，需要重新写入。",
       "compacted": "上下文压缩已执行 — 正在重新写入缓存。",
-      "routing": "路由: {{model}} — {{reason}}"
+      "routing": "路由: {{model}} — {{reason}}",
+      "visionFallback": "{{model}} 无法处理图像 — 正在切换到视觉模型。"
     },
     "errors": {
       "noProvider": "未配置提供商或模型。请打开设置 → 提供商，然后设置 → 模型。",
       "allAttemptsFailed": "所有模型尝试均失败。最后错误: {{error}}",
       "noUsableModel": "没有可用模型。请检查提供商已启用并已连接模型。",
+      "noVisionModel": "消息包含图像，但没有可用的视觉模型。请在设置 → 模型中开启 Vision，或在设置 → 代理中指定视觉回退模型。",
       "toolLoop": "检测到工具循环: 相同的调用({{names}})重复了{{rounds}}轮，已停止。",
       "maxRounds": "{{rounds}}轮工具调用后仍未得到最终答案，已停止。",
       "agentError": "代理循环错误: {{error}}"
@@ -287,7 +291,7 @@
     },
     "modelSection": {
       "title": "模型",
-      "desc": "管理可用模型",
+      "desc": "管理可用模型。标记支持图像的模型后，DeepSeek 等纯文本模型会自动回退。",
       "empty": "未配置模型",
       "add": "添加模型",
       "selectProvider": "选择提供商",
@@ -306,13 +310,24 @@
       "priceCacheWrite": "缓存写入",
       "priceCacheRead": "缓存读取",
       "pricingUnknown": " · 价格未知 — 成本跟踪已禁用",
-      "priceInput": "输入价格"
+      "priceInput": "输入价格",
+      "visionLabel": "视觉（图像）",
+      "visionHint": "Vision = 可处理附件图像/截图。Text only = 仅文本（路由会回退）。Auto = 根据模型 ID 推断。",
+      "visionAuto": "自动",
+      "visionYes": "Vision",
+      "visionNo": "仅文本",
+      "visionBadge": "Vision",
+      "visionTextOnly": "Text"
     },
     "agentSection": {
       "title": "代理",
       "desc": "配置代理行为和路由",
       "routing": "模型路由",
       "routingDesc": "自动将任务路由到最佳可用模型",
+      "visionFallback": "视觉回退模型",
+      "visionFallbackDesc": "可选。仅当当前模型无法处理图像时使用（附件或截图）。若主模型本身支持视觉（如 Gemini），保持自动即可。",
+      "visionFallbackAuto": "自动 — 从支持视觉的模型中选择",
+      "visionFallbackEmpty": "尚无支持视觉的模型。请在模型设置中开启 Vision，或添加 Gemini/GPT-4o/Claude 预设。",
       "sendMode": "发送模式",
       "sendModeDesc": "选择消息发送到代理的方式",
       "queue": "队列",

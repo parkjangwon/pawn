@@ -4,7 +4,8 @@ import type { ModelEntry, ModelTier, Provider } from '../../types/provider'
 import {
   route, estimateComplexity, estimateRoundCost, estimateRePrimeCost, routeKey,
   noteProviderFailure, noteProviderSuccess, isProviderAvailable, providerCooldownRemaining,
-  shouldEscalate, setSessionRoute, clearSessionRoute
+  shouldEscalate, setSessionRoute, clearSessionRoute,
+  markVisionIncapable, clearVisionIncapable, isVisionCapabilityError
 } from '../router'
 import type { TranscriptEntry } from '../transcript'
 
@@ -20,11 +21,13 @@ const pricing = (input: number, output: number, cacheRead: number, cacheWrite: n
   ({ input, output, cacheRead, cacheWrite })
 
 beforeEach(() => {
+  clearVisionIncapable()
   useProviderStore.setState({
     providers: [],
     models: [],
     routingMode: 'auto',
-    activeModelId: null
+    activeModelId: null,
+    visionModelId: null
   })
 })
 
@@ -296,5 +299,89 @@ describe('route', () => {
     })
     const d = route({ sessionId: 'cold-session', entries, complexity: 'simple' })
     expect(d?.model.modelId).toBe('cheap-model')
+  })
+
+  it('keeps a vision-capable natural pick on image turns (no forced fallback)', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'gemini', 'low', { supportsVision: true }),
+        model('p', 'vision-fallback', 'mid', { supportsVision: true })
+      ],
+      routingMode: 'manual',
+      activeModelId: 'p:gemini',
+      visionModelId: 'p:vision-fallback'
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple', needsVision: true })
+    expect(d?.model.modelId).toBe('gemini')
+    expect(d?.ephemeral).toBeUndefined()
+    expect(d?.reason).toBe('manual pin')
+  })
+
+  it('falls back from a text-only pin to the preferred vision model', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'deepseek', 'mid', { supportsVision: false }),
+        model('p', 'gpt-4o-mini', 'low', { supportsVision: true })
+      ],
+      routingMode: 'manual',
+      activeModelId: 'p:deepseek',
+      visionModelId: 'p:gpt-4o-mini'
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple', needsVision: true })
+    expect(d?.model.modelId).toBe('gpt-4o-mini')
+    expect(d?.ephemeral).toBe(true)
+    expect(d?.reason).toBe('vision fallback (preferred)')
+  })
+
+  it('falls back to any known-vision model when no preferred is set', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'deepseek', 'mid', { supportsVision: false }),
+        model('p', 'claude', 'mid', { supportsVision: true })
+      ],
+      routingMode: 'manual',
+      activeModelId: 'p:deepseek',
+      visionModelId: null
+    })
+    const d = route({ sessionId: 's', entries, complexity: 'simple', needsVision: true })
+    expect(d?.model.modelId).toBe('claude')
+    expect(d?.reason).toBe('vision fallback')
+  })
+
+  it('returns null on image turns when only text-only models exist', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [model('p', 'deepseek', 'mid', { supportsVision: false })],
+      routingMode: 'manual',
+      activeModelId: 'p:deepseek'
+    })
+    expect(route({ sessionId: 's', entries, complexity: 'simple', needsVision: true })).toBeNull()
+  })
+
+  it('skips a model marked vision-incapable at runtime', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'maybe-vision', 'mid', { supportsVision: undefined }),
+        model('p', 'real-vision', 'low', { supportsVision: true })
+      ],
+      routingMode: 'manual',
+      activeModelId: 'p:maybe-vision'
+    })
+    markVisionIncapable('p:maybe-vision')
+    const d = route({ sessionId: 's', entries, complexity: 'simple', needsVision: true })
+    expect(d?.model.modelId).toBe('real-vision')
+    expect(d?.ephemeral).toBe(true)
+  })
+})
+
+describe('isVisionCapabilityError', () => {
+  it('detects common vision rejection messages', () => {
+    expect(isVisionCapabilityError(new Error('model does not support image input'))).toBe(true)
+    expect(isVisionCapabilityError('Images are not supported for this model')).toBe(true)
+    expect(isVisionCapabilityError(new Error('rate limit exceeded'))).toBe(false)
   })
 })

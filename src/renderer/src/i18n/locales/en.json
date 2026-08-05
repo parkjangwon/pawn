@@ -57,6 +57,8 @@
     "pastedText": "Pasted text",
     "attachedImage": "Pasted image",
     "attachedText": "Attached file",
+    "imageExpandHint": "Double-click to enlarge",
+    "imageLightbox": "Enlarged image",
     "copy": "Copy",
     "copied": "Copied",
     "thinking": "Thinking...",
@@ -67,12 +69,14 @@
     "diagnostics": {
       "coldStart": "Cold start — the cache expired and needs to be re-primed.",
       "compacted": "Context compaction ran — the cache prefix is being re-primed.",
-      "routing": "Routing: {{model}} — {{reason}}"
+      "routing": "Routing: {{model}} — {{reason}}",
+      "visionFallback": "{{model}} cannot handle images — trying a vision-capable model."
     },
     "errors": {
       "noProvider": "No provider or model configured. Open Settings → Providers, then Settings → Models.",
       "allAttemptsFailed": "All model attempts failed. Last error: {{error}}",
       "noUsableModel": "No usable model. Check that a provider is enabled and has models attached.",
+      "noVisionModel": "This message includes images, but no vision-capable model is available. Mark a model as Vision in Settings → Models, or set a Vision fallback in Settings → Agent.",
       "toolLoop": "Tool loop detected: repeated the same calls ({{names}}) {{rounds}} rounds without progress. Stopping.",
       "maxRounds": "Stopped after {{rounds}} tool rounds without a final answer.",
       "agentError": "Agent loop error: {{error}}"
@@ -287,7 +291,7 @@
     },
     "modelSection": {
       "title": "Models",
-      "desc": "Manage available models",
+      "desc": "Manage available models. Mark which models accept images so DeepSeek-style text models can fall back automatically.",
       "empty": "No models configured",
       "add": "Add Model",
       "selectProvider": "Select Provider",
@@ -306,13 +310,24 @@
       "priceCacheWrite": "Cache write",
       "priceCacheRead": "Cache read",
       "pricingUnknown": " · pricing unknown — cost tracking disabled",
-      "priceInput": "Input price"
+      "priceInput": "Input price",
+      "visionLabel": "Vision (images)",
+      "visionHint": "Yes = can see attached images/screenshots. No = text only (router will fall back). Auto = guess from the model id.",
+      "visionAuto": "Auto",
+      "visionYes": "Vision",
+      "visionNo": "Text only",
+      "visionBadge": "Vision",
+      "visionTextOnly": "Text"
     },
     "agentSection": {
       "title": "Agent",
       "desc": "Configure agent behavior and routing",
       "routing": "Model Routing",
       "routingDesc": "Automatically route tasks to the best available model",
+      "visionFallback": "Vision fallback model",
+      "visionFallbackDesc": "Optional. Used only when the active model cannot handle images (attachments or screenshots). If your main model already has vision (e.g. Gemini), leave this on Auto — nothing extra is needed.",
+      "visionFallbackAuto": "Auto — any vision-capable model",
+      "visionFallbackEmpty": "No vision-capable models yet. Add one under Models and set Vision to Yes (or use a Gemini/GPT-4o/Claude preset).",
       "sendMode": "Send Mode",
       "sendModeDesc": "Choose how messages are sent to the agent",
       "queue": "Queue",

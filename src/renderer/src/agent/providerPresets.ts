@@ -48,13 +48,11 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiFormat: 'openai',
     baseUrl: 'https://api.openai.com/v1',
     keyHint: 'platform.openai.com/api-keys',
+    // https://developers.openai.com/api/docs/models (2026-08)
     models: [
-      model('gpt-4.1', 'GPT-4.1', 'high'),
-      model('gpt-4.1-mini', 'GPT-4.1 Mini', 'mid'),
-      model('gpt-4.1-nano', 'GPT-4.1 Nano', 'low'),
-      model('gpt-4o', 'GPT-4o', 'mid'),
-      model('gpt-4o-mini', 'GPT-4o Mini', 'low'),
-      model('o4-mini', 'o4-mini (reasoning)', 'high')
+      model('gpt-5.6-sol', 'GPT-5.6 Sol', 'high'),
+      model('gpt-5.6-terra', 'GPT-5.6 Terra', 'mid'),
+      model('gpt-5.6-luna', 'GPT-5.6 Luna', 'low')
     ]
   },
   {
@@ -63,10 +61,12 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiFormat: 'claude',
     baseUrl: 'https://api.anthropic.com/v1',
     keyHint: 'console.anthropic.com/settings/keys',
+    // https://platform.claude.com/docs/en/about-claude/models/overview (2026-08)
     models: [
-      model('claude-opus-4-1-20250805', 'Claude Opus 4.1', 'high'),
-      model('claude-sonnet-4-5-20250929', 'Claude Sonnet 4.5', 'mid'),
-      model('claude-haiku-4-5-20251001', 'Claude Haiku 4.5', 'low')
+      model('claude-fable-5', 'Claude Fable 5', 'high'),
+      model('claude-opus-5', 'Claude Opus 5', 'high'),
+      model('claude-sonnet-5', 'Claude Sonnet 5', 'mid'),
+      model('claude-haiku-4-5', 'Claude Haiku 4.5', 'low')
     ]
   },
   {
@@ -76,11 +76,12 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     baseUrl: 'https://openrouter.ai/api/v1',
     keyHint: 'openrouter.ai/keys — one key, hundreds of models',
     models: [
-      model('openai/gpt-4o', 'GPT-4o (via OpenRouter)', 'mid'),
-      model('anthropic/claude-sonnet-4.5', 'Claude Sonnet 4.5 (via OpenRouter)', 'mid'),
-      model('deepseek/deepseek-chat', 'DeepSeek Chat (via OpenRouter)', 'mid'),
-      model('meta-llama/llama-3.3-70b-instruct', 'Llama 3.3 70B (via OpenRouter)', 'mid'),
-      model('google/gemini-2.0-flash-001', 'Gemini 2.0 Flash (via OpenRouter)', 'low')
+      model('openai/gpt-5.6-terra', 'GPT-5.6 Terra (via OpenRouter)', 'mid'),
+      model('anthropic/claude-sonnet-5', 'Claude Sonnet 5 (via OpenRouter)', 'mid'),
+      model('google/gemini-3.6-flash', 'Gemini 3.6 Flash (via OpenRouter)', 'mid'),
+      model('google/gemini-2.5-pro', 'Gemini 2.5 Pro (via OpenRouter)', 'high'),
+      model('deepseek/deepseek-v4-flash', 'DeepSeek V4 Flash (via OpenRouter)', 'mid'),
+      model('x-ai/grok-4.5', 'Grok 4.5 (via OpenRouter)', 'high')
     ]
   },
   {
@@ -89,9 +90,11 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiFormat: 'openai',
     baseUrl: 'https://api.deepseek.com/v1',
     keyHint: 'platform.deepseek.com/api_keys',
+    // https://api-docs.deepseek.com/quick_start/pricing/ (2026-08)
+    // Legacy deepseek-chat / deepseek-reasoner retired ~2026-07.
     models: [
-      model('deepseek-chat', 'DeepSeek Chat', 'mid'),
-      model('deepseek-reasoner', 'DeepSeek Reasoner', 'high')
+      model('deepseek-v4-pro', 'DeepSeek V4 Pro', 'high'),
+      model('deepseek-v4-flash', 'DeepSeek V4 Flash', 'mid')
     ]
   },
   {
@@ -102,8 +105,8 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     keyHint: 'platform.moonshot.cn/console/api-keys',
     models: [
       model('kimi-k2-0711-preview', 'Kimi K2', 'mid'),
-      model('moonshot-v1-32k', 'Moonshot v1 32K', 'mid'),
-      model('moonshot-v1-128k', 'Moonshot v1 128K', 'high')
+      model('moonshot-v1-128k', 'Moonshot v1 128K', 'high'),
+      model('moonshot-v1-32k', 'Moonshot v1 32K', 'mid')
     ]
   },
   {
@@ -114,9 +117,9 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     keyHint: 'bailian.console.aliyun.com',
     keyHintKey: 'settings.providerSection.hintBailian',
     models: [
-      model('qwen-turbo', 'Qwen Turbo', 'low'),
+      model('qwen-max', 'Qwen Max', 'high'),
       model('qwen-plus', 'Qwen Plus', 'mid'),
-      model('qwen-max', 'Qwen Max', 'high')
+      model('qwen-turbo', 'Qwen Turbo', 'low')
     ]
   },
   {
@@ -127,9 +130,9 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     keyHint: 'bailian.console.aliyun.com',
     keyHintKey: 'settings.providerSection.hintBailian',
     models: [
-      model('qwen-turbo', 'Qwen Turbo', 'low'),
+      model('qwen-max', 'Qwen Max', 'high'),
       model('qwen-plus', 'Qwen Plus', 'mid'),
-      model('qwen-max', 'Qwen Max', 'high')
+      model('qwen-turbo', 'Qwen Turbo', 'low')
     ]
   },
   {
@@ -138,10 +141,16 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiFormat: 'openai',
     baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
     keyHint: 'aistudio.google.com/apikey',
+    // Chat/agent models only (not image-gen, Live, TTS, embeddings).
+    // https://ai.google.dev/gemini-api/docs/models (2026-08)
     models: [
-      model('gemini-2.0-flash', 'Gemini 2.0 Flash', 'low'),
-      model('gemini-1.5-pro', 'Gemini 1.5 Pro', 'high'),
-      model('gemini-1.5-flash', 'Gemini 1.5 Flash', 'low')
+      model('gemini-3.1-pro-preview', 'Gemini 3.1 Pro (preview)', 'high'),
+      model('gemini-3.6-flash', 'Gemini 3.6 Flash', 'mid'),
+      model('gemini-3.5-flash', 'Gemini 3.5 Flash', 'mid'),
+      model('gemini-3.5-flash-lite', 'Gemini 3.5 Flash-Lite', 'low'),
+      model('gemini-2.5-pro', 'Gemini 2.5 Pro', 'high'),
+      model('gemini-2.5-flash', 'Gemini 2.5 Flash', 'mid'),
+      model('gemini-2.5-flash-lite', 'Gemini 2.5 Flash-Lite', 'low')
     ]
   },
   {
@@ -153,7 +162,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     models: [
       model('llama-3.3-70b-versatile', 'Llama 3.3 70B (Groq)', 'mid'),
       model('llama-3.1-8b-instant', 'Llama 3.1 8B (Groq)', 'low'),
-      model('mixtral-8x7b-32768', 'Mixtral 8x7B (Groq)', 'mid')
+      model('qwen/qwen3-32b', 'Qwen3 32B (Groq)', 'mid')
     ]
   },
   {
@@ -165,7 +174,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     models: [
       model('meta-llama/Llama-3.3-70B-Instruct-Turbo', 'Llama 3.3 70B (Together)', 'mid'),
       model('deepseek-ai/DeepSeek-V3', 'DeepSeek V3 (Together)', 'mid'),
-      model('Qwen/Qwen2.5-72B-Instruct-Turbo', 'Qwen 2.5 72B (Together)', 'mid')
+      model('Qwen/Qwen3-235B-A22B-Instruct-Turbo', 'Qwen3 235B (Together)', 'high')
     ]
   },
   {
@@ -176,7 +185,9 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     keyHint: 'console.mistral.ai/api-keys',
     models: [
       model('mistral-large-latest', 'Mistral Large', 'high'),
-      model('mistral-small-latest', 'Mistral Small', 'low')
+      model('mistral-medium-latest', 'Mistral Medium', 'mid'),
+      model('mistral-small-latest', 'Mistral Small', 'low'),
+      model('codestral-latest', 'Codestral', 'mid')
     ]
   },
   {
@@ -185,9 +196,11 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     apiFormat: 'openai',
     baseUrl: 'https://api.x.ai/v1',
     keyHint: 'console.x.ai — API Keys',
+    // https://docs.x.ai/developers/models (2026-08)
     models: [
-      model('grok-3', 'Grok 3', 'high'),
-      model('grok-3-mini', 'Grok 3 Mini', 'low')
+      model('grok-4.5', 'Grok 4.5', 'high'),
+      model('grok-4.3', 'Grok 4.3', 'mid'),
+      model('grok-build-0.1', 'Grok Build', 'mid')
     ]
   },
   {
@@ -197,8 +210,9 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     baseUrl: 'https://api.perplexity.ai',
     keyHint: 'perplexity.ai/settings/api',
     models: [
+      model('sonar-pro', 'Sonar Pro', 'high'),
       model('sonar', 'Sonar', 'mid'),
-      model('sonar-pro', 'Sonar Pro', 'high')
+      model('sonar-reasoning-pro', 'Sonar Reasoning Pro', 'high')
     ]
   },
   {
@@ -211,7 +225,7 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     localNoKey: true,
     models: [
       { modelId: 'llama3.3', label: 'Llama 3.3 (local)', tier: 'mid' },
-      { modelId: 'qwen2.5', label: 'Qwen 2.5 (local)', tier: 'mid' },
+      { modelId: 'qwen3', label: 'Qwen3 (local)', tier: 'mid' },
       { modelId: 'deepseek-r1', label: 'DeepSeek R1 (local)', tier: 'high' }
     ]
   },

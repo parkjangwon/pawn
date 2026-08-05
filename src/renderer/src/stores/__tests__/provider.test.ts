@@ -23,6 +23,7 @@ beforeEach(() => {
     models: [],
     routingMode: 'auto',
     activeModelId: null,
+    visionModelId: null,
     defaultSendMode: 'queue',
     permissionMode: 'ask',
     reasoningEffort: 'auto',
@@ -58,6 +59,17 @@ describe('init', () => {
     expect(hydrated.pricing).toBeDefined()
     expect(hydrated.pricing!.input).toBeGreaterThan(0)
     expect(hydrated.contextWindow).toBeGreaterThan(0)
+    expect(hydrated.supportsVision).toBe(true)
+  })
+
+  it('hydrates visionModelId and clears it when the model is missing', async () => {
+    configMock.load.mockResolvedValue({
+      providers: [provider('p1')],
+      models: [model('m1', 'p1', 'gpt-4o', 'mid')],
+      settings: { visionModelId: 'gone' }
+    })
+    await useProviderStore.getState().init()
+    expect(useProviderStore.getState().visionModelId).toBeNull()
   })
 
   it('runs init only once', async () => {

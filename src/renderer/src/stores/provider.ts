@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
-import { guessPricing } from '../types/provider'
+import { guessPricing, guessSupportsVision } from '../types/provider'
 import type { Provider, ModelEntry, RoutingMode } from '../types/provider'
 
 interface ProviderState {
@@ -8,6 +8,8 @@ interface ProviderState {
   models: ModelEntry[]
   routingMode: RoutingMode
   activeModelId: string | null
+  /** Preferred fallback for image turns; null = any vision-capable model. */
+  visionModelId: string | null
   defaultSendMode: 'queue' | 'steer'
   permissionMode: 'ask' | 'auto' | 'yolo'
   reasoningEffort: 'auto' | 'low' | 'medium' | 'high'
@@ -22,9 +24,30 @@ interface ProviderState {
   updateModel: (id: string, patch: Partial<ModelEntry>) => void
   setRoutingMode: (mode: RoutingMode) => void
   setActiveModel: (id: string | null) => void
+  setVisionModel: (id: string | null) => void
   setDefaultSendMode: (mode: 'queue' | 'steer') => void
   setPermissionMode: (mode: 'ask' | 'auto' | 'yolo') => void
   setReasoningEffort: (effort: 'auto' | 'low' | 'medium' | 'high') => void
+}
+
+function hydrateModel(m: ModelEntry): ModelEntry {
+  let next = m
+  if (!m.pricing) {
+    const guess = guessPricing(m.modelId)
+    if (guess) {
+      next = {
+        ...next,
+        pricing: { input: guess.input, output: guess.output, cacheRead: guess.cacheRead, cacheWrite: guess.cacheWrite },
+        contextWindow: m.contextWindow || guess.contextWindow
+      }
+    }
+  }
+  // Only fill vision when the user has never set it — preserves explicit false/true.
+  if (next.supportsVision === undefined) {
+    const vision = guessSupportsVision(next.modelId)
+    if (vision !== undefined) next = { ...next, supportsVision: vision }
+  }
+  return next
 }
 
 function saveToBackend(state: ProviderState): void {
@@ -34,6 +57,7 @@ function saveToBackend(state: ProviderState): void {
     settings: {
       routingMode: state.routingMode,
       activeModelId: state.activeModelId ?? '',
+      visionModelId: state.visionModelId ?? '',
       defaultSendMode: state.defaultSendMode,
       permissionMode: state.permissionMode,
       reasoningEffort: state.reasoningEffort
@@ -46,6 +70,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   models: [],
   routingMode: 'auto',
   activeModelId: null,
+  visionModelId: null,
   defaultSendMode: 'queue',
   permissionMode: 'ask',
   reasoningEffort: 'auto',
@@ -56,24 +81,16 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     try {
       const rawConfig = await window.api.config.load() as Record<string, any>
       const settings = rawConfig.settings || {}
-      const models = (rawConfig.models || []) as ModelEntry[]
-      // Backfill pricing/tier for models saved before the cost model existed, so
-      // the router can reason about them instead of treating them as free.
-      const hydrated = models.map((m) => {
-        if (m.pricing) return m
-        const guess = guessPricing(m.modelId)
-        if (!guess) return m
-        return {
-          ...m,
-          pricing: { input: guess.input, output: guess.output, cacheRead: guess.cacheRead, cacheWrite: guess.cacheWrite },
-          contextWindow: m.contextWindow || guess.contextWindow
-        }
-      })
+      const models = ((rawConfig.models || []) as ModelEntry[]).map(hydrateModel)
+      const visionModelId = (settings.visionModelId as string) || null
+      // Drop a stale vision pin if the model was removed.
+      const visionOk = visionModelId && models.some((m) => m.id === visionModelId) ? visionModelId : null
       set({
         providers: rawConfig.providers || [],
-        models: hydrated,
+        models,
         routingMode: (settings.routingMode as RoutingMode) || 'auto',
         activeModelId: settings.activeModelId || null,
+        visionModelId: visionOk,
         defaultSendMode: (settings.defaultSendMode as 'queue' | 'steer') || 'queue',
         permissionMode: (settings.permissionMode as 'ask' | 'auto' | 'yolo') || 'ask',
         reasoningEffort: (settings.reasoningEffort as 'auto' | 'low' | 'medium' | 'high') || 'auto',
@@ -90,7 +107,17 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   },
 
   removeProvider: (id) => {
-    set((s) => { const next = { ...s, providers: s.providers.filter((p) => p.id !== id), models: s.models.filter((m) => m.providerId !== id) }; saveToBackend(next); return { providers: next.providers, models: next.models } })
+    set((s) => {
+      const models = s.models.filter((m) => m.providerId !== id)
+      const next = {
+        ...s,
+        providers: s.providers.filter((p) => p.id !== id),
+        models,
+        visionModelId: s.visionModelId && models.some((m) => m.id === s.visionModelId) ? s.visionModelId : null
+      }
+      saveToBackend(next)
+      return { providers: next.providers, models: next.models, visionModelId: next.visionModelId }
+    })
   },
 
   updateProvider: (id, patch) => {
@@ -98,7 +125,10 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   },
 
   addModel: (model) => {
-    const m = { ...model, id: model.id || uid() }
+    const withVision = model.supportsVision === undefined
+      ? { ...model, supportsVision: guessSupportsVision(model.modelId) }
+      : model
+    const m = { ...withVision, id: withVision.id || uid() }
     set((s) => { const next = { ...s, models: [...s.models, m] }; saveToBackend(next); return { models: next.models } })
   },
 
@@ -106,8 +136,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     set((s) => {
       const next = { ...s, models: s.models.filter((m) => m.id !== id) }
       if (s.activeModelId === id) next.activeModelId = null
+      if (s.visionModelId === id) next.visionModelId = null
       saveToBackend(next)
-      return { models: next.models, activeModelId: next.activeModelId }
+      return { models: next.models, activeModelId: next.activeModelId, visionModelId: next.visionModelId }
     })
   },
 
@@ -115,8 +146,10 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     set((s) => {
       const next = { ...s, models: s.models.map((m) => (m.id === id ? { ...m, ...patch } : m)) }
       if (s.activeModelId === id && patch.enabled === false) next.activeModelId = null
+      if (s.visionModelId === id && patch.enabled === false) next.visionModelId = null
+      if (s.visionModelId === id && patch.supportsVision === false) next.visionModelId = null
       saveToBackend(next)
-      return { models: next.models, activeModelId: next.activeModelId }
+      return { models: next.models, activeModelId: next.activeModelId, visionModelId: next.visionModelId }
     })
   },
 
@@ -131,6 +164,14 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const next = { ...s, activeModelId: id, routingMode: (id ? 'manual' : s.routingMode) as RoutingMode }
       saveToBackend(next)
       return { activeModelId: id, routingMode: next.routingMode }
+    })
+  },
+
+  setVisionModel: (id) => {
+    set((s) => {
+      const next = { ...s, visionModelId: id }
+      saveToBackend(next)
+      return { visionModelId: id }
     })
   },
 

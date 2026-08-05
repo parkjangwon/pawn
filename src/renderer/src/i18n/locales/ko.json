@@ -57,6 +57,8 @@
     "pastedText": "붙여넣은 텍스트",
     "attachedImage": "붙여넣은 이미지",
     "attachedText": "첨부 파일",
+    "imageExpandHint": "더블클릭하여 확대",
+    "imageLightbox": "확대된 이미지",
     "copy": "복사",
     "copied": "복사됨",
     "thinking": "생각 중...",
@@ -67,12 +69,14 @@
     "diagnostics": {
       "coldStart": "콜드 스타트 — 캐시가 만료되어 다시 기록해야 합니다.",
       "compacted": "컨텍스트 압축 실행 — 캐시를 다시 기록합니다.",
-      "routing": "라우팅: {{model}} — {{reason}}"
+      "routing": "라우팅: {{model}} — {{reason}}",
+      "visionFallback": "{{model}}은(는) 이미지를 처리할 수 없습니다 — 비전 모델로 전환합니다."
     },
     "errors": {
       "noProvider": "프로바이더나 모델이 설정되지 않았습니다. 설정 → 프로바이더, 설정 → 모델에서 추가하세요.",
       "allAttemptsFailed": "모든 모델 시도가 실패했습니다. 마지막 오류: {{error}}",
       "noUsableModel": "사용 가능한 모델이 없습니다. 프로바이더가 활성화되어 있고 모델이 연결되어 있는지 확인하세요.",
+      "noVisionModel": "메시지에 이미지가 포함되어 있지만 비전 모델이 없습니다. 설정 → 모델에서 Vision을 켜거나, 설정 → 에이전트에서 비전 폴백 모델을 지정하세요.",
       "toolLoop": "도구 루프 감지: {{rounds}}라운드 동안 동일한 호출({{names}})이 반복되어 중단합니다.",
       "maxRounds": "최종 답변 없이 {{rounds}}라운드 후 중단되었습니다.",
       "agentError": "에이전트 루프 오류: {{error}}"
@@ -287,7 +291,7 @@
     },
     "modelSection": {
       "title": "모델",
-      "desc": "사용 가능한 모델 관리",
+      "desc": "사용 가능한 모델 관리. 이미지를 받는 모델을 표시해 두면 DeepSeek 같은 텍스트 전용 모델에서 자동 폴백됩니다.",
       "empty": "설정된 모델이 없습니다",
       "add": "모델 추가",
       "selectProvider": "프로바이더 선택",
@@ -306,13 +310,24 @@
       "priceCacheWrite": "캐시 기록",
       "priceCacheRead": "캐시 읽기",
       "pricingUnknown": " · 가격 미설정 — 비용 추적 비활성화",
-      "priceInput": "입력가"
+      "priceInput": "입력가",
+      "visionLabel": "비전 (이미지)",
+      "visionHint": "Vision = 첨부 이미지/스크린샷 처리 가능. Text only = 텍스트만 (라우터가 폴백). Auto = 모델 ID로 추정.",
+      "visionAuto": "자동",
+      "visionYes": "Vision",
+      "visionNo": "텍스트만",
+      "visionBadge": "Vision",
+      "visionTextOnly": "Text"
     },
     "agentSection": {
       "title": "에이전트",
       "desc": "에이전트 동작 및 라우팅 구성",
       "routing": "모델 라우팅",
       "routingDesc": "작업을 최적의 모델에 자동으로 라우팅합니다",
+      "visionFallback": "비전 폴백 모델",
+      "visionFallbackDesc": "선택 사항. 현재 모델이 이미지를 처리할 수 없을 때만 사용합니다 (첨부·스크린샷). 메인 모델이 이미 비전을 지원하면(예: Gemini) 자동으로 두면 됩니다.",
+      "visionFallbackAuto": "자동 — 비전 가능 모델 중 선택",
+      "visionFallbackEmpty": "비전 가능 모델이 없습니다. 모델 설정에서 Vision을 켜거나 Gemini/GPT-4o/Claude 프리셋을 추가하세요.",
       "sendMode": "전송 모드",
       "sendModeDesc": "에이전트에 메시지를 전송하는 방식을 선택하세요",
       "queue": "큐",
