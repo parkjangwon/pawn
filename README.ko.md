@@ -53,15 +53,22 @@ pawn
 
 ### 서비스 연동 (선택)
 
-**설정 → 서비스 연동**에서 Google·GitHub를 연결하면 에이전트가 이 기기에서 읽기 권한으로 데이터를 볼 수 있습니다. 토큰은 `~/.pawn`에만 저장되며 Pawn 서버로 올라가지 않습니다.
+**설정 → 서비스 연동**에서 **Google** / **GitHub**를 연결합니다. 메일함·Drive 전용 UI는 없고, **채팅 내장 툴**로 데이터를 다룹니다. 토큰은 이 기기 `~/.pawn`에만 저장되며 Pawn 서버로 올라가지 않습니다.
 
-공식 빌드를 배포하는 경우 Desktop OAuth Client ID는 빌드 시 GitHub Actions secrets로 주입합니다 — [.github/OAUTH_SECRETS.md](./.github/OAUTH_SECRETS.md).
+**Google** (읽기 전용): Drive 검색/읽기, Gmail 검색/읽기, Calendar, Tasks, Docs, Sheets, Slides.
+
+**GitHub**: 저장소·이슈·PR·커밋·파일·검색, 필요 시 이슈 생성·코멘트·PR 생성(ask 모드에서는 승인).
+
+예: *“이번 주 캘린더 알려줘”*, *“Alice 메일 요약해줘”*, *“parkjangwon/pawn open PR 정리해줘”*.
+
+공식 빌드 배포 시 Desktop OAuth Client ID는 GitHub Actions secrets로 빌드 주입 — [.github/OAUTH_SECRETS.md](./.github/OAUTH_SECRETS.md). OAuth용 개인정보 처리방침: [PRIVACY.md](./PRIVACY.md).
 
 ## 주요 기능
 
 ### 코어 에이전트 및 도구 (Tools)
 - 도구 호출 에이전트 루프 지원 (사용자 턴당 최대 25회 연속 호출).
 - **파일 시스템**: 로컬 파일 읽기, 쓰기, 수정, 목록 조회, 삭제를 안전하게 수행합니다.
+- **스프레드시트**: 로컬 CSV/TSV/XLSX용 `read_spreadsheet` (행·열 상한으로 대용량에도 안전).
 - **쉘 실행**: 로컬 CLI 명령어 실행 (백그라운드 태스크 및 표준 샌드박스 모드 완벽 지원).
 - **컴퓨터 제어 (Computer Use)**: 종속성 없는 크로스 플랫폼 자동화:
   - **멀티모달 비주얼 인식**: 스크린샷을 Claude 및 OpenAI API 규격의 이미지 블록으로 변환하여 모델에 전송합니다.
@@ -70,7 +77,8 @@ pawn
   - **Linux 제어**: `xdotool` 연동을 지원합니다.
   - **고해상도(High-DPI) 보정**: 윈도우 스케일 팩터를 반영하여 클릭 정밀도를 보정합니다.
 - **브라우저 제어 (Browser Use)**: 자체 쿠키 세션이 유지되는 실제 임베드 Chromium 브라우저를 사용합니다 — 접근성(accessibility) 스타일의 요소 스냅샷 기반으로 탐색/클릭/입력/텍스트 읽기/스크린샷을 수행하므로 깨지기 쉬운 CSS 셀렉터가 필요 없고, 화면에 보이는 AI 커서로 동작을 직접 지켜볼 수 있습니다.
-- **첨부 (Attachments)**: 이미지(비전 모델에 실제 이미지 블록으로 전송)와 텍스트 문서를 첨부할 수 있고, 대량 텍스트를 붙여넣으면 제거 가능한 칩으로 변환됩니다.
+- **첨부 (Attachments)**: 이미지(비전 모델에 실제 이미지 블록으로 전송)와 텍스트 문서를 첨부할 수 있고, 대량 텍스트를 붙여넣으면 제거 가능한 칩으로 변환됩니다. 이미지는 더블클릭 라이트박스로 확대할 수 있습니다.
+- **Google / GitHub 툴**: 선택 연동 계정용 채팅 툴 ([서비스 연동](#서비스-연동-선택)). 별도 제품 화면이 아니라 대화에 결과가 표시됩니다.
 - 민감한 작업에 대한 세분화된 사용자 승인 권한 시스템 (MCP 도구 포함, 도구 유형별로 세분화).
 - 큐(Queue) 전송 및 조향(Steering) 전송 모드 제공.
 - 도구 호출 결과는 Claude Code 스타일로 기본 접힘(collapsed) 처리되어 대화창이 항상 깔끔합니다.
@@ -90,6 +98,7 @@ pawn
   - **캐시 인지 라우팅(Cache-Aware Routing)**: 모델을 변경할 때 발생하는 캐시 작성 비용과 토큰당 절감액을 비교 계산하여, 프롬프트 캐싱(Prompt Caching) 효율을 극대화합니다.
   - **자동 에스컬레이션(Automatic Escalation)**: 연속적인 도구 실행 실패나 모델의 빈(empty) 응답이 감지되면 자동으로 더 고성능 등급의 모델로 티어를 상향합니다.
   - **장애 대응 및 쿨다운(Failover & Cooldown)**: 응답에 실패한 프로바이더에 일시적인 쿨다운(5초~120초)을 적용하여 에이전트의 중단 없는 반응성을 보장합니다.
+  - **비전 폴백**: 메시지에 이미지가 포함되면 현재 모델이 비전을 지원하지 않을 때 비전 가능 모델(또는 설정한 비전 폴백)로 라우팅합니다.
 
 ### 로컬 데이터베이스 및 영속성
 - WAL 저널 모드가 활성화된 **SQLite** (`better-sqlite3`) 기반으로 가볍고 강력한 로컬 스토리지를 제공합니다.
@@ -100,18 +109,19 @@ pawn
   - `usage`: 입력/출력 토큰 및 캐시 읽기/쓰기 토큰의 상세 정보와 예측 비용 추적.
   - `routines`: 주기적으로 백그라운드에서 자동 실행되는 스케줄 기반 루틴 저장.
 
-### 우측 패널 — 터미널, 파일, Git & Diff
-- **터미널**: 프로젝트별 실제 셸(xterm.js + `node-pty`)을 채팅 옆에 나란히 사용할 수 있습니다.
+### 우측 패널 — 터미널, 파일, Git, Diff, Artifacts & 브라우저
+- **터미널**: 프로젝트별 실제 셸(xterm.js + `node-pty`). 채팅 하단 **Codex 스타일 터미널** 토글도 지원합니다.
 - **파일**: Pawn을 벗어나지 않고 프로젝트 트리를 탐색하며 내장 에디터로 파일을 열고 수정할 수 있습니다.
 - **Git**: 현재 프로젝트의 브랜치·상태·로그를 확인합니다.
 - **Diff**: 변경된 모든 파일을 한 곳에서 검토한 뒤 무엇을 유지할지 결정할 수 있습니다.
+- **Artifacts**: 에이전트가 만든 리포트·내보내기 파일을 모아 바로 열기/표시.
 - **브라우저**: 에이전트가 직접 조작하는 것과 동일한 임베드 브라우저를 지켜보거나 직접 넘겨받아 조작할 수 있습니다.
 - 컴포저 바의 실시간 git 상태 칩으로 현재 브랜치와 diff 통계를 한눈에 확인하고, 팝오버에서 브랜치를 전환하거나 Git/Diff 탭으로 바로 이동할 수 있습니다.
 
 ### 자동화 (Automation)
-- 간격/매일/매주 스케줄 기반 반복 루틴. 모든 창이 닫혀 있어도 헤드리스로 실행됩니다.
+- 간격/매일/매주 스케줄 기반 반복 자동화. 모든 창이 닫혀 있어도 헤드리스로 실행됩니다.
 - **템플릿**: 일일 리포트, 웹/가격 모니터, RSS 다이제스트, 이슈 트리아지, 체인지로그, 리포 점검 — 클릭 한 번으로 생성.
-- **결과물**: 완료된 루틴은 `~/.pawn/reports/<이름>/`에 마크다운 리포트로 저장되고, 완료 알림에 경로가 포함됩니다.
+- **결과물**: 완료된 실행은 `~/.pawn/reports/<이름>/` 등에 마크다운으로 남길 수 있고, 알림·Artifacts로 경로를 확인할 수 있습니다.
 - **공유**: 자동화 설정을 JSON 파일로 내보내기/가져오기할 수 있습니다.
 - **메뉴바/트레이**: Pawn 로고 아이콘으로 macOS 메뉴바·Windows 시스템 트레이에 표시. 좌/우클릭 모두 다국어 메뉴(표시 여부, 열기, 종료)가 열립니다.
 
@@ -119,7 +129,7 @@ pawn
 - ChatGPT 스타일의 레이아웃 (사이드바 + 대화 창), macOS 트래픽 라이트를 고려한 네이티브 헤더 — 사이드바 토글 버튼이 창 컨트롤 버튼 옆에 위치하고, 헤더 어디를 더블클릭해도 창 최대화/복원이 동작합니다.
 - ChatGPT 스타일 컴포저 카드: 정렬된 툴바, 첨부 버튼, 제거 가능한 첨부 칩.
 - **커맨드 팔레트** (`Cmd/Ctrl+K`)로 빠른 이동과 실행이 가능합니다.
-- **커스터마이즈 가능한 키보드 단축키** (설정 → 단축키) — 커맨드 팔레트를 포함한 모든 바인딩을 재지정하거나 초기화할 수 있습니다.
+- **커스터마이즈 가능한 키보드 단축키** (설정 → 단축키) — 커맨드 팔레트·터미널·우측 패널·사이드바 토글 등을 재지정하거나 초기화할 수 있습니다.
 - **사이드바 세션 관리**: Pinned/Recent 목록에서 세션을 고정하거나, 세션·프로젝트를 바로 삭제할 수 있으며, 삭제 시 진행 중이던 스트림도 함께 정리됩니다.
 - **"열기" 실행기**: 25개 이상의 프리셋(VS Code 계열, Cursor, Windsurf, Trae, Zed, Nova, JetBrains 전 제품군, Sublime, BBEdit, Xcode, Android Studio 등)에서 설치된 에디터를 감지하고 각 앱의 실제 아이콘을 메뉴에 표시합니다.
 - 라이트 모드 및 다크 모드 지원 (설정 > 외관에서 변경 가능).
@@ -157,6 +167,7 @@ pawn
 - **highlight.js** — 소스 코드 구문 강조
 - **@modelcontextprotocol/sdk** — MCP 클라이언트 (stdio 트랜스포트)
 - **xterm.js** + **node-pty** — 내장 터미널
+- **exceljs** — 에이전트용 로컬 스프레드시트 미리보기
 
 ## 개발 가이드
 
@@ -202,19 +213,21 @@ npm run pack
 ```
 src/
 ├── main/              # Electron 메인 프로세스 (IPC 통신, DB 제어, CSP 설정, 윈도우 생성)
-│   ├── ipc/           # IPC 핸들러: fs, shell, browser, computer, terminal, mcp, routine 등
+│   ├── connections/   # Google/GitHub OAuth(로컬 토큰) + 에이전트용 API 툴
+│   ├── ipc/           # IPC: fs, shell, browser, computer, terminal, mcp, connections, routine 등
+│   ├── spreadsheet.ts # CSV/XLSX 상한 읽기
 │   └── mcpManager.ts  # MCP 서버 탐색, 라이프사이클, 도구 호출
 ├── preload/           # 프리로드 스크립트 (보안 API 노출용 컨텍스트 브릿지)
 └── renderer/          # React 애플리케이션
     └── src/
-        ├── agent/     # 에이전트 루프, 도구(Tools), 스마트 라우터, 트랜스크립트, MCP 도구 브릿지
-        ├── components/# UI 화면 구성 컴포넌트 (채팅, 우측 패널, 설정, 사이드바 등)
+        ├── agent/     # 에이전트 루프, 도구(Google/GitHub 포함), 라우터, 트랜스크립트, MCP 브릿지
+        ├── components/# UI (채팅, 우측 패널, 설정, Artifacts, 사이드바 등)
         ├── i18n/      # 다국어 번역 파일 리소스 (en, ko, ja, zh)
-        ├── stores/    # Zustand 전역 상태 스토어 (app, chat, provider, theme, permission, mcp, keybindings 등)
+        ├── stores/    # Zustand (app, chat, provider, artifacts, mcp, keybindings 등)
         ├── styles/    # 글로벌 CSS 및 테마 스타일 시트
         └── types/     # 공통 TypeScript 타입 정의 파일
 ```
 
 ## 라이선스
 
-MIT
+MIT — [LICENSE](./LICENSE). 선택 OAuth 연동 관련: [PRIVACY.md](./PRIVACY.md).
