@@ -39,8 +39,9 @@
   flex: 1;
 }
 
-/* Align right panel toggle to the right edge */
-.right-panel-toggle {
+/* Align right panel / terminal toggles to the right edge */
+.right-panel-toggle,
+.terminal-toggle {
   -webkit-app-region: no-drag;
 }
 

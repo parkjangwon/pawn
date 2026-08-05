@@ -166,6 +166,7 @@
     "workWithoutProject": "Work without a project",
     "usageTotalCost": "Total cost",
     "toggleRightPanel": "Toggle right panel",
+    "toggleTerminal": "Toggle terminal",
     "usageCacheHitRate": "Cache hit rate",
     "openSidebar": "Open sidebar",
     "navBack": "Back",
@@ -456,6 +457,7 @@
       "cancel": "Cancel",
       "reset": "Reset",
       "toggle-right-panel": "Toggle right panel",
+      "toggle-terminal": "Toggle terminal",
       "toggle-sidebar": "Toggle sidebar",
       "open-command-palette": "Open command palette",
       "open-settings": "Open settings",
@@ -550,6 +552,9 @@
     "allToolsOpen": "All tools are open",
     "terminalRestart": "Restart terminal"
   },
+  "bottomTerminal": {
+    "close": "Close terminal"
+  },
   "commandPalette": {
     "placeholder": "Type a command...",
     "noResults": "No matching commands",
@@ -572,6 +577,8 @@
       "openSettingsDesc": "Open the application settings",
       "toggleRightPanel": "Toggle right panel",
       "toggleRightPanelDesc": "Show or hide the tools panel",
+      "toggleTerminal": "Toggle terminal",
+      "toggleTerminalDesc": "Show or hide the bottom terminal panel",
       "toggleSidebar": "Toggle sidebar",
       "toggleSidebarDesc": "Show or hide the project sidebar"
     }

@@ -1,0 +1,116 @@
+.bottom-terminal {
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-color);
+  position: relative;
+  overflow: hidden;
+  transition: height 0.2s var(--ease-spring), min-height 0.2s var(--ease-spring), opacity 0.15s ease;
+  z-index: 20;
+}
+
+.bottom-terminal.closing,
+.bottom-terminal[aria-hidden="true"] {
+  border-top-color: transparent;
+}
+
+/* Top edge resize handle */
+.bt-resizer {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 6px;
+  cursor: row-resize;
+  z-index: 10;
+  background: transparent;
+  touch-action: none;
+}
+
+.bt-resizer::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 2px;
+  height: 1px;
+  background: transparent;
+  transition: background 0.15s;
+}
+
+.bt-resizer:hover::after,
+body.resizing-bottom-terminal .bt-resizer::after {
+  background: var(--text-muted);
+}
+
+.bt-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 10px 4px 12px;
+  min-height: 32px;
+  flex-shrink: 0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bt-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.bt-title svg {
+  flex-shrink: 0;
+  color: var(--text-muted);
+}
+
+.bt-path {
+  font-weight: 400;
+  font-size: 11px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+}
+
+.bt-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s ease, color 0.12s ease;
+}
+
+.bt-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.bt-content {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1e1e1e;
+}
+
+/* Restart button lives inside TerminalView; show it on panel hover too */
+.bt-content:hover .terminal-restart-btn {
+  opacity: 1;
+}

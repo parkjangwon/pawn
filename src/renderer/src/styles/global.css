@@ -69,7 +69,8 @@ body {
   position: relative;
 }
 
-.main-column {
+/* Content column next to the sidebar: chat/right-panel on top, terminal below. */
+.workspace {
   flex: 1;
   display: flex;
   flex-direction: column;
@@ -80,12 +81,28 @@ body {
   transition: margin-left 0.2s var(--ease-spring);
 }
 
+.workspace-top {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.main-column {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  height: 100%;
+  overflow: hidden;
+}
+
 /* Sidebar collapsed state */
 .app.sidebar-collapsed .sidebar {
   transform: translateX(-100%);
 }
 
-.app.sidebar-collapsed .main-column {
+.app.sidebar-collapsed .workspace {
   margin-left: 0;
 }
 
@@ -208,7 +225,7 @@ body {
     z-index: 99;
     animation: fadeIn 0.2s ease;
   }
-  .main-column {
+  .workspace {
     margin-left: 0;
   }
   .chat-header {

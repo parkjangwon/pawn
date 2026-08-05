@@ -166,6 +166,7 @@
     "workWithoutProject": "プロジェクトなしで作業",
     "usageTotalCost": "合計コスト",
     "toggleRightPanel": "右パネルを切り替え",
+    "toggleTerminal": "ターミナルを切り替え",
     "usageCacheHitRate": "キャッシュヒット率",
     "openSidebar": "サイドバーを開く",
     "navBack": "戻る",
@@ -456,6 +457,7 @@
       "cancel": "キャンセル",
       "reset": "リセット",
       "toggle-right-panel": "右パネルの切り替え",
+      "toggle-terminal": "ターミナルの切り替え",
       "toggle-sidebar": "サイドバーの切り替え",
       "open-command-palette": "コマンドパレットを開く",
       "open-settings": "設定を開く",
@@ -550,6 +552,9 @@
     "allToolsOpen": "すべてのツールが開いています",
     "terminalRestart": "ターミナルを再起動"
   },
+  "bottomTerminal": {
+    "close": "ターミナルを閉じる"
+  },
   "commandPalette": {
     "placeholder": "コマンドを入力...",
     "noResults": "一致するコマンドがありません",
@@ -572,6 +577,8 @@
       "openSettingsDesc": "アプリケーション設定を開く",
       "toggleRightPanel": "右パネルを切り替え",
       "toggleRightPanelDesc": "ツールパネルの表示/非表示",
+      "toggleTerminal": "ターミナルを切り替え",
+      "toggleTerminalDesc": "下部ターミナルパネルの表示/非表示",
       "toggleSidebar": "サイドバーを切り替え",
       "toggleSidebarDesc": "プロジェクトサイドバーの表示/非表示"
     }

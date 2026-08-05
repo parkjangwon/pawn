@@ -78,6 +78,14 @@ export default function CommandPalette({ onClose, onOpenSettings }: CommandPalet
       group: 'actions'
     },
     {
+      id: 'toggle-terminal',
+      label: t('commandPalette.commands.toggleTerminal'),
+      description: t('commandPalette.commands.toggleTerminalDesc'),
+      shortcut: formatCombo(keybindings['toggle-terminal']),
+      action: () => { (window as any).__toggleTerminal?.(); onClose() },
+      group: 'actions'
+    },
+    {
       id: 'toggle-sidebar',
       label: t('commandPalette.commands.toggleSidebar'),
       description: t('commandPalette.commands.toggleSidebarDesc'),

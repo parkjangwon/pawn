@@ -45,6 +45,9 @@ declare global {
     __openRightPanelTab?: (id: string) => void
     __closeRightPanelTab?: (id: string) => void
     __toggleRightPanel?: () => void
+    __toggleTerminal?: () => void
+    __openTerminal?: () => void
+    __closeTerminal?: () => void
     __openFileInPanel?: (path: string) => void
     api: {
       platform: string

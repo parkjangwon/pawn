@@ -379,19 +379,19 @@ export const TOOLS: ToolDefinition[] = [
   },
   {
     name: 'app_open_tab',
-    description: 'Open the right panel on one of the app tool tabs: terminal, files, git, browser, diff. Use this to show the user what you are doing.',
+    description: 'Open an app tool surface: terminal (bottom panel), or files/git/browser/diff (right panel). Use this to show the user what you are doing.',
     parameters: {
       type: 'object',
-      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff'], description: 'Which app tool tab to open' } },
+      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff'], description: 'Which app tool to open (terminal is the bottom panel; others open in the right panel)' } },
       required: ['tab']
     }
   },
   {
     name: 'app_close_tab',
-    description: 'Close an app tool tab in the right panel: terminal, files, git, browser, diff. Closing the browser also discards its current page.',
+    description: 'Close an app tool surface: terminal (bottom panel), or files/git/browser/diff (right panel). Closing the browser also discards its current page.',
     parameters: {
       type: 'object',
-      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff'], description: 'Which app tool tab to close' } },
+      properties: { tab: { type: 'string', enum: ['terminal', 'files', 'git', 'browser', 'diff'], description: 'Which app tool to close' } },
       required: ['tab']
     }
   },
