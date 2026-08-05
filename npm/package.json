@@ -1,6 +1,6 @@
 {
   "name": "@parkjangwon/pawn",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Installer runner for Pawn — AI Desktop Coding Agent. Downloads the right build for your OS and launches it.",
   "license": "MIT",
   "author": "parkjangwon",
