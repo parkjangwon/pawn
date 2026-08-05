@@ -159,7 +159,7 @@ describe('toOpenAIMessages', () => {
     expect(out[0]).toEqual({
       role: 'tool',
       tool_call_id: 's1',
-      content: 'Screenshot captured and attached.'
+      content: 'Screenshot captured and attached. Coords use image space (top-left).'
     })
     expect(out[1]).toEqual({
       role: 'user',

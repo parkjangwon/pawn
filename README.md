@@ -160,12 +160,21 @@ If you also install an external “insane-search” skill under Claude Code / `~
 
 #### Browser & computer
 
-- **Browser Use**: embedded Chromium with its own cookie session — navigate, snapshot, click, fill, read text, screenshot, with a visible AI cursor (`browser_*`).
-- **Computer Use**: cross-platform desktop automation (screenshot as vision, click/type/keypress via `computer_*`).
-  - macOS: `cliclick` + AppleScript fallback
-  - Windows: PowerShell / `.NET Forms SendKeys`
-  - Linux: `xdotool`
-  - High-DPI coordinate normalization
+- **Browser Use**: embedded Chromium with its own cookie session — navigate, snapshot, click, fill, read text, screenshot, with a visible AI cursor (`browser_*`). Prefer this for web UIs inside Pawn.
+- **Computer Use** (full desktop OS automation via `computer_*`):
+  | Tool | Purpose |
+  |------|---------|
+  | `computer_screenshot` | Vision capture + image/screen size meta (multi-display via `display_id`) |
+  | `computer_displays` | List monitors |
+  | `computer_click` | Left/right/middle, single/double-click; image or screen coords |
+  | `computer_move` / `computer_drag` / `computer_scroll` | Hover, drag, scroll |
+  | `computer_type` / `computer_keypress` | Text + hotkeys (`cmd+c`, `ctrl+shift+t`, …) |
+  | `computer_clipboard` | Get/set clipboard text |
+  | `computer_wait` | Settle UI after actions |
+  - Coord space: **image (from last screenshot)** by default; `return_screenshot` for post-action vision
+  - macOS: `brew install cliclick` + Accessibility + Screen Recording
+  - Windows: PowerShell mouse/keyboard APIs; Linux: `xdotool`
+  - High-DPI scale handling on Win/Linux
 
 #### Google & GitHub (Settings → Connections)
 
@@ -339,6 +348,7 @@ src/
 │   ├── connections/   # Google/GitHub OAuth (local tokens) + API tools
 │   ├── memory/        # Long-term Memory engine (SQLite FTS, embed, extract, store)
 │   ├── hooks/         # Lifecycle hooks (Claude/Codex-compatible load + run)
+│   ├── computer/      # Desktop computer-use (screenshot, mouse, keyboard, clipboard)
 │   ├── research/      # Public-web engine (web_search / web_fetch / web_research)
 │   ├── ipc/           # fs, shell, browser, computer, terminal, mcp, memory, research, …
 │   ├── quit.ts        # Cmd+Q confirm + before-quit

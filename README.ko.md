@@ -160,12 +160,20 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 
 #### 브라우저 · 컴퓨터
 
-- **브라우저**: 쿠키 세션이 유지되는 임베드 Chromium — 탐색·스냅샷·클릭·입력·텍스트·스크린샷, AI 커서 (`browser_*`).
-- **컴퓨터 제어**: 스크린샷(비전)·클릭·타이핑·키 입력 (`computer_*`).
-  - macOS: cliclick / osascript
-  - Windows: PowerShell / .NET Forms
-  - Linux: xdotool
-  - High-DPI 좌표 보정
+- **브라우저**: 쿠키 세션이 유지되는 임베드 Chromium — 탐색·스냅샷·클릭·입력·텍스트·스크린샷, AI 커서 (`browser_*`). 앱 안 웹 UI는 이쪽 우선.
+- **컴퓨터 제어** (OS 전체, `computer_*`):
+  | 툴 | 용도 |
+  |----|------|
+  | `computer_screenshot` | 비전 캡처 + 이미지/화면 크기 메타 (멀티 모니터 `display_id`) |
+  | `computer_displays` | 모니터 목록 |
+  | `computer_click` | 좌/우/중 클릭, 더블클릭, image/screen 좌표 |
+  | `computer_move` / `computer_drag` / `computer_scroll` | 호버·드래그·스크롤 |
+  | `computer_type` / `computer_keypress` | 텍스트·단축키 (`cmd+c` 등) |
+  | `computer_clipboard` | 클립보드 읽기/쓰기 |
+  | `computer_wait` | UI 안정화 대기 |
+  - 좌표: 기본 **마지막 스크린샷 image 공간**; `return_screenshot`로 액션 후 비전
+  - macOS: `brew install cliclick` + 손쉬운 사용 + 화면 기록
+  - Windows: PowerShell / Linux: `xdotool` · HiDPI 보정
 
 #### Google · GitHub (설정 → 서비스 연동)
 
@@ -304,6 +312,7 @@ src/
 │   ├── connections/   # Google/GitHub OAuth + API 툴
 │   ├── memory/        # 장기 메모리 엔진 (SQLite FTS, embed, extract, store)
 │   ├── hooks/         # 라이프사이클 훅 (Claude/Codex 호환 load + run)
+│   ├── computer/      # 데스크톱 computer-use (스크린샷, 마우스, 키보드, 클립보드)
 │   ├── research/      # 공개 웹 엔진 (web_search / web_fetch / web_research)
 │   ├── ipc/           # fs, shell, browser, terminal, mcp, memory, hooks, research, …
 │   ├── quit.ts        # Cmd+Q 확인 + before-quit

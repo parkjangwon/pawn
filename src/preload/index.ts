@@ -52,12 +52,55 @@ const api = {
     getAppIcon: (path: string) => ipcRenderer.invoke('app:getFileIcon', path)
   },
 
-  // Computer Use
+  // Computer Use (desktop automation)
   computer: {
-    screenshot: () => ipcRenderer.invoke('computer:screenshot'),
-    click: (x: number, y: number) => ipcRenderer.invoke('computer:click', x, y),
-    type: (text: string) => ipcRenderer.invoke('computer:type', text),
-    keypress: (key: string) => ipcRenderer.invoke('computer:keypress', key)
+    screenshot: (opts?: { displayId?: number; maxWidth?: number }) =>
+      ipcRenderer.invoke('computer:screenshot', opts || {}),
+    displays: () => ipcRenderer.invoke('computer:displays'),
+    click: (
+      x: number,
+      y: number,
+      opts?: {
+        button?: string
+        clicks?: number
+        coordSpace?: string
+        returnScreenshot?: boolean
+        displayId?: number
+      }
+    ) => ipcRenderer.invoke('computer:click', x, y, opts || {}),
+    move: (x: number, y: number, opts?: { coordSpace?: string }) =>
+      ipcRenderer.invoke('computer:move', x, y, opts || {}),
+    drag: (
+      fromX: number,
+      fromY: number,
+      toX: number,
+      toY: number,
+      opts?: {
+        button?: string
+        steps?: number
+        coordSpace?: string
+        returnScreenshot?: boolean
+        displayId?: number
+      }
+    ) => ipcRenderer.invoke('computer:drag', fromX, fromY, toX, toY, opts || {}),
+    scroll: (
+      x: number,
+      y: number,
+      opts?: {
+        dy?: number
+        dx?: number
+        coordSpace?: string
+        returnScreenshot?: boolean
+        displayId?: number
+      }
+    ) => ipcRenderer.invoke('computer:scroll', x, y, opts || {}),
+    type: (text: string, opts?: { returnScreenshot?: boolean }) =>
+      ipcRenderer.invoke('computer:type', text, opts || {}),
+    keypress: (key: string, opts?: { returnScreenshot?: boolean }) =>
+      ipcRenderer.invoke('computer:keypress', key, opts || {}),
+    clipboard: (action: string, text?: string) =>
+      ipcRenderer.invoke('computer:clipboard', action, text),
+    wait: (ms: number) => ipcRenderer.invoke('computer:wait', ms)
   },
 
   // Browser (embedded WebContentsView, driven by both the UI panel and the agent)

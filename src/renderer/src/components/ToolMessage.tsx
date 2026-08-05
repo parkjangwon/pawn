@@ -48,9 +48,15 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
     git_log: { icon: 'M12 8v4l3 3', label: t('toolMessage.gitLog') },
     update_plan: { icon: 'M9 11l3 3L22 4', label: t('toolMessage.plan') },
     computer_screenshot: { icon: 'M11 4a2 2 0 118 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z', label: t('toolMessage.screenshot') },
+    computer_displays: { icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', label: t('toolMessage.displays', { defaultValue: 'Displays' }) },
     computer_click: { icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z', label: t('toolMessage.click') },
+    computer_move: { icon: 'M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122', label: t('toolMessage.move', { defaultValue: 'Move' }) },
+    computer_drag: { icon: 'M7 11.5V14m0-2.5v-6a1.5 1.5 0 113 0m-3 6a1.5 1.5 0 00-3 0v2a7.5 7.5 0 0015 0v-5a1.5 1.5 0 00-3 0m-6-3V11m0-5.5v-1a1.5 1.5 0 013 0v1m0 0V11m0-5.5a1.5 1.5 0 013 0v3m0 0V11', label: t('toolMessage.drag', { defaultValue: 'Drag' }) },
+    computer_scroll: { icon: 'M19 13l-7 7-7-7m14-8l-7 7-7-7', label: t('toolMessage.scroll', { defaultValue: 'Scroll' }) },
     computer_type: { icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t('toolMessage.type') },
     computer_keypress: { icon: 'M13 10V3L4 14h7v7l9-11h-7z', label: t('toolMessage.keypress') },
+    computer_clipboard: { icon: 'M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3', label: t('toolMessage.clipboard', { defaultValue: 'Clipboard' }) },
+    computer_wait: { icon: 'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z', label: t('toolMessage.wait', { defaultValue: 'Wait' }) },
     browser_open: { icon: 'M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71', label: t('toolMessage.browser') }
   }
 

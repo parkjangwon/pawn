@@ -323,7 +323,21 @@ describe('search tools', () => {
     useProviderStore.setState({ permissionMode: 'yolo' })
     const result = await executeTool(call('computer_keypress', { key: 'Return' }))
     expect(result.content).toContain('Return')
-    expect((window as any).api.computer.keypress).toHaveBeenCalledWith('Return')
+    expect((window as any).api.computer.keypress).toHaveBeenCalledWith('Return', expect.any(Object))
+  })
+
+  it('computer click passes options', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    ;(window as any).api.computer.click = vi.fn().mockResolvedValue({ ok: true, x: 10, y: 20 })
+    const result = await executeTool(
+      call('computer_click', { x: 10, y: 20, button: 'right', clicks: 2 })
+    )
+    expect(result.content).toContain('Clicked')
+    expect((window as any).api.computer.click).toHaveBeenCalledWith(
+      10,
+      20,
+      expect.objectContaining({ button: 'right', clicks: 2 })
+    )
   })
 
   it('reports no matches', async () => {

@@ -122,10 +122,108 @@ declare global {
         getAppIcon: (path: string) => Promise<{ dataUrl?: string; error?: string }>
       }
       computer: {
-        screenshot: () => Promise<{ dataUrl?: string; error?: string }>
-        click: (x: number, y: number) => Promise<{ ok?: boolean; error?: string }>
-        type: (text: string) => Promise<{ ok?: boolean; error?: string }>
-        keypress: (key: string) => Promise<{ ok?: boolean; error?: string }>
+        screenshot: (opts?: {
+          displayId?: number
+          maxWidth?: number
+        }) => Promise<{
+          dataUrl?: string
+          error?: string
+          width?: number
+          height?: number
+          screenWidth?: number
+          screenHeight?: number
+          scaleFactor?: number
+          displayId?: number
+          displayLabel?: string
+          displays?: Array<{
+            id: number
+            label: string
+            width: number
+            height: number
+            primary: boolean
+          }>
+        }>
+        displays: () => Promise<{
+          displays?: Array<{
+            id: number
+            label: string
+            width: number
+            height: number
+            primary: boolean
+          }>
+          error?: string
+        }>
+        click: (
+          x: number,
+          y: number,
+          opts?: {
+            button?: string
+            clicks?: number
+            coordSpace?: string
+            returnScreenshot?: boolean
+            displayId?: number
+          }
+        ) => Promise<{
+          ok?: boolean
+          error?: string
+          x?: number
+          y?: number
+          screenshot?: string
+          screenshotMeta?: Record<string, number | undefined>
+          screenshotError?: string
+        }>
+        move: (
+          x: number,
+          y: number,
+          opts?: { coordSpace?: string }
+        ) => Promise<{ ok?: boolean; error?: string; x?: number; y?: number }>
+        drag: (
+          fromX: number,
+          fromY: number,
+          toX: number,
+          toY: number,
+          opts?: {
+            button?: string
+            steps?: number
+            coordSpace?: string
+            returnScreenshot?: boolean
+            displayId?: number
+          }
+        ) => Promise<{
+          ok?: boolean
+          error?: string
+          screenshot?: string
+          screenshotError?: string
+        }>
+        scroll: (
+          x: number,
+          y: number,
+          opts?: {
+            dy?: number
+            dx?: number
+            coordSpace?: string
+            returnScreenshot?: boolean
+            displayId?: number
+          }
+        ) => Promise<{
+          ok?: boolean
+          error?: string
+          screenshot?: string
+          screenshotError?: string
+        }>
+        type: (
+          text: string,
+          opts?: { returnScreenshot?: boolean }
+        ) => Promise<{ ok?: boolean; error?: string; screenshot?: string }>
+        keypress: (
+          key: string,
+          opts?: { returnScreenshot?: boolean }
+        ) => Promise<{ ok?: boolean; error?: string; screenshot?: string }>
+        clipboard: (
+          action: string,
+          text?: string
+        ) => Promise<{ ok?: boolean; text?: string; error?: string }>
+        wait: (ms: number) => Promise<{ ok?: boolean; ms?: number; error?: string }>
       }
       browser: {
         open: (url: string) => Promise<{ ok?: boolean }>
