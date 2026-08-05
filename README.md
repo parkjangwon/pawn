@@ -53,15 +53,22 @@ pawn
 
 ### Service connections (optional)
 
-In **Settings → Connections**, you can link Google or GitHub so the agent can read your data on this machine. Tokens stay under `~/.pawn` and are never uploaded to a Pawn server.
+Link **Google** and/or **GitHub** in **Settings → Connections**. There is no inbox or Drive UI — the agent uses **built-in chat tools** with tokens stored only on this machine under `~/.pawn` (never sent to a Pawn server).
 
-Maintainers shipping official builds: inject Desktop OAuth client IDs at build time via GitHub Actions secrets — see [.github/OAUTH_SECRETS.md](./.github/OAUTH_SECRETS.md).
+**Google** (read-only): Drive search/read, Gmail search/read, Calendar, Tasks, Docs, Sheets, Slides.
+
+**GitHub**: repos, issues, PRs, commits, files, code/issue search; optional writes (create issue, comment, open PR) with confirmation in ask mode.
+
+Example prompts: *“What’s on my calendar this week?”*, *“Summarize unread mail from Alice”*, *“List open PRs on parkjangwon/pawn”*.
+
+Maintainers: inject Desktop OAuth client IDs at release build time via GitHub Actions secrets — see [.github/OAUTH_SECRETS.md](./.github/OAUTH_SECRETS.md). Privacy policy for OAuth consent: [PRIVACY.md](./PRIVACY.md).
 
 ## Features
 
 ### Core Agent & Tools
 - Tool-calling agent loop (up to 25 rounds per turn).
 - **File System**: Read, write, edit, list, and delete files safely.
+- **Spreadsheets**: `read_spreadsheet` for local CSV/TSV/XLSX with hard row/column caps (safe for large files).
 - **Shell execution**: Run CLI tools locally (supports background tasks and standard sandbox modes).
 - **Computer Use**: Zero-dependency cross-platform automation:
   - **Multimodal Eyesight**: Feeds screenshots directly to Claude & OpenAI models as image blocks.
@@ -70,7 +77,8 @@ Maintainers shipping official builds: inject Desktop OAuth client IDs at build t
   - **Linux Support**: Driven via `xdotool`.
   - **High-DPI Normalization**: Normalizes logical coordinate mouse clicks using monitor scale factors.
 - **Browser Use**: A real embedded Chromium view with its own persistent cookie session — the agent navigates, clicks, fills forms, reads page text, and takes screenshots via an accessibility-style element snapshot (no brittle CSS selectors required), with a visible AI cursor so you can watch it work.
-- **Attachments**: Attach images (sent to vision-capable models as real image blocks) and text documents; pasting a large block of text turns it into a removable chip.
+- **Attachments**: Attach images (sent to vision-capable models as real image blocks) and text documents; pasting a large block of text turns it into a removable chip. Images open in a double-click lightbox.
+- **Google / GitHub tools**: optional connected-account tools (see [Service connections](#service-connections-optional)); results appear in chat, not as a separate product surface.
 - Permission system with granular user approval dialogs (per tool type, including MCP tools).
 - Queue / Steering send modes.
 - Collapsed-by-default tool call output (Claude Code-style folded rows) to keep the transcript readable.
@@ -90,6 +98,7 @@ Maintainers shipping official builds: inject Desktop OAuth client IDs at build t
   - **Cache-Aware Routing**: Evaluates the cost of cache writes versus per-token savings before switching models to maximize prompt caching performance.
   - **Automatic Escalation**: Automatically escalates to stronger model tiers when detecting consecutive tool failures or empty model responses.
   - **Failover & Cooldown**: Automatically puts failing providers on a transient cooldown (5s to 120s) to keep the agent responsive.
+  - **Vision fallback**: when a message includes images, routes to a vision-capable model (or a configured vision fallback) if the current pick cannot handle images.
 
 ### Local Database & Persistence
 - Powered by **SQLite** (`better-sqlite3` with WAL journal mode) for lightweight, robust local storage.
@@ -100,18 +109,19 @@ Maintainers shipping official builds: inject Desktop OAuth client IDs at build t
   - `usage`: Tracks detailed usage tokens (input, output, cache-read, cache-write) and estimated costs.
   - `routines`: Recurring scheduled automation routines.
 
-### Right Panel — Terminal, Files, Git & Diff
-- **Terminal**: a real shell (xterm.js + `node-pty`) per project, split alongside the chat.
+### Right Panel — Terminal, Files, Git, Diff, Artifacts & Browser
+- **Terminal**: a real shell (xterm.js + `node-pty`) per project — also available as a Codex-style **bottom terminal** toggle from the chat chrome.
 - **Files**: browse the project tree and open/edit files in a built-in editor without leaving Pawn.
 - **Git**: branch, status, and log view for the current project.
 - **Diff**: review every changed file in one place before deciding what to keep.
+- **Artifacts**: shelf of agent-produced files (reports, exports) for quick open/reveal.
 - **Browser**: the same embedded browser the agent drives, so you can watch or take over.
 - A live git-status chip in the composer bar shows the current branch and diff stat at a glance, with a popover to switch branches or jump straight into the Git/Diff tabs.
 
 ### Automation
-- Recurring routines on interval / daily / weekly schedules, executed headlessly when every window is closed.
+- Recurring automations on interval / daily / weekly schedules, executed headlessly when every window is closed.
 - **Templates**: daily report, web/price monitor, RSS digest, issue triage, changelog, repo audit — one click to create.
-- **Deliverables**: every finished routine saves a markdown report to `~/.pawn/reports/<name>/` and the path is included in the completion notification.
+- **Deliverables**: finished runs can save markdown under `~/.pawn/reports/<name>/` (and surface paths via notifications / artifacts).
 - **Shareable**: export and import automations as a portable JSON file.
 - **Menu bar / tray**: macOS menu bar and Windows system tray with the Pawn logo; left- or right-click opens a multilingual menu (show/hide, open, quit).
 
@@ -119,7 +129,7 @@ Maintainers shipping official builds: inject Desktop OAuth client IDs at build t
 - ChatGPT-style layout (sidebar + chat area), with a native macOS traffic-light-aware header — the sidebar toggle sits next to the window controls, and double-clicking anywhere in the header maximizes/restores the window.
 - ChatGPT-style composer card: aligned toolbar, attach button, and removable attachment chips.
 - **Command palette** (`Cmd/Ctrl+K`) for quick navigation and actions.
-- **Customizable keyboard shortcuts** (Settings → Shortcuts) — rebind or reset any binding, including the command palette itself.
+- **Customizable keyboard shortcuts** (Settings → Shortcuts) — rebind or reset any binding, including the command palette itself. Toggle terminal / right panel / sidebar from bindings.
 - **Sidebar session management**: pin frequently-used sessions, delete sessions or whole projects directly from the Pinned/Recent lists, with active-stream cleanup on delete.
 - **"Open in" launcher**: detects installed editors from 25+ presets (VS Code family, Cursor, Windsurf, Trae, Zed, Nova, the full JetBrains suite, Sublime, BBEdit, Xcode, Android Studio, and more) and shows each app's real icon in the menu.
 - Light / Dark theme (configurable in Settings > Appearance).
@@ -157,6 +167,7 @@ Maintainers shipping official builds: inject Desktop OAuth client IDs at build t
 - **highlight.js** — Code syntax highlighting
 - **@modelcontextprotocol/sdk** — MCP client (stdio transport)
 - **xterm.js** + **node-pty** — Integrated terminal
+- **exceljs** — Local spreadsheet preview for the agent
 
 ## Development
 
@@ -202,19 +213,21 @@ Output goes to the `release/` directory.
 ```
 src/
 ├── main/              # Electron main process (IPC, DB, CSP, window management)
-│   ├── ipc/           # IPC handlers: fs, shell, browser, computer, terminal, mcp, routine, ...
+│   ├── connections/   # Google/GitHub OAuth (local tokens) + API tools for the agent
+│   ├── ipc/           # IPC: fs, shell, browser, computer, terminal, mcp, connections, routine, ...
+│   ├── spreadsheet.ts # CSV/XLSX read with caps
 │   └── mcpManager.ts  # MCP server discovery, lifecycle, and tool calls
 ├── preload/           # Context bridge (secure API exposure)
 └── renderer/          # React app
     └── src/
-        ├── agent/     # Agent loop, tools, smart routing, transcripts, MCP tool bridge
-        ├── components/# UI components (chat, right panel, settings, sidebar, ...)
+        ├── agent/     # Agent loop, tools (incl. Google/GitHub), routing, transcripts, MCP bridge
+        ├── components/# UI (chat, right panel, settings, artifacts, sidebar, ...)
         ├── i18n/      # Translations (en, ko, ja, zh)
-        ├── stores/    # Zustand stores (app, chat, provider, theme, permission, mcp, keybindings, ...)
+        ├── stores/    # Zustand (app, chat, provider, artifacts, mcp, keybindings, ...)
         ├── styles/    # Global CSS with theme variables
         └── types/     # TypeScript definitions
 ```
 
 ## License
 
-MIT
+MIT — see [LICENSE](./LICENSE). Privacy practices for optional OAuth: [PRIVACY.md](./PRIVACY.md).
