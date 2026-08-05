@@ -164,7 +164,6 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   const userProjects = projects.filter((p) => p.id !== GENERAL_PROJECT_ID)
 
   const sessionMeta = (session: { id: string; messages: Array<{ role: string; content: string; createdAt: number }>; createdAt: number }): {
-    count: number
     preview: string
     lastActivity: number
     running: boolean
@@ -173,7 +172,6 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     const firstLine = (last?.content || '').split('\n').find((l) => l.trim()) || ''
     const preview = firstLine.replace(/^\[Tool: [^\]]+\]\s*/, '').trim().slice(0, 44)
     return {
-      count: session.messages.length,
       preview,
       lastActivity: last?.createdAt || session.createdAt,
       running: runningRoutineIds.has(session.id) || streamingSessionId === session.id
@@ -183,7 +181,6 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   const renderSessionMeta = (meta: ReturnType<typeof sessionMeta>, withPreview: boolean): React.ReactNode => (
     <>
       {meta.running && <span className="session-running" title={t('sidebar.running')} />}
-      {meta.count > 0 && <span className="session-count">{meta.count}</span>}
       {withPreview && meta.preview && <span className="session-preview">{meta.preview}</span>}
     </>
   )
