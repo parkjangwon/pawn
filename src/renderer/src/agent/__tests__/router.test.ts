@@ -379,9 +379,15 @@ describe('route', () => {
 })
 
 describe('isVisionCapabilityError', () => {
-  it('detects common vision rejection messages', () => {
+  it('detects clear vision rejection messages', () => {
     expect(isVisionCapabilityError(new Error('model does not support image input'))).toBe(true)
     expect(isVisionCapabilityError('Images are not supported for this model')).toBe(true)
     expect(isVisionCapabilityError(new Error('rate limit exceeded'))).toBe(false)
+  })
+
+  it('does not match broad or unrelated errors', () => {
+    expect(isVisionCapabilityError(new Error('invalid content'))).toBe(false)
+    expect(isVisionCapabilityError(new Error('revision failed'))).toBe(false)
+    expect(isVisionCapabilityError(new Error('provision timed out'))).toBe(false)
   })
 })

@@ -17,7 +17,14 @@
  */
 
 import { useProviderStore } from '../stores/provider'
-import { guessPricing, type ModelEntry, type ModelPricing, type ModelTier, type Provider } from '../types/provider'
+import {
+  guessPricing,
+  guessSupportsVision,
+  type ModelEntry,
+  type ModelPricing,
+  type ModelTier,
+  type Provider
+} from '../types/provider'
 import { estimateTokens, type TranscriptEntry } from './transcript'
 
 // Models that refused an image this session — treated as non-vision until restart.
@@ -36,31 +43,39 @@ export function isKnownVisionIncapable(key: string): boolean {
   return visionIncapableKeys.has(key)
 }
 
-/** True when the provider error looks like "this model cannot take images". */
+/**
+ * True when the provider error clearly means "this model cannot take images".
+ * Keep this narrow: broad substrings like bare "vision" match "revision", and
+ * "invalid content" matches ordinary API failures — which wrongly banned vision
+ * fallbacks for the whole session.
+ */
 export function isVisionCapabilityError(err: unknown): boolean {
   const msg = (err instanceof Error ? err.message : String(err)).toLowerCase()
   if (!msg) return false
-  const needles = [
-    'vision',
-    'image_url',
-    'image input',
-    'images are not supported',
-    'image not supported',
+  const phrases = [
     'does not support image',
     'do not support image',
+    "doesn't support image",
+    'images are not supported',
+    'image is not supported',
+    'image input is not supported',
+    'image inputs are not supported',
+    'images not supported',
     'unsupported image',
-    'invalid image',
-    'multimodal',
-    'media type',
-    'content type.*image',
-    'unable to process.*image',
-    'no.*image.*support',
-    'image.*not.*allowed',
+    'image_url is not supported',
+    'image_url not supported',
+    'no support for image',
     'cannot process image',
-    'unknown part type',
-    'invalid content'
+    'unable to process image',
+    'model does not support multimodal',
+    'not a multimodal',
+    'multimodal is not supported',
+    'vision is not supported',
+    'does not support vision',
+    'image modalities are not supported',
+    'modality.*image.*not supported'
   ]
-  return needles.some((n) => {
+  return phrases.some((n) => {
     if (n.includes('.*')) return new RegExp(n).test(msg)
     return msg.includes(n)
   })
@@ -68,8 +83,18 @@ export function isVisionCapabilityError(err: unknown): boolean {
 
 function canAttemptVision(model: ModelEntry): boolean {
   if (model.supportsVision === false) return false
+  // Explicitly vision-capable models are never session-banned from broad errors;
+  // only unknown/false models use the runtime denylist.
+  if (model.supportsVision === true) return true
   if (isKnownVisionIncapable(routeKey(model))) return false
   return true
+}
+
+/** Effective vision capability including id heuristics when unset. */
+function isEffectivelyVisionCapable(model: ModelEntry): boolean {
+  if (model.supportsVision === true) return true
+  if (model.supportsVision === false) return false
+  return guessSupportsVision(model.modelId) === true
 }
 
 export type Complexity = 'simple' | 'medium' | 'complex'
@@ -473,21 +498,31 @@ function applyVisionPolicy(req: RouteRequest, base: RouteDecision): RouteDecisio
   const exclude = req.exclude || new Set<string>()
   const promptTokens = estimateTokens(req.entries)
   const all = candidates()
+  // Prefer context-fit models, but never drop the entire vision pool when
+  // estimateTokens was wrong historically (huge base64) — fall back to all.
   const contextFit = all.filter((c) => fitsContext(c.model, promptTokens))
   const basePool = contextFit.length > 0 ? contextFit : all
-  const usable = basePool.filter((c) => !exclude.has(routeKey(c.model)))
-  const pool = usable.length > 0 ? usable : basePool
+  let pool = basePool.filter((c) => !exclude.has(routeKey(c.model)))
+  if (pool.length === 0) pool = basePool
 
   // 1) Natural pick can try vision (explicit true, or unknown not yet failed).
-  if (!exclude.has(base.key) && canAttemptVision(base.model)) {
-    return base
+  // Prefer explicit vision models over text-only sticky when needsVision.
+  if (
+    !exclude.has(base.key) &&
+    canAttemptVision(base.model) &&
+    base.model.supportsVision !== false
+  ) {
+    // If natural pick is only "unknown" but a known vision model exists, skip to fallbacks.
+    if (base.model.supportsVision === true) {
+      return base
+    }
   }
 
   const sticky = sessionRoutes.get(req.sessionId)
   const warm = sticky && !exclude.has(sticky.key) ? { key: sticky.key, ratio: warmRatio(sticky, promptTokens) } : null
   const { visionModelId } = useProviderStore.getState()
 
-  // 2) User-preferred vision fallback.
+  // 2) User-preferred vision fallback (by model entry id).
   if (visionModelId) {
     const preferred = pool.find((c) => c.model.id === visionModelId)
     if (preferred && canAttemptVision(preferred.model)) {
@@ -499,14 +534,24 @@ function applyVisionPolicy(req: RouteRequest, base: RouteDecision): RouteDecisio
         ephemeral: true
       }
     }
+    // Preferred set but not in filtered pool — try full candidate list once.
+    const preferredAny = all.find((c) => c.model.id === visionModelId && !exclude.has(routeKey(c.model)))
+    if (preferredAny && canAttemptVision(preferredAny.model)) {
+      return {
+        ...preferredAny,
+        key: routeKey(preferredAny.model),
+        tier: preferredAny.model.tier,
+        reason: 'vision fallback (preferred, ignore context filter)',
+        ephemeral: true
+      }
+    }
   }
 
-  // 3) Any model marked vision-capable.
-  const knownVision = rank(
-    pool.filter((c) => c.model.supportsVision === true && canAttemptVision(c.model)),
-    promptTokens,
-    warm
-  )
+  // 3) Any model that can see (explicit Vision flag OR known multimodal id).
+  const visionFilter = (c: RouteTarget) =>
+    canAttemptVision(c.model) && isEffectivelyVisionCapable(c.model)
+
+  const knownVision = rank(pool.filter(visionFilter), promptTokens, warm)
   if (knownVision[0]) {
     const pick = knownVision.find((c) => isProviderAvailable(c.provider.id)) || knownVision[0]
     return {
@@ -517,8 +562,29 @@ function applyVisionPolicy(req: RouteRequest, base: RouteDecision): RouteDecisio
       ephemeral: true
     }
   }
+  // Same, from full list if pool was over-filtered.
+  const knownVisionAll = rank(
+    all.filter((c) => visionFilter(c) && !exclude.has(routeKey(c.model))),
+    promptTokens,
+    warm
+  )
+  if (knownVisionAll[0]) {
+    const pick = knownVisionAll.find((c) => isProviderAvailable(c.provider.id)) || knownVisionAll[0]
+    return {
+      ...pick,
+      key: routeKey(pick.model),
+      tier: pick.model.tier,
+      reason: 'vision fallback (any enabled)',
+      ephemeral: true
+    }
+  }
 
-  // 4) Unknown-capability models (not explicitly false) as last resort try.
+  // 4) Natural pick if unknown capability and not banned.
+  if (!exclude.has(base.key) && canAttemptVision(base.model) && base.model.supportsVision !== false) {
+    return { ...base, reason: `${base.reason} (try vision)` }
+  }
+
+  // 5) Unknown-capability models (not explicitly false) as last resort try.
   const unknown = rank(
     pool.filter((c) => c.model.supportsVision === undefined && canAttemptVision(c.model)),
     promptTokens,
@@ -537,6 +603,21 @@ function applyVisionPolicy(req: RouteRequest, base: RouteDecision): RouteDecisio
 
   // Nothing left that can even attempt images.
   return null
+}
+
+/** Human-readable reason when no vision route exists (for chat errors). */
+export function describeVisionRouteFailure(): string {
+  const all = candidates()
+  const visionMarked = all.filter((c) => c.model.supportsVision === true)
+  const { visionModelId, models } = useProviderStore.getState()
+  if (all.length === 0) return 'no_models'
+  if (visionMarked.length === 0) {
+    const preferred = visionModelId ? models.find((m) => m.id === visionModelId) : null
+    if (preferred && !preferred.enabled) return 'fallback_disabled'
+    if (preferred && !all.some((c) => c.model.id === preferred.id)) return 'fallback_provider_off'
+    return 'no_vision_models'
+  }
+  return 'vision_unavailable'
 }
 
 /**

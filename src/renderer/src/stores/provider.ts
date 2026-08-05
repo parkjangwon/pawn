@@ -82,15 +82,26 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const rawConfig = await window.api.config.load() as Record<string, any>
       const settings = rawConfig.settings || {}
       const models = ((rawConfig.models || []) as ModelEntry[]).map(hydrateModel)
-      const visionModelId = (settings.visionModelId as string) || null
+      let visionModelId = (settings.visionModelId as string) || null
       // Drop a stale vision pin if the model was removed.
-      const visionOk = visionModelId && models.some((m) => m.id === visionModelId) ? visionModelId : null
+      if (visionModelId && !models.some((m) => m.id === visionModelId && m.enabled)) {
+        visionModelId = null
+      }
+      // Auto-pick first enabled vision model when unset (DeepSeek + Gemini setups).
+      if (!visionModelId) {
+        const auto = models.find(
+          (m) =>
+            m.enabled &&
+            (m.supportsVision === true || guessSupportsVision(m.modelId) === true)
+        )
+        if (auto) visionModelId = auto.id
+      }
       set({
         providers: rawConfig.providers || [],
         models,
         routingMode: (settings.routingMode as RoutingMode) || 'auto',
         activeModelId: settings.activeModelId || null,
-        visionModelId: visionOk,
+        visionModelId,
         defaultSendMode: (settings.defaultSendMode as 'queue' | 'steer') || 'queue',
         permissionMode: (settings.permissionMode as 'ask' | 'auto' | 'yolo') || 'ask',
         reasoningEffort: (settings.reasoningEffort as 'auto' | 'low' | 'medium' | 'high') || 'auto',

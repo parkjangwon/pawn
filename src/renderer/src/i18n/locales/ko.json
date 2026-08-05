@@ -70,13 +70,16 @@
       "coldStart": "콜드 스타트 — 캐시가 만료되어 다시 기록해야 합니다.",
       "compacted": "컨텍스트 압축 실행 — 캐시를 다시 기록합니다.",
       "routing": "라우팅: {{model}} — {{reason}}",
-      "visionFallback": "{{model}}은(는) 이미지를 처리할 수 없습니다 — 비전 모델로 전환합니다."
+      "visionFallback": "{{model}}은(는) 이미지를 처리할 수 없습니다 — 비전 모델로 전환합니다.",
+      "visionDemoted": "비전 모델이 없어 스크린샷을 텍스트 요약으로 대체합니다. computer use를 완전히 쓰려면 설정 → 에이전트에서 Vision 폴백(예: Gemini)을 지정하세요."
     },
     "errors": {
       "noProvider": "프로바이더나 모델이 설정되지 않았습니다. 설정 → 프로바이더, 설정 → 모델에서 추가하세요.",
       "allAttemptsFailed": "모든 모델 시도가 실패했습니다. 마지막 오류: {{error}}",
       "noUsableModel": "사용 가능한 모델이 없습니다. 프로바이더가 활성화되어 있고 모델이 연결되어 있는지 확인하세요.",
-      "noVisionModel": "메시지에 이미지가 포함되어 있지만 비전 모델이 없습니다. 설정 → 모델에서 Vision을 켜거나, 설정 → 에이전트에서 비전 폴백 모델을 지정하세요.",
+      "noVisionModel": "이 턴에 이미지가 필요하지만 비전 모델이 없습니다. 설정 → 모델에서 Gemini/GPT-4o/Claude를 Vision으로 표시하고, 프로바이더를 켠 뒤 설정 → 에이전트에서 비전 폴백을 지정하세요.",
+      "noVisionFallbackDisabled": "비전 폴백 모델이 비활성입니다. 설정 → 모델에서 다시 켜거나, 설정 → 에이전트에서 다른 Vision 모델을 고르세요.",
+      "noVisionFallbackProvider": "비전 폴백 모델의 프로바이더가 꺼져 있거나 없습니다. 설정 → 프로바이더에서 Google/OpenAI/Claude를 활성화하세요.",
       "toolLoop": "도구 루프 감지: {{rounds}}라운드 동안 동일한 호출({{names}})이 반복되어 중단합니다.",
       "maxRounds": "최종 답변 없이 {{rounds}}라운드 후 중단되었습니다.",
       "agentError": "에이전트 루프 오류: {{error}}",

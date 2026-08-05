@@ -31,9 +31,22 @@ export interface TranscriptThinking {
 
 export type TranscriptEntry =
   | { role: 'user'; content: string; attachments?: TranscriptImageAttachment[] }
-  | { role: 'assistant'; content: string; toolCalls?: TranscriptToolCall[]; thinking?: TranscriptThinking[] }
+  | {
+      role: 'assistant'
+      content: string
+      toolCalls?: TranscriptToolCall[]
+      thinking?: TranscriptThinking[]
+      /**
+       * OpenAI-compat reasoning field (DeepSeek thinking mode, etc.).
+       * Must be echoed on subsequent tool-loop requests or the API returns 400.
+       */
+      reasoningContent?: string
+    }
   | { role: 'tool'; toolCallId: string; name: string; content: string; isError?: boolean }
   | { role: 'summary'; content: string }
+
+/** @deprecated use needsReasoningContentEcho from deepseekCompat */
+export { needsReasoningContentEcho as modelNeedsReasoningContentEcho } from './deepseekCompat'
 
 /** User-attached images, sent as real vision blocks on both wire formats. */
 export interface TranscriptImageAttachment {
@@ -53,9 +66,23 @@ export function extractImageDataUrl(content: string): string | null {
   return m ? m[0] : null
 }
 
-/** True when the transcript carries any image the model must actually "see". */
+/**
+ * True when the *current turn* needs a vision-capable model.
+ * Only the last user message and entries after it count — older computer_screenshot
+ * / attachment images must not force vision routing forever (text follow-ups stay on
+ * the text model + vision fallback only when new images appear).
+ */
 export function transcriptNeedsVision(entries: TranscriptEntry[]): boolean {
-  for (const e of entries) {
+  let lastUserIdx = -1
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (entries[i].role === 'user') {
+      lastUserIdx = i
+      break
+    }
+  }
+  const start = lastUserIdx >= 0 ? lastUserIdx : 0
+  for (let i = start; i < entries.length; i++) {
+    const e = entries[i]
     if (e.role === 'user' && e.attachments?.some((a) => a.kind === 'image' && !!a.dataUrl)) {
       return true
     }
@@ -65,6 +92,39 @@ export function transcriptNeedsVision(entries: TranscriptEntry[]): boolean {
   }
   return false
 }
+
+/**
+ * Drop full data-URL screenshots from tool results that predate the last user
+ * message, so old computer-use frames do not bloat the request or force vision.
+ * Keeps a short text stub (and any meta lines) for continuity.
+ */
+export function stripStaleVisionPayloads(entries: TranscriptEntry[]): TranscriptEntry[] {
+  let lastUserIdx = -1
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (entries[i].role === 'user') {
+      lastUserIdx = i
+      break
+    }
+  }
+  if (lastUserIdx < 0) return entries
+
+  return entries.map((e, i) => {
+    if (e.role !== 'tool' || i >= lastUserIdx) return e
+    if (typeof e.content !== 'string') return e
+    const url = extractImageDataUrl(e.content)
+    if (!url) return e
+    const meta = e.content.replace(url, '').replace(/\n+/g, ' ').trim()
+    return {
+      ...e,
+      content: meta
+        ? `${meta}\n[earlier screenshot omitted from context]`
+        : '[earlier screenshot omitted from context]'
+    }
+  })
+}
+
+/** Fixed token cost for one vision image (base64 length is not real tokens). */
+const IMAGE_TOKEN_ESTIMATE = 1_200
 
 export const TRANSCRIPT_VERSION = 2
 
@@ -84,19 +144,31 @@ export interface StoredTranscript {
 /** Rough token estimate. Deliberately cheap — only used for compaction thresholds. */
 export function estimateTokens(entries: TranscriptEntry[]): number {
   let chars = 0
+  let imageTokens = 0
   for (const e of entries) {
     if (e.role === 'assistant') {
       chars += e.content.length
       for (const tc of e.toolCalls || []) chars += tc.name.length + JSON.stringify(tc.arguments).length
       for (const th of e.thinking || []) chars += (th.thinking || th.data || '').length
+    } else if (e.role === 'tool') {
+      const url = typeof e.content === 'string' ? extractImageDataUrl(e.content) : null
+      if (url) {
+        imageTokens += IMAGE_TOKEN_ESTIMATE
+        chars += Math.max(0, e.content.length - url.length)
+      } else {
+        chars += e.content.length
+      }
     } else {
       chars += e.content.length
       if (e.role === 'user') {
-        for (const a of e.attachments || []) chars += a.dataUrl.length
+        for (const a of e.attachments || []) {
+          if (a.dataUrl?.startsWith('data:image/')) imageTokens += IMAGE_TOKEN_ESTIMATE
+          else chars += (a.dataUrl || '').length
+        }
       }
     }
   }
-  return Math.ceil(chars / 3.6)
+  return Math.ceil(chars / 3.6) + imageTokens
 }
 
 /**
@@ -250,8 +322,12 @@ export function toClaudeMessages(entries: TranscriptEntry[]): Array<Record<strin
   return out
 }
 
-export function toOpenAIMessages(entries: TranscriptEntry[]): Array<Record<string, unknown>> {
+export function toOpenAIMessages(
+  entries: TranscriptEntry[],
+  opts?: { echoReasoningContent?: boolean }
+): Array<Record<string, unknown>> {
   const out: Array<Record<string, unknown>> = []
+  const echoReasoning = opts?.echoReasoningContent === true
 
   for (const e of entries) {
     if (e.role === 'user' || e.role === 'summary') {
@@ -270,15 +346,31 @@ export function toOpenAIMessages(entries: TranscriptEntry[]): Array<Record<strin
       continue
     }
     if (e.role === 'assistant') {
-      const msg: Record<string, unknown> = { role: 'assistant', content: e.content || null }
+      const msg: Record<string, unknown> = {
+        role: 'assistant',
+        // DeepSeek accepts null content when tool_calls are present.
+        content: e.content || null
+      }
       if (e.toolCalls && e.toolCalls.length > 0) {
         msg.tool_calls = e.toolCalls.map((tc) => ({
           id: tc.id,
           type: 'function',
           function: { name: tc.name, arguments: JSON.stringify(tc.arguments) }
         }))
-      } else if (!e.content) {
+      } else if (!e.content && !e.reasoningContent) {
         continue
+      }
+      // DeepSeek thinking + tools: when the request includes `tools`, every prior
+      // assistant turn that participated in the tool loop must carry
+      // `reasoning_content` (even ""). Omitting the field → HTTP 400.
+      if (echoReasoning) {
+        if (e.reasoningContent != null && e.reasoningContent !== '') {
+          msg.reasoning_content = e.reasoningContent
+        } else if (e.toolCalls && e.toolCalls.length > 0) {
+          msg.reasoning_content = e.reasoningContent || ''
+        } else if (e.reasoningContent != null) {
+          msg.reasoning_content = e.reasoningContent
+        }
       }
       out.push(msg)
       continue

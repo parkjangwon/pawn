@@ -9,9 +9,14 @@ import { toolsToClaude, toolsToOpenAI, getMcpToolDefinitions, type ToolCall } fr
 import type { CallUsage } from '../stores/usage'
 import type { RouteDecision } from './router'
 import {
-  sanitizeForSend, toClaudeMessages, toOpenAIMessages,
+  sanitizeForSend, stripStaleVisionPayloads, toClaudeMessages, toOpenAIMessages,
   type TranscriptEntry, type TranscriptThinking
 } from './transcript'
+import {
+  deepSeekChatBodyExtras,
+  isDeepSeekModel,
+  needsReasoningContentEcho
+} from './deepseekCompat'
 
 export function withConversationCacheAnchors(
   messages: Array<Record<string, unknown>>
@@ -55,7 +60,10 @@ export function withConversationCacheAnchors(
  * that is not OpenAI itself.
  */
 export function supportsReasoningEffort(modelId: string): boolean {
-  return /(^|\/)(o[1-4](-|$)|gpt-5|deepseek-v4|deepseek-reasoner|qwq|grok-4)/i.test(modelId)
+  // DeepSeek uses deepSeekChatBodyExtras (thinking + reasoning_effort) instead
+  // of bare reasoning_effort alone.
+  if (isDeepSeekModel(modelId)) return false
+  return /(^|\/)(o[1-4](-|$)|gpt-5|qwq|grok-4)/i.test(modelId)
 }
 
 /**
@@ -86,7 +94,9 @@ export interface LlmResult {
   text: string
   toolCalls: ToolCall[]
   thinking: TranscriptThinking[]
- usage: CallUsage
+  /** OpenAI-compat `reasoning_content` (DeepSeek thinking mode) for replay. */
+  reasoningContent?: string
+  usage: CallUsage
 }
 
 export interface LlmRequest {
@@ -109,7 +119,9 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const { provider, model } = decision
   const { reasoningEffort } = useProviderStore.getState()
   const isBrowser = window.api?.platform === 'browser'
-  const sendable = sanitizeForSend(req.entries)
+  // Drop pre-turn screenshots so old computer-use frames do not force vision
+  // tokens or bloated prompts on later text turns.
+  const sendable = stripStaleVisionPayloads(sanitizeForSend(req.entries))
   const mcpTools = projectPath ? await getMcpToolDefinitions(projectPath) : []
 
   let url: string
@@ -153,6 +165,11 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   } else {
     url = `${provider.baseUrl}/chat/completions`
     headers['Authorization'] = `Bearer ${token}`
+    const deepSeekExtras = deepSeekChatBodyExtras({
+      modelId: model.modelId,
+      reasoningEffort,
+      thinkingEnabled: true
+    })
     body = {
       model: model.modelId,
       stream: true,
@@ -160,17 +177,24 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       // cached_tokens can't be measured.
       stream_options: { include_usage: true },
       // Explicit cap so coding responses are not cut short by low provider defaults.
-      max_tokens: 16_384,
+      // DeepSeek thinking uses separate reasoning tokens; keep completion headroom high.
+      max_tokens: isDeepSeekModel(model.modelId) ? 8192 : 16_384,
       tools: toolsToOpenAI(mcpTools),
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
         : {}),
+      // DeepSeek V4: thinking + reasoning_effort (must echo reasoning_content with tools).
+      ...deepSeekExtras,
       // A single deterministic system block: layers joined in fixed order, no
       // per-turn values, so the prefix matches byte for byte across turns.
       messages: [
         { role: 'system', content: systemLayers.join('\n\n') },
         ...(projectPreamble ? [{ role: 'system', content: projectPreamble }] : []),
-        ...toOpenAIMessages(sendable)
+        ...toOpenAIMessages(sendable, {
+          // When tools are present (agent always sends them), DeepSeek requires
+          // every prior assistant reasoning_content to be replayed.
+          echoReasoningContent: needsReasoningContentEcho(model.modelId)
+        })
       ]
     }
   }
@@ -192,11 +216,9 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const decoder = new TextDecoder()
   let buffer = ''
   let fullText = ''
-  // Some OpenAI-compatible reasoning models (DeepSeek Reasoner, QwQ, etc.) stream
-  // their visible "thinking" in a separate `reasoning_content` field instead of
-  // `content`. It has no replayable wire form on OpenAI-format APIs, so it is
-  // shown live but never included in `fullText` — persisting it back as the
-  // assistant's message would resend "thinking" as if it were a real answer.
+  // DeepSeek / QwQ stream thinking in `reasoning_content` (not `content`).
+  // Shown live for UX, and persisted as `reasoningContent` so tool-loop
+  // follow-ups can echo it back (DeepSeek 400 without that field).
   let reasoningText = ''
   const toolCalls: ToolCall[] = []
   const thinking: TranscriptThinking[] = []
@@ -358,8 +380,22 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
           fullText += choice.delta.content
           flushText()
         }
-        if (typeof choice.delta?.reasoning_content === 'string' && choice.delta.reasoning_content) {
-          reasoningText += choice.delta.reasoning_content
+        // DeepSeek streams CoT as reasoning_content (and sometimes reasoning).
+        const deltaReasoning =
+          (typeof choice.delta?.reasoning_content === 'string' && choice.delta.reasoning_content) ||
+          (typeof choice.delta?.reasoning === 'string' && choice.delta.reasoning) ||
+          ''
+        if (deltaReasoning) {
+          reasoningText += deltaReasoning
+          flushText()
+        }
+        // Finished message payload (some gateways only set this once).
+        const msgReasoning =
+          (typeof choice.message?.reasoning_content === 'string' && choice.message.reasoning_content) ||
+          (typeof choice.message?.reasoning === 'string' && choice.message.reasoning) ||
+          ''
+        if (msgReasoning && msgReasoning.length > reasoningText.length) {
+          reasoningText = msgReasoning
           flushText()
         }
         if (choice.delta?.tool_calls) {
@@ -392,7 +428,13 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     seen.add(buf.id)
   }
 
-  return { text: fullText, toolCalls, thinking, usage }
+  return {
+    text: fullText,
+    toolCalls,
+    thinking,
+    ...(reasoningText ? { reasoningContent: reasoningText } : {}),
+    usage
+  }
 }
 
 /**

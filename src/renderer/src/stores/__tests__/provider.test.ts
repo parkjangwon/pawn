@@ -62,14 +62,15 @@ describe('init', () => {
     expect(hydrated.supportsVision).toBe(true)
   })
 
-  it('hydrates visionModelId and clears it when the model is missing', async () => {
+  it('hydrates visionModelId, drops missing pins, and auto-picks a vision model', async () => {
     configMock.load.mockResolvedValue({
       providers: [provider('p1')],
       models: [model('m1', 'p1', 'gpt-4o', 'mid')],
       settings: { visionModelId: 'gone' }
     })
     await useProviderStore.getState().init()
-    expect(useProviderStore.getState().visionModelId).toBeNull()
+    // Stale pin cleared, then auto-select first enabled vision-capable model (gpt-4o).
+    expect(useProviderStore.getState().visionModelId).toBe('m1')
   })
 
   it('runs init only once', async () => {

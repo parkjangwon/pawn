@@ -70,13 +70,16 @@
       "coldStart": "Cold start — the cache expired and needs to be re-primed.",
       "compacted": "Context compaction ran — the cache prefix is being re-primed.",
       "routing": "Routing: {{model}} — {{reason}}",
-      "visionFallback": "{{model}} cannot handle images — trying a vision-capable model."
+      "visionFallback": "{{model}} cannot handle images — trying a vision-capable model.",
+      "visionDemoted": "No vision model available — screenshots demoted to text stubs. Set a Vision fallback (e.g. Gemini) under Settings → Agent for full computer use."
     },
     "errors": {
       "noProvider": "No provider or model configured. Open Settings → Providers, then Settings → Models.",
       "allAttemptsFailed": "All model attempts failed. Last error: {{error}}",
       "noUsableModel": "No usable model. Check that a provider is enabled and has models attached.",
-      "noVisionModel": "This message includes images, but no vision-capable model is available. Mark a model as Vision in Settings → Models, or set a Vision fallback in Settings → Agent.",
+      "noVisionModel": "This turn needs images, but no vision-capable model is available. In Settings → Models mark Gemini/GPT-4o/Claude as Vision, enable its provider, and set Vision fallback under Settings → Agent.",
+      "noVisionFallbackDisabled": "Vision fallback model is disabled. Re-enable it under Settings → Models, or pick another Vision model in Settings → Agent.",
+      "noVisionFallbackProvider": "Vision fallback model’s provider is off or missing. Enable the Google/OpenAI/Claude provider under Settings → Providers.",
       "toolLoop": "Tool loop detected: repeated the same calls ({{names}}) {{rounds}} rounds without progress. Stopping.",
       "maxRounds": "Stopped after {{rounds}} tool rounds without a final answer.",
       "agentError": "Agent loop error: {{error}}",

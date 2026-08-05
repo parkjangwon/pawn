@@ -205,6 +205,7 @@ Claude Code / `~/.agents` 에 insane-search **스킬**을 따로 깔아도, 전�
 ### 프로바이더 및 스마트 라우팅
 
 - OpenAI / Claude API 규격 및 커스텀 OpenAI 호환 엔드포인트.
+- **DeepSeek 1급 지원** — `deepseek-v4-flash` / `deepseek-v4-pro` 프리셋, 공식 thinking 모드(`thinking` + `reasoning_effort`), 스트림 `reasoning_content` 수신, 툴 루프마다 **reasoning_content 재전송**(DeepSeek 400 방지). 스크린샷·computer use는 Vision 폴백(예: Gemini)과 함께 쓰는 것을 권장.
 - **스마트 모델 라우터**: 난이도 휴리스틱, 캐시 인지 라우팅, 실패 시 에스컬레이션, 프로바이더 쿨다운, 비전 폴백.
 
 ### 로컬 데이터 (`~/.pawn`)
