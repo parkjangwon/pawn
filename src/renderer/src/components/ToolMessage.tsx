@@ -100,7 +100,7 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
             </div>
           )}
           <pre className="tool-message-content">
-            {displayContent || t('toolMessage.empty')}
+            {displayContent ? linkifyCreatedFiles(displayContent) : t('toolMessage.empty')}
           </pre>
           {truncated && (
             <button className="tool-show-more" onClick={() => setShowAll(true)}>
@@ -116,4 +116,39 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
       )}
     </div>
   )
+}
+
+/**
+ * Turn "File created/written/edited/deleted: <abs path>" lines into clickable
+ * file:// links that reveal the file in Finder/Explorer, so users can jump to
+ * session-generated files without copying the path.
+ */
+function linkifyCreatedFiles(text: string): React.ReactNode[] {
+  return text.split('\n').map((line, i) => {
+    const m = line.match(/^(File (?:created|written|edited|deleted): )(\S+)(.*)$/)
+    const path = m?.[2]
+    if (m && path && (path.startsWith('/') || /^[A-Za-z]:[\\/]/.test(path))) {
+      const trailing = m[3] || ''
+      return (
+        <span key={i}>
+          {m[1]}
+          <a
+            className="tool-file-link"
+            href={'file://' + path}
+            title={path}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              void Promise.resolve(window.api?.workspace?.reveal?.(path)).catch(() => {})
+            }}
+          >
+            {path}
+          </a>
+          {trailing}
+          {'\n'}
+        </span>
+      )
+    }
+    return <span key={i}>{line}{'\n'}</span>
+  })
 }

@@ -47,6 +47,7 @@ const api = {
 
   workspace: {
     openIn: (path: string, app: string) => ipcRenderer.invoke('workspace:openIn', path, app),
+    reveal: (path: string) => ipcRenderer.invoke('workspace:reveal', path),
     runScript: (cwd: string, script: string, packageManager?: string) => ipcRenderer.invoke('workspace:runScript', cwd, script, packageManager || 'npm'),
     openPath: (path: string) => ipcRenderer.invoke('app:openPath', path),
     getAppIcon: (path: string) => ipcRenderer.invoke('app:getFileIcon', path)
@@ -110,6 +111,12 @@ const api = {
     create: () => ipcRenderer.invoke('browser:create'),
     destroy: () => ipcRenderer.invoke('browser:destroy'),
     setVisible: (visible: boolean) => ipcRenderer.invoke('browser:setVisible', visible),
+    hideCursor: () => ipcRenderer.invoke('browser:cursorHide'),
+    pickStart: (placeholder?: string, hint?: string) =>
+      ipcRenderer.invoke('browser:pickStart', placeholder || '', hint || ''),
+    pickStop: () => ipcRenderer.invoke('browser:pickStop'),
+    pickState: () => ipcRenderer.invoke('browser:pickState'),
+    pickClear: () => ipcRenderer.invoke('browser:pickClear'),
     state: () => ipcRenderer.invoke('browser:state'),
     logs: () => ipcRenderer.invoke('browser:logs'),
     navigate: (url: string) => ipcRenderer.invoke('browser:navigate', url),

@@ -161,6 +161,14 @@ export function registerMiscIpc(): void {
     return err ? { error: err } : { ok: true }
   })
 
+  // Reveal a file in the OS file manager (Finder / Explorer). Unlike openIn,
+  // this selects the item in its parent folder instead of opening the file.
+  handleTrusted('workspace:reveal', async (_, path: string) => {
+    if (typeof path !== 'string' || !path.trim()) return { error: 'No path provided' }
+    shell.showItemInFolder(resolve(String(path).trim()))
+    return { ok: true }
+  })
+
   // Open a Pawn-managed path (config file, data dir) with the OS default app.
   // Anything outside ~/.pawn is rejected so this cannot be used to launch
   // arbitrary files from renderer-controlled input.

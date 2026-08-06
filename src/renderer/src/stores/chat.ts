@@ -98,6 +98,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     abortController?.abort()
     // Kill live shell process groups so `npm test` etc. don't keep running after Stop.
     void window.api.shell?.killAll?.().catch(() => {})
+    // Remove the injected AI cursor from the embedded browser page.
+    void window.api.browser?.hideCursor?.().catch(() => {})
     set({ isStreaming: false, streamingSessionId: null })
     window.api.setStreaming?.(false)
   }
@@ -681,6 +683,9 @@ async function agentLoop(
     if (isCurrent) abortController = null
     const aborted = signal.aborted
     useChangeLedger.getState().endTurn()
+    // Turn finished (normally or aborted) — drop the AI cursor so it doesn't
+    // linger on the browser page after browser control ends.
+    void window.api.browser?.hideCursor?.().catch(() => {})
     if (isCurrent) {
       set(() => ({ isStreaming: false, streamingSessionId: null }))
       window.api.setStreaming?.(false)

@@ -644,7 +644,11 @@
       "proxyMode": "Proxy mode (bypass X-Frame-Options)",
       "enableProxy": "Enable proxy mode",
       "emptyHint": "Enter a URL, or let the agent navigate here",
-      "emptyHintWeb": "Enter a URL above to start browsing (agent automation requires the desktop app)"
+      "emptyHintWeb": "Enter a URL above to start browsing (agent automation requires the desktop app)",
+      "pick": "Point at a UI element or text for the agent",
+      "pickHint": "Click an element or drag-select text, then tell the agent what to change",
+      "feedbackPlaceholder": "What should the agent change or check? (optional)",
+      "bubbleHint": "↵ Enter to send · ⇧↵ newline · Esc cancel"
     },
     "diff": {
       "title": "Recent Changes",
@@ -774,6 +778,7 @@
     "showAllLines": "Show all lines",
     "showAll": "Show all {{total}} lines (+{{extra}})",
     "open": "Open",
+    "reveal": "Reveal in Finder",
     "revert": "Revert",
     "reverted": "Reverted",
     "revertFailed": "Revert failed",

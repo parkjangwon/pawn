@@ -1,5 +1,13 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useAppStore } from '../stores/app'
+import { useChatStore } from '../stores/chat'
+import { uid } from '../utils/uid'
+import {
+  formatBrowserSelectionBlock,
+  type BrowserPickSelection
+} from '../utils/browserFeedback'
+import type { ChatAttachment } from '../utils/attachments'
 
 /**
  * The panel showing the SAME embedded browser the agent tools drive (see
@@ -30,6 +38,8 @@ function NativeBrowserView(): React.JSX.Element {
   const [error, setError] = useState<string | null>(null)
   const [showConsole, setShowConsole] = useState(false)
   const [logs, setLogs] = useState<string[]>([])
+  const [pickActive, setPickActive] = useState(false)
+  const [sending, setSending] = useState(false)
 
   const syncBounds = useCallback(() => {
     const el = containerRef.current
@@ -105,6 +115,34 @@ function NativeBrowserView(): React.JSX.Element {
     return () => { cancelled = true; clearInterval(id) }
   }, [showConsole])
 
+  // Pick mode: injects the element/text highlighter + speech bubble into the
+  // page. The bubble submits with Enter (Shift+Enter = newline) and we poll for
+  // the ready flag, then forward the selection + comment to the main chat.
+  useEffect(() => {
+    if (!pickActive) return
+    let cancelled = false
+    void window.api.browser
+      .pickStart(
+        t('rightPanel.browser.feedbackPlaceholder'),
+        t('rightPanel.browser.bubbleHint')
+      )
+      .catch(() => {})
+    const poll = async (): Promise<void> => {
+      const s = await window.api.browser.pickState().catch(() => null)
+      if (cancelled || !s) return
+      if (s.ready && s.selection && !sendingRef.current) {
+        await sendFeedback(s.selection as BrowserPickSelection, s.feedback)
+        if (!cancelled) void window.api.browser.pickClear().catch(() => {})
+      }
+    }
+    const id = window.setInterval(() => void poll(), 400)
+    return () => {
+      cancelled = true
+      window.clearInterval(id)
+      void window.api.browser.pickStop().catch(() => {})
+    }
+  }, [pickActive])
+
   const navigate = async (target: string): Promise<void> => {
     const t = target.trim()
     if (!t) return
@@ -115,6 +153,43 @@ function NativeBrowserView(): React.JSX.Element {
 
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter') navigate(url)
+  }
+
+  const sendingRef = useRef(false)
+  const sendFeedback = async (selection: BrowserPickSelection, comment: string): Promise<void> => {
+    if (sendingRef.current) return
+    sendingRef.current = true
+    setSending(true)
+    try {
+      const app = useAppStore.getState()
+      let projectId = app.activeProjectId
+      let sessionId = app.activeSessionId
+      if (!projectId || !sessionId) {
+        projectId = app.ensureGeneralProject()
+        sessionId = app.startNewChat(comment.trim().slice(0, 40) || 'Browser feedback')
+      }
+      const block = formatBrowserSelectionBlock(selection, comment)
+      const attachments: ChatAttachment[] = []
+      // Screenshot while the highlight overlay is still visible so the agent
+      // sees exactly which area the user pointed at.
+      await window.api.browser.hideCursor().catch(() => {})
+      const shot = await window.api.browser.screenshot().catch(() => null)
+      if (shot && !shot.error && shot.dataUrl) {
+        attachments.push({
+          id: uid('sel-'),
+          name: 'selection.png',
+          kind: 'image',
+          dataUrl: shot.dataUrl,
+          bytes: shot.dataUrl.length
+        })
+      }
+      const mode = useChatStore.getState().isStreaming ? 'steer' : 'queue'
+      useChatStore.getState().sendMessage(projectId, sessionId, block, mode, attachments)
+      setPickActive(false)
+    } finally {
+      sendingRef.current = false
+      setSending(false)
+    }
   }
 
   return (
@@ -144,6 +219,18 @@ function NativeBrowserView(): React.JSX.Element {
         </div>
 
         <div className="rp-browser-modes">
+          <button
+            className={`rp-browser-modebtn ${pickActive ? 'active' : ''}`}
+            onClick={() => setPickActive((a) => !a)}
+            disabled={!state.url || sending}
+            title={t('rightPanel.browser.pick')}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <circle cx="12" cy="12" r="6" />
+              <line x1="12" y1="2" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="22" />
+              <line x1="2" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="22" y2="12" />
+            </svg>
+          </button>
           <button className={`rp-browser-modebtn ${showConsole ? 'active' : ''}`} onClick={() => setShowConsole(!showConsole)} title={t('rightPanel.browser.console')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
           </button>
@@ -174,6 +261,13 @@ function NativeBrowserView(): React.JSX.Element {
           </div>
         )}
       </div>
+
+      {pickActive && (
+        <div className="rp-browser-pick-hint">
+          <span className="rp-browser-pick-dot" />
+          {t('rightPanel.browser.pickHint')}
+        </div>
+      )}
 
       {showConsole && (
         <div className="rp-browser-devtools">

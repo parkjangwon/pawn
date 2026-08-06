@@ -644,7 +644,11 @@
       "proxyMode": "프록시 모드 (X-Frame-Options 우회)",
       "enableProxy": "프록시 모드 사용",
       "emptyHint": "URL을 입력하거나 에이전트가 여기서 탐색하게 하세요",
-      "emptyHintWeb": "위 URL 입력창에서 브라우징을 시작하세요 (에이전트 자동화는 데스크톱 앱 필요)"
+      "emptyHintWeb": "위 URL 입력창에서 브라우징을 시작하세요 (에이전트 자동화는 데스크톱 앱 필요)",
+      "pick": "에이전트에게 지시할 UI 요소나 텍스트 지정",
+      "pickHint": "요소를 클릭하거나 텍스트를 드래그 선택한 뒤, 에이전트에게 바꿀 내용을 알려주세요",
+      "feedbackPlaceholder": "무엇을 바꾸거나 확인할까요? (선택)",
+      "bubbleHint": "↵ Enter 전송 · ⇧↵ 줄바꿈 · Esc 취소"
     },
     "diff": {
       "title": "최근 변경사항",
@@ -774,6 +778,7 @@
     "showAllLines": "모든 줄 표시",
     "showAll": "전체 {{total}}줄 보기 (+{{extra}})",
     "open": "열기",
+    "reveal": "Finder에서 위치 열기",
     "revert": "되돌리기",
     "reverted": "되돌림",
     "revertFailed": "되돌리기 실패",

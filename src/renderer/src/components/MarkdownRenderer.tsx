@@ -25,6 +25,7 @@ interface LightboxState {
  */
 function safeUrlTransform(url: string): string {
   if (/^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(url)) return url
+  if (/^file:/i.test(url)) return url
   return defaultUrlTransform(url)
 }
 
@@ -69,6 +70,25 @@ function MarkdownRenderer({ content }: Props): React.JSX.Element {
               // Never render javascript:/data: links; the renderer holds
               // privileged window.api access.
               return <span>{children}</span>
+            }
+            // Local file links reveal the file in Finder/Explorer instead of
+            // navigating the renderer to a file:// URL.
+            if (safe.startsWith('file://')) {
+              const localPath = decodeFilePath(safe)
+              return (
+                <a
+                  className="md-file-link"
+                  href={safe}
+                  title={localPath}
+                  onClick={(e) => {
+                    e.preventDefault()
+                    e.stopPropagation()
+                    void Promise.resolve(window.api?.workspace?.reveal?.(localPath)).catch(() => {})
+                  }}
+                >
+                  {children}
+                </a>
+              )
             }
             return <a href={safe} target="_blank" rel="noopener noreferrer">{children}</a>
           },
@@ -162,11 +182,23 @@ function safeHref(href: string | undefined): string | null {
   if (!trimmed) return null
   try {
     const protocol = new URL(trimmed, 'https://base.invalid').protocol
-    if (protocol === 'http:' || protocol === 'https:' || protocol === 'mailto:') return trimmed
+    if (protocol === 'http:' || protocol === 'https:' || protocol === 'mailto:' || protocol === 'file:') return trimmed
     return null
   } catch {
     return null
   }
+}
+
+/** file:///Users/a.ts → /Users/a.ts; file:///C:/x.ts → C:/x.ts (Windows). */
+function decodeFilePath(href: string): string {
+  let p = href.slice('file://'.length)
+  if (/^\/[A-Za-z]:/.test(p)) p = p.slice(1)
+  try {
+    p = decodeURIComponent(p)
+  } catch {
+    /* keep raw */
+  }
+  return p
 }
 
 // Streaming appends content one chunk at a time; memoizing keeps earlier

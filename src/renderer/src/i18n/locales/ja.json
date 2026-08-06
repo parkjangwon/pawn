@@ -644,7 +644,11 @@
       "proxyMode": "プロキシモード（X-Frame-Options回避）",
       "enableProxy": "プロキシモードを有効化",
       "emptyHint": "URLを入力するか、エージェントにここでナビゲートさせてください",
-      "emptyHintWeb": "上のURL欄からブラウジングを開始してください（エージェント自動化はデスクトップアプリが必要です）"
+      "emptyHintWeb": "上のURL欄からブラウジングを開始してください（エージェント自動化はデスクトップアプリが必要です）",
+      "pick": "エージェントに指示するUI要素やテキストを指定",
+      "pickHint": "要素をクリック、またはテキストをドラッグ選択してから、変更内容をエージェントに伝えてください",
+      "feedbackPlaceholder": "何を変更・確認しますか？（任意）",
+      "bubbleHint": "↵ Enter 送信 · ⇧↵ 改行 · Esc キャンセル"
     },
     "diff": {
       "title": "最近の変更",
@@ -774,6 +778,7 @@
     "showAllLines": "すべての行を表示",
     "showAll": "全 {{total}} 行を表示 (+{{extra}})",
     "open": "開く",
+    "reveal": "Finder で表示",
     "revert": "元に戻す",
     "reverted": "元に戻しました",
     "revertFailed": "失敗しました",

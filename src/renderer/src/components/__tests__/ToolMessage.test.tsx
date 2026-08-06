@@ -52,4 +52,16 @@ describe('ToolMessage', () => {
     expand()
     expect(screen.getByText('legacy.ts')).toBeInTheDocument()
   })
+
+  it('turns File created/written paths into clickable reveal links', () => {
+    const reveal = vi.fn(async () => ({ ok: true }))
+    ;(window as any).api = { workspace: { reveal } }
+    const content = '[Tool: write_file] OK\nFile created: /tmp/project/src/app.ts\n'
+    render(<ToolMessage content={content} />)
+    expand()
+    const link = screen.getByText('/tmp/project/src/app.ts') as HTMLAnchorElement
+    expect(link.tagName).toBe('A')
+    fireEvent.click(link)
+    expect(reveal).toHaveBeenCalledWith('/tmp/project/src/app.ts')
+  })
 })

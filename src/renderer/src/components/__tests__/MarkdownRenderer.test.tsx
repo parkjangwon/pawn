@@ -36,6 +36,16 @@ describe('MarkdownRenderer', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', 'mailto:hi@example.com')
   })
 
+  it('renders file:// links as local reveal shortcuts', () => {
+    const reveal = vi.fn(async () => ({ ok: true }))
+    ;(window as any).api = { workspace: { reveal } }
+    render(<MarkdownRenderer content="[app.ts](file:///tmp/project/src/app.ts)" />)
+    const link = screen.getByRole('link') as HTMLAnchorElement
+    expect(link).toHaveAttribute('href', 'file:///tmp/project/src/app.ts')
+    fireEvent.click(link)
+    expect(reveal).toHaveBeenCalledWith('/tmp/project/src/app.ts')
+  })
+
   it('renders data:image markdown attachments (not broken placeholders)', () => {
     const src = 'data:image/png;base64,iVBORw0KGgo='
     render(<MarkdownRenderer content={`look\n\n![shot.png](${src})`} />)

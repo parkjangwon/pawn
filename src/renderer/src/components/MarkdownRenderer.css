@@ -65,6 +65,11 @@
   text-decoration: none;
 }
 
+.markdown-body a.md-file-link {
+  border-bottom: 1px dashed var(--accent);
+  cursor: pointer;
+}
+
 .markdown-body a:hover {
   text-decoration: underline;
 }

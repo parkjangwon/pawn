@@ -138,7 +138,20 @@ export default function RightPanel(): React.JSX.Element | null {
   // Switch to a tab
   const switchTab = (id: TabId): void => {
     setActiveTab(id)
+    setShowPicker(false)
   }
+
+  // The embedded browser is a native WebContentsView that always layers above
+  // the renderer DOM, so the tool picker dropdown would be hidden behind the
+  // page while the browser tab is active. Hide the native view for the brief
+  // moment the picker is open, then bring it back when the picker closes.
+  useEffect(() => {
+    // Only touch visibility while the browser tab is still active: switching
+    // away unmounts BrowserView, whose own cleanup hides the native view.
+    if (window.api?.browser?.setVisible && activeTabRef.current === 'browser') {
+      void window.api.browser.setVisible(!showPicker).catch(() => {})
+    }
+  }, [showPicker])
 
   // Close a tab (shared by the X button and the agent's app_close_tab tool).
   // `activeTab` is read via ref so a window-registered bridge never acts on a

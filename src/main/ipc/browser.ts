@@ -1,7 +1,8 @@
 import { ipcMain, WebContentsView } from 'electron'
 import { handleTrusted } from './trust'
 import { getMainWindow } from '../window'
-import { injectAICursor, cursorShow } from '../browserCursor'
+import { injectAICursor, cursorShow, cursorHide } from '../browserCursor'
+import { injectPicker, stopPicker, getPickerState } from '../browserPicker'
 
 // The embedded browser runs in its own session partition. The app's own CSP is
 // installed on `session.defaultSession`; sharing it would apply `default-src
@@ -34,6 +35,7 @@ function normalizeBrowserUrl(rawUrl: string): string | null {
 
 let browserView: WebContentsView | null = null
 let browserVisible = false
+let pickerActive = false
 const browserLogs: string[] = []
 
 function emitBrowserEvent(payload: Record<string, unknown>): void {
@@ -87,7 +89,11 @@ function ensureBrowserView(): WebContentsView {
   wc.on('did-stop-loading', () => emitBrowserEvent({ type: 'loaded', ...browserState() }))
   wc.on('did-navigate', () => { browserLogs.length = 0; emitBrowserEvent({ type: 'navigated', ...browserState() }) })
   wc.on('did-navigate-in-page', () => emitBrowserEvent({ type: 'navigated', ...browserState() }))
-  wc.on('did-finish-load', () => injectAICursor(wc))
+  wc.on('did-finish-load', () => {
+    injectAICursor(wc)
+    // Re-arm the pick overlay after navigation so a mid-session pick stays usable.
+    if (pickerActive) injectPicker(wc)
+  })
   wc.on('page-title-updated', () => emitBrowserEvent({ type: 'title', ...browserState() }))
   wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
     if (!isMainFrame || code === -3) return // -3 is a user/script-initiated abort
@@ -102,6 +108,7 @@ function ensureBrowserView(): WebContentsView {
     browserView.setBounds({ x: 0, y: 0, width: 1280, height: 800 })
     browserView.setVisible(false)
     browserVisible = false
+    pickerActive = false
   }
   return browserView
 }
@@ -165,6 +172,7 @@ export function registerBrowserIpc(): void {
       }
       browserView = null
       browserVisible = false
+      pickerActive = false
       browserLogs.length = 0
       return { ok: true }
     } catch (err) {
@@ -176,6 +184,55 @@ export function registerBrowserIpc(): void {
     if (!browserView || browserView.webContents.isDestroyed()) return { ok: true }
     browserView.setVisible(visible)
     browserVisible = visible
+    return { ok: true }
+  })
+
+  // Remove the injected AI cursor from the page (turn end / stop). No-op when
+  // there is no browser view, so every turn can safely call it.
+  handleTrusted('browser:cursorHide', async () => {
+    if (browserView && !browserView.webContents.isDestroyed()) {
+      cursorHide(browserView.webContents)
+    }
+    return { ok: true }
+  })
+
+  // Element/text pick mode: injects the highlight overlay into the page. While
+  // active, clicking an element or dragging text captures it for agent feedback.
+  handleTrusted('browser:pickStart', async (_, placeholder: string, hint: string) => {
+    const guard = requireView()
+    if ('error' in guard) return guard
+    pickerActive = true
+    injectPicker(guard.view.webContents, String(placeholder || ''), String(hint || ''))
+    return { ok: true }
+  })
+
+  handleTrusted('browser:pickStop', async () => {
+    pickerActive = false
+    if (browserView && !browserView.webContents.isDestroyed()) {
+      stopPicker(browserView.webContents)
+    }
+    return { ok: true }
+  })
+
+  handleTrusted('browser:pickState', async () => {
+    if (!browserView || browserView.webContents.isDestroyed()) {
+      return { active: false, selection: null, feedback: '', ready: false }
+    }
+    const s = await getPickerState(browserView.webContents)
+    return {
+      active: pickerActive && s.active,
+      selection: s.selection,
+      feedback: s.feedback,
+      ready: s.ready
+    }
+  })
+
+  handleTrusted('browser:pickClear', async () => {
+    if (browserView && !browserView.webContents.isDestroyed()) {
+      await browserView.webContents
+        .executeJavaScript('window.__pawnPick && window.__pawnPick.clear()', true)
+        .catch(() => {})
+    }
     return { ok: true }
   })
 
@@ -251,8 +308,28 @@ export function registerBrowserIpc(): void {
   handleTrusted('browser:eval', async (_, code: string) => {
     // The async wrapper lets the injected expression await promises; the
     // returned promise is resolved by executeJavaScript itself.
-    const result = await runInPage<unknown>(`(async function(){ try { return { ok: await (${code}) } } catch (e) { return { err: String(e) } } })()`)
-    if (result && typeof result === 'object' && 'error' in (result as object)) return result
+    const source = String(code ?? '')
+    let result = await runInPage<unknown>(`(async function(){ try { return { ok: await (${source}) } } catch (e) { return { err: String(e) } } })()`)
+    if (result && typeof result === 'object' && 'error' in (result as object)) {
+      // The whole wrapper failed to parse/run — almost always a syntax error in
+      // the agent's expression. Re-parse with new Function (outside the broken
+      // wrapper) to surface the real error instead of Chromium's generic
+      // "Script failed to execute" message, which the model cannot act on.
+      const failure = (result as { error: string }).error || ''
+      if (failure.includes('Script failed to execute')) {
+        const diag = await runInPage<unknown>(`(async function(){
+          try { new Function(${JSON.stringify(source)}); return { syntax: null } }
+          catch (e) { return { syntax: String(e) } }
+        })()`)
+        if (diag && typeof diag === 'object' && !('error' in (diag as object))) {
+          const d = diag as { syntax: string | null }
+          if (d && d.syntax) {
+            return { error: 'Syntax error in browser_eval code: ' + d.syntax }
+          }
+        }
+      }
+      return result
+    }
     const wrapped = result as { ok?: unknown; err?: string }
     if (wrapped?.err) return { error: wrapped.err }
     let serialized: string

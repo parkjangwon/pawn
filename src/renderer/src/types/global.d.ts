@@ -117,6 +117,7 @@ declare global {
       setStreaming: (streaming: boolean) => void
       workspace: {
         openIn: (path: string, app: string) => Promise<{ ok?: boolean; error?: string }>
+        reveal: (path: string) => Promise<{ ok?: boolean; error?: string }>
         runScript: (cwd: string, script: string, packageManager?: string) => Promise<{ ok?: boolean; error?: string }>
         openPath: (path: string) => Promise<{ ok?: boolean; error?: string }>
         getAppIcon: (path: string) => Promise<{ dataUrl?: string; error?: string }>
@@ -231,6 +232,29 @@ declare global {
         create: () => Promise<{ ok?: boolean; error?: string }>
         destroy: () => Promise<{ ok?: boolean; error?: string }>
         setVisible: (visible: boolean) => Promise<{ ok?: boolean }>
+        hideCursor: () => Promise<{ ok?: boolean }>
+        pickStart: (placeholder?: string, hint?: string) => Promise<{ ok?: boolean; error?: string }>
+        pickStop: () => Promise<{ ok?: boolean }>
+        pickClear: () => Promise<{ ok?: boolean }>
+        pickState: () => Promise<{
+          active: boolean
+          selection: null | {
+            kind: 'element' | 'text'
+            tag?: string
+            id?: string
+            classes?: string
+            selector?: string
+            ref?: string | null
+            text?: string
+            href?: string
+            url?: string
+            contextTag?: string
+            contextText?: string
+            box?: { x: number; y: number; w: number; h: number }
+          }
+          feedback: string
+          ready: boolean
+        }>
         state: () => Promise<{
           created: boolean; url?: string; title?: string; loading?: boolean
           canGoBack?: boolean; canGoForward?: boolean; visible?: boolean

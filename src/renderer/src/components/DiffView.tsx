@@ -45,6 +45,10 @@ export default function DiffView({
     setActionMsg(r.ok ? t('diffView.reverted') : r.error || t('diffView.revertFailed'))
   }
 
+  const onReveal = (): void => {
+    if (openPath) void window.api?.workspace?.reveal?.(openPath).catch(() => {})
+  }
+
   return (
     <div className={`diff-view ${collapsed ? 'collapsed' : ''}`}>
       <div className="diff-header" onClick={() => setCollapsed(!collapsed)}>
@@ -76,6 +80,11 @@ export default function DiffView({
           {openPath && (
             <button type="button" className="diff-action-btn" onClick={onOpen}>
               {t('diffView.open')}
+            </button>
+          )}
+          {openPath && (
+            <button type="button" className="diff-action-btn" onClick={onReveal}>
+              {t('diffView.reveal')}
             </button>
           )}
           {openPath && (

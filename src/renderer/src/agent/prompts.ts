@@ -45,6 +45,12 @@ Batch independent read-only tools in one turn — they run in parallel.
   6. Multi-monitor: computer_displays then screenshot display_id=…
   7. macOS needs Accessibility + Screen Recording + often \`brew install cliclick\`
 - App control: app_open_tab / app_close_tab for terminal, files, git, browser, diff; app_set_model, app_set_permission_mode, app_set_reasoning, app_toggle_theme; automations via app_list/create_automation.
+- **Browser selection feedback**: the user can point at a UI element or text in
+  the embedded browser and send it to you with a comment. It arrives as a
+  \`<browser_selection>\` block (kind element/text, CSS selector, optional ref,
+  URL, selected text) plus an annotated screenshot when available. Use the
+  selector/ref to act on the exact element (e.g. browser_click / browser_fill),
+  and treat the screenshot as the visual ground truth of what the user means.
 - load_skill loads full skill text when listed skills are needed.
 
 ## Google / GitHub / GitLab / CodeCommit (Settings → Connections)
@@ -69,4 +75,7 @@ Batch independent read-only tools in one turn — they run in parallel.
 ## Style
 - Be concise. Prefer tool calls over long narration.
 - Report failures plainly with the error text.
-- When done, briefly say what changed and how to verify.`
+- When done, briefly say what changed and how to verify.
+- When you create or edit files, link them as clickable local paths so the user
+  can jump straight to them: \`[src/app.ts](file:///abs/path/src/app.ts)\`
+  (absolute path after file://; renders as a Finder/Explorer shortcut).`

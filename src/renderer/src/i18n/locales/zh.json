@@ -644,7 +644,11 @@
       "proxyMode": "代理模式（绕过X-Frame-Options）",
       "enableProxy": "启用代理模式",
       "emptyHint": "输入URL，或让代理在此浏览",
-      "emptyHintWeb": "在上方输入URL开始浏览（代理自动化需要桌面应用）"
+      "emptyHintWeb": "在上方输入URL开始浏览（代理自动化需要桌面应用）",
+      "pick": "为代理指定UI元素或文本",
+      "pickHint": "点击元素或拖选文本，然后告诉代理需要修改什么",
+      "feedbackPlaceholder": "希望代理修改或检查什么？（可选）",
+      "bubbleHint": "↵ Enter 发送 · ⇧↵ 换行 · Esc 取消"
     },
     "diff": {
       "title": "最近更改",
@@ -774,6 +778,7 @@
     "showAllLines": "显示所有行",
     "showAll": "显示全部 {{total}} 行 (+{{extra}})",
     "open": "打开",
+    "reveal": "在 Finder 中显示",
     "revert": "还原",
     "reverted": "已还原",
     "revertFailed": "还原失败",

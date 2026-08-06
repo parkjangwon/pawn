@@ -72,6 +72,7 @@ if (typeof window !== 'undefined' && !window.api) {
     },
     workspace: {
       openIn: async () => ({ error: 'Not available in browser mode' }),
+      reveal: async () => ({ error: 'Not available in browser mode' }),
       runScript: async () => ({ error: 'Not available in browser mode' }),
       openPath: async () => ({ error: 'Not available in browser mode' }),
       getAppIcon: async () => ({ error: 'Not available in browser mode' })
@@ -83,7 +84,12 @@ if (typeof window !== 'undefined' && !window.api) {
       keypress: async () => ({ error: 'Not available in browser mode' })
     },
     browser: {
-      open: async (url: string) => { window.open(url, '_blank'); return { ok: true } }
+      open: async (url: string) => { window.open(url, '_blank'); return { ok: true } },
+      hideCursor: async () => ({ ok: true }),
+      pickStart: async () => ({ error: 'Not available in browser mode' }),
+      pickStop: async () => ({ ok: true }),
+      pickClear: async () => ({ ok: true }),
+      pickState: async () => ({ active: false, selection: null, feedback: '', ready: false })
     },
     notification: {
       send: async (title: string, body: string) => {

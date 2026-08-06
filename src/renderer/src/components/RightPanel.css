@@ -598,6 +598,38 @@ body.resizing-right-panel .rp-resizer::after {
   color: #fff;
 }
 
+.rp-browser-modebtn:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* Pick-mode hint banner (visible while the user is pointing at an element) */
+.rp-browser-pick-hint {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  color: var(--text-secondary);
+  background: rgba(255, 138, 61, 0.12);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.rp-browser-pick-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #ff8a3d;
+  flex-shrink: 0;
+  animation: rp-pick-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes rp-pick-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 .rp-browser-modebtn.active:hover {
   background: var(--accent-hover);
 }
