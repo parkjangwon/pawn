@@ -1,25 +1,40 @@
 /**
  * DeepSeek API first-class compatibility (V4 Flash / Pro).
  *
- * Official references (2026-08):
+ * Official docs (authoritative):
+ * - https://api-docs.deepseek.com/
  * - https://api-docs.deepseek.com/quick_start/pricing/
  * - https://api-docs.deepseek.com/guides/thinking_mode/
  * - https://api-docs.deepseek.com/guides/kv_cache/
+ * - https://api-docs.deepseek.com/guides/tool_calls/
  * - https://api-docs.deepseek.com/api/create-chat-completion/
+ * - https://api-docs.deepseek.com/quick_start/rate_limit
+ * - https://api-docs.deepseek.com/guides/anthropic_api
  *
- * Cost model (USD / 1M tokens, regular):
- *   deepseek-v4-flash: miss $0.14 · hit $0.0028 · out $0.28
- *   deepseek-v4-pro:   miss $0.435 · hit $0.003625 · out $0.87
- * Disk context cache is automatic (stable prefixes → huge savings).
- * Thinking CoT is billed as output; keep effort adaptive.
+ * Pricing (USD / 1M, regular — subject to official notice of increases):
+ *   deepseek-v4-flash: miss $0.14 · hit $0.0028 · out $0.28 · concurrency 2500
+ *   deepseek-v4-pro:   miss $0.435 · hit $0.003625 · out $0.87 · concurrency 500
+ * Context 1M · max output 384K · thinking default on (effort high).
+ * Disk cache is automatic; stable message prefixes matter more than any flag.
  */
 
 export type Complexity = 'simple' | 'medium' | 'complex'
 export type PawnReasoningEffort = 'auto' | 'low' | 'medium' | 'high' | 'max' | string
 export type DeepSeekEffort = 'low' | 'high' | 'max'
 
+/** Official model ids (OpenAI Chat Completions). */
+export const DEEPSEEK_MODELS = {
+  flash: 'deepseek-v4-flash',
+  pro: 'deepseek-v4-pro'
+} as const
+
+export const DEEPSEEK_OPENAI_BASE = 'https://api.deepseek.com'
+export const DEEPSEEK_ANTHROPIC_BASE = 'https://api.deepseek.com/anthropic'
+
 export function isDeepSeekModel(modelId: string): boolean {
   const id = (modelId || '').toLowerCase()
+  // Local ollama deepseek-r1 is not the official API surface.
+  if (id === 'deepseek-r1' || id.startsWith('deepseek-r1:')) return false
   return id.includes('deepseek')
 }
 
@@ -34,6 +49,11 @@ export function isDeepSeekOfficialHost(baseUrl: string | undefined | null): bool
   }
 }
 
+export function isDeepSeekAnthropicBase(baseUrl: string | undefined | null): boolean {
+  if (!baseUrl || !isDeepSeekOfficialHost(baseUrl)) return false
+  return /\/anthropic\/?$/i.test(baseUrl.replace(/\/$/, '')) || baseUrl.includes('/anthropic')
+}
+
 export function isDeepSeekV4Pro(modelId: string): boolean {
   const id = (modelId || '').toLowerCase()
   return id.includes('v4-pro') || id.includes('deepseek-pro')
@@ -46,9 +66,24 @@ export function isDeepSeekV4Flash(modelId: string): boolean {
     id.includes('v4-flash') ||
     id.includes('deepseek-chat') ||
     id.includes('deepseek-reasoner') ||
-    // bare deepseek-v4 without pro
     /deepseek-v4($|[^a-z])/.test(id)
   )
+}
+
+/**
+ * Normalize OpenAI-compatible chat URL for DeepSeek.
+ * Docs: base_url = https://api.deepseek.com  →  POST .../chat/completions
+ * Users often append /v1 — both work; keep /v1 if present.
+ */
+export function deepSeekChatCompletionsUrl(baseUrl: string): string {
+  let b = (baseUrl || DEEPSEEK_OPENAI_BASE).trim().replace(/\/+$/, '')
+  if (!b) b = DEEPSEEK_OPENAI_BASE
+  if (b.endsWith('/chat/completions')) return b
+  // Anthropic path uses /messages, not chat completions
+  if (isDeepSeekAnthropicBase(b)) {
+    return b.endsWith('/messages') ? b : `${b}/messages`
+  }
+  return `${b}/chat/completions`
 }
 
 /** OpenAI-compat hosts that need the same reasoning_content echo rules. */
@@ -65,7 +100,7 @@ export function needsReasoningContentEcho(modelId: string): boolean {
 
 /**
  * Map UI effort → DeepSeek wire `reasoning_effort`.
- * Flash: low | high | max. Pro (early Aug 2026): low→high, xhigh→max.
+ * Spec table: low | high | max; medium→high; Flash xhigh→high; Pro low→high, xhigh→max.
  */
 export function mapDeepSeekReasoningEffort(
   effort: PawnReasoningEffort | undefined | null,
@@ -74,22 +109,25 @@ export function mapDeepSeekReasoningEffort(
   const e = (effort || 'auto').toLowerCase()
   const pro = modelId ? isDeepSeekV4Pro(modelId) : false
   if (e === 'low') return pro ? 'high' : 'low'
-  if (e === 'max' || e === 'xhigh') return 'max'
+  if (e === 'max') return 'max'
+  if (e === 'xhigh') return pro ? 'max' : 'high'
   // auto / medium / high → high (DeepSeek default)
   return 'high'
 }
 
+const mapEffort = mapDeepSeekReasoningEffort
+
 export interface DeepSeekAgentPolicy {
   thinkingEnabled: boolean
   reasoningEffort: DeepSeekEffort
-  /** Completion budget (reasoning tokens count against this in thinking mode). */
+  /** Completion budget; reasoning tokens count against this (thinking mode). Max API: 384K. */
   maxTokens: number
 }
 
 /**
- * Cost/performance policy for agent turns.
- * - simple + auto → non-thinking (fast, cheap; tools still work)
- * - medium + auto → think with low (Flash) / high (Pro)
+ * Cost/performance policy for agent turns (BYOK — tokens are cash).
+ * - simple + auto → non-thinking (tools still work; docs non-thinking tool mode)
+ * - medium + auto → think low (Flash) / high (Pro maps low→high)
  * - complex + auto → think high (Flash) / max (Pro)
  * Explicit UI effort always enables thinking at the mapped level.
  */
@@ -105,7 +143,7 @@ export function resolveDeepSeekAgentPolicy(opts: {
   if (effort === 'low') {
     return {
       thinkingEnabled: true,
-      reasoningEffort: mapDeepSeekReasoningEffort('low', opts.modelId),
+      reasoningEffort: mapEffort('low', opts.modelId),
       maxTokens: 16_384
     }
   }
@@ -113,7 +151,11 @@ export function resolveDeepSeekAgentPolicy(opts: {
     return { thinkingEnabled: true, reasoningEffort: 'high', maxTokens: 32_768 }
   }
   if (effort === 'max' || effort === 'xhigh') {
-    return { thinkingEnabled: true, reasoningEffort: 'max', maxTokens: 65_536 }
+    return {
+      thinkingEnabled: true,
+      reasoningEffort: mapEffort(effort, opts.modelId),
+      maxTokens: 65_536
+    }
   }
 
   // auto
@@ -124,26 +166,22 @@ export function resolveDeepSeekAgentPolicy(opts: {
     return {
       thinkingEnabled: true,
       reasoningEffort: pro ? 'max' : 'high',
-      maxTokens: pro ? 65_536 : 32_768
+      // Headroom for long tool+CoT loops (API max 384K; keep practical)
+      maxTokens: pro ? 98_304 : 49_152
     }
   }
-  // medium: Flash prefers low effort (cheaper CoT); Pro maps low→high
   return {
     thinkingEnabled: true,
-    reasoningEffort: mapDeepSeekReasoningEffort(pro ? 'high' : 'low', opts.modelId),
+    reasoningEffort: mapEffort(pro ? 'high' : 'low', opts.modelId),
     maxTokens: 24_576
   }
 }
 
-/**
- * OpenAI Chat Completions body extras for DeepSeek thinking mode.
- * Spec: thinking.type + reasoning_effort; default thinking is enabled/high.
- */
+/** OpenAI Chat Completions body extras: thinking + reasoning_effort. */
 export function deepSeekChatBodyExtras(opts: {
   modelId: string
   reasoningEffort?: PawnReasoningEffort | null
   complexity?: Complexity | null
-  /** Override policy thinking flag. */
   thinkingEnabled?: boolean
 }): Record<string, unknown> {
   if (!isDeepSeekModel(opts.modelId)) return {}
@@ -161,8 +199,35 @@ export function deepSeekChatBodyExtras(opts: {
   if (enabled) {
     extras.reasoning_effort =
       opts.thinkingEnabled === true && opts.reasoningEffort && opts.reasoningEffort !== 'auto'
-        ? mapDeepSeekReasoningEffort(opts.reasoningEffort, opts.modelId)
+        ? mapEffort(opts.reasoningEffort, opts.modelId)
         : policy.reasoningEffort
+  }
+  return extras
+}
+
+/**
+ * Anthropic-format body extras for https://api.deepseek.com/anthropic
+ * Docs: thinking supported (budget_tokens ignored); output_config.effort; metadata.user_id
+ */
+export function deepSeekAnthropicBodyExtras(opts: {
+  modelId: string
+  reasoningEffort?: PawnReasoningEffort | null
+  complexity?: Complexity | null
+  userId?: string
+}): Record<string, unknown> {
+  if (!isDeepSeekModel(opts.modelId)) return {}
+  const policy = resolveDeepSeekAgentPolicy(opts)
+  const extras: Record<string, unknown> = {}
+  if (policy.thinkingEnabled) {
+    // budget_tokens is ignored by DeepSeek; type-only is enough.
+    extras.thinking = { type: 'enabled' }
+    extras.output_config = { effort: policy.reasoningEffort }
+  } else {
+    // Anthropic path: reasoning.effort "none" disables thinking
+    extras.thinking = { type: 'disabled' }
+  }
+  if (opts.userId) {
+    extras.metadata = { user_id: opts.userId }
   }
   return extras
 }
@@ -177,8 +242,9 @@ export function deepSeekMaxTokens(opts: {
 }
 
 /**
- * Stable user_id for official DeepSeek (KV-cache isolation + scheduling).
- * Allowed: [a-zA-Z0-9_-], max 512. Prefer project scope so multi-turn cache hits.
+ * Stable user_id for official DeepSeek (content safety + KV isolation + scheduling).
+ * Spec: [a-zA-Z0-9_-]+, max 512. No PII.
+ * Prefer project scope so multi-turn disk/KV cache hits stay high.
  */
 export function deepSeekUserId(projectId?: string | null, sessionId?: string | null): string {
   const raw = (projectId && projectId !== '__general__' ? projectId : sessionId) || 'default'
@@ -187,8 +253,8 @@ export function deepSeekUserId(projectId?: string | null, sessionId?: string | n
 }
 
 /**
- * Whether this assistant message should carry reasoning_content on the wire.
- * Empty string still counts for tool-call turns (API 400 if omitted with tools).
+ * When the request includes `tools`, every assistant message that used tools
+ * must carry reasoning_content (even ""). Spec: tool calls section of thinking_mode.
  */
 export function shouldEchoReasoningOnWire(
   modelId: string,
@@ -197,18 +263,13 @@ export function shouldEchoReasoningOnWire(
 ): boolean {
   if (!needsReasoningContentEcho(modelId)) return false
   if (hasToolCalls) return true
-  return reasoningContent != null
+  return reasoningContent != null && reasoningContent !== ''
 }
 
 /**
  * Map OpenAI-compat or DeepSeek-native usage into Pawn CallUsage.
  * DeepSeek: prompt_cache_hit_tokens / prompt_cache_miss_tokens (disk cache).
- * OpenAI-style: prompt_tokens_details.cached_tokens.
- *
- * Cost model expects:
- *   inputTokens      = uncached / miss prompt tokens (full input rate)
- *   cacheReadTokens  = hit tokens (cache-hit rate)
- *   cacheWriteTokens = Anthropic-style write (DeepSeek usually 0)
+ * Cost: miss @ input rate, hit @ cacheRead rate; no separate write fee.
  */
 export function parseCompatUsage(raw: Record<string, unknown> | null | undefined): {
   inputTokens: number
@@ -244,7 +305,20 @@ export function parseCompatUsage(raw: Record<string, unknown> | null | undefined
     inputTokens: input,
     outputTokens: completion,
     cacheReadTokens: cacheRead,
-    cacheWriteTokens: n(raw.cache_creation_input_tokens) || n(details.cache_write_tokens),
+    // DeepSeek has no cache-write fee; keep 0 so cost model doesn't double-count.
+    cacheWriteTokens: hasDeepSeekCache ? 0 : n(raw.cache_creation_input_tokens) || n(details.cache_write_tokens),
     reasoningTokens: n(completionDetails.reasoning_tokens)
   }
 }
+
+/** Detect rate-limit / capacity errors worth retrying (HTTP 429, insufficient_system_resource). */
+export function isDeepSeekRetryableError(status: number, bodyText: string): boolean {
+  if (status === 429 || status >= 500) return true
+  const t = (bodyText || '').toLowerCase()
+  return (
+    t.includes('insufficient_system_resource') ||
+    t.includes('rate limit') ||
+    t.includes('too many requests')
+  )
+}
+

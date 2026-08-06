@@ -360,15 +360,15 @@ export function toOpenAIMessages(
       } else if (!e.content && !e.reasoningContent) {
         continue
       }
-      // DeepSeek thinking + tools: when the request includes `tools`, every prior
-      // assistant turn that participated in the tool loop must carry
-      // `reasoning_content` (even ""). Omitting the field → HTTP 400.
+      // DeepSeek thinking + tools (api-docs.deepseek.com/guides/thinking_mode):
+      // When the request carries `tools`, assistant messages that used tools must
+      // pass reasoning_content back on every subsequent request (even "").
+      // Pure multi-turn finals without tool_calls may omit CoT (API ignores if sent).
       if (echoReasoning) {
-        if (e.reasoningContent != null && e.reasoningContent !== '') {
-          msg.reasoning_content = e.reasoningContent
-        } else if (e.toolCalls && e.toolCalls.length > 0) {
-          msg.reasoning_content = e.reasoningContent || ''
-        } else if (e.reasoningContent != null) {
+        if (e.toolCalls && e.toolCalls.length > 0) {
+          msg.reasoning_content = e.reasoningContent ?? ''
+        } else if (e.reasoningContent != null && e.reasoningContent !== '') {
+          // Keep CoT from tool-loop final answers for multi-turn continuity (sample Turn 1.3→2).
           msg.reasoning_content = e.reasoningContent
         }
       }

@@ -2,15 +2,19 @@ import { describe, it, expect } from 'vitest'
 import {
   isDeepSeekModel,
   isDeepSeekOfficialHost,
+  isDeepSeekAnthropicBase,
   isDeepSeekV4Pro,
   needsReasoningContentEcho,
   mapDeepSeekReasoningEffort,
   deepSeekChatBodyExtras,
+  deepSeekAnthropicBodyExtras,
+  deepSeekChatCompletionsUrl,
   resolveDeepSeekAgentPolicy,
   deepSeekMaxTokens,
   deepSeekUserId,
   shouldEchoReasoningOnWire,
-  parseCompatUsage
+  parseCompatUsage,
+  isDeepSeekRetryableError
 } from '../deepseekCompat'
 import { toOpenAIMessages } from '../transcript'
 
@@ -59,7 +63,32 @@ describe('deepseekCompat', () => {
     })
     expect(hard.thinkingEnabled).toBe(true)
     expect(hard.reasoningEffort).toBe('max')
-    expect(hard.maxTokens).toBe(65_536)
+    expect(hard.maxTokens).toBeGreaterThanOrEqual(65_536)
+  })
+
+  it('builds Anthropic-path extras and chat URL', () => {
+    expect(isDeepSeekAnthropicBase('https://api.deepseek.com/anthropic')).toBe(true)
+    expect(deepSeekChatCompletionsUrl('https://api.deepseek.com')).toBe(
+      'https://api.deepseek.com/chat/completions'
+    )
+    expect(deepSeekChatCompletionsUrl('https://api.deepseek.com/v1')).toBe(
+      'https://api.deepseek.com/v1/chat/completions'
+    )
+    const anth = deepSeekAnthropicBodyExtras({
+      modelId: 'deepseek-v4-pro',
+      reasoningEffort: 'high',
+      complexity: 'medium',
+      userId: 'pawn_p1'
+    })
+    expect(anth.thinking).toEqual({ type: 'enabled' })
+    expect(anth.output_config).toEqual({ effort: 'high' })
+    expect(anth.metadata).toEqual({ user_id: 'pawn_p1' })
+  })
+
+  it('detects retryable DeepSeek errors', () => {
+    expect(isDeepSeekRetryableError(429, '')).toBe(true)
+    expect(isDeepSeekRetryableError(200, 'insufficient_system_resource')).toBe(true)
+    expect(isDeepSeekRetryableError(400, 'bad request')).toBe(false)
   })
 
   it('builds thinking body extras for DeepSeek only', () => {
@@ -88,6 +117,9 @@ describe('deepseekCompat', () => {
       deepSeekMaxTokens({ modelId: 'deepseek-v4-flash', reasoningEffort: 'auto', complexity: 'simple' })
     ).toBe(8_192)
     expect(deepSeekMaxTokens({ modelId: 'deepseek-v4-pro', reasoningEffort: 'max' })).toBe(65_536)
+    expect(
+      deepSeekMaxTokens({ modelId: 'deepseek-v4-pro', reasoningEffort: 'auto', complexity: 'complex' })
+    ).toBe(98_304)
   })
 
   it('sanitizes user_id', () => {

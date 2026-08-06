@@ -88,18 +88,28 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     id: 'deepseek',
     name: 'DeepSeek',
     apiFormat: 'openai',
-    // Official OpenAI-compatible endpoint (Chat Completions + tools + thinking).
-    // https://api-docs.deepseek.com/  base also supports Anthropic path at /anthropic
+    // https://api-docs.deepseek.com/ — OpenAI format (default for Pawn)
+    // Anthropic format: base https://api.deepseek.com/anthropic + apiFormat claude
     baseUrl: 'https://api.deepseek.com',
     keyHint: 'platform.deepseek.com/api_keys',
-    // Pricing: https://api-docs.deepseek.com/quick_start/pricing/ (2026-08)
-    // Flash: $0.14/$0.28 · hit $0.0028 | Pro: $0.435/$0.87 · hit $0.003625 (per 1M)
-    // Disk context cache is automatic — keep system/preamble prefix stable.
-    // Thinking + tools: must echo reasoning_content (see deepseekCompat.ts).
-    // Auto effort: simple→non-think, medium→low/high, complex→high/max.
+    // Pricing + limits: quick_start/pricing · rate_limit (Flash 2500 / Pro 500 concurrent)
+    // Disk cache automatic (kv_cache) — keep system+history prefixes stable.
+    // thinking + tools: echo reasoning_content or HTTP 400 (thinking_mode guide).
+    // Auto effort: simple→non-think · medium→low/high · complex→high/max.
     models: [
       model('deepseek-v4-flash', 'DeepSeek V4 Flash (agent default)', 'mid'),
       model('deepseek-v4-pro', 'DeepSeek V4 Pro (hard tasks)', 'high')
+    ]
+  },
+  {
+    id: 'deepseek-anthropic',
+    name: 'DeepSeek (Anthropic API)',
+    apiFormat: 'claude',
+    baseUrl: 'https://api.deepseek.com/anthropic',
+    keyHint: 'platform.deepseek.com/api_keys — Anthropic-compatible path',
+    models: [
+      model('deepseek-v4-flash', 'DeepSeek V4 Flash', 'mid'),
+      model('deepseek-v4-pro', 'DeepSeek V4 Pro', 'high')
     ]
   },
   {

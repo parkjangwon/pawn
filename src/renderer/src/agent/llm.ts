@@ -13,11 +13,15 @@ import {
   type TranscriptEntry, type TranscriptThinking
 } from './transcript'
 import {
+  deepSeekAnthropicBodyExtras,
   deepSeekChatBodyExtras,
+  deepSeekChatCompletionsUrl,
   deepSeekMaxTokens,
   deepSeekUserId,
+  isDeepSeekAnthropicBase,
   isDeepSeekModel,
   isDeepSeekOfficialHost,
+  isDeepSeekRetryableError,
   needsReasoningContentEcho,
   parseCompatUsage,
   type Complexity
@@ -150,20 +154,48 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   }
   const combinedSignal = AbortSignal.any([signal, timeoutController.signal])
 
-  if (provider.apiFormat === 'claude') {
+  const deepSeekModel = isDeepSeekModel(model.modelId)
+  const deepSeekHost = isDeepSeekOfficialHost(provider.baseUrl)
+  const deepSeekAnthropic = deepSeekHost && (
+    provider.apiFormat === 'claude' || isDeepSeekAnthropicBase(provider.baseUrl)
+  )
+  const dsUser = deepSeekHost ? deepSeekUserId(projectId, sessionId) : undefined
+
+  if (provider.apiFormat === 'claude' || deepSeekAnthropic) {
     const budget = reasoningEffort && reasoningEffort !== 'auto'
       ? ({ low: 2048, medium: 4096, high: 8192 } as Record<string, number>)[reasoningEffort]
       : undefined
 
-    url = `${provider.baseUrl}/messages`
+    // DeepSeek Anthropic base: https://api.deepseek.com/anthropic (+ /messages)
+    url = deepSeekAnthropic
+      ? deepSeekChatCompletionsUrl(provider.baseUrl.includes('/anthropic')
+        ? provider.baseUrl
+        : `${provider.baseUrl.replace(/\/+$/, '')}/anthropic`)
+      : `${provider.baseUrl.replace(/\/+$/, '')}/messages`
     headers['x-api-key'] = token
     headers['anthropic-version'] = '2023-06-01'
+    const dsAnth = deepSeekAnthropic
+      ? deepSeekAnthropicBodyExtras({
+        modelId: model.modelId,
+        reasoningEffort,
+        complexity,
+        userId: dsUser
+      })
+      : {}
     body = {
       model: model.modelId,
-      // Coding turns need headroom; thinking budget must stay under max_tokens.
-      max_tokens: budget ? budget + 16_384 : 16_384,
+      // Coding turns need headroom; DeepSeek ignores budget_tokens on Anthropic path.
+      max_tokens: deepSeekModel
+        ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort, complexity })
+        : budget
+          ? budget + 16_384
+          : 16_384,
       stream: true,
-      ...(budget ? { thinking: { type: 'enabled', budget_tokens: budget } } : {}),
+      ...(deepSeekAnthropic
+        ? dsAnth
+        : budget
+          ? { thinking: { type: 'enabled', budget_tokens: budget } }
+          : {}),
       system: systemLayers.map((text, i) =>
         i === systemLayers.length - 1
           ? { type: 'text', text, cache_control: { type: 'ephemeral' } }
@@ -173,9 +205,11 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       messages: withConversationCacheAnchors(injectClaudePreamble(toClaudeMessages(sendable), projectPreamble))
     }
   } else {
-    url = `${provider.baseUrl}/chat/completions`
+    // OpenAI-compatible; DeepSeek docs: base https://api.deepseek.com → /chat/completions
+    url = deepSeekHost
+      ? deepSeekChatCompletionsUrl(provider.baseUrl)
+      : `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`
     headers['Authorization'] = `Bearer ${token}`
-    const deepSeek = isDeepSeekModel(model.modelId)
     const deepSeekExtras = deepSeekChatBodyExtras({
       modelId: model.modelId,
       reasoningEffort,
@@ -184,23 +218,21 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     body = {
       model: model.modelId,
       stream: true,
-      // Streamed usage is required for cache-hit accounting (OpenAI + DeepSeek).
+      // Required for usage + prompt_cache_hit_tokens on DeepSeek streams.
       stream_options: { include_usage: true },
-      // DeepSeek: reasoning tokens count against max_tokens — scale with policy.
-      max_tokens: deepSeek
+      // DeepSeek: CoT counts toward max_tokens (thinking mode). API max output 384K.
+      max_tokens: deepSeekModel
         ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort, complexity })
         : 16_384,
       tools: toolsToOpenAI(mcpTools),
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
         : {}),
-      // DeepSeek V4: thinking + reasoning_effort; replay reasoning_content with tools.
+      // thinking + reasoning_effort (must echo reasoning_content when tools present).
       ...deepSeekExtras,
-      // Official host: project-scoped user_id for KV-cache isolation + better hits.
-      ...(deepSeek && isDeepSeekOfficialHost(provider.baseUrl)
-        ? { user_id: deepSeekUserId(projectId, sessionId) }
-        : {}),
-      // Stable system prefix first so disk/prompt cache can hit across turns.
+      // user_id: safety + KV isolation + scheduling (docs rate_limit).
+      ...(deepSeekHost && dsUser ? { user_id: dsUser } : {}),
+      // Stable system prefix first — disk cache hits require byte-stable prefixes.
       messages: [
         { role: 'system', content: systemLayers.join('\n\n') },
         ...(projectPreamble ? [{ role: 'system', content: projectPreamble }] : []),
@@ -305,8 +337,12 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       buffer = lines.pop() || ''
 
       for (const line of lines) {
-        if (!line.startsWith('data:')) continue
-        const data = line.slice(5).trim()
+        // DeepSeek keep-alive: SSE comments (`: keep-alive`) and blank lines
+        // (https://api-docs.deepseek.com/quick_start/rate_limit).
+        const trimmed = line.trim()
+        if (!trimmed || trimmed.startsWith(':')) continue
+        if (!trimmed.startsWith('data:')) continue
+        const data = trimmed.slice(5).trim()
         if (!data || data === '[DONE]') continue
 
         let parsed: Record<string, any>
@@ -506,7 +542,9 @@ export async function fetchWithRetry(
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     if (attempt > 0) {
       if (!retryable) throw lastError!
-      await new Promise((r) => setTimeout(r, 700 * (1 << (attempt - 1))))
+      // 429 / capacity: longer backoff (DeepSeek concurrency limits 500–2500).
+      const base = lastError?.message.includes('429') ? 1600 : 700
+      await new Promise((r) => setTimeout(r, base * (1 << (attempt - 1))))
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     }
 
@@ -538,7 +576,7 @@ export async function fetchWithRetry(
     const status = response.status
     const text = await response.text().catch(() => '')
     const err = new Error(`HTTP ${status}: ${text.slice(0, 300)}`)
-    if (status === 429 || status >= 500) {
+    if (status === 429 || status >= 500 || isDeepSeekRetryableError(status, text)) {
       retryable = true
       lastError = markTransient(err, true)
       continue

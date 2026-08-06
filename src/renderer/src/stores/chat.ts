@@ -5,7 +5,6 @@ import { useUsageStore, type CallUsage } from './usage'
 import { executeTool, TOOL_SAFETY, type ToolCall, type ToolResult } from '../agent/tools'
 import { runProjectChecks } from '../agent/runChecks'
 import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
-import { repoMapPreamble } from '../agent/repoMap'
 import {
   route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute, clearSessionRoute,
   noteProviderFailure, noteProviderSuccess, refreshMeasuredPricing,
@@ -308,13 +307,9 @@ async function agentLoop(
      } catch {
        // Missing CLAUDE.md / skills is normal; keep the base layer.
      }
-     // Compact repo map (Aider-inspired). Failures are silent — search tools remain.
-     try {
-       const map = await repoMapPreamble(projectPath)
-       if (map) projectPreamble += (projectPreamble ? '\n\n' : '') + map
-     } catch {
-       /* optional */
-     }
+     // Do NOT auto-inject repo_map here: DeepSeek disk cache requires a stable
+     // prefix (https://api-docs.deepseek.com/guides/kv_cache/). A rotating map
+     // forces full re-prime every TTL. Use the repo_map tool on demand instead.
    }
    const agentMode = useProviderStore.getState().agentMode
    if (agentMode === 'plan') {
