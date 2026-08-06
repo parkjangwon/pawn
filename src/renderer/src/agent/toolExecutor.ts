@@ -1167,6 +1167,34 @@ async function executeToolBody(
         const contextLines = Math.min(3, Math.max(0, Number(call.arguments.context_lines) || 0))
         const maxMatches = Math.min(200, Math.max(1, Number(call.arguments.max_matches) || 80))
 
+        // Fast path: ripgrep / git-grep in main (orders of magnitude faster on large repos).
+        if (window.api.fs.contentSearch && query && query.length <= 512) {
+          try {
+            const fast = await window.api.fs.contentSearch(grepRoot, {
+              query,
+              fixedString,
+              caseInsensitive,
+              glob: filePattern || undefined,
+              maxMatches,
+              contextLines,
+              timeoutMs: 15_000
+            })
+            if (fast.engine !== 'none') {
+              if (fast.error && fast.matches.length === 0) {
+                return { toolCallId: call.id, content: fast.error, isError: true }
+              }
+              const body =
+                fast.text ||
+                (fast.matches.length === 0
+                  ? `No matches for ${JSON.stringify(query)}`
+                  : fast.matches.map((m) => `${m.path}:${m.line}: ${m.text}`).join('\n'))
+              return { toolCallId: call.id, content: body }
+            }
+          } catch {
+            // fall through to walk-based scan
+          }
+        }
+
         const walkResult2 = await window.api.fs.walk(grepRoot)
         if (!Array.isArray(walkResult2)) {
           return { toolCallId: call.id, content: (walkResult2 as { error: string }).error, isError: true }

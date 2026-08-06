@@ -57,7 +57,8 @@ if (typeof window !== 'undefined' && !window.api) {
       },
       copyDir: async () => ({ error: 'Not available in browser mode' }),
       removeDir: async () => ({ error: 'Not available in browser mode' }),
-      readSpreadsheet: async () => ({ error: 'Not available in browser mode' })
+      readSpreadsheet: async () => ({ error: 'Not available in browser mode' }),
+      contentSearch: async () => ({ engine: 'none' as const, matches: [], truncated: false })
     },
     shell: {
       exec: async (command: string, cwd?: string, timeoutMs?: number) => {

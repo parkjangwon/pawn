@@ -113,7 +113,7 @@ export async function runProjectChecks(
   const selected =
     kind === 'all' ? cmds.filter((c) => c.kind !== 'build') : cmds.filter((c) => c.kind === kind)
   // if kind=all and only build exists, still run typecheck/test/lint empty message
-  const toRun =
+  let toRun =
     kind === 'all'
       ? selected.length
         ? selected
@@ -123,6 +123,12 @@ export async function runProjectChecks(
   if (!toRun.length) {
     const available = cmds.map((c) => `${c.kind}:${c.label}`).join(', ')
     return `No command for kind=${kind}. Available: ${available || '(none)'}`
+  }
+
+  // Fast feedback first: typecheck → lint → test → build (then anything else).
+  if (kind === 'all' && toRun.length > 1) {
+    const order: Record<string, number> = { typecheck: 0, lint: 1, test: 2, build: 3 }
+    toRun = [...toRun].sort((a, b) => (order[a.kind] ?? 9) - (order[b.kind] ?? 9))
   }
 
   const timeoutMs = Math.min(Math.max(timeoutSec, 30), 600) * 1000

@@ -26,7 +26,19 @@ const api = {
     copyDir: (src: string, dest: string) => ipcRenderer.invoke('fs:copyDir', src, dest),
     removeDir: (path: string) => ipcRenderer.invoke('fs:removeDir', path),
     readSpreadsheet: (path: string, opts?: { sheet?: string; maxRows?: number; maxCols?: number }) =>
-      ipcRenderer.invoke('fs:readSpreadsheet', path, opts)
+      ipcRenderer.invoke('fs:readSpreadsheet', path, opts),
+    contentSearch: (
+      rootPath: string,
+      opts: {
+        query: string
+        fixedString?: boolean
+        caseInsensitive?: boolean
+        glob?: string
+        maxMatches?: number
+        contextLines?: number
+        timeoutMs?: number
+      }
+    ) => ipcRenderer.invoke('fs:contentSearch', rootPath, opts)
   },
 
   // Shell

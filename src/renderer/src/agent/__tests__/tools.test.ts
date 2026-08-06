@@ -11,7 +11,8 @@ const fsMock = {
   writeFile: vi.fn(),
   listDir: vi.fn(),
   walk: vi.fn(),
-  exists: vi.fn()
+  exists: vi.fn(),
+  contentSearch: vi.fn()
 }
 
 const shellMock = { exec: vi.fn(), execFile: vi.fn() }
@@ -53,6 +54,8 @@ beforeEach(() => {
       return typeof r === 'string' ? { path: p, content: r } : { path: p, error: String(r?.error || 'read failed') }
     }))
   )
+  // Default: no fast search engine so unit tests exercise the walk fallback.
+  fsMock.contentSearch.mockResolvedValue({ engine: 'none', matches: [], truncated: false })
   shellMock.exec.mockReset()
   shellMock.execFile.mockReset()
   routineMock.list.mockReset()

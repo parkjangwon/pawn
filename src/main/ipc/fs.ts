@@ -4,6 +4,7 @@ import { join, relative } from 'path'
 import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync, rmdirSync } from 'fs'
 import { cp, rm } from 'fs/promises'
 import { readSpreadsheet } from '../spreadsheet'
+import { contentSearch, formatContentMatches, type ContentSearchOpts } from '../contentSearch'
 
 const WALK_IGNORE = new Set([
   'node_modules',
@@ -72,7 +73,9 @@ const WALK_MAX_DEPTH = 14
 // Agent tools (search/grep) and the @-mention index call fs:walk repeatedly;
 // a short TTL keeps large projects responsive while staying fresh enough for
 // interactive edits.
-const WALK_CACHE_TTL_MS = 3000
+// Agent search is chatty; a slightly longer TTL keeps large monorepos snappy
+// while writes still clear the cache immediately.
+const WALK_CACHE_TTL_MS = 15_000
 const WALK_CACHE_MAX = 10
 // A single huge synchronous read would freeze the main process (and the UI).
 const MAX_READ_BYTES = 32 * 1024 * 1024
@@ -420,6 +423,27 @@ export function registerFsIpc(): void {
       return await readSpreadsheet(filePath.trim(), opts || {})
     } catch (err) {
       return { error: String(err) }
+    }
+  })
+
+  // Fast content search (rg → git-grep). engine=none → renderer JS fallback.
+  handleTrusted('fs:contentSearch', async (_, rootPath: string, opts: ContentSearchOpts) => {
+    if (typeof rootPath !== 'string' || !rootPath.trim()) {
+      return { engine: 'none' as const, matches: [], truncated: false, error: 'Invalid root path' }
+    }
+    try {
+      const result = contentSearch(rootPath.trim(), opts || { query: '' })
+      return {
+        ...result,
+        text: formatContentMatches(result, rootPath.trim(), String(opts?.query || ''))
+      }
+    } catch (err) {
+      return {
+        engine: 'none' as const,
+        matches: [],
+        truncated: false,
+        error: String(err)
+      }
     }
   })
 }

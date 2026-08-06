@@ -3,6 +3,7 @@ import { useAppStore } from './app'
 import { useProviderStore } from './provider'
 import { useUsageStore, type CallUsage } from './usage'
 import { executeTool, TOOL_SAFETY, type ToolCall, type ToolResult } from '../agent/tools'
+import { runProjectChecks } from '../agent/runChecks'
 import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
 import {
   route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute, clearSessionRoute,
@@ -276,6 +277,10 @@ async function agentLoop(
 
   // Hoisted so finally can auto-capture Memory from this turn's transcript.
   let entries: TranscriptEntry[] = []
+  /** Code mutations this user turn — drives free local typecheck auto-verify. */
+  let turnHadCodeEdits = false
+  let turnRanChecks = false
+  let autoVerifyDone = false
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -597,7 +602,53 @@ async function agentLoop(
           : {})
       })
 
+      // Effective tool cwd: session override path, else project root.
+      const toolCwd = cwd || projectPath
+
       if (!hasTools) {
+        // Free local power: after code edits, run typecheck once without the model
+        // asking. Green → surface OK and stop (no extra LLM round). Fail → feed
+        // results back and continue so the agent can fix. Only auto/yolo (ask would
+        // spam permission prompts). No paid services.
+        const perm = useProviderStore.getState().permissionMode
+        const canAuto =
+          (perm === 'auto' || perm === 'yolo') &&
+          !!toolCwd &&
+          turnHadCodeEdits &&
+          !turnRanChecks &&
+          !autoVerifyDone &&
+          !signal.aborted
+        if (canAuto) {
+          autoVerifyDone = true
+          try {
+            const checkText = await runProjectChecks(toolCwd, 'typecheck', 90)
+            const noCmd =
+              /No command for kind=|No standard check commands detected/i.test(checkText)
+            if (!noCmd) {
+              const failed = /\bFAIL\b|exit: (?!0)\d+/.test(checkText)
+              const sysId = `${Date.now()}-auto-typecheck`
+              useAppStore.getState().addMessage(projectId, sessionId, {
+                id: sysId,
+                role: 'system',
+                content: `[auto_verify typecheck]\n${checkText.slice(0, 12_000)}`,
+                createdAt: Date.now()
+              })
+              if (failed) {
+                entries.push({
+                  role: 'user',
+                  content:
+                    `<auto_verify kind="typecheck">\n${checkText.slice(0, 12_000)}\n</auto_verify>\n` +
+                    'Typecheck failed after your edits. Fix the errors with tools, then finish.'
+                })
+                turnRanChecks = true
+                persistTranscript(sessionId, entries, decision.key, decision.tier)
+                continue
+              }
+            }
+          } catch {
+            // typecheck optional — do not block the turn
+          }
+        }
         persistTranscript(sessionId, entries, decision.key, decision.tier)
         break
       }
@@ -619,10 +670,6 @@ async function agentLoop(
       for (const tc of result.toolCalls) {
         (TOOL_SAFETY[tc.name] === 'safe' ? safe : risky).push(tc)
       }
-
-      // Effective tool cwd: session override path, else project root.
-      // Must match the Working Directory preamble or relative paths silently resolve wrong.
-      const toolCwd = cwd || projectPath
 
       const resultsById = new Map<string, ToolResult>()
       if (safe.length > 0 && !signal.aborted) {
@@ -647,6 +694,13 @@ async function agentLoop(
         }
         if (raw.isError) roundErrors++
         const truncated = truncateToolResult(raw, tc.name)
+
+        if (!raw.isError && (tc.name === 'edit_file' || tc.name === 'write_file' || tc.name === 'delete_file')) {
+          turnHadCodeEdits = true
+        }
+        if (tc.name === 'run_checks' && !raw.isError) {
+          turnRanChecks = true
+        }
 
         const toolMsgId = `${Date.now()}-tool-${tc.id}`
         useAppStore.getState().addMessage(projectId, sessionId, {

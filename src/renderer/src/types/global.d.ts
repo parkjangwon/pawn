@@ -83,6 +83,24 @@ declare global {
           previewMarkdown?: string
           error?: string
         }>
+        contentSearch: (
+          rootPath: string,
+          opts: {
+            query: string
+            fixedString?: boolean
+            caseInsensitive?: boolean
+            glob?: string
+            maxMatches?: number
+            contextLines?: number
+            timeoutMs?: number
+          }
+        ) => Promise<{
+          engine: 'rg' | 'git-grep' | 'none'
+          matches: Array<{ path: string; line: number; text: string }>
+          truncated: boolean
+          error?: string
+          text?: string
+        }>
       }
       shell: {
         exec: (

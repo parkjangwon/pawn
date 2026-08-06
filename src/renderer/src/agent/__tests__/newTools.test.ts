@@ -37,7 +37,8 @@ describe('codebase_search / artifacts / terminal tools', () => {
     exists: vi.fn(),
     listDir: vi.fn(),
     mkdir: vi.fn(),
-    writeFile: vi.fn()
+    writeFile: vi.fn(),
+    contentSearch: vi.fn()
   }
   const shellMock = {
     exec: vi.fn(),
@@ -76,6 +77,8 @@ describe('codebase_search / artifacts / terminal tools', () => {
   })
 
   it('codebase_search finds a function definition', async () => {
+    // Force walk fallback so the unit test does not depend on host rg/git.
+    fsMock.contentSearch.mockResolvedValue({ engine: 'none', matches: [], truncated: false })
     fsMock.walk.mockResolvedValue([
       { name: 'app.ts', path: '/p/src/app.ts', isDirectory: false },
       { name: 'node_modules', path: '/p/node_modules/x', isDirectory: false }
@@ -90,6 +93,21 @@ describe('codebase_search / artifacts / terminal tools', () => {
     expect(res.isError).toBeFalsy()
     expect(res.content).toContain('fetchUrl')
     expect(res.content).toMatch(/Likely definitions|app\.ts/)
+  })
+
+  it('codebase_search uses fast contentSearch when available', async () => {
+    fsMock.contentSearch.mockResolvedValue({
+      engine: 'rg',
+      truncated: false,
+      matches: [
+        { path: '/p/src/app.ts', line: 1, text: 'export function fetchUrl() {' }
+      ]
+    })
+    const res = await executeTool(call('codebase_search', { query: 'fetchUrl' }), '/p')
+    expect(res.isError).toBeFalsy()
+    expect(res.content).toContain('fetchUrl')
+    expect(res.content).toMatch(/engine=rg/)
+    expect(fsMock.walk).not.toHaveBeenCalled()
   })
 
   it('write_artifact rejects path traversal', async () => {
