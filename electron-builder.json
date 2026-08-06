@@ -18,6 +18,7 @@
         ]
       }
     ],
+    "x64ArchFiles": "**/node_modules/*/prebuilds/**",
     "artifactName": "pawn-${version}-${arch}.${ext}",
     "category": "public.app-category.developer-tools",
     "hardenedRuntime": true,
