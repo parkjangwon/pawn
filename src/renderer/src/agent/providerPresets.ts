@@ -88,15 +88,18 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     id: 'deepseek',
     name: 'DeepSeek',
     apiFormat: 'openai',
-    // Official OpenAI-compatible endpoint (thinking mode + tools).
-    // https://api-docs.deepseek.com/
+    // Official OpenAI-compatible endpoint (Chat Completions + tools + thinking).
+    // https://api-docs.deepseek.com/  base also supports Anthropic path at /anthropic
     baseUrl: 'https://api.deepseek.com',
     keyHint: 'platform.deepseek.com/api_keys',
-    // https://api-docs.deepseek.com/quick_start/pricing/ (2026-08)
-    // V4: thinking mode on by default; agent must echo reasoning_content with tools.
+    // Pricing: https://api-docs.deepseek.com/quick_start/pricing/ (2026-08)
+    // Flash: $0.14/$0.28 · hit $0.0028 | Pro: $0.435/$0.87 · hit $0.003625 (per 1M)
+    // Disk context cache is automatic — keep system/preamble prefix stable.
+    // Thinking + tools: must echo reasoning_content (see deepseekCompat.ts).
+    // Auto effort: simple→non-think, medium→low/high, complex→high/max.
     models: [
-      model('deepseek-v4-pro', 'DeepSeek V4 Pro (thinking)', 'high'),
-      model('deepseek-v4-flash', 'DeepSeek V4 Flash (thinking)', 'mid')
+      model('deepseek-v4-flash', 'DeepSeek V4 Flash (agent default)', 'mid'),
+      model('deepseek-v4-pro', 'DeepSeek V4 Pro (hard tasks)', 'high')
     ]
   },
   {

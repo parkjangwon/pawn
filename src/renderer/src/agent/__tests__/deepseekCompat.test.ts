@@ -1,26 +1,65 @@
 import { describe, it, expect } from 'vitest'
 import {
   isDeepSeekModel,
+  isDeepSeekOfficialHost,
+  isDeepSeekV4Pro,
   needsReasoningContentEcho,
   mapDeepSeekReasoningEffort,
   deepSeekChatBodyExtras,
-  shouldEchoReasoningOnWire
+  resolveDeepSeekAgentPolicy,
+  deepSeekMaxTokens,
+  deepSeekUserId,
+  shouldEchoReasoningOnWire,
+  parseCompatUsage
 } from '../deepseekCompat'
 import { toOpenAIMessages } from '../transcript'
 
 describe('deepseekCompat', () => {
-  it('detects deepseek models', () => {
+  it('detects deepseek models and hosts', () => {
     expect(isDeepSeekModel('deepseek-v4-flash')).toBe(true)
     expect(isDeepSeekModel('deepseek/deepseek-v4-pro')).toBe(true)
     expect(isDeepSeekModel('gpt-4o')).toBe(false)
+    expect(isDeepSeekV4Pro('deepseek-v4-pro')).toBe(true)
+    expect(isDeepSeekOfficialHost('https://api.deepseek.com')).toBe(true)
+    expect(isDeepSeekOfficialHost('https://api.deepseek.com/anthropic')).toBe(true)
+    expect(isDeepSeekOfficialHost('https://openrouter.ai/api/v1')).toBe(false)
   })
 
-  it('maps reasoning effort', () => {
+  it('maps reasoning effort (Pro maps low→high)', () => {
     expect(mapDeepSeekReasoningEffort('low')).toBe('low')
+    expect(mapDeepSeekReasoningEffort('low', 'deepseek-v4-pro')).toBe('high')
     expect(mapDeepSeekReasoningEffort('auto')).toBe('high')
     expect(mapDeepSeekReasoningEffort('medium')).toBe('high')
-    expect(mapDeepSeekReasoningEffort('high')).toBe('high')
     expect(mapDeepSeekReasoningEffort('max')).toBe('max')
+  })
+
+  it('auto policy: simple = non-thinking (cheap/fast)', () => {
+    const p = resolveDeepSeekAgentPolicy({
+      modelId: 'deepseek-v4-flash',
+      reasoningEffort: 'auto',
+      complexity: 'simple'
+    })
+    expect(p.thinkingEnabled).toBe(false)
+    expect(p.maxTokens).toBe(8_192)
+  })
+
+  it('auto policy: medium flash uses low effort; complex pro uses max', () => {
+    const mid = resolveDeepSeekAgentPolicy({
+      modelId: 'deepseek-v4-flash',
+      reasoningEffort: 'auto',
+      complexity: 'medium'
+    })
+    expect(mid.thinkingEnabled).toBe(true)
+    expect(mid.reasoningEffort).toBe('low')
+
+    const hard = resolveDeepSeekAgentPolicy({
+      modelId: 'deepseek-v4-pro',
+      reasoningEffort: 'auto',
+      complexity: 'complex'
+    })
+    expect(hard.thinkingEnabled).toBe(true)
+    expect(hard.reasoningEffort).toBe('max')
+    expect(hard.maxTokens).toBe(65_536)
   })
 
   it('builds thinking body extras for DeepSeek only', () => {
@@ -35,13 +74,25 @@ describe('deepseekCompat', () => {
     })
   })
 
-  it('can disable thinking', () => {
+  it('can disable thinking via policy (simple auto)', () => {
+    const body = deepSeekChatBodyExtras({
+      modelId: 'deepseek-v4-flash',
+      reasoningEffort: 'auto',
+      complexity: 'simple'
+    })
+    expect(body).toEqual({ thinking: { type: 'disabled' } })
+  })
+
+  it('sizes max_tokens by policy', () => {
     expect(
-      deepSeekChatBodyExtras({
-        modelId: 'deepseek-v4-pro',
-        thinkingEnabled: false
-      })
-    ).toEqual({ thinking: { type: 'disabled' } })
+      deepSeekMaxTokens({ modelId: 'deepseek-v4-flash', reasoningEffort: 'auto', complexity: 'simple' })
+    ).toBe(8_192)
+    expect(deepSeekMaxTokens({ modelId: 'deepseek-v4-pro', reasoningEffort: 'max' })).toBe(65_536)
+  })
+
+  it('sanitizes user_id', () => {
+    expect(deepSeekUserId('proj/abc!', 'sess')).toBe('pawn_proj_abc_')
+    expect(deepSeekUserId('__general__', 's1')).toBe('pawn_s1')
   })
 
   it('echoes reasoning_content on the wire for tool loops', () => {
@@ -80,5 +131,29 @@ describe('deepseekCompat', () => {
       reasoning_content: '',
       tool_calls: expect.any(Array)
     })
+  })
+
+  it('parses DeepSeek disk-cache usage fields', () => {
+    const u = parseCompatUsage({
+      prompt_tokens: 1000,
+      completion_tokens: 50,
+      prompt_cache_hit_tokens: 800,
+      prompt_cache_miss_tokens: 200,
+      completion_tokens_details: { reasoning_tokens: 30 }
+    })
+    expect(u.cacheReadTokens).toBe(800)
+    expect(u.inputTokens).toBe(200)
+    expect(u.outputTokens).toBe(50)
+    expect(u.reasoningTokens).toBe(30)
+  })
+
+  it('parses OpenAI-style cached_tokens usage', () => {
+    const u = parseCompatUsage({
+      prompt_tokens: 500,
+      completion_tokens: 20,
+      prompt_tokens_details: { cached_tokens: 400 }
+    })
+    expect(u.cacheReadTokens).toBe(400)
+    expect(u.inputTokens).toBe(100)
   })
 })

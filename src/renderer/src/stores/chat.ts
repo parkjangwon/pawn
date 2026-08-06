@@ -465,7 +465,8 @@ async function agentLoop(
 
         try {
          result = await callLLM({
-            decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal
+            decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal,
+            complexity
          })
           noteProviderSuccess(decision.provider.id)
           // Vision-only fallbacks must not steal sticky from the text model

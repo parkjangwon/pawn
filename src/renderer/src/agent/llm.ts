@@ -14,8 +14,13 @@ import {
 } from './transcript'
 import {
   deepSeekChatBodyExtras,
+  deepSeekMaxTokens,
+  deepSeekUserId,
   isDeepSeekModel,
-  needsReasoningContentEcho
+  isDeepSeekOfficialHost,
+  needsReasoningContentEcho,
+  parseCompatUsage,
+  type Complexity
 } from './deepseekCompat'
 
 export function withConversationCacheAnchors(
@@ -109,13 +114,18 @@ export interface LlmRequest {
   projectPath?: string
   assistantMsgId: string
   signal: AbortSignal
+  /** Drives DeepSeek thinking effort / max_tokens when UI effort is auto. */
+  complexity?: Complexity
 }
 
 /** No data for this long means the provider connection is dead; bail out. */
 const STREAM_IDLE_TIMEOUT_MS = 90_000
 
 export async function callLLM(req: LlmRequest): Promise<LlmResult> {
-  const { decision, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal } = req
+  const {
+    decision, systemLayers, projectPreamble, sessionId, projectId, projectPath,
+    assistantMsgId, signal, complexity
+  } = req
   const { provider, model } = decision
   const { reasoningEffort } = useProviderStore.getState()
   const isBrowser = window.api?.platform === 'browser'
@@ -165,34 +175,36 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   } else {
     url = `${provider.baseUrl}/chat/completions`
     headers['Authorization'] = `Bearer ${token}`
+    const deepSeek = isDeepSeekModel(model.modelId)
     const deepSeekExtras = deepSeekChatBodyExtras({
       modelId: model.modelId,
       reasoningEffort,
-      thinkingEnabled: true
+      complexity
     })
     body = {
       model: model.modelId,
       stream: true,
-      // Without this the usage block never arrives on a streamed response and
-      // cached_tokens can't be measured.
+      // Streamed usage is required for cache-hit accounting (OpenAI + DeepSeek).
       stream_options: { include_usage: true },
-      // Explicit cap so coding responses are not cut short by low provider defaults.
-      // DeepSeek thinking uses separate reasoning tokens; keep completion headroom high.
-      max_tokens: isDeepSeekModel(model.modelId) ? 8192 : 16_384,
+      // DeepSeek: reasoning tokens count against max_tokens — scale with policy.
+      max_tokens: deepSeek
+        ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort, complexity })
+        : 16_384,
       tools: toolsToOpenAI(mcpTools),
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
         : {}),
-      // DeepSeek V4: thinking + reasoning_effort (must echo reasoning_content with tools).
+      // DeepSeek V4: thinking + reasoning_effort; replay reasoning_content with tools.
       ...deepSeekExtras,
-      // A single deterministic system block: layers joined in fixed order, no
-      // per-turn values, so the prefix matches byte for byte across turns.
+      // Official host: project-scoped user_id for KV-cache isolation + better hits.
+      ...(deepSeek && isDeepSeekOfficialHost(provider.baseUrl)
+        ? { user_id: deepSeekUserId(projectId, sessionId) }
+        : {}),
+      // Stable system prefix first so disk/prompt cache can hit across turns.
       messages: [
         { role: 'system', content: systemLayers.join('\n\n') },
         ...(projectPreamble ? [{ role: 'system', content: projectPreamble }] : []),
         ...toOpenAIMessages(sendable, {
-          // When tools are present (agent always sends them), DeepSeek requires
-          // every prior assistant reasoning_content to be replayed.
           echoReasoningContent: needsReasoningContentEcho(model.modelId)
         })
       ]
@@ -366,12 +378,13 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
           continue
         }
 
-        // OpenAI-compatible stream
+        // OpenAI-compatible stream (DeepSeek: prompt_cache_hit/miss_tokens)
         if (parsed.usage) {
-          const cached = parsed.usage.prompt_tokens_details?.cached_tokens || 0
-          usage.cacheReadTokens = cached
-          usage.inputTokens = Math.max(0, (parsed.usage.prompt_tokens || 0) - cached)
-          usage.outputTokens = parsed.usage.completion_tokens || 0
+          const u = parseCompatUsage(parsed.usage as Record<string, unknown>)
+          usage.inputTokens = u.inputTokens
+          usage.outputTokens = u.outputTokens
+          usage.cacheReadTokens = u.cacheReadTokens
+          if (u.cacheWriteTokens > 0) usage.cacheWriteTokens = u.cacheWriteTokens
         }
         const choice = parsed.choices?.[0]
         if (!choice) continue

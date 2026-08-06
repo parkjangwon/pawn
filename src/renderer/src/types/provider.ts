@@ -96,11 +96,13 @@ export const KNOWN_PRICING: Record<string, ModelPricing & { tier: ModelTier; con
   'gpt-4.1': { input: 2, output: 8, cacheRead: 0.5, cacheWrite: 2, tier: 'high', contextWindow: 1_000_000 },
   'o4-mini': { input: 1.1, output: 4.4, cacheRead: 0.275, cacheWrite: 1.1, tier: 'high', contextWindow: 200_000 },
 
-  // --- DeepSeek (https://api-docs.deepseek.com/quick_start/pricing/, 2026-08) ---
+  // --- DeepSeek V4 (https://api-docs.deepseek.com/quick_start/pricing/, 2026-08) ---
+  // Disk context cache: hit ≪ miss (≈50× Flash). cacheWrite unused (auto disk cache).
+  // Max output 384K; context 1M. Tool calls + thinking supported on both.
   'deepseek-v4-flash': { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0.14, tier: 'mid', contextWindow: 1_000_000 },
   'deepseek-v4-pro': { input: 0.435, output: 0.87, cacheRead: 0.003625, cacheWrite: 0.435, tier: 'high', contextWindow: 1_000_000 },
   'deepseek-v3': { input: 0.27, output: 1.1, cacheRead: 0.07, cacheWrite: 0.27, tier: 'mid', contextWindow: 128_000 },
-  // Legacy DeepSeek aliases (retired ~2026-07; kept for hydrate)
+  // Legacy aliases (retired ~2026-07-24; map to Flash economics for hydrate)
   'deepseek-chat': { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0.14, tier: 'mid', contextWindow: 1_000_000 },
   'deepseek-reasoner': { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0.14, tier: 'high', contextWindow: 1_000_000 },
 
