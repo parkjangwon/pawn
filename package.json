@@ -1,6 +1,6 @@
 {
   "name": "pawn",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "description": "AI Desktop Coding Agent — Code, Browse, Automate. BYOK, no harness, fully extensible.",
   "main": "./out/main/index.js",
   "author": "parkjangwon",
@@ -72,7 +72,7 @@
     "@vitejs/plugin-react": "^6.0.0",
     "@vitest/coverage-v8": "^4.1.10",
     "electron": "^43.2.0",
-    "electron-builder": "^25.1.8",
+    "electron-builder": "^26.15.7",
     "electron-vite": "^6.0.0-beta.1",
     "jsdom": "^30.0.1",
     "react": "^19.0.0",
