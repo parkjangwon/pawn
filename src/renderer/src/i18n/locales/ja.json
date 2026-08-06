@@ -305,15 +305,20 @@
       "baseUrlPlaceholder": "https://api.example.com",
       "apiKeyPlaceholder": "sk-...",
       "addWithModels": "追加（{{count}}モデル含む）",
-      "presetDesc": "有名プロバイダー — APIキーを入力するだけで利用できます",
+      "presetDesc": "有名プロバイダー — APIキーを入力するだけで利用できます。可能なら API からモデル一覧を同期します。",
       "pasteApiKey": "APIキーを貼り付け",
       "hintBailian": "bailian.console.aliyun.com — Token Plan でAPIキーを発行",
       "hintOllama": "ローカル実行 — APIキー不要、Ollamaの起動が必要",
-      "hintLmStudio": "ローカル実行 — APIキー不要、LM Studioの起動が必要"
+      "hintLmStudio": "ローカル実行 — APIキー不要、LM Studioの起動が必要",
+      "syncModels": "モデル同期",
+      "syncHint": "GET {baseUrl}/models から最新カタログを取得してマージします",
+      "syncOk": "{{total}} モデル同期（+{{added}} 追加、{{updated}} 更新）",
+      "syncFail": "同期失敗: {{error}}",
+      "syncSeedOnly": "シードモデルを維持（ライブ同期失敗: {{error}}）"
     },
     "modelSection": {
       "title": "モデル",
-      "desc": "利用可能なモデルを管理。画像対応モデルをマークすると、DeepSeek などテキスト専用モデルから自動フォールバックします。",
+      "desc": "利用可能なモデルを管理。プロバイダーのモデル同期で API 一覧を取り込むことを推奨します。画像対応をマークするとテキスト専用モデルから自動フォールバックします。",
       "empty": "モデルが設定されていません",
       "add": "モデルを追加",
       "selectProvider": "プロバイダーを選択",

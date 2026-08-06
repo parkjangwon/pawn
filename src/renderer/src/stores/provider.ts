@@ -3,6 +3,7 @@ import { uid } from '../utils/uid'
 import { guessPricing, guessSupportsVision } from '../types/provider'
 import type { Provider, ModelEntry, RoutingMode } from '../types/provider'
 import { parseAgentMode, parseDoneGate, type AgentMode, type DoneGate } from '../agent/agentMode'
+import { fetchProviderModels, mergeRemoteModels } from '../agent/listModels'
 
 interface ProviderState {
   providers: Provider[]
@@ -27,6 +28,11 @@ interface ProviderState {
   addModel: (model: ModelEntry) => void
   removeModel: (id: string) => void
   updateModel: (id: string, patch: Partial<ModelEntry>) => void
+  /**
+   * Pull the live model catalog from the provider's GET /models endpoint and
+   * merge it in (add new, refresh metadata, keep user enables/pricing).
+   */
+  syncModelsFromProvider: (providerId: string) => Promise<{ added: number; updated: number; remoteCount: number }>
   setRoutingMode: (mode: RoutingMode) => void
   setActiveModel: (id: string | null) => void
   setVisionModel: (id: string | null) => void
@@ -176,6 +182,22 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       saveToBackend(next)
       return { models: next.models, activeModelId: next.activeModelId, visionModelId: next.visionModelId }
     })
+  },
+
+  syncModelsFromProvider: async (providerId) => {
+    const provider = get().providers.find((p) => p.id === providerId)
+    if (!provider) throw new Error('Provider not found')
+    const { models: remote } = await fetchProviderModels(provider)
+    if (remote.length === 0) {
+      throw new Error('Provider returned an empty model list')
+    }
+    const merged = mergeRemoteModels(get().models, providerId, remote)
+    set((s) => {
+      const next = { ...s, models: merged.models }
+      saveToBackend(next)
+      return { models: next.models }
+    })
+    return { added: merged.added, updated: merged.updated, remoteCount: merged.remoteCount }
   },
 
   setRoutingMode: (mode) => {

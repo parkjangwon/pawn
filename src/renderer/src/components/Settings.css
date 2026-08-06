@@ -647,6 +647,18 @@ body.resizing-sidebar .settings-resizer::after {
   box-shadow: none;
 }
 
+/* Sync status under provider row */
+.settings-row-desc.sync-result {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  opacity: 0.85;
+  max-width: 420px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Test button */
 .test-btn {
   padding: 3px 8px;

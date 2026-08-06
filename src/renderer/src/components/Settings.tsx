@@ -11,6 +11,13 @@ import {
 } from '../stores/keybindings'
 import { guessPricing, guessSupportsVision, type ApiFormat, type ModelPricing, type Provider } from '../types/provider'
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
+import {
+  authHeadersForChat,
+  buildTestRequestBody,
+  pickTestModelId,
+  providerChatUrl,
+  summarizeProviderError
+} from '../agent/testProvider'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
 import { useSidebarResize } from '../hooks/useSidebarResize'
@@ -97,7 +104,8 @@ export default function Settings({
   const {
     providers, models, routingMode, defaultSendMode, permissionMode, visionModelId,
     addProvider, removeProvider, updateProvider,
-    addModel, removeModel, updateModel, setRoutingMode, setDefaultSendMode, setPermissionMode,
+    addModel, removeModel, updateModel, syncModelsFromProvider,
+    setRoutingMode, setDefaultSendMode, setPermissionMode,
     setVisionModel
   } = useProviderStore()
 
@@ -108,6 +116,8 @@ export default function Settings({
   const [showAddModel, setShowAddModel] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<Record<string, string>>({})
+  const [syncingId, setSyncingId] = useState<string | null>(null)
+  const [syncResult, setSyncResult] = useState<Record<string, string>>({})
   const [form, setForm] = useState({
     name: '',
     apiFormat: 'openai' as ApiFormat,
@@ -190,7 +200,7 @@ export default function Settings({
     [models]
   )
 
-  const handleAddFromPreset = (preset: ProviderPreset, apiKey: string): void => {
+  const handleAddFromPreset = async (preset: ProviderPreset, apiKey: string): Promise<void> => {
     if (!preset.localNoKey && !apiKey.trim()) return
     const before = useProviderStore.getState().providers.length
     addProvider({
@@ -213,9 +223,54 @@ export default function Settings({
           supportsVision: guessSupportsVision(m.modelId)
         })
       }
+      // Best-effort live catalog sync so seeds are not the long-term source of truth.
+      setSyncingId(created.id)
+      try {
+        const r = await syncModelsFromProvider(created.id)
+        setSyncResult((s) => ({
+          ...s,
+          [created.id]: t('settings.providerSection.syncOk', {
+            added: r.added,
+            updated: r.updated,
+            total: r.remoteCount
+          })
+        }))
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        setSyncResult((s) => ({
+          ...s,
+          [created.id]: t('settings.providerSection.syncSeedOnly', { error: msg.slice(0, 120) })
+        }))
+      } finally {
+        setSyncingId(null)
+      }
     }
     setPresetPicking(null)
     setPresetKey('')
+  }
+
+  const handleSyncModels = async (providerId: string): Promise<void> => {
+    setSyncingId(providerId)
+    setSyncResult((s) => ({ ...s, [providerId]: '' }))
+    try {
+      const r = await syncModelsFromProvider(providerId)
+      setSyncResult((s) => ({
+        ...s,
+        [providerId]: t('settings.providerSection.syncOk', {
+          added: r.added,
+          updated: r.updated,
+          total: r.remoteCount
+        })
+      }))
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      setSyncResult((s) => ({
+        ...s,
+        [providerId]: t('settings.providerSection.syncFail', { error: msg.slice(0, 160) })
+      }))
+    } finally {
+      setSyncingId(null)
+    }
   }
 
   const handleAddProvider = (): void => {
@@ -312,20 +367,40 @@ export default function Settings({
     setTestingId(providerId)
     setTestResult((r) => ({ ...r, [providerId]: '' }))
     try {
-      const url = p.apiFormat === 'claude' ? `${p.baseUrl}/messages` : `${p.baseUrl}/chat/completions`
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      const token = p.apiKey || ''
-      if (p.apiFormat === 'claude') { headers['x-api-key'] = token; headers['anthropic-version'] = '2023-06-01' }
-      else { headers['Authorization'] = `Bearer ${token}` }
-      const body = p.apiFormat === 'claude' ? { model: 'claude-3-haiku-20240307', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] } : { model: 'gpt-4o-mini', max_tokens: 10, messages: [{ role: 'user', content: 'hi' }] }
+      const modelId = pickTestModelId(providerId, models, p.apiFormat)
+      if (!modelId) {
+        setTestResult((r) => ({ ...r, [providerId]: 'FAIL: no model' }))
+        return
+      }
+      const url = providerChatUrl(p)
+      const headers = authHeadersForChat(p)
+      const body = buildTestRequestBody(p.apiFormat, modelId)
       const isBrowser = window.api?.platform === 'browser'
       let response: Response
-      if (isBrowser) { response = await fetch('/api/proxy', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ url, headers, body: JSON.stringify(body) }) }) }
-      else { response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) }) }
-      if (response.ok) setTestResult((r) => ({ ...r, [providerId]: 'OK' }))
-      else { setTestResult((r) => ({ ...r, [providerId]: `FAIL: ${response.status}` })) }
-    } catch { setTestResult((r) => ({ ...r, [providerId]: 'ERROR' })) }
-    finally { setTestingId(null) }
+      if (isBrowser) {
+        response = await fetch('/api/proxy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, headers, body: JSON.stringify(body) })
+        })
+      } else {
+        response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+      }
+      if (response.ok) {
+        setTestResult((r) => ({ ...r, [providerId]: 'OK' }))
+      } else {
+        const text = await response.text().catch(() => '')
+        setTestResult((r) => ({
+          ...r,
+          [providerId]: summarizeProviderError(response.status, text)
+        }))
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'ERROR'
+      setTestResult((r) => ({ ...r, [providerId]: `ERROR: ${msg.slice(0, 60)}` }))
+    } finally {
+      setTestingId(null)
+    }
   }
 
   const languages = [{ code: 'en', label: 'English' }, { code: 'ko', label: '한국어' }, { code: 'ja', label: '日本語' }, { code: 'zh', label: '中文' }]
@@ -734,9 +809,29 @@ export default function Settings({
                     <span className="settings-row-desc">
                       {p.apiFormat} / {p.baseUrl}
                     </span>
+                    {syncResult[p.id] && (
+                      <span className="settings-row-desc sync-result" title={syncResult[p.id]}>
+                        {syncResult[p.id]}
+                      </span>
+                    )}
                   </div>
                   <div className="settings-row-actions">
-                    <button className={`test-btn ${testResult[p.id] === 'OK' ? 'ok' : testResult[p.id]?.startsWith('FAIL') ? 'fail' : ''}`} onClick={() => handleTestProvider(p.id)} disabled={testingId === p.id}>{testingId === p.id ? '...' : testResult[p.id] || 'Test'}</button>
+                    <button
+                      className="test-btn"
+                      onClick={() => handleSyncModels(p.id)}
+                      disabled={syncingId === p.id}
+                      title={t('settings.providerSection.syncHint')}
+                    >
+                      {syncingId === p.id ? '...' : t('settings.providerSection.syncModels')}
+                    </button>
+                    <button
+                      className={`test-btn ${testResult[p.id] === 'OK' ? 'ok' : testResult[p.id]?.startsWith('FAIL') || testResult[p.id]?.startsWith('ERROR') ? 'fail' : ''}`}
+                      onClick={() => handleTestProvider(p.id)}
+                      disabled={testingId === p.id}
+                      title={testResult[p.id] || undefined}
+                    >
+                      {testingId === p.id ? '...' : testResult[p.id] || 'Test'}
+                    </button>
                     <label className="toggle-switch"><input type="checkbox" checked={p.enabled} onChange={(e) => updateProvider(p.id, { enabled: e.target.checked })} /><span className="toggle-slider" /></label>
                     <button className="delete-btn" onClick={() => setConfirmDelete({ type: 'provider', id: p.id, name: p.name })}><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg></button>
                   </div>

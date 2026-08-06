@@ -314,11 +314,12 @@ function apiProxyPlugin(): Plugin {
         req.on('data', (chunk) => { body += chunk })
         req.on('end', async () => {
           try {
-            const { url, headers, body: reqBody } = JSON.parse(body)
+            const { url, headers, body: reqBody, method: reqMethod } = JSON.parse(body)
+            const method = typeof reqMethod === 'string' && reqMethod ? reqMethod.toUpperCase() : 'POST'
             const response = await fetch(url, {
-              method: 'POST',
+              method,
               headers,
-              body: reqBody
+              body: method === 'GET' || method === 'HEAD' ? undefined : reqBody
             })
 
             res.statusCode = response.status

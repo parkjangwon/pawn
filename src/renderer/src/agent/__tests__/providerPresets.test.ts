@@ -41,4 +41,15 @@ describe('PROVIDER_PRESETS', () => {
     expect(local.length).toBeGreaterThan(0)
     for (const p of local) expect(p.keyHint).toBeTruthy()
   })
+
+  it('includes OpenCode Go, Command Code, and Xiaomi MiMo presets', () => {
+    const byId = Object.fromEntries(PROVIDER_PRESETS.map((p) => [p.id, p]))
+    expect(byId['opencode-go']?.baseUrl).toBe('https://opencode.ai/zen/go/v1')
+    expect(byId['opencode-go']?.apiFormat).toBe('openai')
+    expect(byId['opencode-go-anthropic']?.apiFormat).toBe('claude')
+    expect(byId['command-code']?.baseUrl).toBe('https://api.commandcode.ai/provider/v1')
+    expect(byId['xiaomi-mimo']?.baseUrl).toBe('https://api.xiaomimimo.com/v1')
+    expect(byId['xiaomi-mimo-anthropic']?.baseUrl).toBe('https://api.xiaomimimo.com/anthropic')
+    expect(byId['xiaomi-mimo']?.models.some((m) => m.modelId === 'mimo-v2.5-pro')).toBe(true)
+  })
 })

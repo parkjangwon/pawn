@@ -127,6 +127,12 @@ describe('deepseekCompat', () => {
     expect(deepSeekUserId('__general__', 's1')).toBe('pawn_s1')
   })
 
+  it('requires reasoning_content echo for MiMo thinking tool loops', () => {
+    expect(needsReasoningContentEcho('mimo-v2.5-pro')).toBe(true)
+    expect(needsReasoningContentEcho('xiaomi/mimo-v2.5')).toBe(true)
+    expect(needsReasoningContentEcho('gpt-4o')).toBe(false)
+  })
+
   it('echoes reasoning_content on the wire for tool loops', () => {
     expect(shouldEchoReasoningOnWire('deepseek-v4-flash', 'chain')).toBe(true)
     expect(shouldEchoReasoningOnWire('deepseek-v4-flash', '', true)).toBe(true)

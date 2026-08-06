@@ -106,6 +106,24 @@ export const KNOWN_PRICING: Record<string, ModelPricing & { tier: ModelTier; con
   'deepseek-chat': { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0.14, tier: 'mid', contextWindow: 1_000_000 },
   'deepseek-reasoner': { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0.14, tier: 'high', contextWindow: 1_000_000 },
 
+  // --- Xiaomi MiMo (https://mimo.mi.com/docs — V2.5 series; Go pricing mirror) ---
+  'mimo-v2.5-pro': { input: 0.435, output: 0.87, cacheRead: 0.003625, cacheWrite: 0.435, tier: 'high', contextWindow: 1_000_000 },
+  'mimo-v2.5': { input: 0.14, output: 0.28, cacheRead: 0.0028, cacheWrite: 0.14, tier: 'mid', contextWindow: 1_000_000 },
+
+  // --- Open-coding peers (OpenCode Go table, 2026-08) ---
+  'glm-5.2': { input: 1.4, output: 4.4, cacheRead: 0.26, cacheWrite: 1.4, tier: 'high', contextWindow: 200_000 },
+  'glm-5.1': { input: 1.4, output: 4.4, cacheRead: 0.26, cacheWrite: 1.4, tier: 'high', contextWindow: 200_000 },
+  'kimi-k3': { input: 3, output: 15, cacheRead: 0.3, cacheWrite: 3, tier: 'high', contextWindow: 1_000_000 },
+  'kimi-k2.7': { input: 0.95, output: 4, cacheRead: 0.19, cacheWrite: 0.95, tier: 'mid', contextWindow: 256_000 },
+  'kimi-k2.6': { input: 0.95, output: 4, cacheRead: 0.16, cacheWrite: 0.95, tier: 'mid', contextWindow: 256_000 },
+  'minimax-m3': { input: 0.3, output: 1.2, cacheRead: 0.06, cacheWrite: 0.3, tier: 'mid', contextWindow: 200_000 },
+  'minimax-m2.7': { input: 0.3, output: 1.2, cacheRead: 0.06, cacheWrite: 0.375, tier: 'mid', contextWindow: 200_000 },
+  'qwen3.8-max': { input: 2, output: 6, cacheRead: 0.25, cacheWrite: 2.5, tier: 'high', contextWindow: 256_000 },
+  'qwen3.7-max': { input: 2.5, output: 7.5, cacheRead: 0.5, cacheWrite: 3.125, tier: 'high', contextWindow: 256_000 },
+  'qwen3.7-plus': { input: 0.4, output: 1.6, cacheRead: 0.04, cacheWrite: 0.5, tier: 'mid', contextWindow: 256_000 },
+  'qwen3.6-plus': { input: 0.5, output: 3, cacheRead: 0.05, cacheWrite: 0.625, tier: 'mid', contextWindow: 256_000 },
+  hy3: { input: 0.14, output: 0.58, cacheRead: 0.035, cacheWrite: 0.14, tier: 'mid', contextWindow: 200_000 },
+
   // --- Moonshot / Kimi ---
   'moonshot-v1-8k': { input: 0.2, output: 2, cacheRead: 0.02, cacheWrite: 0.2, tier: 'low', contextWindow: 8_000 },
   'moonshot-v1-32k': { input: 0.4, output: 4, cacheRead: 0.04, cacheWrite: 0.4, tier: 'mid', contextWindow: 32_000 },
@@ -179,9 +197,11 @@ export function guessSupportsVision(modelId: string): boolean | undefined {
   // Explicit non-vision families first (substring order matters vs generic names).
   const noVision = [
     'deepseek-v4', 'deepseek-chat', 'deepseek-reasoner', 'deepseek-v3', 'deepseek-r1', 'deepseek',
+    'mimo-v2.5-pro', // text + tools + thinking; omni is mimo-v2.5 without -pro
     'llama-3.1', 'llama-3.3', 'llama3.3', 'llama3.1', 'llama-3',
     'mixtral', 'qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen2.5', 'qwen3',
-    'codestral', 'ministral', 'sonar-reasoning', 'sonar-pro', 'sonar'
+    'codestral', 'ministral', 'sonar-reasoning', 'sonar-pro', 'sonar',
+    'glm-5', 'kimi-k', 'minimax', 'hy3'
   ]
   for (const key of noVision) {
     if (id.includes(key)) return false
@@ -194,6 +214,7 @@ export function guessSupportsVision(modelId: string): boolean | undefined {
     'claude-fable', 'claude-opus', 'claude-sonnet', 'claude-haiku', 'claude-3', 'claude-4', 'claude-5',
     'gemini',
     'grok-4.5', 'grok-4.3', 'grok-4', 'grok-3',
+    'mimo-v2.5', // full-modal (image/audio/video); checked after mimo-v2.5-pro above
     'qwen-vl', 'qwen2-vl', 'llava', 'vision',
     'mistral-large', 'mistral-medium', 'mistral-small', 'pixtral'
   ]

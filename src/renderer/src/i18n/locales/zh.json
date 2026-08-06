@@ -305,15 +305,20 @@
       "baseUrlPlaceholder": "https://api.example.com",
       "apiKeyPlaceholder": "sk-...",
       "addWithModels": "添加（包含{{count}}个模型）",
-      "presetDesc": "知名提供商 — 粘贴API密钥即可使用",
+      "presetDesc": "知名提供商 — 粘贴API密钥即可使用。尽可能从提供商 API 同步模型列表。",
       "pasteApiKey": "粘贴API密钥",
       "hintBailian": "bailian.console.aliyun.com — 在 Token Plan 页面获取 API 密钥",
       "hintOllama": "本地运行 — 无需 API 密钥，需要启动 Ollama",
-      "hintLmStudio": "本地运行 — 无需 API 密钥，需要启动 LM Studio"
+      "hintLmStudio": "本地运行 — 无需 API 密钥，需要启动 LM Studio",
+      "syncModels": "同步模型",
+      "syncHint": "通过 GET {baseUrl}/models 获取最新目录并合并",
+      "syncOk": "已同步 {{total}} 个模型（+{{added}} 新增，{{updated}} 更新）",
+      "syncFail": "同步失败：{{error}}",
+      "syncSeedOnly": "保留种子模型（实时同步失败：{{error}}）"
     },
     "modelSection": {
       "title": "模型",
-      "desc": "管理可用模型。标记支持图像的模型后，DeepSeek 等纯文本模型会自动回退。",
+      "desc": "管理可用模型。建议在提供商上使用“同步模型”从 API 拉取列表。标记视觉能力后，纯文本模型可自动回退。",
       "empty": "未配置模型",
       "add": "添加模型",
       "selectProvider": "选择提供商",

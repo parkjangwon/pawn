@@ -113,6 +113,87 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     ]
   },
   {
+    // https://opencode.ai/docs/ko/go/ — subscription gateway for open coding models.
+    // OpenAI-compatible chat/completions (+ /models). Seed list is a fallback;
+    // prefer Settings → Sync models from the live GET /v1/models catalog.
+    id: 'opencode-go',
+    name: 'OpenCode Go',
+    apiFormat: 'openai',
+    baseUrl: 'https://opencode.ai/zen/go/v1',
+    keyHint: 'opencode.ai/auth — subscribe Go, copy API key',
+    models: [
+      model('deepseek-v4-flash', 'DeepSeek V4 Flash', 'mid'),
+      model('deepseek-v4-pro', 'DeepSeek V4 Pro', 'high'),
+      model('glm-5.2', 'GLM-5.2', 'high'),
+      model('kimi-k3', 'Kimi K3', 'high'),
+      model('kimi-k2.7-code', 'Kimi K2.7 Code', 'mid'),
+      model('mimo-v2.5', 'MiMo-V2.5', 'mid'),
+      model('mimo-v2.5-pro', 'MiMo-V2.5-Pro', 'high'),
+      model('grok-4.5', 'Grok 4.5', 'high'),
+      model('hy3', 'Hy3', 'mid')
+    ]
+  },
+  {
+    // OpenCode Go models that route via Anthropic Messages (MiniMax, Qwen).
+    // Same base URL as OpenCode Go; wire format is /messages.
+    id: 'opencode-go-anthropic',
+    name: 'OpenCode Go (Anthropic)',
+    apiFormat: 'claude',
+    baseUrl: 'https://opencode.ai/zen/go/v1',
+    keyHint: 'opencode.ai/auth — same Go key; MiniMax / Qwen via Messages API',
+    models: [
+      model('minimax-m3', 'MiniMax M3', 'mid'),
+      model('minimax-m2.7', 'MiniMax M2.7', 'mid'),
+      model('qwen3.8-max', 'Qwen3.8 Max', 'high'),
+      model('qwen3.7-max', 'Qwen3.7 Max', 'high'),
+      model('qwen3.7-plus', 'Qwen3.7 Plus', 'mid'),
+      model('qwen3.6-plus', 'Qwen3.6 Plus', 'mid')
+    ]
+  },
+  {
+    // https://commandcode.ai/docs/provider
+    // Base https://api.commandcode.ai/provider/v1 — chat/completions, messages, models.
+    id: 'command-code',
+    name: 'Command Code',
+    apiFormat: 'openai',
+    baseUrl: 'https://api.commandcode.ai/provider/v1',
+    keyHint: 'commandcode.ai/studio — Generate API key (Provider plan)',
+    models: [
+      model('claude-sonnet-5', 'Claude Sonnet 5', 'mid'),
+      model('claude-opus-5', 'Claude Opus 5', 'high'),
+      model('gpt-5.6-terra', 'GPT-5.6 Terra', 'mid'),
+      model('gpt-5.6-luna', 'GPT-5.6 Luna', 'low'),
+      model('deepseek/deepseek-v4-flash', 'DeepSeek V4 Flash', 'mid'),
+      model('deepseek/deepseek-v4-pro', 'DeepSeek V4 Pro', 'high'),
+      model('moonshotai/Kimi-K3', 'Kimi K3', 'high'),
+      model('xiaomi/mimo-v2.5-pro', 'MiMo-V2.5-Pro', 'high')
+    ]
+  },
+  {
+    // https://mimo.mi.com/docs/en-US/quick-start/summary/first-api-call
+    // Pay-as-you-go OpenAI path. Token Plan uses different base + tp- key.
+    id: 'xiaomi-mimo',
+    name: 'Xiaomi MiMo',
+    apiFormat: 'openai',
+    baseUrl: 'https://api.xiaomimimo.com/v1',
+    keyHint: 'platform.xiaomimimo.com — API Keys (sk-…); Token Plan uses token-plan base + tp-…',
+    models: [
+      model('mimo-v2.5', 'MiMo-V2.5 (full-modal)', 'mid'),
+      model('mimo-v2.5-pro', 'MiMo-V2.5-Pro', 'high')
+    ]
+  },
+  {
+    id: 'xiaomi-mimo-anthropic',
+    name: 'Xiaomi MiMo (Anthropic API)',
+    apiFormat: 'claude',
+    baseUrl: 'https://api.xiaomimimo.com/anthropic',
+    keyHint: 'platform.xiaomimimo.com — same MiMo key on Anthropic-compatible path',
+    models: [
+      model('mimo-v2.5', 'MiMo-V2.5', 'mid'),
+      model('mimo-v2.5-pro', 'MiMo-V2.5-Pro', 'high')
+    ]
+  },
+  {
     id: 'moonshot',
     name: 'Moonshot AI (Kimi)',
     apiFormat: 'openai',

@@ -22,9 +22,27 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 - **Hooks** — 兼容 Claude/Codex 的生命周期钩子（Claude + Pawn 配置合并去重）
 - **连接** — 设置 → 连接 中可选 Google / GitHub（OAuth）与 GitLab / AWS CodeCommit（PAT）工具（令牌仅本地）
 - **扩展** — MCP、Claude Code 技能/插件、`CLAUDE.md` / `AGENTS.md`、自动化、托盘
-- **路由** — 多模型自动路由、缓存稳定、DeepSeek thinking + 视觉回退
+- **路由** — 多模型自动路由、缓存稳定、DeepSeek/MiMo thinking + 视觉回退
+- **提供商（BYOK）** — OpenAI、Anthropic、OpenRouter、DeepSeek、**OpenCode Go**、**Command Code**、**Xiaomi MiMo**、Gemini、xAI、Groq 等粘贴密钥，或任意 OpenAI/Claude 兼容 base URL
+- **模型列表同步** — 设置 → 提供商 → **同步模型** 通过 `GET {baseUrl}/models` 拉取最新目录（预设仅为引导）
 
 界面：ChatGPT 风格布局，终端 / 文件 / Git / Diff / 浏览器面板，明暗主题。语言：英 / 韩 / 日 / 中。
+
+---
+
+## 提供商
+
+Pawn 不内置厂商密钥，请自备 API Key（BYOK）。
+
+| 预设 | 说明 |
+|------|------|
+| OpenAI、Anthropic、OpenRouter、Gemini、xAI、Groq 等 | 标准 OpenAI / Claude 兼容端点 |
+| DeepSeek | V4 Flash/Pro · 磁盘缓存 + thinking（工具循环须回传 `reasoning_content`） |
+| **OpenCode Go** | 开放编码模型订阅网关 — [文档](https://opencode.ai/docs/ko/go/) · `https://opencode.ai/zen/go/v1` |
+| **Command Code** | 多模型 Provider API — [文档](https://commandcode.ai/docs/provider) · `https://api.commandcode.ai/provider/v1` |
+| **Xiaomi MiMo** | OpenAI + Anthropic 路径 — [文档](https://mimo.mi.com/docs/en-US/quick-start/summary/first-api-call) · `https://api.xiaomimimo.com/v1` |
+
+添加提供商后用 **同步模型**（预设添加时也会尝试）对齐 API 列表。**Test** 使用该提供商已挂载的模型探测（不再固定 `gpt-4o-mini`）。
 
 ---
 

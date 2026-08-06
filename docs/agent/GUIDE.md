@@ -210,7 +210,11 @@ Project-scoped overrides user on id collision. UI: **Settings → MCP** (id, com
 ## 7. Providers & smart routing
 
 - OpenAI-format and Claude-format APIs; custom OpenAI-compatible endpoints
+- **Presets include:** OpenAI, Anthropic, OpenRouter, DeepSeek (+ Anthropic path), **OpenCode Go** (`https://opencode.ai/zen/go/v1`, + Anthropic Messages preset for MiniMax/Qwen), **Command Code** (`https://api.commandcode.ai/provider/v1`), **Xiaomi MiMo** (`https://api.xiaomimimo.com/v1` + Anthropic path), Gemini, xAI, Groq, Moonshot, Ollama, LM Studio, …
+- **Live model sync:** Settings → Providers → **Sync models** calls `GET {baseUrl}/models` and merges (add new, refresh metadata, keep user `enabled`/pricing). Seed models on preset add are a bootstrap; auto-sync runs after preset add when the network allows
+- **Connection Test:** probes with a model already attached to that provider (not hardcoded `gpt-4o-mini`); surfaces status + short error body
 - **DeepSeek first-class:** presets `deepseek-v4-flash` / `deepseek-v4-pro`; thinking (`thinking` + `reasoning_effort`); stream `reasoning_content`; **must replay `reasoning_content` on every tool-loop request** (empty string if none) or API returns 400. Pair with a vision model for screenshots/computer use
+- **Xiaomi MiMo:** same `reasoning_content` echo on thinking tool loops; dual auth headers (`Authorization` + `api-key`) for official hosts
 - **Router:** complexity `simple|medium|complex`; cache-aware stickiness; escalate after tool failures; provider cooldown 5s–120s; vision fallback when images present
 
 ---

@@ -139,7 +139,11 @@ Google·GitHub OAuth 빌드: [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECR
 ## 7. 프로바이더·라우팅
 
 - OpenAI / Claude 포맷, 커스텀 OpenAI 호환
+- **프리셋:** OpenAI, Anthropic, OpenRouter, DeepSeek(+ Anthropic 경로), **OpenCode Go** (`https://opencode.ai/zen/go/v1`, MiniMax/Qwen용 Anthropic 프리셋 별도), **Command Code** (`https://api.commandcode.ai/provider/v1`), **Xiaomi MiMo** (`https://api.xiaomimimo.com/v1` + Anthropic), Gemini, xAI, Groq, Ollama 등
+- **모델 동기화:** 설정 → 프로바이더 → **모델 동기화** = `GET {baseUrl}/models` 병합(신규 추가·메타 갱신·사용자 enabled/가격 유지). 프리셋 시드는 부트스트랩; 프리셋 추가 시 자동 동기화 시도
+- **연결 Test:** 해당 프로바이더에 붙은 모델로 프로브(`gpt-4o-mini` 고정 아님); 상태 코드 + 에러 메시지 요약
 - **DeepSeek:** `deepseek-v4-flash` / `pro` 프리셋. thinking 시 **툴 루프마다 `reasoning_content` 에코 필수**(없으면 빈 문자열). 없으면 HTTP 400. 스크린샷은 비전 모델 페어링
+- **Xiaomi MiMo:** thinking 툴 루프에서 동일 `reasoning_content` 에코; 공식 호스트는 `Authorization` + `api-key` 병행
 - 라우터: simple|medium|complex, 캐시 점성, 실패 시 에스컬레이션, 쿨다운, 비전 폴백
 
 ---

@@ -210,6 +210,10 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       ? deepSeekChatCompletionsUrl(provider.baseUrl)
       : `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`
     headers['Authorization'] = `Bearer ${token}`
+    // Xiaomi MiMo curl samples use `api-key`; OpenAI SDK uses Bearer — send both.
+    if (/xiaomimimo\.com/i.test(provider.baseUrl || '')) {
+      headers['api-key'] = token
+    }
     const deepSeekExtras = deepSeekChatBodyExtras({
       modelId: model.modelId,
       reasoningEffort,

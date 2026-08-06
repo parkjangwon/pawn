@@ -139,7 +139,11 @@ Google/GitHub の OAuth ビルド: [.github/OAUTH_SECRETS.md](../../.github/OAUT
 ## 7. プロバイダとルーティング
 
 - OpenAI / Claude 形式、カスタム OpenAI 互換
+- **プリセット:** OpenAI、Anthropic、OpenRouter、DeepSeek（+ Anthropic 経路）、**OpenCode Go**（`https://opencode.ai/zen/go/v1`、MiniMax/Qwen 用 Anthropic プリセット別）、**Command Code**（`https://api.commandcode.ai/provider/v1`）、**Xiaomi MiMo**（`https://api.xiaomimimo.com/v1` + Anthropic）、Gemini、xAI、Groq、Ollama など
+- **モデル同期:** 設定 → プロバイダー → **モデル同期** = `GET {baseUrl}/models` をマージ（追加・メタ更新・enabled/料金は維持）。プリセットシードはブートストラップ；追加時に自動同期を試行
+- **接続 Test:** 紐づいたモデルでプローブ（`gpt-4o-mini` 固定ではない）；ステータス + エラー要約を表示
 - **DeepSeek:** `deepseek-v4-flash` / `pro`。thinking 時は**ツールループごとに `reasoning_content` をエコー必須**（無ければ空文字）。欠けると HTTP 400。スクショはビジョンモデルと併用
+- **Xiaomi MiMo:** thinking ツールループでも `reasoning_content` エコー；公式ホストは `Authorization` + `api-key` 併用
 - ルータ: simple|medium|complex、キャッシュ粘性、失敗時エスカレーション、クールダウン、ビジョンフォールバック
 
 ---

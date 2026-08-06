@@ -305,15 +305,20 @@
       "baseUrlPlaceholder": "https://api.example.com",
       "apiKeyPlaceholder": "sk-...",
       "addWithModels": "Add (includes {{count}} models)",
-      "presetDesc": "Well-known providers — paste an API key and go",
+      "presetDesc": "Well-known providers — paste an API key and go. Model lists refresh from each provider’s API when possible.",
       "pasteApiKey": "Paste your API key",
       "hintBailian": "bailian.console.aliyun.com — issue an API key on the Token Plan page",
       "hintOllama": "Local server — no API key needed, Ollama must be running",
-      "hintLmStudio": "Local server — no API key needed, LM Studio must be running"
+      "hintLmStudio": "Local server — no API key needed, LM Studio must be running",
+      "syncModels": "Sync models",
+      "syncHint": "Fetch the live model catalog from GET {baseUrl}/models and merge it into your list",
+      "syncOk": "Synced {{total}} models (+{{added}} new, {{updated}} updated)",
+      "syncFail": "Sync failed: {{error}}",
+      "syncSeedOnly": "Seed models kept (live sync failed: {{error}})"
     },
     "modelSection": {
       "title": "Models",
-      "desc": "Manage available models. Mark which models accept images so DeepSeek-style text models can fall back automatically.",
+      "desc": "Manage available models. Prefer Sync models on a provider so the list comes from their API instead of stale seeds. Mark vision capability so text-only models can fall back automatically.",
       "empty": "No models configured",
       "add": "Add Model",
       "selectProvider": "Select Provider",

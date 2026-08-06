@@ -90,6 +90,9 @@ export function deepSeekChatCompletionsUrl(baseUrl: string): string {
 export function needsReasoningContentEcho(modelId: string): boolean {
   const id = (modelId || '').toLowerCase()
   if (isDeepSeekModel(id)) return true
+  // Xiaomi MiMo V2.5+: multi-turn tool calls in thinking mode require reasoning_content
+  // to be echoed back (mimo.mi.com first-api-call docs).
+  if (id.includes('mimo-v2') || id.includes('mimo/v2') || /(^|\/)mimo-v2/.test(id)) return true
   return (
     id.includes('reasoner') ||
     id.includes('qwq') ||

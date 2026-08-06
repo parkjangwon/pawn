@@ -139,7 +139,11 @@ Google/GitHub 的 OAuth 构建见 [.github/OAUTH_SECRETS.md](../../.github/OAUTH
 ## 7. 提供商与路由
 
 - OpenAI / Claude 格式及自定义 OpenAI 兼容端点
+- **预设含:** OpenAI、Anthropic、OpenRouter、DeepSeek（+ Anthropic 路径）、**OpenCode Go**（`https://opencode.ai/zen/go/v1`，MiniMax/Qwen 另有 Anthropic 预设）、**Command Code**（`https://api.commandcode.ai/provider/v1`）、**Xiaomi MiMo**（`https://api.xiaomimimo.com/v1` + Anthropic）、Gemini、xAI、Groq、Ollama 等
+- **模型同步:** 设置 → 提供商 → **同步模型** = `GET {baseUrl}/models` 合并（新增、刷新元数据、保留用户 enabled/定价）。预设种子仅引导；添加预设时尝试自动同步
+- **连接 Test:** 使用该提供商已挂载模型探测（非固定 `gpt-4o-mini`）；显示状态码 + 错误摘要
 - **DeepSeek:** `deepseek-v4-flash` / `pro`。thinking 时**每次工具循环必须回传 `reasoning_content`**（无则空串），否则 HTTP 400。截图需搭配视觉模型
+- **Xiaomi MiMo:** thinking 工具循环同样回传 `reasoning_content`；官方主机同时发送 `Authorization` 与 `api-key`
 - 路由: simple|medium|complex、缓存粘性、失败升级、冷却、视觉回退
 
 ---

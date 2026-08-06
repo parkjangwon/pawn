@@ -22,9 +22,27 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 - **Hooks** — Claude/Codex-compatible lifecycle hooks (Claude + Pawn configs merge with dedupe)
 - **Connect** — Optional Google & GitHub OAuth + GitLab & AWS CodeCommit (PAT) tools via Settings → Connections (tokens stay local)
 - **Extend** — MCP servers, Claude Code skills/plugins, `CLAUDE.md` / `AGENTS.md`, automations, tray
-- **Route** — Multi-model auto routing, cache-aware stickiness, DeepSeek thinking + vision fallback
+- **Route** — Multi-model auto routing, cache-aware stickiness, DeepSeek/MiMo thinking + vision fallback
+- **Providers (BYOK)** — Paste a key for OpenAI, Anthropic, OpenRouter, DeepSeek, **OpenCode Go**, **Command Code**, **Xiaomi MiMo**, Gemini, xAI, Groq, and more — or any custom OpenAI-/Claude-compatible base URL
+- **Live model lists** — Settings → Providers → **Sync models** pulls `GET {baseUrl}/models` so catalogs stay fresh (seed presets are only a bootstrap)
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
+
+---
+
+## Providers
+
+Pawn never ships vendor keys. You bring your own (BYOK).
+
+| Preset | Notes |
+|--------|--------|
+| OpenAI, Anthropic, OpenRouter, Google Gemini, xAI, Groq, … | Standard OpenAI- or Claude-compatible endpoints |
+| DeepSeek | V4 Flash/Pro; disk cache + thinking (`reasoning_content` echo on tool loops) |
+| **OpenCode Go** | Subscription gateway for open coding models — [docs](https://opencode.ai/docs/ko/go/) · base `https://opencode.ai/zen/go/v1` |
+| **Command Code** | Multi-model Provider API — [docs](https://commandcode.ai/docs/provider) · base `https://api.commandcode.ai/provider/v1` |
+| **Xiaomi MiMo** | OpenAI + Anthropic paths — [docs](https://mimo.mi.com/docs/en-US/quick-start/summary/first-api-call) · `https://api.xiaomimimo.com/v1` |
+
+After adding a provider, use **Sync models** (or rely on the auto-sync on preset add) so the model list comes from the provider API instead of a stale hardcoded catalog. **Test** probes with a model already attached to that provider (not a generic `gpt-4o-mini`).
 
 ---
 

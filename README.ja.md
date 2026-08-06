@@ -22,9 +22,27 @@ Pawn はまた別のクラウド囲い込み IDE ではありません。OpenAI 
 - **Hooks** — Claude/Codex 互換ライフサイクルフック（Claude + Pawn 設定をマージ・重複排除）
 - **連携** — 設定 → 接続で Google / GitHub（OAuth）と GitLab / AWS CodeCommit（PAT）ツール（トークンはローカルのみ）
 - **拡張** — MCP、Claude Code スキル/プラグイン、`CLAUDE.md` / `AGENTS.md`、自動化、トレイ
-- **ルーティング** — マルチモデル自動ルーティング、キャッシュ安定、DeepSeek thinking + ビジョンフォールバック
+- **ルーティング** — マルチモデル自動ルーティング、キャッシュ安定、DeepSeek/MiMo thinking + ビジョンフォールバック
+- **プロバイダー（BYOK）** — OpenAI、Anthropic、OpenRouter、DeepSeek、**OpenCode Go**、**Command Code**、**Xiaomi MiMo**、Gemini、xAI、Groq などにキーを貼るか、任意の OpenAI/Claude 互換 base URL
+- **モデル一覧同期** — 設定 → プロバイダー → **モデル同期** で `GET {baseUrl}/models` を取得（プリセットはブートストラップ用）
 
 UI: ChatGPT 風レイアウト、ターミナル / ファイル / Git / Diff / ブラウザパネル、ライト・ダーク。言語: 英・韓・日・中。
+
+---
+
+## プロバイダー
+
+Pawn はベンダー鍵を同梱しません。自分の API キー（BYOK）を使います。
+
+| プリセット | 説明 |
+|------------|------|
+| OpenAI、Anthropic、OpenRouter、Gemini、xAI、Groq など | 標準 OpenAI / Claude 互換エンドポイント |
+| DeepSeek | V4 Flash/Pro · ディスクキャッシュ + thinking（ツールループで `reasoning_content` エコー必須） |
+| **OpenCode Go** | オープンコーディングモデル向けサブスクゲートウェイ — [docs](https://opencode.ai/docs/ko/go/) · `https://opencode.ai/zen/go/v1` |
+| **Command Code** | マルチモデル Provider API — [docs](https://commandcode.ai/docs/provider) · `https://api.commandcode.ai/provider/v1` |
+| **Xiaomi MiMo** | OpenAI + Anthropic パス — [docs](https://mimo.mi.com/docs/en-US/quick-start/summary/first-api-call) · `https://api.xiaomimimo.com/v1` |
+
+プロバイダー追加後は **モデル同期**（プリセット追加時も試行）で API 一覧に合わせます。**Test** は紐づいたモデルでプローブします（`gpt-4o-mini` 固定ではない）。
 
 ---
 
