@@ -109,7 +109,13 @@
       "settings": "設定",
       "settingsDesc": "環境設定を開く",
       "export": "エクスポート",
-      "exportDesc": "チャットをMarkdownで保存"
+      "exportDesc": "チャットをMarkdownで保存",
+      "plan": "plan",
+      "planDesc": "Switch to Plan mode (read-only)",
+      "build": "build",
+      "buildDesc": "Switch to Build mode (full tools)",
+      "issuePr": "issue-pr",
+      "issuePrDesc": "Fix an issue and prepare a PR"
     },
     "mention": {
       "title": "ファイルとフォルダ",
@@ -192,7 +198,18 @@
     "sendQueue": "キュー",
     "sendSteer": "ステア",
     "sendQueueHint": "実行中はメッセージをキューに入れます",
-    "sendSteerHint": "中断して新しいメッセージで指示します"
+    "sendSteerHint": "中断して新しいメッセージで指示します",
+    "agentPlan": "Plan",
+    "agentBuild": "Build",
+    "agentPlanHint": "Plan: explore only (no edits). Alt+P to toggle.",
+    "agentBuildHint": "Build: full tools. Alt+P for Plan.",
+    "doneGateLabel": "Done gate",
+    "doneGateOff": "Off",
+    "doneGateOffDesc": "No auto checks after edits",
+    "doneGateTypecheck": "Typecheck",
+    "doneGateTypecheckDesc": "Auto typecheck after edits (auto/yolo)",
+    "doneGateTest": "Test",
+    "doneGateTestDesc": "Auto test after edits (auto/yolo)"
   },
   "modelPicker": {
     "noModels": "利用可能なモデルがありません",
@@ -816,7 +833,15 @@
     "undoTurn": "ターンを元に戻す",
     "undoing": "戻しています…",
     "reverted": "{{count}} ファイルを戻しました",
-    "failed": "元に戻せませんでした"
+    "failed": "元に戻せませんでした",
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "showMore": "+{{count}} more",
+    "showLess": "Show less",
+    "history": "History ({{count}})",
+    "undoTurnHint": "Restore files from this turn"
   },
   "notifications": {
     "taskComplete": "タスク完了",

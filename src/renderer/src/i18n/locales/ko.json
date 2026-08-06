@@ -109,7 +109,13 @@
       "settings": "설정",
       "settingsDesc": "환경설정 열기",
       "export": "내보내기",
-      "exportDesc": "대화를 Markdown으로 저장"
+      "exportDesc": "대화를 Markdown으로 저장",
+      "plan": "plan",
+      "planDesc": "계획 모드로 전환 (읽기 전용)",
+      "build": "build",
+      "buildDesc": "실행 모드로 전환 (전체 도구)",
+      "issuePr": "issue-pr",
+      "issuePrDesc": "이슈 수정 후 PR 준비 (#42 또는 URL)"
     },
     "mention": {
       "title": "파일 및 폴더",
@@ -192,7 +198,18 @@
     "sendQueue": "큐",
     "sendSteer": "스티어",
     "sendQueueHint": "에이전트 실행 중 메시지를 대기열에 넣습니다",
-    "sendSteerHint": "실행을 중단하고 새 메시지로 방향을 바꿉니다"
+    "sendSteerHint": "실행을 중단하고 새 메시지로 방향을 바꿉니다",
+    "agentPlan": "계획",
+    "agentBuild": "실행",
+    "agentPlanHint": "계획 모드: 탐색·설계만 (수정 불가). Alt+P 전환.",
+    "agentBuildHint": "실행 모드: 전체 도구. Alt+P로 계획 모드.",
+    "doneGateLabel": "완료 게이트",
+    "doneGateOff": "끔",
+    "doneGateOffDesc": "수정 후 자동 검사 안 함",
+    "doneGateTypecheck": "타입검사",
+    "doneGateTypecheckDesc": "코드 수정 후 자동 타입검사 (auto/yolo)",
+    "doneGateTest": "테스트",
+    "doneGateTestDesc": "코드 수정 후 자동 테스트 (auto/yolo)"
   },
   "modelPicker": {
     "noModels": "사용 가능한 모델이 없습니다",
@@ -816,7 +833,15 @@
     "undoTurn": "턴 되돌리기",
     "undoing": "되돌리는 중…",
     "reverted": "{{count}}개 파일 되돌림",
-    "failed": "되돌리기 실패"
+    "failed": "되돌리기 실패",
+    "justNow": "방금",
+    "minutesAgo": "{{count}}분 전",
+    "hoursAgo": "{{count}}시간 전",
+    "daysAgo": "{{count}}일 전",
+    "showMore": "+{{count}}개 더",
+    "showLess": "접기",
+    "history": "기록 ({{count}})",
+    "undoTurnHint": "이 턴의 파일 변경 되돌리기"
   },
   "notifications": {
     "taskComplete": "작업 완료",

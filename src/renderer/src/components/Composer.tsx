@@ -55,7 +55,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const {
     models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode,
-    reasoningEffort, setReasoningEffort, routingMode, setRoutingMode
+    reasoningEffort, setReasoningEffort, routingMode, setRoutingMode,
+    agentMode, setAgentMode, doneGate, setDoneGate
   } = useProviderStore()
   const usageTotals = useUsageStore((s) => (props.activeSessionId ? s.bySession[props.activeSessionId] : undefined))
   const lastRoute = useUsageStore((s) => (props.activeSessionId ? s.lastRoute[props.activeSessionId] : undefined))
@@ -251,6 +252,22 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     )}
                   </button>
                 )}
+                  <button
+                    type="button"
+                    className={`perm-chip perm-agent-${agentMode}`}
+                    onClick={() => setAgentMode(agentMode === 'plan' ? 'build' : 'plan')}
+                    title={agentMode === 'plan' ? t('contextBar.agentPlanHint') : t('contextBar.agentBuildHint')}
+                    aria-label={agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}
+                  >
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      {agentMode === 'plan' ? (
+                        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9l2 2 4-4" />
+                      ) : (
+                        <path d="M12 19V5M5 12l7-7 7 7" />
+                      )}
+                    </svg>
+                    <span>{agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}</span>
+                  </button>
                   <button className={`perm-chip perm-${permissionMode}`} onClick={() => { setShowPermPicker(!showPermPicker); setShowProjectPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}>
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                     <span>{permLabels[permissionMode]}</span>
@@ -264,6 +281,25 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                           {permissionMode === mode && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
                         </button>
                       ))}
+                      <div className="picker-group">
+                        <div className="picker-group-label">{t('contextBar.doneGateLabel')}</div>
+                        {([
+                          { id: 'off' as const, label: t('contextBar.doneGateOff'), desc: t('contextBar.doneGateOffDesc') },
+                          { id: 'typecheck' as const, label: t('contextBar.doneGateTypecheck'), desc: t('contextBar.doneGateTypecheckDesc') },
+                          { id: 'test' as const, label: t('contextBar.doneGateTest'), desc: t('contextBar.doneGateTestDesc') }
+                        ]).map((g) => (
+                          <button
+                            key={g.id}
+                            type="button"
+                            className={`picker-item ${doneGate === g.id ? 'active' : ''}`}
+                            onClick={() => { setDoneGate(g.id); setShowPermPicker(false) }}
+                          >
+                            <span className="picker-item-label">{g.label}</span>
+                            <span className="picker-item-desc">{g.desc}</span>
+                            {doneGate === g.id && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>

@@ -5,6 +5,7 @@ import { useUsageStore, type CallUsage } from './usage'
 import { executeTool, TOOL_SAFETY, type ToolCall, type ToolResult } from '../agent/tools'
 import { runProjectChecks } from '../agent/runChecks'
 import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
+import { repoMapPreamble } from '../agent/repoMap'
 import {
   route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute, clearSessionRoute,
   noteProviderFailure, noteProviderSuccess, refreshMeasuredPricing,
@@ -307,6 +308,22 @@ async function agentLoop(
      } catch {
        // Missing CLAUDE.md / skills is normal; keep the base layer.
      }
+     // Compact repo map (Aider-inspired). Failures are silent — search tools remain.
+     try {
+       const map = await repoMapPreamble(projectPath)
+       if (map) projectPreamble += (projectPreamble ? '\n\n' : '') + map
+     } catch {
+       /* optional */
+     }
+   }
+   const agentMode = useProviderStore.getState().agentMode
+   if (agentMode === 'plan') {
+     projectPreamble +=
+       (projectPreamble ? '\n\n' : '') +
+       '--- Agent mode: PLAN ---\n' +
+       'You are in Plan mode: explore, design, and call update_plan. ' +
+       'Do not edit files, run shell that changes state, or use computer/browser actions that mutate. ' +
+       'When ready to implement, ask the user to switch to Build (or call app_set_agent_mode build if allowed).'
    }
     // Long-term Memory injection (local, optional)
     try {
@@ -611,35 +628,38 @@ async function agentLoop(
         // asking. Green → surface OK and stop (no extra LLM round). Fail → feed
         // results back and continue so the agent can fix. Only auto/yolo (ask would
         // spam permission prompts). No paid services.
-        const perm = useProviderStore.getState().permissionMode
+        const { permissionMode: perm, doneGate, agentMode } = useProviderStore.getState()
+        const gateKind = doneGate === 'test' ? 'test' : doneGate === 'typecheck' ? 'typecheck' : null
         const canAuto =
+          agentMode === 'build' &&
+          gateKind != null &&
           (perm === 'auto' || perm === 'yolo') &&
           !!toolCwd &&
           turnHadCodeEdits &&
           !turnRanChecks &&
           !autoVerifyDone &&
           !signal.aborted
-        if (canAuto) {
+        if (canAuto && gateKind) {
           autoVerifyDone = true
           try {
-            const checkText = await runProjectChecks(toolCwd, 'typecheck', 90)
+            const checkText = await runProjectChecks(toolCwd, gateKind, 90)
             const noCmd =
               /No command for kind=|No standard check commands detected/i.test(checkText)
             if (!noCmd) {
               const failed = /\bFAIL\b|exit: (?!0)\d+/.test(checkText)
-              const sysId = `${Date.now()}-auto-typecheck`
+              const sysId = `${Date.now()}-auto-${gateKind}`
               useAppStore.getState().addMessage(projectId, sessionId, {
                 id: sysId,
                 role: 'system',
-                content: `[auto_verify typecheck]\n${checkText.slice(0, 12_000)}`,
+                content: `[auto_verify ${gateKind}]\n${checkText.slice(0, 12_000)}`,
                 createdAt: Date.now()
               })
               if (failed) {
                 entries.push({
                   role: 'user',
                   content:
-                    `<auto_verify kind="typecheck">\n${checkText.slice(0, 12_000)}\n</auto_verify>\n` +
-                    'Typecheck failed after your edits. Fix the errors with tools, then finish.'
+                    `<auto_verify kind="${gateKind}">\n${checkText.slice(0, 12_000)}\n</auto_verify>\n` +
+                    `${gateKind} failed after your edits. Fix the errors with tools, then finish.`
                 })
                 turnRanChecks = true
                 persistTranscript(sessionId, entries, decision.key, decision.tier)
@@ -647,7 +667,7 @@ async function agentLoop(
               }
             }
           } catch {
-            // typecheck optional — do not block the turn
+            // done-gate optional — do not block the turn
           }
         }
         persistTranscript(sessionId, entries, decision.key, decision.tier)

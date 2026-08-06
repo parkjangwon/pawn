@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { uid } from '../utils/uid'
 import { guessPricing, guessSupportsVision } from '../types/provider'
 import type { Provider, ModelEntry, RoutingMode } from '../types/provider'
+import { parseAgentMode, parseDoneGate, type AgentMode, type DoneGate } from '../agent/agentMode'
 
 interface ProviderState {
   providers: Provider[]
@@ -13,6 +14,10 @@ interface ProviderState {
   defaultSendMode: 'queue' | 'steer'
   permissionMode: 'ask' | 'auto' | 'yolo'
   reasoningEffort: 'auto' | 'low' | 'medium' | 'high'
+  /** Plan = read-only explore; Build = full tools (OpenCode/Cline-inspired). */
+  agentMode: AgentMode
+  /** Auto-verify after code edits: off | typecheck | test. */
+  doneGate: DoneGate
   initialized: boolean
   init: () => Promise<void>
 
@@ -28,6 +33,9 @@ interface ProviderState {
   setDefaultSendMode: (mode: 'queue' | 'steer') => void
   setPermissionMode: (mode: 'ask' | 'auto' | 'yolo') => void
   setReasoningEffort: (effort: 'auto' | 'low' | 'medium' | 'high') => void
+  setAgentMode: (mode: AgentMode) => void
+  toggleAgentMode: () => void
+  setDoneGate: (gate: DoneGate) => void
 }
 
 function hydrateModel(m: ModelEntry): ModelEntry {
@@ -60,7 +68,9 @@ function saveToBackend(state: ProviderState): void {
       visionModelId: state.visionModelId ?? '',
       defaultSendMode: state.defaultSendMode,
       permissionMode: state.permissionMode,
-      reasoningEffort: state.reasoningEffort
+      reasoningEffort: state.reasoningEffort,
+      agentMode: state.agentMode,
+      doneGate: state.doneGate
     }
   })
 }
@@ -74,6 +84,8 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   defaultSendMode: 'queue',
   permissionMode: 'ask',
   reasoningEffort: 'auto',
+  agentMode: 'build',
+  doneGate: 'typecheck',
   initialized: false,
 
   init: async () => {
@@ -105,6 +117,8 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         defaultSendMode: (settings.defaultSendMode as 'queue' | 'steer') || 'queue',
         permissionMode: (settings.permissionMode as 'ask' | 'auto' | 'yolo') || 'ask',
         reasoningEffort: (settings.reasoningEffort as 'auto' | 'low' | 'medium' | 'high') || 'auto',
+        agentMode: parseAgentMode(settings.agentMode),
+        doneGate: parseDoneGate(settings.doneGate),
         initialized: true
       })
     } catch {
@@ -196,5 +210,26 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   setReasoningEffort: (effort) => {
     set((s) => { const next = { ...s, reasoningEffort: effort }; saveToBackend(next); return { reasoningEffort: effort } })
+  },
+
+  setAgentMode: (mode) => {
+    set((s) => {
+      const next = { ...s, agentMode: mode }
+      saveToBackend(next)
+      return { agentMode: mode }
+    })
+  },
+
+  toggleAgentMode: () => {
+    const cur = get().agentMode
+    get().setAgentMode(cur === 'plan' ? 'build' : 'plan')
+  },
+
+  setDoneGate: (gate) => {
+    set((s) => {
+      const next = { ...s, doneGate: gate }
+      saveToBackend(next)
+      return { doneGate: gate }
+    })
   }
 }))

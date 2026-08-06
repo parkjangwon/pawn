@@ -161,6 +161,24 @@ const app_set_permission_mode: ToolHandler = async (call, projectPath, _signal, 
         return { toolCallId: call.id, content: `Permission mode set to ${mode}` }
       }
 
+const app_set_agent_mode: ToolHandler = async (call, _projectPath, _signal, _ctx, _api) => {
+  const mode = String(call.arguments.mode || '').toLowerCase()
+  if (mode !== 'plan' && mode !== 'build') {
+    return {
+      toolCallId: call.id,
+      content: `Unknown agent mode "${mode}". Valid: plan, build`,
+      isError: true
+    }
+  }
+  useProviderStore.getState().setAgentMode(mode)
+  return {
+    toolCallId: call.id,
+    content:
+      mode === 'plan'
+        ? 'Agent mode: Plan (read-only explore; mutations blocked)'
+        : 'Agent mode: Build (full tools; permission mode still applies)'
+  }
+}
 
 const app_set_reasoning: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
         const effort = call.arguments.effort as 'auto' | 'low' | 'medium' | 'high'
@@ -185,6 +203,7 @@ export const appHandlers: Record<string, ToolHandler> = {
   'app_create_automation': app_create_automation,
   'app_set_model': app_set_model,
   'app_set_permission_mode': app_set_permission_mode,
+  'app_set_agent_mode': app_set_agent_mode,
   'app_set_reasoning': app_set_reasoning,
   'app_toggle_theme': app_toggle_theme,
 }

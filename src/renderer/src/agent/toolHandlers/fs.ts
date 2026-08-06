@@ -2,6 +2,8 @@ import { resolveToolPath, formatFileRead } from '../pathUtils'
 import { applyEdit } from '../editUtils'
 import { useChangeLedger } from '../../stores/changeLedger'
 import { compileGlob, matchesGlob } from '../globMatch'
+import { formatVerifyNote, verifyEditedSource } from '../editVerify'
+import { clearRepoMapCache } from '../repoMap'
 import type { ToolHandler } from './types'
 
 const read_spreadsheet: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
@@ -88,16 +90,18 @@ const write_file: ToolHandler = async (call, projectPath, _signal, ctx, api) => 
           op: 'write',
           toolCallId: call.id
         })
+        clearRepoMapCache(projectPath)
+        const note = formatVerifyNote(wPath, verifyEditedSource(wPath, newContent))
         if (before !== null) {
           return {
             toolCallId: call.id,
-            content: `File written: ${wPath}`,
+            content: `File written: ${wPath}${note}`,
             diffData: { oldText: before, newText: newContent, filename, path: wPath }
           }
         }
         return {
           toolCallId: call.id,
-          content: `File created: ${wPath}`,
+          content: `File created: ${wPath}${note}`,
           diffData: { oldText: '', newText: newContent, filename, path: wPath }
         }
       }
@@ -134,9 +138,11 @@ const edit_file: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
           op: 'edit',
           toolCallId: call.id
         })
+        clearRepoMapCache(projectPath)
+        const note = formatVerifyNote(path, verifyEditedSource(path, applied.updated))
         return {
           toolCallId: call.id,
-          content: `File edited: ${path} (${applied.replacements} replacement${applied.replacements > 1 ? 's' : ''}${modeNote})`,
+          content: `File edited: ${path} (${applied.replacements} replacement${applied.replacements > 1 ? 's' : ''}${modeNote})${note}`,
           diffData: { oldText: before, newText: applied.updated, filename, path }
         }
       }

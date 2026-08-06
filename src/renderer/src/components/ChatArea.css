@@ -982,6 +982,30 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+.perm-chip.perm-agent-plan {
+  color: #0d9488;
+  background: rgba(13, 148, 136, 0.12);
+  border-color: rgba(13, 148, 136, 0.28);
+}
+
+.perm-chip.perm-agent-build {
+  color: var(--accent);
+  background: var(--accent-subtle);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
+}
+
+.app.dark .perm-chip.perm-agent-plan {
+  background: rgba(45, 212, 191, 0.12);
+  border-color: rgba(45, 212, 191, 0.28);
+  color: #5eead4;
+}
+
+.app.dark .perm-chip.perm-agent-build {
+  background: rgba(96, 165, 250, 0.12);
+  border-color: rgba(96, 165, 250, 0.28);
+  color: #93c5fd;
+}
+
 .perm-chip svg {
   flex-shrink: 0;
 }

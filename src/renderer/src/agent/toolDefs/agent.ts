@@ -48,6 +48,34 @@ export const AGENT_TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'repo_map',
+    description:
+      'Build a compact local map of the repository (paths + key symbols). Prefer this once at the start of large tasks before blind grepping. Faster than reading every file; not a substitute for read_file before edits.',
+    parameters: {
+      type: 'object',
+      properties: {
+        max_files: { type: 'number', description: 'Max source files to include (default 80, max 200)' },
+        rootPath: { type: 'string', description: 'Project root (optional)' }
+      }
+    }
+  },
+  {
+    name: 'issue_to_pr',
+    description:
+      'Start the Issue→PR playbook for a GitHub/GitLab issue number or URL. Returns a structured workflow the agent must follow with existing tools (fetch issue, edit, run_checks, git_pr_ready, optional create PR). Prefer when the user asks to fix an issue and open a PR.',
+    parameters: {
+      type: 'object',
+      properties: {
+        issue: {
+          type: 'string',
+          description: 'Issue number (#42), owner/repo#42, or full issue URL'
+        },
+        repo: { type: 'string', description: 'Optional owner/repo hint when only a number is given' }
+      },
+      required: ['issue']
+    }
+  },
+  {
     name: 'codebase_search',
     description:
       'Symbol-aware local search: finds likely definitions (function/class/type/const/…) and references for a name or phrase under the project. Prefer this to locate symbols before grep_search; use grep_search for arbitrary regex/text.',

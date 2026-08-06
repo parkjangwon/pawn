@@ -24,6 +24,7 @@ import {
   navigatePromptHistory,
   pushPromptHistory
 } from '../utils/promptHistory'
+import { buildIssuePrPlaybook, parseIssuePrArg } from '../agent/issueWorkflow'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -50,7 +51,7 @@ export default function ChatArea({
   const [showPermPicker, setShowPermPicker] = useState(false)
   const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, startNewChat, clearMessages, updateProjectName } = useAppStore()
   const { sendMessage, isStreaming, stopStreaming, queue } = useChatStore()
-  const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode } = useProviderStore()
+  const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode, toggleAgentMode, setAgentMode } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
   const [showUsagePopover, setShowUsagePopover] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -219,8 +220,25 @@ export default function ChatArea({
         icon: ic(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>),
         action: () => handleExport()
       },
+      {
+        id: 'plan', label: t('chat.slash.plan'), description: t('chat.slash.planDesc'),
+        icon: ic(<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><path d="M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2" /></>),
+        action: () => setAgentMode('plan')
+      },
+      {
+        id: 'build', label: t('chat.slash.build'), description: t('chat.slash.buildDesc'),
+        icon: ic(<><path d="M12 19V5M5 12l7-7 7 7" /></>),
+        action: () => setAgentMode('build')
+      },
+      {
+        id: 'issue-pr',
+        label: t('chat.slash.issuePr'),
+        description: t('chat.slash.issuePrDesc'),
+        icon: ic(<><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></>),
+        insert: '/issue-pr '
+      },
       ...skills
-        .filter((s) => !['new', 'clear', 'model', 'theme', 'settings', 'export'].includes(s.name.toLowerCase()))
+        .filter((s) => !['new', 'clear', 'model', 'theme', 'settings', 'export', 'plan', 'build', 'issue-pr'].includes(s.name.toLowerCase()))
         .map((s) => {
         const firstLine = (s.content.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('---') && !l.startsWith('#')) || s.source.split('/').pop() || '').slice(0, 60)
         return {
@@ -449,6 +467,14 @@ export default function ChatArea({
       const sk = skillByName.get(name)
       if (sk) blocks.push(`<skill name="${name}">\n${sk.content}\n</skill>`)
     }
+    // /issue-pr #42 — inject Issue→PR playbook (SWE-agent style)
+    const issuePrMatch = typedPrompt.match(/(?:^|\s)\/issue-pr(?:\s+(\S+))?/i)
+    if (issuePrMatch) {
+      const arg = (issuePrMatch[1] || '').trim()
+      const parsed = parseIssuePrArg(arg || typedPrompt.replace(/\/issue-pr/i, '').trim())
+      if (parsed) blocks.push(buildIssuePrPlaybook(parsed))
+      setAgentMode('build')
+    }
     const finalContent = blocks.length ? blocks.join('\n\n') + '\n\n' + typedPrompt : typedPrompt
 
     // Remember the raw typed prompt (not expanded @mentions) for ↑/↓ recall.
@@ -525,6 +551,13 @@ export default function ChatArea({
           }
         }
       }
+    }
+
+    // Alt+P: toggle Plan/Build (OpenCode Tab-equivalent without fighting focus).
+    if (e.key === 'p' && e.altKey && !e.metaKey && !e.ctrlKey) {
+      e.preventDefault()
+      toggleAgentMode()
+      return
     }
 
     if (e.key === 'Enter' && !e.shiftKey) {

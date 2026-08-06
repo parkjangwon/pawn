@@ -2,6 +2,7 @@ import { useProviderStore } from '../stores/provider'
 import { usePermissionStore, type PermissionType } from '../stores/permission'
 import { resolveToolPath } from './pathUtils'
 import { fireHook } from './hooksClient'
+import { isToolAllowedInAgentMode } from './agentMode'
 
 export type SafetyLevel = 'safe' | 'risky'
 
@@ -29,6 +30,9 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   memory_forget: 'risky',
   memory_update: 'risky',
   update_plan: 'safe',
+  repo_map: 'safe',
+  issue_to_pr: 'safe',
+  app_set_agent_mode: 'safe',
   shell_poll: 'safe',
   browser_navigate: 'safe',
   browser_snapshot: 'safe',
@@ -145,6 +149,9 @@ function permissionTypeFor(callName: string): PermissionType {
     git_pr_ready: 'file_read',
     run_checks: 'shell_exec',
     codebase_search: 'file_read',
+    repo_map: 'file_read',
+    issue_to_pr: 'file_read',
+    app_set_agent_mode: 'app',
     write_artifact: 'file_write',
     list_artifacts: 'file_read',
     terminal_list: 'file_read',
@@ -223,7 +230,12 @@ export async function checkPermission(
   projectPath?: string,
   opts?: { sessionId?: string; cwd?: string }
 ): Promise<boolean> {
-  const mode = useProviderStore.getState().permissionMode
+  const { permissionMode: mode, agentMode } = useProviderStore.getState()
+
+  // Plan mode hard-blocks mutating tools before YOLO/hooks can approve them.
+  if (!isToolAllowedInAgentMode(callName, agentMode)) {
+    return false
+  }
 
   const type = permissionTypeFor(callName)
 
@@ -325,8 +337,11 @@ export async function checkPermission(
     app_create_automation: 'Create Automation',
     app_set_model: 'Change Model',
     app_set_permission_mode: 'Change Permission Mode',
+    app_set_agent_mode: 'Change Agent Mode',
     app_set_reasoning: 'Change Reasoning Effort',
-    app_toggle_theme: 'Toggle Theme'
+    app_toggle_theme: 'Toggle Theme',
+    repo_map: 'Repository Map',
+    issue_to_pr: 'Issue→PR Playbook'
   }
 
   const mcpMatch = callName.startsWith('mcp__') ? callName.slice(5).match(/^(.+?)__(.+)$/) : null

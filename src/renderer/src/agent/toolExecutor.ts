@@ -3,6 +3,8 @@ import { fireHook } from './hooksClient'
 import { isMcpToolName, callMcpTool } from './mcp'
 import type { ToolCall, ToolResult } from './toolDefinitionsTypes'
 import { TOOL_HANDLERS, type ToolExecContext } from './toolHandlers'
+import { isToolAllowedInAgentMode, planModeBlockMessage } from './agentMode'
+import { useProviderStore } from '../stores/provider'
 
 export type { ToolExecContext } from './toolHandlers'
 export { compileGlob, matchesGlob } from './globMatch'
@@ -47,6 +49,11 @@ export async function executeTool(
         isError: true
       }
     }
+  }
+
+  const agentMode = useProviderStore.getState().agentMode
+  if (!isToolAllowedInAgentMode(call.name, agentMode)) {
+    return { toolCallId: call.id, content: planModeBlockMessage(call.name), isError: true }
   }
 
   const permitted = await checkPermission(call.name, call.arguments, signal, projectPath, {

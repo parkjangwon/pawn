@@ -63,6 +63,16 @@ export const APP_TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'app_set_agent_mode',
+    description:
+      'Switch agent mode: plan (read-only explore/design; no file/shell/computer mutations) or build (full tools). Prefer plan for architecture questions; build to implement.',
+    parameters: {
+      type: 'object',
+      properties: { mode: { type: 'string', enum: ['plan', 'build'], description: 'Agent mode' } },
+      required: ['mode']
+    }
+  },
+  {
     name: 'app_set_reasoning',
     description: 'Set the reasoning effort for reasoning-capable models: auto, low, medium or high.',
     parameters: {

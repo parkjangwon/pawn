@@ -5,6 +5,8 @@ import { usePlanStore } from '../../stores/plan'
 import { runProjectChecks } from '../runChecks'
 import { searchCodebase } from '../codebaseSearch'
 import { listArtifacts, writeArtifact } from '../artifacts'
+import { buildRepoMap } from '../repoMap'
+import { buildIssuePrPlaybook, parseIssuePrArg } from '../issueWorkflow'
 import type { ToolHandler } from './types'
 
 
@@ -103,13 +105,55 @@ const install_skill: ToolHandler = async (call, projectPath, _signal, ctx, api) 
         return { toolCallId: call.id, content: res.content, isError: res.isError === true }
       }
 
+const repo_map: ToolHandler = async (call, projectPath, _signal, _ctx, _api) => {
+  const root = resolveToolPath(
+    (call.arguments.rootPath as string) || projectPath || '',
+    projectPath
+  )
+  if (!root || root === '.') {
+    return { toolCallId: call.id, content: 'No project path set', isError: true }
+  }
+  const maxFiles =
+    call.arguments.max_files !== undefined ? Number(call.arguments.max_files) : undefined
+  const { text, fileCount, fromCache } = await buildRepoMap(root, { maxFiles })
+  if (!fileCount) {
+    return { toolCallId: call.id, content: text || 'No source files found', isError: !text }
+  }
+  return {
+    toolCallId: call.id,
+    content: fromCache ? `${text}\n\n(cache hit)` : text
+  }
+}
+
+const issue_to_pr: ToolHandler = async (call, projectPath, _signal, _ctx, _api) => {
+  const raw = String(call.arguments.issue || '').trim()
+  const parsed = parseIssuePrArg(raw)
+  if (!parsed) {
+    return {
+      toolCallId: call.id,
+      content: 'Provide issue as #42, owner/repo#42, or a full issue URL',
+      isError: true
+    }
+  }
+  if (call.arguments.repo) parsed.repoHint = String(call.arguments.repo)
+  const playbook = buildIssuePrPlaybook(parsed)
+  return {
+    toolCallId: call.id,
+    content:
+      playbook +
+      `\n\nProject cwd: ${projectPath || '(none)'}\n` +
+      `Begin step 1 now with the appropriate tools.`
+  }
+}
 
 export const agentHandlers: Record<string, ToolHandler> = {
-  'update_plan': update_plan,
-  'run_checks': run_checks,
-  'codebase_search': codebase_search,
-  'write_artifact': write_artifact,
-  'list_artifacts': list_artifacts,
-  'load_skill': load_skill,
-  'install_skill': install_skill,
+  update_plan,
+  run_checks,
+  codebase_search,
+  write_artifact,
+  list_artifacts,
+  load_skill,
+  install_skill,
+  repo_map,
+  issue_to_pr
 }

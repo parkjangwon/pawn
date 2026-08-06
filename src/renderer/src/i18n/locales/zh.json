@@ -109,7 +109,13 @@
       "settings": "设置",
       "settingsDesc": "打开偏好设置",
       "export": "导出",
-      "exportDesc": "将对话保存为 Markdown"
+      "exportDesc": "将对话保存为 Markdown",
+      "plan": "plan",
+      "planDesc": "切换到计划模式（只读）",
+      "build": "build",
+      "buildDesc": "切换到执行模式（完整工具）",
+      "issuePr": "issue-pr",
+      "issuePrDesc": "修复 Issue 并准备 PR"
     },
     "mention": {
       "title": "文件与文件夹",
@@ -192,7 +198,18 @@
     "sendQueue": "排队",
     "sendSteer": "转向",
     "sendQueueHint": "代理运行时将消息加入队列",
-    "sendSteerHint": "中断并用新消息重新引导"
+    "sendSteerHint": "中断并用新消息重新引导",
+    "agentPlan": "计划",
+    "agentBuild": "执行",
+    "agentPlanHint": "计划模式：仅探索设计（不可改文件）。Alt+P 切换。",
+    "agentBuildHint": "执行模式：完整工具。Alt+P 切回计划。",
+    "doneGateLabel": "完成门槛",
+    "doneGateOff": "关闭",
+    "doneGateOffDesc": "编辑后不自动检查",
+    "doneGateTypecheck": "类型检查",
+    "doneGateTypecheckDesc": "编辑后自动 typecheck（auto/yolo）",
+    "doneGateTest": "测试",
+    "doneGateTestDesc": "编辑后自动测试（auto/yolo）"
   },
   "modelPicker": {
     "noModels": "没有可用模型",
@@ -816,7 +833,15 @@
     "undoTurn": "撤销本轮",
     "undoing": "正在撤销…",
     "reverted": "已撤销 {{count}} 个文件",
-    "failed": "撤销失败"
+    "failed": "撤销失败",
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}} 分钟前",
+    "hoursAgo": "{{count}} 小时前",
+    "daysAgo": "{{count}} 天前",
+    "showMore": "还有 {{count}} 个",
+    "showLess": "收起",
+    "history": "历史 ({{count}})",
+    "undoTurnHint": "撤销本轮文件更改"
   },
   "notifications": {
     "taskComplete": "任务完成",

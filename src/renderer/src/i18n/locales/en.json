@@ -109,7 +109,13 @@
       "settings": "Settings",
       "settingsDesc": "Open preferences",
       "export": "Export",
-      "exportDesc": "Save the chat as Markdown"
+      "exportDesc": "Save the chat as Markdown",
+      "plan": "plan",
+      "planDesc": "Switch to Plan mode (read-only)",
+      "build": "build",
+      "buildDesc": "Switch to Build mode (full tools)",
+      "issuePr": "issue-pr",
+      "issuePrDesc": "Fix an issue and prepare a PR (#42 or URL)"
     },
     "mention": {
       "title": "Files & folders",
@@ -192,7 +198,18 @@
     "sendQueue": "Queue",
     "sendSteer": "Steer",
     "sendQueueHint": "Queue messages while the agent runs",
-    "sendSteerHint": "Interrupt and steer with a new message"
+    "sendSteerHint": "Interrupt and steer with a new message",
+    "agentPlan": "Plan",
+    "agentBuild": "Build",
+    "agentPlanHint": "Plan mode: explore and design only (no edits). Alt+P to toggle.",
+    "agentBuildHint": "Build mode: full tools. Alt+P to toggle Plan.",
+    "doneGateLabel": "Done gate",
+    "doneGateOff": "Off",
+    "doneGateOffDesc": "Do not auto-run checks after edits",
+    "doneGateTypecheck": "Typecheck",
+    "doneGateTypecheckDesc": "Auto typecheck after code edits (auto/yolo)",
+    "doneGateTest": "Test",
+    "doneGateTestDesc": "Auto test after code edits (auto/yolo)"
   },
   "modelPicker": {
     "noModels": "No models available",
@@ -816,7 +833,15 @@
     "undoTurn": "Undo turn",
     "undoing": "Reverting…",
     "reverted": "Reverted {{count}} file(s)",
-    "failed": "Revert failed"
+    "failed": "Revert failed",
+    "justNow": "just now",
+    "minutesAgo": "{{count}}m ago",
+    "hoursAgo": "{{count}}h ago",
+    "daysAgo": "{{count}}d ago",
+    "showMore": "+{{count}} more",
+    "showLess": "Show less",
+    "history": "History ({{count}})",
+    "undoTurnHint": "Restore files from this turn"
   },
   "notifications": {
     "taskComplete": "Task complete",

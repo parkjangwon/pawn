@@ -26,6 +26,70 @@
 .turn-review-count {
   color: var(--text-muted);
 }
+.turn-review-meta {
+  color: var(--text-muted);
+  font-size: 11px;
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.turn-review-op {
+  display: inline-block;
+  width: 0.85em;
+  margin-right: 2px;
+  font-weight: 700;
+  opacity: 0.75;
+}
+.turn-review-op[data-op='delete'] { color: var(--danger, #e55); }
+.turn-review-op[data-op='write'] { color: #16a34a; }
+.turn-review-history {
+  position: relative;
+  font-size: 11px;
+}
+.turn-review-history summary {
+  cursor: pointer;
+  color: var(--text-muted);
+  list-style: none;
+  user-select: none;
+}
+.turn-review-history summary::-webkit-details-marker { display: none; }
+.turn-review-history ul {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin: 0 0 6px;
+  padding: 6px;
+  list-style: none;
+  min-width: 160px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 20;
+}
+.turn-review-history li button {
+  width: 100%;
+  text-align: left;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  padding: 4px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 11px;
+}
+.turn-review-history li button:hover:not(:disabled) {
+  background: var(--bg-hover);
+}
+.turn-review-more {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 11px;
+  padding: 0 4px;
+}
 .turn-review-files {
   display: flex;
   flex-wrap: wrap;
