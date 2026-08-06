@@ -17,6 +17,13 @@ import TurnReviewBar from './TurnReviewBar'
 import ConfirmDialog from './ConfirmDialog'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { MAX_ATTACHMENTS, type ChatAttachment } from '../utils/attachments'
+import {
+  collectUserPrompts,
+  isCaretOnFirstLine,
+  isCaretOnLastLine,
+  navigatePromptHistory,
+  pushPromptHistory
+} from '../utils/promptHistory'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -69,6 +76,10 @@ export default function ChatArea({
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const projectMenuRef = useRef<HTMLDivElement>(null)
   const pendingCursor = useRef<number | null>(null)
+  /** Session-scoped user prompt history for ↑/↓ recall (oldest → newest). */
+  const promptHistoryRef = useRef<Map<string, string[]>>(new Map())
+  const [historyIndex, setHistoryIndex] = useState(-1)
+  const historyDraftRef = useRef('')
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
@@ -109,10 +120,12 @@ export default function ChatArea({
     }
   }, [lastMessageId])
 
-  // A new session starts with a tail-only window.
+  // A new session starts with a tail-only window; leave prompt-history browsing.
   useEffect(() => {
     setStartIndex(null)
     setNearTop(false)
+    setHistoryIndex(-1)
+    historyDraftRef.current = ''
   }, [activeSessionId])
 
   useEffect(() => {
@@ -339,11 +352,21 @@ export default function ChatArea({
     return () => document.removeEventListener('mousedown', handler)
   }, [showProjectMenu])
 
+  const ensurePromptHistory = (sessionId: string): string[] => {
+    let list = promptHistoryRef.current.get(sessionId)
+    if (!list) {
+      list = collectUserPrompts(messages)
+      promptHistoryRef.current.set(sessionId, list)
+    }
+    return list
+  }
+
   const handleSend = async (): Promise<void> => {
     if (!input.trim()) return
 
     let projectId = activeProjectId
     let sessionId = activeSessionId
+    const typedPrompt = input.trim()
 
     // Auto-create project + session if none active
     if (!projectId || !sessionId) {
@@ -361,7 +384,7 @@ export default function ChatArea({
       }
 
       // Create session with first message as title
-      const title = input.trim().slice(0, 40) + (input.trim().length > 40 ? '...' : '')
+      const title = typedPrompt.slice(0, 40) + (typedPrompt.length > 40 ? '...' : '')
       addSession(projectId, title)
       const store = useAppStore.getState()
       sessionId = store.activeSessionId || ''
@@ -426,18 +449,28 @@ export default function ChatArea({
       const sk = skillByName.get(name)
       if (sk) blocks.push(`<skill name="${name}">\n${sk.content}\n</skill>`)
     }
-    const finalContent = blocks.length ? blocks.join('\n\n') + '\n\n' + input.trim() : input.trim()
+    const finalContent = blocks.length ? blocks.join('\n\n') + '\n\n' + typedPrompt : typedPrompt
+
+    // Remember the raw typed prompt (not expanded @mentions) for ↑/↓ recall.
+    pushPromptHistory(ensurePromptHistory(sessionId), typedPrompt)
 
     sendMessage(projectId, sessionId, finalContent, sendMode, attachments)
     setInput('')
     setAttachments([])
     setTrigger(null)
+    setHistoryIndex(-1)
+    historyDraftRef.current = ''
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
     const value = e.target.value
     setInput(value)
+    // Editing while browsing history exits history mode (new draft).
+    if (historyIndex !== -1) {
+      setHistoryIndex(-1)
+      historyDraftRef.current = ''
+    }
     const cursor = e.target.selectionStart ?? value.length
     const before = value.slice(0, cursor)
     const m = before.match(/(^|\s)([/@])([^\s]*)$/)
@@ -463,6 +496,37 @@ export default function ChatArea({
     } else if (trigger && e.key === 'Escape') {
       e.preventDefault(); setTrigger(null); return
     }
+
+    // Session prompt history: ↑ older / ↓ newer (shell-style), only when the caret
+    // is on the first/last line so multi-line editing still moves normally.
+    if ((e.key === 'ArrowUp' || e.key === 'ArrowDown') && activeSessionId) {
+      const ta = textareaRef.current
+      const selStart = ta?.selectionStart ?? 0
+      const selEnd = ta?.selectionEnd ?? selStart
+      if (selStart === selEnd) {
+        const onEdge =
+          e.key === 'ArrowUp' ? isCaretOnFirstLine(input, selStart) : isCaretOnLastLine(input, selStart)
+        if (onEdge) {
+          const step = navigatePromptHistory(
+            e.key === 'ArrowUp' ? 'up' : 'down',
+            historyIndex,
+            historyDraftRef.current,
+            ensurePromptHistory(activeSessionId),
+            input
+          )
+          if (step) {
+            e.preventDefault()
+            historyDraftRef.current = step.draft
+            setHistoryIndex(step.index)
+            setInput(step.value)
+            setTrigger(null)
+            pendingCursor.current = step.value.length
+            return
+          }
+        }
+      }
+    }
+
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
       handleSend()
@@ -562,7 +626,12 @@ export default function ChatArea({
           confirmLabel={t('confirmDialog.confirm')}
           cancelLabel={t('confirmDialog.cancel')}
           onConfirm={() => {
-            if (activeProjectId && activeSessionId) clearMessages(activeProjectId, activeSessionId)
+            if (activeProjectId && activeSessionId) {
+              clearMessages(activeProjectId, activeSessionId)
+              promptHistoryRef.current.delete(activeSessionId)
+              setHistoryIndex(-1)
+              historyDraftRef.current = ''
+            }
             setShowClearConfirm(false)
           }}
           onCancel={() => setShowClearConfirm(false)}
