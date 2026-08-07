@@ -4,6 +4,7 @@ import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useThemeStore } from '../stores/theme'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
+import { useFocusTrap } from '../utils/focusTrap'
 import './CommandPalette.css'
 
 type GroupId = 'actions' | 'navigation' | 'sessions' | 'projects'
@@ -75,8 +76,10 @@ export default function CommandPalette({
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
+  const modalRef = useRef<HTMLDivElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const itemRefs = useRef<Map<number, HTMLButtonElement>>(new Map())
+  useFocusTrap(true, modalRef, { initialFocus: 'input, [data-cp-search]' })
 
   const projects = useAppStore((s) => s.projects)
   const activeProjectId = useAppStore((s) => s.activeProjectId)
@@ -316,11 +319,12 @@ export default function CommandPalette({
       role="presentation"
     >
       <div
+        ref={modalRef}
         className="cp-modal"
-        onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label={t('commandPalette.title')}
+        aria-label={t('commandPalette.title', { defaultValue: 'Command palette' })}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="cp-header">
           <div className="cp-search-field">
@@ -330,6 +334,7 @@ export default function CommandPalette({
             <input
               ref={inputRef}
               className="cp-input"
+              data-cp-search
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               onKeyDown={handleKeyDown}

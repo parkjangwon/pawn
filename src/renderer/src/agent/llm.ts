@@ -120,6 +120,10 @@ export interface LlmRequest {
   signal: AbortSignal
   /** Drives DeepSeek thinking effort / max_tokens when UI effort is auto. */
   complexity?: Complexity
+  /** When set, only these tools are exposed (subagent explore mode). */
+  toolAllowlist?: string[]
+  /** When set, these tools are removed from the exposed list (subagent worker). */
+  toolDenylist?: string[]
 }
 
 /** No data for this long means the provider connection is dead; bail out. */
@@ -128,8 +132,12 @@ const STREAM_IDLE_TIMEOUT_MS = 90_000
 export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const {
     decision, systemLayers, projectPreamble, sessionId, projectId, projectPath,
-    assistantMsgId, signal, complexity
+    assistantMsgId, signal, complexity, toolAllowlist, toolDenylist
   } = req
+  const toolListOpts = {
+    allowlist: toolAllowlist,
+    denylist: toolDenylist
+  }
   const { provider, model } = decision
   const { reasoningEffort } = useProviderStore.getState()
   const isBrowser = window.api?.platform === 'browser'
@@ -201,7 +209,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
           ? { type: 'text', text, cache_control: { type: 'ephemeral' } }
           : { type: 'text', text }
       ),
-      tools: toolsToClaude(mcpTools),
+      tools: toolsToClaude(mcpTools, toolListOpts),
       messages: withConversationCacheAnchors(injectClaudePreamble(toClaudeMessages(sendable), projectPreamble))
     }
   } else {
@@ -228,7 +236,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       max_tokens: deepSeekModel
         ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort, complexity })
         : 16_384,
-      tools: toolsToOpenAI(mcpTools),
+      tools: toolsToOpenAI(mcpTools, toolListOpts),
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
         : {}),
@@ -282,7 +290,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
 
   const applyFlush = (display: string): void => {
     lastFlushed = display
-    // Live view only — the app store (and DB) are touched once at stream end.
+    // Live view only — coalesced again inside the streaming store (rAF).
     useStreamingStore.getState().setContent(assistantMsgId, display)
   }
 
@@ -309,15 +317,22 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const flushNow = (): void => {
     if (rafId !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafId)
     rafId = null
-    if (pendingDisplay !== null && pendingDisplay !== lastFlushed) {
-      const next = pendingDisplay
-      pendingDisplay = null
-      lastFlushed = next
-      // Final flush persists the complete text and releases the live buffer.
-      useStreamingStore.getState().setContent(assistantMsgId, next)
-      useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, next, true)
-      useStreamingStore.getState().clear(assistantMsgId)
+    // Prefer pending frame, else latest built text so we never drop the tail.
+    const display =
+      pendingDisplay !== null
+        ? pendingDisplay
+        : reasoningText
+          ? `${reasoningText}${fullText ? '\n\n' + fullText : ''}`
+          : fullText
+    pendingDisplay = null
+    if (display && display !== lastFlushed) {
+      lastFlushed = display
     }
+    const finalText = lastFlushed || display || fullText
+    // Final flush: immediate store write + persist + drop live buffer.
+    useStreamingStore.getState().setContentNow(assistantMsgId, finalText)
+    useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, finalText, true)
+    useStreamingStore.getState().clear(assistantMsgId)
   }
 
   try {
@@ -468,8 +483,18 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     }
   } finally {
     if (idleTimer) clearTimeout(idleTimer)
-    reader.cancel().catch(() => {})
-    flushNow()
+    try {
+      await reader.cancel()
+    } catch {
+      /* already closed */
+    }
+    // Always land the latest tokens into the message store, even on abort,
+    // so the UI does not flash empty after Stop mid-stream.
+    try {
+      flushNow()
+    } catch {
+      /* store optional in tests */
+    }
   }
 
   // Flush any tool buffers the stream never closed. Anthropic closes every block,

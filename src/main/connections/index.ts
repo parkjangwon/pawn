@@ -22,6 +22,35 @@ export type { ConnectProgress } from './session'
 export { getGoogleAccessToken, getGithubAccessToken, getGitlabAccessToken, cancelConnect }
 export { isPatProvider, isConnectionProvider, ALL_CONNECTION_PROVIDERS, PAT_PROVIDERS } from './types'
 
+const GOOGLE_WRITE_SCOPE_MARKERS = [
+  'gmail.send',
+  'spreadsheets',
+  'calendar'
+] as const
+
+function googleWriteScopeStatus(scope?: string): {
+  writeScopesReady: boolean
+  writeScopesMissing: string[]
+} {
+  const s = (scope || '').toLowerCase()
+  const missing = GOOGLE_WRITE_SCOPE_MARKERS.filter((m) => !s.includes(m))
+  // "spreadsheets" (rw) vs "spreadsheets.readonly" — require non-readonly
+  const sheetsOk =
+    s.includes('spreadsheets') && !s.includes('spreadsheets.readonly')
+      ? true
+      : s.includes('/auth/spreadsheets') && !s.includes('spreadsheets.readonly')
+  const calOk =
+    (s.includes('/auth/calendar') && !s.includes('calendar.readonly')) ||
+    s.includes('calendar.events')
+  const gmailOk = s.includes('gmail.send')
+  const writeScopesReady = gmailOk && (sheetsOk || s.includes('/auth/spreadsheets')) && calOk
+  const missingOut: string[] = []
+  if (!gmailOk) missingOut.push('gmail.send')
+  if (!sheetsOk && !s.includes('/auth/spreadsheets')) missingOut.push('spreadsheets')
+  if (!calOk) missingOut.push('calendar')
+  return { writeScopesReady, writeScopesMissing: missingOut.length ? missingOut : missing.slice() }
+}
+
 export function getConnectionStatus(provider: ConnectionProvider): ConnectionStatus {
   const tokens = loadTokens(provider)
   const isPat = isPatProvider(provider)
@@ -42,7 +71,7 @@ export function getConnectionStatus(provider: ConnectionProvider): ConnectionSta
     hostHint = tokens.region
   }
 
-  return {
+  const base: ConnectionStatus = {
     provider,
     connected: !!tokens?.accessToken,
     accountLabel: tokens?.accountLabel,
@@ -52,6 +81,12 @@ export function getConnectionStatus(provider: ConnectionProvider): ConnectionSta
     updatedAt: tokens?.updatedAt,
     hostHint
   }
+  if (provider === 'google' && base.connected) {
+    const w = googleWriteScopeStatus(tokens?.scope)
+    base.writeScopesReady = w.writeScopesReady
+    base.writeScopesMissing = w.writeScopesMissing
+  }
+  return base
 }
 
 export function listConnectionStatuses(): ConnectionStatus[] {

@@ -77,7 +77,8 @@ function ensureBrowserView(): WebContentsView {
   wc.setUserAgent(BROWSER_USER_AGENT)
   // Popups navigate the same view instead of spawning windows the agent cannot see.
   wc.setWindowOpenHandler(({ url }) => {
-    wc.loadURL(url).catch(() => {})
+    const safe = normalizeBrowserUrl(url)
+    if (safe) wc.loadURL(safe).catch(() => {})
     return { action: 'deny' }
   })
   wc.on('console-message', (_e, level, message, line, sourceId) => {
@@ -123,12 +124,26 @@ function requireView(): { view: WebContentsView } | { error: string } {
   return { view: browserView }
 }
 
+const EVAL_TIMEOUT_MS = 30_000
+const EVAL_MAX_CHARS = 100_000
+
 /** Run an expression in the page and normalise the failure into a value. */
-async function runInPage<T>(code: string): Promise<T | { error: string }> {
+async function runInPage<T>(code: string, timeoutMs = EVAL_TIMEOUT_MS): Promise<T | { error: string }> {
   const guard = requireView()
   if ('error' in guard) return guard
+  if (typeof code !== 'string') return { error: 'Invalid script' }
+  if (code.length > EVAL_MAX_CHARS) {
+    return { error: `browser_eval code too large (${code.length} chars, max ${EVAL_MAX_CHARS})` }
+  }
   try {
-    return (await guard.view.webContents.executeJavaScript(code, true)) as T
+    const exec = guard.view.webContents.executeJavaScript(code, true) as Promise<T>
+    const result = await Promise.race([
+      exec,
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`Page script timed out after ${timeoutMs}ms`)), timeoutMs)
+      })
+    ])
+    return result
   } catch (err) {
     return { error: 'Page script failed: ' + String(err) }
   }

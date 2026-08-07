@@ -7,6 +7,14 @@ import { searchCodebase } from '../codebaseSearch'
 import { listArtifacts, writeArtifact } from '../artifacts'
 import { buildRepoMap } from '../repoMap'
 import { buildIssuePrPlaybook, parseIssuePrArg } from '../issueWorkflow'
+import {
+  formatSubagentResults,
+  runParallelSubagents,
+  runSubagent,
+  type SubagentIsolation,
+  type SubagentMode,
+  type SubagentTask
+} from '../subagent'
 import type { ToolHandler } from './types'
 
 
@@ -146,6 +154,90 @@ const issue_to_pr: ToolHandler = async (call, projectPath, _signal, _ctx, _api) 
   }
 }
 
+const spawn_agent: ToolHandler = async (call, projectPath, signal, ctx, _api) => {
+  if (ctx?.subagent) {
+    return {
+      toolCallId: call.id,
+      content: 'Nested spawn_agent is not allowed inside a subagent. Finish your task and return a summary.',
+      isError: true
+    }
+  }
+  const prompt = String(call.arguments.prompt || '').trim()
+  if (!prompt) {
+    return { toolCallId: call.id, content: 'prompt is required', isError: true }
+  }
+  const modeRaw = String(call.arguments.mode || 'explore')
+  const mode: SubagentMode = modeRaw === 'worker' ? 'worker' : 'explore'
+  const isoRaw = String(call.arguments.isolation || '')
+  const isolation: SubagentIsolation | undefined =
+    isoRaw === 'worktree' || isoRaw === 'none' ? isoRaw : undefined
+  const result = await runSubagent(
+    {
+      prompt,
+      name: call.arguments.name ? String(call.arguments.name) : undefined,
+      mode,
+      isolation,
+      maxRounds:
+        call.arguments.max_rounds !== undefined ? Number(call.arguments.max_rounds) : undefined
+    },
+    {
+      projectId: ctx?.projectId || '__general__',
+      sessionId: ctx?.sessionId || 'subagent',
+      projectPath,
+      signal
+    }
+  )
+  return {
+    toolCallId: call.id,
+    content: formatSubagentResults([result]),
+    isError: !result.ok
+  }
+}
+
+const parallel_agents: ToolHandler = async (call, projectPath, signal, ctx, _api) => {
+  if (ctx?.subagent) {
+    return {
+      toolCallId: call.id,
+      content: 'parallel_agents is not allowed inside a subagent.',
+      isError: true
+    }
+  }
+  const raw = call.arguments.tasks
+  if (!Array.isArray(raw) || raw.length === 0) {
+    return { toolCallId: call.id, content: 'tasks must be a non-empty array', isError: true }
+  }
+  const tasks: SubagentTask[] = raw.slice(0, 6).map((t, i) => {
+    const row = (t && typeof t === 'object' ? t : {}) as Record<string, unknown>
+    const modeRaw = String(row.mode || 'explore')
+    const isoRaw = String(row.isolation || '')
+    return {
+      prompt: String(row.prompt || ''),
+      name: row.name ? String(row.name) : `task-${i + 1}`,
+      mode: (modeRaw === 'worker' ? 'worker' : 'explore') as SubagentMode,
+      isolation:
+        isoRaw === 'worktree' || isoRaw === 'none'
+          ? (isoRaw as SubagentIsolation)
+          : undefined,
+      maxRounds: row.max_rounds !== undefined ? Number(row.max_rounds) : undefined
+    }
+  })
+  if (tasks.some((t) => !t.prompt.trim())) {
+    return { toolCallId: call.id, content: 'Each task needs a non-empty prompt', isError: true }
+  }
+  const results = await runParallelSubagents(tasks, {
+    projectId: ctx?.projectId || '__general__',
+    sessionId: ctx?.sessionId || 'subagent',
+    projectPath,
+    signal
+  })
+  const anyFail = results.some((r) => !r.ok)
+  return {
+    toolCallId: call.id,
+    content: formatSubagentResults(results),
+    isError: anyFail
+  }
+}
+
 export const agentHandlers: Record<string, ToolHandler> = {
   update_plan,
   run_checks,
@@ -155,5 +247,7 @@ export const agentHandlers: Record<string, ToolHandler> = {
   load_skill,
   install_skill,
   repo_map,
-  issue_to_pr
+  issue_to_pr,
+  spawn_agent,
+  parallel_agents
 }

@@ -1,8 +1,16 @@
 import { resolveToolPath } from '../pathUtils'
+import { useProviderStore } from '../../stores/provider'
 import type { ToolHandler } from './types'
 
 
-const shell_exec: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
+        if (signal?.aborted) {
+          return { toolCallId: call.id, content: 'Tool was not executed (run aborted).', isError: true }
+        }
+        const command = String(call.arguments.command || '').trim()
+        if (!command) {
+          return { toolCallId: call.id, content: 'command is required', isError: true }
+        }
         const timeoutArg = Number(call.arguments.timeout)
         const timeoutMs = Number.isFinite(timeoutArg) && timeoutArg > 0
           ? Math.min(300_000, Math.max(5_000, timeoutArg * 1000))
@@ -13,8 +21,27 @@ const shell_exec: ToolHandler = async (call, projectPath, _signal, ctx, api) => 
         )
         const workDir = cwd === '.' ? projectPath : cwd
         const background = Boolean(call.arguments.background)
+        const prefs = useProviderStore.getState()
+        const sandboxEnabled =
+          call.arguments.sandbox === false
+            ? false
+            : call.arguments.sandbox === true
+              ? true
+              : prefs.shellSandbox !== false
+        const network =
+          call.arguments.network === false
+            ? false
+            : call.arguments.network === true
+              ? true
+              : prefs.shellNetwork !== false
+        const sandbox = {
+          enabled: sandboxEnabled,
+          network,
+          projectRoot: projectPath,
+          jailCwd: prefs.shellCwdJail !== false
+        }
         if (background) {
-          const started = await api.shell.start(call.arguments.command as string, workDir)
+          const started = await api.shell.start(command, workDir, sandbox)
           if (started.error || !started.jobId) {
             return {
               toolCallId: call.id,
@@ -24,16 +51,37 @@ const shell_exec: ToolHandler = async (call, projectPath, _signal, ctx, api) => 
           }
           return {
             toolCallId: call.id,
-            content: `Background job started: ${started.jobId}${started.pid ? ` (pid ${started.pid})` : ''}\nUse shell_poll with job_id to check output; shell_kill to stop.`
+            content: `Background job started: ${started.jobId}${started.pid ? ` (pid ${started.pid})` : ''}${started.sandboxNote ? `\n(${started.sandboxNote})` : ''}\nUse shell_poll with job_id to check output; shell_kill to stop.`
           }
         }
-        const result = await api.shell.exec(
-          call.arguments.command as string,
-          workDir,
-          timeoutMs
-        )
+        // Stop/steer aborts kill live shells via shell.killAll; race the exec so
+        // we return promptly instead of waiting for the full timeout.
+        const execPromise = api.shell.exec(command, workDir, timeoutMs, sandbox)
+        const result = signal
+          ? await Promise.race([
+              execPromise,
+              new Promise<Awaited<typeof execPromise>>((resolve) => {
+                const onAbort = (): void => {
+                  void api.shell.killAll?.().catch?.(() => {})
+                  resolve({
+                    stdout: '',
+                    stderr: 'Command aborted (run stopped)',
+                    exitCode: 130,
+                    killed: true
+                  })
+                }
+                if (signal.aborted) {
+                  onAbort()
+                  return
+                }
+                signal.addEventListener('abort', onAbort, { once: true })
+                void execPromise.finally(() => signal.removeEventListener('abort', onAbort))
+              })
+            ])
+          : await execPromise
         const parts = [result.stdout, result.stderr].filter(Boolean)
         if (result.killed) parts.push('(command killed — stopped or timed out)')
+        if (result.sandboxNote) parts.push(`(${result.sandboxNote})`)
         const output = parts.join('\n')
         return {
           toolCallId: call.id,

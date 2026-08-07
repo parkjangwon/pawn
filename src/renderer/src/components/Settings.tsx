@@ -27,6 +27,7 @@ import MemorySettingsPanel from './MemorySettingsPanel'
 import HooksSettingsPanel from './HooksSettingsPanel'
 import logoGitlab from '../assets/logos/gitlab.svg'
 import logoCodeCommit from '../assets/logos/codecommit.svg'
+import { MCP_TEMPLATES } from '../agent/mcpTemplates'
 import './Settings.css'
 
 type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'mcp' | 'connections' | 'system' | 'shortcuts' | 'data'
@@ -106,6 +107,8 @@ export default function Settings({
     addProvider, removeProvider, updateProvider,
     addModel, removeModel, updateModel, syncModelsFromProvider,
     setRoutingMode, setDefaultSendMode, setPermissionMode,
+    shellSandbox, setShellSandbox, shellNetwork, setShellNetwork,
+    shellCwdJail, setShellCwdJail, autoMemoryConsolidate, setAutoMemoryConsolidate,
     setVisionModel
   } = useProviderStore()
 
@@ -155,6 +158,8 @@ export default function Settings({
     clientConfigured: boolean
     authMode?: 'oauth' | 'pat'
     hostHint?: string
+    writeScopesReady?: boolean
+    writeScopesMissing?: string[]
   }>>([])
   const [connBusy, setConnBusy] = useState<ConnProvider | null>(null)
   const [connMsg, setConnMsg] = useState('')
@@ -1037,6 +1042,46 @@ export default function Settings({
                   <button className={permissionMode === 'yolo' ? 'active' : ''} onClick={() => setPermissionMode('yolo')}>{t('permission.yolo')}</button>
                 </div>
               </div>
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">Shell sandbox</span>
+                  <span className="settings-row-desc">Env allowlist + dangerous-command block for agent shell_exec (default on)</span>
+                </div>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={shellSandbox} onChange={(e) => setShellSandbox(e.target.checked)} />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">Shell network</span>
+                  <span className="settings-row-desc">Allow network in sandboxed shells (off uses sandbox-exec on macOS when possible)</span>
+                </div>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={shellNetwork} onChange={(e) => setShellNetwork(e.target.checked)} />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">CWD jail</span>
+                  <span className="settings-row-desc">Refuse shell cwd outside the project root</span>
+                </div>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={shellCwdJail} onChange={(e) => setShellCwdJail(e.target.checked)} />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
+              <div className="settings-row">
+                <div className="settings-row-info">
+                  <span className="settings-row-label">Auto-consolidate memory</span>
+                  <span className="settings-row-desc">Merge near-duplicate memory cards after each turn</span>
+                </div>
+                <label className="toggle-switch">
+                  <input type="checkbox" checked={autoMemoryConsolidate} onChange={(e) => setAutoMemoryConsolidate(e.target.checked)} />
+                  <span className="toggle-slider" />
+                </label>
+              </div>
             </div>
 
             <h3 className="settings-subsection-title">{t('settings.memorySection.title')}</h3>
@@ -1131,6 +1176,40 @@ export default function Settings({
             <h2>{t('settings.mcpSection.title')}</h2>
             <p className="settings-desc">{t('settings.mcpSection.desc')}</p>
             <div className="settings-card">
+              <div className="settings-row-info" style={{ marginBottom: 8 }}>
+                <span className="settings-row-label">Templates</span>
+                <span className="settings-row-desc">
+                  One-click install common MCP servers (stdio or HTTP). Add secrets in env after install.
+                </span>
+              </div>
+              <div className="mcp-templates" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+                {MCP_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    type="button"
+                    className="test-btn"
+                    title={tpl.description}
+                    disabled={mcpAdding || (tpl.scope === 'project' && !projectPath)}
+                    onClick={() => {
+                      void (async () => {
+                        setMcpAdding(true)
+                        setMcpFormError(null)
+                        const res = await useMcpStore.getState().addServer(
+                          tpl.scope,
+                          tpl.scope === 'project' ? projectPath || undefined : undefined,
+                          tpl.id,
+                          tpl.input as McpServerInput
+                        )
+                        setMcpAdding(false)
+                        if (!res.ok) setMcpFormError(res.error || 'Template install failed')
+                        else void useMcpStore.getState().refresh(projectPath || undefined)
+                      })()
+                    }}
+                  >
+                    + {tpl.name}
+                  </button>
+                ))}
+              </div>
               {mcpLoading && mcpServers.length === 0 && <div className="settings-empty">{t('common.loading')}</div>}
               {!mcpLoading && mcpServers.length === 0 && <div className="settings-empty">{t('settings.mcpSection.empty')}</div>}
               {mcpServers.map((server) => (
@@ -1265,6 +1344,19 @@ export default function Settings({
                                 : isPat
                                   ? t('settings.connectionsSection.statusDisconnectedPat')
                                   : t('settings.connectionsSection.statusDisconnected')}
+                            {provider === 'google' && connected && st?.writeScopesReady === false && (
+                              <span className="conn-write-scope-warn">
+                                {' '}
+                                · Write scopes missing
+                                {st.writeScopesMissing?.length
+                                  ? ` (${st.writeScopesMissing.join(', ')})`
+                                  : ''}
+                                . Disconnect → Connect to enable Gmail send / Sheets write / Calendar create.
+                              </span>
+                            )}
+                            {provider === 'google' && connected && st?.writeScopesReady === true && (
+                              <span className="conn-write-scope-ok"> · Write scopes ready</span>
+                            )}
                           </span>
                         </div>
                       </div>

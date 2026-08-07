@@ -23,9 +23,12 @@ const GOOGLE_TOOLS = new Set<string>([
   'google_drive_read',
   'google_gmail_search',
   'google_gmail_read',
+  'google_gmail_send',
   'google_calendar_list',
+  'google_calendar_create',
   'google_tasks_list',
   'google_sheets_read',
+  'google_sheets_write',
   'google_docs_read',
   'google_slides_read'
 ])

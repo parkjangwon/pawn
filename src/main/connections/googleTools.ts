@@ -1,5 +1,5 @@
 /**
- * Google Workspace tools (read-only) using local OAuth tokens.
+ * Google Workspace tools (read + selective write) using local OAuth tokens.
  */
 
 import { getGoogleAccessToken } from './google'
@@ -477,15 +477,204 @@ export async function googleSlidesRead(presentationId: string): Promise<GoogleTo
   return { ok: true, text: truncate(slidesToText(res.body as Record<string, unknown>)) }
 }
 
+/** Send an email via Gmail API (users.messages.send). */
+export async function googleGmailSend(opts: {
+  to: string
+  subject: string
+  body: string
+  cc?: string
+  bcc?: string
+}): Promise<GoogleToolResult> {
+  const t = await tokenOrErr()
+  if (!('token' in t)) return t
+  const to = (opts.to || '').trim()
+  const subject = (opts.subject || '').trim()
+  const body = opts.body || ''
+  if (!to || !subject) return { ok: false, text: '', error: 'to and subject are required' }
+  if (to.length > 500 || subject.length > 500) {
+    return { ok: false, text: '', error: 'to/subject too long' }
+  }
+
+  const headers = [
+    `To: ${to}`,
+    opts.cc ? `Cc: ${opts.cc.trim()}` : null,
+    opts.bcc ? `Bcc: ${opts.bcc.trim()}` : null,
+    `Subject: ${subject}`,
+    'Content-Type: text/plain; charset=utf-8'
+  ]
+    .filter(Boolean)
+    .join('\r\n')
+  const raw = `${headers}\r\n\r\n${body}`
+  const encoded = Buffer.from(raw, 'utf8')
+    .toString('base64')
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+
+  const res = await fetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${t.token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ raw: encoded })
+  })
+  const json = (await res.json().catch(() => ({}))) as { id?: string; error?: { message?: string } }
+  if (!res.ok) {
+    return {
+      ok: false,
+      text: '',
+      error: json.error?.message || `Gmail send failed (${res.status})`
+    }
+  }
+  return {
+    ok: true,
+    text: truncate(`Email sent.\nid: ${json.id || '(unknown)'}\nto: ${to}\nsubject: ${subject}`)
+  }
+}
+
+/** Write/update a sheet range (USER_ENTERED). values: 2D array or JSON string. */
+export async function googleSheetsWrite(
+  spreadsheetId: string,
+  range: string,
+  values: unknown
+): Promise<GoogleToolResult> {
+  const t = await tokenOrErr()
+  if (!('token' in t)) return t
+  const id = spreadsheetId.trim()
+  const rng = range.trim()
+  if (!id || !rng) return { ok: false, text: '', error: 'spreadsheet_id and range are required' }
+
+  let matrix: unknown[][]
+  if (typeof values === 'string') {
+    try {
+      matrix = JSON.parse(values) as unknown[][]
+    } catch {
+      return { ok: false, text: '', error: 'values must be a JSON 2D array string' }
+    }
+  } else if (Array.isArray(values)) {
+    matrix = values as unknown[][]
+  } else {
+    return { ok: false, text: '', error: 'values must be a 2D array' }
+  }
+  if (!Array.isArray(matrix) || matrix.length === 0) {
+    return { ok: false, text: '', error: 'values empty' }
+  }
+  if (matrix.length > 500) return { ok: false, text: '', error: 'max 500 rows per write' }
+
+  const url =
+    `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(id)}/values/${encodeURIComponent(rng)}` +
+    '?valueInputOption=USER_ENTERED'
+  const res = await fetch(url, {
+    method: 'PUT',
+    headers: {
+      Authorization: `Bearer ${t.token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ range: rng, majorDimension: 'ROWS', values: matrix })
+  })
+  const json = (await res.json().catch(() => ({}))) as {
+    updatedCells?: number
+    updatedRange?: string
+    error?: { message?: string }
+  }
+  if (!res.ok) {
+    return {
+      ok: false,
+      text: '',
+      error: json.error?.message || `Sheets write failed (${res.status})`
+    }
+  }
+  return {
+    ok: true,
+    text: truncate(
+      `Sheet updated.\nrange: ${json.updatedRange || rng}\ncells: ${json.updatedCells ?? '?'}`
+    )
+  }
+}
+
+/** Create a calendar event. */
+export async function googleCalendarCreate(opts: {
+  summary: string
+  start: string
+  end: string
+  description?: string
+  location?: string
+  calendarId?: string
+  attendees?: string[]
+}): Promise<GoogleToolResult> {
+  const t = await tokenOrErr()
+  if (!('token' in t)) return t
+  const summary = (opts.summary || '').trim()
+  const start = (opts.start || '').trim()
+  const end = (opts.end || '').trim()
+  if (!summary || !start || !end) {
+    return { ok: false, text: '', error: 'summary, start, and end are required (ISO8601)' }
+  }
+  const cal = (opts.calendarId || 'primary').trim() || 'primary'
+  const body: Record<string, unknown> = {
+    summary,
+    start: start.includes('T') ? { dateTime: start } : { date: start },
+    end: end.includes('T') ? { dateTime: end } : { date: end }
+  }
+  if (opts.description) body.description = opts.description
+  if (opts.location) body.location = opts.location
+  if (opts.attendees?.length) {
+    body.attendees = opts.attendees.map((email) => ({ email: email.trim() })).filter((a) => a.email)
+  }
+
+  const res = await fetch(
+    `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(cal)}/events`,
+    {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${t.token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(body)
+    }
+  )
+  const json = (await res.json().catch(() => ({}))) as {
+    id?: string
+    htmlLink?: string
+    error?: { message?: string }
+  }
+  if (!res.ok) {
+    return {
+      ok: false,
+      text: '',
+      error: json.error?.message || `Calendar create failed (${res.status})`
+    }
+  }
+  return {
+    ok: true,
+    text: truncate(
+      [
+        'Event created.',
+        `id: ${json.id || ''}`,
+        `summary: ${summary}`,
+        `start: ${start}`,
+        `end: ${end}`,
+        json.htmlLink ? `link: ${json.htmlLink}` : null
+      ]
+        .filter(Boolean)
+        .join('\n')
+    )
+  }
+}
+
 export type GoogleToolName =
   | 'google_whoami'
   | 'google_drive_search'
   | 'google_drive_read'
   | 'google_gmail_search'
   | 'google_gmail_read'
+  | 'google_gmail_send'
   | 'google_calendar_list'
+  | 'google_calendar_create'
   | 'google_tasks_list'
   | 'google_sheets_read'
+  | 'google_sheets_write'
   | 'google_docs_read'
   | 'google_slides_read'
 
@@ -504,12 +693,30 @@ export async function runGoogleTool(
       return googleGmailSearch(String(args.query ?? ''), Number(args.max_results))
     case 'google_gmail_read':
       return googleGmailRead(String(args.message_id ?? ''))
+    case 'google_gmail_send':
+      return googleGmailSend({
+        to: String(args.to ?? ''),
+        subject: String(args.subject ?? ''),
+        body: String(args.body ?? ''),
+        cc: args.cc ? String(args.cc) : undefined,
+        bcc: args.bcc ? String(args.bcc) : undefined
+      })
     case 'google_calendar_list':
       return googleCalendarList({
         timeMin: args.time_min ? String(args.time_min) : undefined,
         timeMax: args.time_max ? String(args.time_max) : undefined,
         maxResults: Number(args.max_results),
         calendarId: args.calendar_id ? String(args.calendar_id) : undefined
+      })
+    case 'google_calendar_create':
+      return googleCalendarCreate({
+        summary: String(args.summary ?? ''),
+        start: String(args.start ?? args.time_min ?? ''),
+        end: String(args.end ?? args.time_max ?? ''),
+        description: args.description ? String(args.description) : undefined,
+        location: args.location ? String(args.location) : undefined,
+        calendarId: args.calendar_id ? String(args.calendar_id) : undefined,
+        attendees: Array.isArray(args.attendees) ? args.attendees.map(String) : undefined
       })
     case 'google_tasks_list':
       return googleTasksList(
@@ -520,6 +727,12 @@ export async function runGoogleTool(
       return googleSheetsRead(
         String(args.spreadsheet_id ?? ''),
         args.range ? String(args.range) : undefined
+      )
+    case 'google_sheets_write':
+      return googleSheetsWrite(
+        String(args.spreadsheet_id ?? ''),
+        String(args.range ?? ''),
+        args.values
       )
     case 'google_docs_read':
       return googleDocsRead(String(args.document_id ?? ''))

@@ -166,6 +166,50 @@ describe('message actions', () => {
     expect(messages[1].id).toBe('local-1')
   })
 
+  it('prefers in-memory streamed content over stale DB rows', async () => {
+    useAppStore.setState({
+      projects: [{
+        id: 'p1', name: 'P', paths: ['/p'],
+        sessions: [{
+          id: 's1', title: 'S', path: '', createdAt: 1,
+          messages: [{ id: 'a1', role: 'assistant', content: 'live longer text from stream', createdAt: 5 }]
+        }]
+      }],
+      activeProjectId: 'p1',
+      activeSessionId: 's1',
+      loadedSessions: new Set(),
+      loadingSessions: new Set()
+    })
+    dbMock.getMessages.mockResolvedValue([
+      { id: 'a1', role: 'assistant', content: 'stale', createdAt: 5 }
+    ])
+    await useAppStore.getState().loadMessages('p1', 's1')
+    const msg = useAppStore.getState().projects[0].sessions[0].messages.find((m) => m.id === 'a1')
+    expect(msg?.content).toBe('live longer text from stream')
+  })
+
+  it('does not start a second load while one is in flight', async () => {
+    let release!: (v: unknown) => void
+    const gate = new Promise((r) => { release = r })
+    dbMock.getMessages.mockImplementation(() => gate as Promise<unknown[]>)
+    useAppStore.setState({
+      projects: [{
+        id: 'p1', name: 'P', paths: ['/p'],
+        sessions: [{ id: 's1', title: 'S', path: '', createdAt: 1, messages: [] }]
+      }],
+      activeProjectId: 'p1',
+      activeSessionId: 's1',
+      loadedSessions: new Set(),
+      loadingSessions: new Set()
+    })
+    const p1 = useAppStore.getState().loadMessages('p1', 's1')
+    const p2 = useAppStore.getState().loadMessages('p1', 's1')
+    expect(useAppStore.getState().loadingSessions.has('s1')).toBe(true)
+    release([])
+    await Promise.all([p1, p2])
+    expect(dbMock.getMessages).toHaveBeenCalledTimes(1)
+  })
+
   it('updates, deletes and clears messages', () => {
     useAppStore.getState().addProject('P', ['/p'], 'p1')
     useAppStore.getState().addSession('p1', 'S')

@@ -413,6 +413,117 @@ export function searchMemories(input: MemorySearchInput): MemorySearchHit[] {
   return top
 }
 
+/**
+ * Merge near-duplicate cards by embedding cosine + content overlap.
+ * Keeps the higher-confidence / pinned card and folds tags.
+ */
+export function consolidateMemories(opts: {
+  projectId?: string | null
+  threshold?: number
+  dryRun?: boolean
+} = {}): {
+  ok: boolean
+  merged: number
+  examined: number
+  pairs: Array<{ kept: string; dropped: string; score: number }>
+} {
+  const threshold = Math.min(0.98, Math.max(0.75, opts.threshold ?? 0.9))
+  const db = getMemoryDb()
+  let rows = db
+    .prepare(
+      `SELECT * FROM memories WHERE enabled = 1 ORDER BY pinned DESC, confidence DESC, updated_at DESC LIMIT 400`
+    )
+    .all() as Row[]
+  if (opts.projectId) {
+    rows = rows.filter((r) => r.scope === 'user' || r.project_id === opts.projectId)
+  }
+
+  const pairs: Array<{ kept: string; dropped: string; score: number }> = []
+  const dropped = new Set<string>()
+  const embOf = (r: Row): Float32Array | null => {
+    const e = unpackEmbedding(r.embedding)
+    if (e) return e
+    return embedText(`${r.title}\n${r.content}`)
+  }
+
+  for (let i = 0; i < rows.length; i++) {
+    if (dropped.has(rows[i].id)) continue
+    const a = rows[i]
+    const ae = embOf(a)
+    if (!ae) continue
+    for (let j = i + 1; j < rows.length; j++) {
+      if (dropped.has(rows[j].id)) continue
+      const b = rows[j]
+      // Only merge same kind + scope (and same project when project-scoped)
+      if (a.kind !== b.kind || a.scope !== b.scope) continue
+      if (a.scope === 'project' && a.project_id !== b.project_id) continue
+      const be = embOf(b)
+      if (!be) continue
+      const sim = cosine(ae, be)
+      // Content inclusion also counts as merge
+      const incl =
+        a.content.includes(b.content) ||
+        b.content.includes(a.content) ||
+        a.content_hash === b.content_hash
+      if (sim < threshold && !incl) continue
+
+      // Keep a (higher rank order), drop b
+      pairs.push({ kept: a.id, dropped: b.id, score: Math.round(sim * 1000) / 1000 })
+      dropped.add(b.id)
+      if (!opts.dryRun) {
+        // Merge tags into keeper
+        let tagsA: string[] = []
+        let tagsB: string[] = []
+        try {
+          tagsA = JSON.parse(a.tags || '[]')
+        } catch {
+          /* */
+        }
+        try {
+          tagsB = JSON.parse(b.tags || '[]')
+        } catch {
+          /* */
+        }
+        const mergedTags = normalizeTags([...tagsA, ...tagsB, 'merged'])
+        const conf = Math.max(a.confidence, b.confidence)
+        const pinned = a.pinned || b.pinned
+        const content =
+          a.content.length >= b.content.length ? a.content : b.content
+        const title = a.title.length >= b.title.length ? a.title : b.title
+        const emb = packEmbedding(embedText(`${title}\n${content}\n${mergedTags.join(' ')}`))
+        db.prepare(
+          `UPDATE memories SET title=?, content=?, tags=?, confidence=?, pinned=?, embedding=?, content_hash=?, updated_at=?, hit_count=hit_count+? WHERE id=?`
+        ).run(
+          title,
+          content,
+          JSON.stringify(mergedTags),
+          conf,
+          pinned,
+          emb,
+          hashContent(content),
+          now(),
+          b.hit_count || 0,
+          a.id
+        )
+        db.prepare(`DELETE FROM memories WHERE id = ?`).run(b.id)
+        a.content = content
+        a.title = title
+        a.tags = JSON.stringify(mergedTags)
+        a.confidence = conf
+        a.pinned = pinned
+        a.embedding = emb
+      }
+    }
+  }
+
+  return {
+    ok: true,
+    merged: pairs.length,
+    examined: rows.length,
+    pairs: pairs.slice(0, 50)
+  }
+}
+
 export function listMemories(input: MemoryListInput = {}): {
   items: MemoryRecord[]
   total: number

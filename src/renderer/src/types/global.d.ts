@@ -5,6 +5,8 @@ declare global {
     | { type: 'interval'; minutes: number }
     | { type: 'daily'; hour: number; minute: number }
     | { type: 'weekly'; weekday: number; hour: number; minute: number }
+    | { type: 'cron'; expr: string }
+    | { type: 'file_watch'; path: string; debounceMinutes?: number }
 
   interface Routine {
     id: string
@@ -34,9 +36,12 @@ declare global {
     | { id: string; source: McpServerSource; status: 'error'; error: string }
 
   interface McpServerInput {
-    command: string
-    args: string[]
+    command?: string
+    args?: string[]
     env?: Record<string, string>
+    url?: string
+    type?: 'stdio' | 'http' | 'sse'
+    headers?: Record<string, string>
   }
 }
 
@@ -102,22 +107,58 @@ declare global {
           text?: string
         }>
       }
+      worktree?: {
+        create: (
+          projectPath: string,
+          runId: string
+        ) => Promise<{ ok: boolean; path?: string; branch?: string; error?: string }>
+        remove: (
+          projectPath: string,
+          worktreePath: string,
+          branch?: string
+        ) => Promise<{ ok: boolean; error?: string }>
+        diffStat: (worktreePath: string) => Promise<string>
+      }
       shell: {
         exec: (
           command: string,
           cwd?: string,
-          timeoutMs?: number
-        ) => Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }>
+          timeoutMs?: number,
+          sandbox?: {
+            enabled?: boolean
+            network?: boolean
+            projectRoot?: string
+            jailCwd?: boolean
+          }
+        ) => Promise<{
+          stdout: string
+          stderr: string
+          exitCode: number
+          killed?: boolean
+          sandboxNote?: string
+        }>
         execFile: (
           file: string,
           args: string[],
           cwd?: string,
-          timeoutMs?: number
+          timeoutMs?: number,
+          sandbox?: {
+            enabled?: boolean
+            network?: boolean
+            projectRoot?: string
+            jailCwd?: boolean
+          }
         ) => Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }>
         start: (
           command: string,
-          cwd?: string
-        ) => Promise<{ jobId?: string; pid?: number; error?: string }>
+          cwd?: string,
+          sandbox?: {
+            enabled?: boolean
+            network?: boolean
+            projectRoot?: string
+            jailCwd?: boolean
+          }
+        ) => Promise<{ jobId?: string; pid?: number; error?: string; sandboxNote?: string }>
         poll: (jobId: string) => Promise<{
           jobId?: string
           command?: string
@@ -665,6 +706,16 @@ declare global {
           pinned: number
           byKind: Record<string, number>
           byScope: Record<string, number>
+        }>
+        consolidate: (opts?: {
+          projectId?: string | null
+          threshold?: number
+          dryRun?: boolean
+        }) => Promise<{
+          ok: boolean
+          merged: number
+          examined: number
+          pairs: Array<{ kept: string; dropped: string; score: number }>
         }>
         injectBlock: (opts?: {
           query?: string

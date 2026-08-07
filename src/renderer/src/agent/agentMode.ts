@@ -34,7 +34,18 @@ const MUTATING_EXACT = new Set([
   'browser_eval',
   'browser_open_external',
   'app_set_permission_mode', // avoid plan elevating to yolo via tools
-  'app_set_model'
+  'app_set_model',
+  'git_add',
+  'git_commit',
+  'git_push',
+  'git_branch',
+  'git_stash',
+  'spawn_agent',
+  'parallel_agents',
+  'google_gmail_send',
+  'google_sheets_write',
+  'google_calendar_create',
+  'memory_consolidate'
 ])
 
 /** Explicitly allowed mutators that are actually planning (none currently). */

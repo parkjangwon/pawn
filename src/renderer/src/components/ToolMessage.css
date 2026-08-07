@@ -5,6 +5,14 @@
   background: var(--bg-elevated, var(--bg-secondary));
   overflow: hidden;
   font-size: 12px;
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-fast) var(--ease-out-soft),
+    background var(--dur-fast) var(--ease-out-soft);
+}
+
+.tool-message:hover {
+  border-color: color-mix(in srgb, var(--border-strong, var(--border-color)) 80%, var(--accent));
 }
 
 /* Dark: lift tool rows off the canvas so folded rows don't read as empty voids */
@@ -29,7 +37,7 @@
 
 .tool-chevron {
   flex-shrink: 0;
-  transition: transform 0.15s;
+  transition: transform var(--dur-fast) var(--ease-spring);
   opacity: 0.5;
 }
 
@@ -95,6 +103,7 @@
 .tool-message-body {
   border-top: 1px solid var(--border-color);
   padding: 8px 10px;
+  animation: slideDownIn var(--dur-fast) var(--ease-spring);
 }
 
 .tool-message-content {
@@ -142,4 +151,23 @@
 
 .tool-message-content a.tool-file-link:hover {
   text-decoration: underline;
+}
+
+.tool-message.tool-structure-warn {
+  border-color: color-mix(in srgb, #f59e0b 55%, var(--border-color));
+}
+
+.tool-message.tool-subagent {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border-color));
+}
+
+.tool-badge-warn {
+  font-size: 10px;
+  padding: 0 5px;
+  border-radius: 3px;
+  background: color-mix(in srgb, #f59e0b 22%, transparent);
+  color: #d97706;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
 }

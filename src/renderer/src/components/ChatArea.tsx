@@ -38,8 +38,9 @@ interface ChatAreaProps {
 
 // Long sessions render only the tail; scrolling to the top reveals older
 // messages in batches. New messages always append to the visible window.
-const DEFAULT_VISIBLE_MESSAGES = 300
-const EARLIER_BATCH = 300
+// Smaller window = snappier switch + less markdown work (user can load earlier).
+const DEFAULT_VISIBLE_MESSAGES = 100
+const EARLIER_BATCH = 80
 
 export default function ChatArea({
   onToggleSidebar, onOpenSettings, canGoBack, canGoForward, onGoBack, onGoForward
@@ -49,8 +50,10 @@ export default function ChatArea({
   const [sendMode, setSendMode] = useState<'queue' | 'steer'>(() => useProviderStore.getState().defaultSendMode)
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
-  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, startNewChat, clearMessages, updateProjectName } = useAppStore()
-  const { sendMessage, isStreaming, stopStreaming, queue } = useChatStore()
+  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, startNewChat, clearMessages, updateProjectName, loadedSessions, loadingSessions } = useAppStore()
+  const { sendMessage, isStreaming, streamingSessionId, stopStreaming, queue } = useChatStore()
+  /** Live tokens / thinking indicator only for the session currently on screen. */
+  const sessionStreaming = isStreaming && streamingSessionId === activeSessionId
   const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode, toggleAgentMode, setAgentMode } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
   const [showUsagePopover, setShowUsagePopover] = useState(false)
@@ -58,6 +61,8 @@ export default function ChatArea({
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const stickToBottomRef = useRef(true)
   const lastMessageIdRef = useRef<string | undefined>(undefined)
+  const scrollRafRef = useRef<number | null>(null)
+  const [sessionPaneClass, setSessionPaneClass] = useState('session-pane')
   const projectPickerRef = useRef<HTMLDivElement>(null)
   const permPickerRef = useRef<HTMLDivElement>(null)
   const modelPickerRef = useRef<HTMLDivElement>(null)
@@ -77,6 +82,8 @@ export default function ChatArea({
   const [showClearConfirm, setShowClearConfirm] = useState(false)
   const projectMenuRef = useRef<HTMLDivElement>(null)
   const pendingCursor = useRef<number | null>(null)
+  /** Prevents double-submit while @mention expansion awaits IPC. */
+  const sendingRef = useRef(false)
   /** Session-scoped user prompt history for ↑/↓ recall (oldest → newest). */
   const promptHistoryRef = useRef<Map<string, string[]>>(new Map())
   const [historyIndex, setHistoryIndex] = useState(-1)
@@ -127,12 +134,30 @@ export default function ChatArea({
     setNearTop(false)
     setHistoryIndex(-1)
     historyDraftRef.current = ''
+    stickToBottomRef.current = true
+    // Cross-fade pane on session switch
+    setSessionPaneClass('session-pane session-pane-enter')
+    const t = window.setTimeout(() => setSessionPaneClass('session-pane'), 220)
+    return () => window.clearTimeout(t)
   }, [activeSessionId])
 
+  // Scroll stick: one rAF max per frame during streaming (avoids layout thrash).
   useEffect(() => {
     if (!stickToBottomRef.current) return
-    messagesEndRef.current?.scrollIntoView({ behavior: isStreaming ? 'auto' : 'smooth' })
-  }, [messages.length, isStreaming, lastMessage?.content, streamingTail])
+    if (scrollRafRef.current !== null) return
+    const smooth = !sessionStreaming
+    scrollRafRef.current = requestAnimationFrame(() => {
+      scrollRafRef.current = null
+      if (!stickToBottomRef.current) return
+      messagesEndRef.current?.scrollIntoView({ behavior: smooth ? 'smooth' : 'auto' })
+    })
+    return () => {
+      if (scrollRafRef.current !== null) {
+        cancelAnimationFrame(scrollRafRef.current)
+        scrollRafRef.current = null
+      }
+    }
+  }, [messages.length, sessionStreaming, streamingTail])
 
   const handleMessageScroll = (e: React.UIEvent<HTMLDivElement>): void => {
     const el = e.currentTarget
@@ -159,6 +184,46 @@ export default function ChatArea({
     document.addEventListener('mousedown', onMouseDown)
     return () => document.removeEventListener('mousedown', onMouseDown)
   }, [anyDropdownOpen])
+
+  // Google-style "/" focus: when nothing is typing, jump into the composer.
+  // Does not insert "/"; type it again after focus for slash commands.
+  useEffect(() => {
+    const isTypingTarget = (el: EventTarget | null): boolean => {
+      if (!(el instanceof HTMLElement)) return false
+      const tag = el.tagName
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true
+      if (el.isContentEditable) return true
+      return Boolean(el.closest('[contenteditable="true"]'))
+    }
+    const isBlockedUi = (): boolean => {
+      // Overlays that own keyboard input
+      if (document.querySelector('.cp-overlay, .permission-overlay, .confirm-overlay, .settings-page')) {
+        return true
+      }
+      if (document.querySelector('[role="dialog"][aria-modal="true"]')) return true
+      return false
+    }
+    const onKeyDown = (e: KeyboardEvent): void => {
+      if (e.key !== '/' || e.metaKey || e.ctrlKey || e.altKey) return
+      if (e.repeat) return
+      if (isTypingTarget(e.target) || isTypingTarget(document.activeElement)) return
+      if (isBlockedUi()) return
+      const ta = textareaRef.current
+      if (!ta) return
+      e.preventDefault()
+      e.stopPropagation()
+      ta.focus()
+      const len = ta.value.length
+      try {
+        ta.setSelectionRange(len, len)
+      } catch {
+        /* ignore */
+      }
+    }
+    // Capture so we win over other document listeners when appropriate
+    window.addEventListener('keydown', onKeyDown, true)
+    return () => window.removeEventListener('keydown', onKeyDown, true)
+  }, [])
 
   const handleExport = (): void => {
     if (!activeSession || messages.length === 0) return
@@ -380,12 +445,24 @@ export default function ChatArea({
   }
 
   const handleSend = async (): Promise<void> => {
-    if (!input.trim()) return
+    if (!input.trim() && attachments.length === 0) return
+    if (sendingRef.current) return
+    sendingRef.current = true
 
     let projectId = activeProjectId
     let sessionId = activeSessionId
     const typedPrompt = input.trim()
+    const sendAttachments = attachments
+    // Clear composer immediately so a second Enter cannot re-send the same text
+    // while we await @mention / git expansion.
+    setInput('')
+    setAttachments([])
+    setTrigger(null)
+    setHistoryIndex(-1)
+    historyDraftRef.current = ''
+    if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
+    try {
     // Auto-create project + session if none active
     if (!projectId || !sessionId) {
       // Find or create general project
@@ -409,7 +486,12 @@ export default function ChatArea({
       projectId = store.activeProjectId || projectId
     }
 
-    if (!projectId || !sessionId) return
+    if (!projectId || !sessionId) {
+      // Session creation failed — put the draft back so the user can retry.
+      setInput(typedPrompt)
+      setAttachments(sendAttachments)
+      return
+    }
 
     // Resolve @mentions: specials (@git/@diff), folders, files (size-capped)
     const MENTION_FILE_CAP = 40_000
@@ -418,51 +500,67 @@ export default function ChatArea({
     for (const f of fileIndex) {
       if (f.isDirectory) pathByRel.set(f.rel.replace(/\/$/, '') + '/', f)
     }
-    const tokens = [...new Set((input.match(/@(\S+)/g) || []).map((tok) => tok.slice(1)))]
+    const tokens = [...new Set((typedPrompt.match(/@(\S+)/g) || []).map((tok) => tok.slice(1)))]
     const blocks: string[] = []
     const cwd = effectivePath || ''
     for (const raw of tokens) {
       const rel = raw.replace(/\/$/, '')
       if (rel === 'git' && cwd) {
-        const [branch, status] = await Promise.all([
-          window.api.shell.execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], cwd, 10_000),
-          window.api.shell.execFile('git', ['status', '--short', '--branch'], cwd, 10_000)
-        ])
-        blocks.push(
-          `<git>\nbranch: ${(branch.stdout || '').trim()}\n${(status.stdout || '').trim() || '(clean)'}\n</git>`
-        )
+        try {
+          const [branch, status] = await Promise.all([
+            window.api.shell.execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], cwd, 10_000),
+            window.api.shell.execFile('git', ['status', '--short', '--branch'], cwd, 10_000)
+          ])
+          blocks.push(
+            `<git>\nbranch: ${(branch.stdout || '').trim()}\n${(status.stdout || '').trim() || '(clean)'}\n</git>`
+          )
+        } catch {
+          blocks.push('<git>\n(git status unavailable)\n</git>')
+        }
         continue
       }
       if (rel === 'diff' && cwd) {
-        const d = await window.api.shell.execFile('git', ['diff', 'HEAD', '--no-color'], cwd, 20_000)
-        const text = (d.stdout || '(no changes)').slice(0, 30_000)
-        blocks.push(`<git_diff>\n${text}\n</git_diff>`)
+        try {
+          const d = await window.api.shell.execFile('git', ['diff', 'HEAD', '--no-color'], cwd, 20_000)
+          const text = (d.stdout || '(no changes)').slice(0, 30_000)
+          blocks.push(`<git_diff>\n${text}\n</git_diff>`)
+        } catch {
+          blocks.push('<git_diff>\n(git diff unavailable)\n</git_diff>')
+        }
         continue
       }
       const entry = pathByRel.get(raw) || pathByRel.get(rel) || pathByRel.get(rel + '/')
       if (!entry) continue
       if (entry.isDirectory) {
-        const listing = await window.api.fs.listDir(entry.path)
-        if (Array.isArray(listing)) {
-          const lines = listing
-            .slice(0, 80)
-            .map((e) => `${e.isDirectory ? '[DIR]' : '[FILE]'} ${e.name}`)
-            .join('\n')
-          blocks.push(`<folder path="${entry.rel}">\n${lines || '(empty)'}\n</folder>`)
+        try {
+          const listing = await window.api.fs.listDir(entry.path)
+          if (Array.isArray(listing)) {
+            const lines = listing
+              .slice(0, 80)
+              .map((e) => `${e.isDirectory ? '[DIR]' : '[FILE]'} ${e.name}`)
+              .join('\n')
+            blocks.push(`<folder path="${entry.rel}">\n${lines || '(empty)'}\n</folder>`)
+          }
+        } catch {
+          /* skip folder */
         }
         continue
       }
-      const r = await window.api.fs.readFile(entry.path)
-      if (typeof r === 'string') {
-        const body =
-          r.length > MENTION_FILE_CAP
-            ? r.slice(0, MENTION_FILE_CAP) + `\n...(truncated ${r.length - MENTION_FILE_CAP} chars)`
-            : r
-        blocks.push(`<file path="${entry.rel}">\n${body}\n</file>`)
+      try {
+        const r = await window.api.fs.readFile(entry.path)
+        if (typeof r === 'string') {
+          const body =
+            r.length > MENTION_FILE_CAP
+              ? r.slice(0, MENTION_FILE_CAP) + `\n...(truncated ${r.length - MENTION_FILE_CAP} chars)`
+              : r
+          blocks.push(`<file path="${entry.rel}">\n${body}\n</file>`)
+        }
+      } catch {
+        /* skip file */
       }
     }
     const skillByName = new Map(skills.map((s) => [s.name, s]))
-    const slashTokens = [...new Set((input.match(/\/([^\s/]+)/g) || []).map((tok) => tok.slice(1)))]
+    const slashTokens = [...new Set((typedPrompt.match(/\/([^\s/]+)/g) || []).map((tok) => tok.slice(1)))]
     for (const name of slashTokens) {
       const sk = skillByName.get(name)
       if (sk) blocks.push(`<skill name="${name}">\n${sk.content}\n</skill>`)
@@ -480,13 +578,10 @@ export default function ChatArea({
     // Remember the raw typed prompt (not expanded @mentions) for ↑/↓ recall.
     pushPromptHistory(ensurePromptHistory(sessionId), typedPrompt)
 
-    sendMessage(projectId, sessionId, finalContent, sendMode, attachments)
-    setInput('')
-    setAttachments([])
-    setTrigger(null)
-    setHistoryIndex(-1)
-    historyDraftRef.current = ''
-    if (textareaRef.current) textareaRef.current.style.height = 'auto'
+    sendMessage(projectId, sessionId, finalContent, sendMode, sendAttachments)
+    } finally {
+      sendingRef.current = false
+    }
   }
 
   const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>): void => {
@@ -577,6 +672,9 @@ export default function ChatArea({
 
   const triggerItems = getItems()
   const triggerOpen = trigger !== null
+  const sessionLoading =
+    !!activeSessionId &&
+    (loadingSessions.has(activeSessionId) || !loadedSessions.has(activeSessionId))
 
   return (
     <main className="chat-area">
@@ -590,24 +688,49 @@ export default function ChatArea({
         onGoBack={onGoBack}
         onGoForward={onGoForward}
       />
-      {!activeSession || messages.length === 0 ? (
-        <WelcomeScreen
-          activeProject={activeProject}
-          suggestions={suggestions}
-          onPick={(text) => { setInput(text); setTrigger(null) }}
-          onOpenSettings={onOpenSettings}
-        />
-      ) : (
-        <MessageList
-          messages={messages}
-          isStreaming={isStreaming}
-          endRef={messagesEndRef}
-          startIndex={effectiveStart}
-          nearTop={nearTop}
-          onShowEarlier={() => setStartIndex(Math.max(0, effectiveStart - EARLIER_BATCH))}
-          onScroll={handleMessageScroll}
-        />
-      )}
+      <div className={sessionPaneClass} key={activeSessionId || 'none'}>
+        {sessionLoading ? (
+          <div className="chat-skeleton" aria-busy="true" aria-label="Loading messages">
+            <div className="chat-skeleton-row user">
+              <div className="chat-skeleton-line short" />
+              <div className="chat-skeleton-bubble" />
+            </div>
+            <div className="chat-skeleton-row">
+              <div className="chat-skeleton-line short" />
+              <div className="chat-skeleton-line" />
+              <div className="chat-skeleton-line" />
+              <div className="chat-skeleton-line med" />
+            </div>
+            <div className="chat-skeleton-row user">
+              <div className="chat-skeleton-line short" />
+              <div className="chat-skeleton-bubble short" />
+            </div>
+            <div className="chat-skeleton-row">
+              <div className="chat-skeleton-line short" />
+              <div className="chat-skeleton-line" />
+              <div className="chat-skeleton-line med" />
+            </div>
+          </div>
+        ) : !activeSession || messages.length === 0 ? (
+          <WelcomeScreen
+            activeProject={activeProject}
+            suggestions={suggestions}
+            onPick={(text) => { setInput(text); setTrigger(null) }}
+            onOpenSettings={onOpenSettings}
+          />
+        ) : (
+          <MessageList
+            messages={messages}
+            isStreaming={sessionStreaming}
+            endRef={messagesEndRef}
+            startIndex={effectiveStart}
+            nearTop={nearTop}
+            onShowEarlier={() => setStartIndex(Math.max(0, effectiveStart - EARLIER_BATCH))}
+            onScroll={handleMessageScroll}
+            sessionKey={activeSessionId || ''}
+          />
+        )}
+      </div>
       <PlanStrip sessionId={activeSessionId} />
       <TurnReviewBar sessionId={activeSessionId} />
       <Composer

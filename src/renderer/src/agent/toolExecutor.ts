@@ -63,6 +63,10 @@ export async function executeTool(
   if (!permitted) {
     return { toolCallId: call.id, content: `Permission denied: ${call.name}`, isError: true }
   }
+  // Permission dialog can take a while; abort may land while the user is choosing.
+  if (signal?.aborted) {
+    return { toolCallId: call.id, content: 'Tool was not executed (run aborted).', isError: true }
+  }
 
   try {
     let result: ToolResult
@@ -74,6 +78,13 @@ export async function executeTool(
         result = { toolCallId: call.id, content: `Unknown tool: ${call.name}`, isError: true }
       } else {
         result = await handler(call, projectPath, signal, ctx, api)
+      }
+    }
+    if (signal?.aborted && !result.isError) {
+      // Tool finished after Stop — still report completion but mark soft-abort.
+      return {
+        ...result,
+        content: `${result.content}\n(note: run was aborted after this tool finished)`
       }
     }
 

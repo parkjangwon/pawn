@@ -1,21 +1,37 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePermissionStore } from '../stores/permission'
+import { useFocusTrap } from '../utils/focusTrap'
 import './PermissionDialog.css'
 
 export default function PermissionDialog(): React.JSX.Element | null {
   const { t } = useTranslation()
   const { pending, resolve, approveSession, addRule } = usePermissionStore()
+  const dialogRef = useRef<HTMLDivElement>(null)
+  const open = pending.length > 0
+  useFocusTrap(open, dialogRef, { initialFocus: '.allow-btn' })
 
   useEffect(() => {
     if (pending.length === 0) return
+    const currentId = pending[0]?.id
+    if (!currentId) return
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') resolve(pending[0].id, false)
+      // Re-read store so a rapid double-Escape cannot resolve a missing entry.
+      const head = usePermissionStore.getState().pending[0]
+      if (!head || head.id !== currentId) return
+      if (e.key === 'Escape') {
+        e.preventDefault()
+        resolve(head.id, false)
+        return
+      }
       if (e.key === 'Enter' && !e.metaKey && !e.ctrlKey && !e.altKey) {
         const tag = (e.target as HTMLElement | null)?.tagName
         if (tag === 'TEXTAREA' || tag === 'INPUT') return
+        // Only primary allow when focus is not already on a secondary action
+        const t = e.target as HTMLElement | null
+        if (t?.closest('.session-btn') || t?.closest('.deny-btn')) return
         e.preventDefault()
-        resolve(pending[0].id, true)
+        resolve(head.id, true)
       }
     }
     window.addEventListener('keydown', onKey)
@@ -50,6 +66,7 @@ export default function PermissionDialog(): React.JSX.Element | null {
   return (
     <div className="permission-overlay" role="presentation">
       <div
+        ref={dialogRef}
         className="permission-dialog"
         role="dialog"
         aria-modal="true"

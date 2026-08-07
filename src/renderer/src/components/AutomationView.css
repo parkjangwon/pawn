@@ -114,7 +114,10 @@
   border-radius: var(--radius-lg);
   background: var(--bg-elevated, var(--bg-primary));
   padding: var(--space-md) var(--space-lg);
-  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-instant) var(--ease-spring);
   display: flex;
   flex-direction: column;
 }
@@ -126,7 +129,12 @@
 
 .automation-card:hover {
   border-color: var(--text-muted);
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+  transform: translateY(-1px);
+}
+
+.automation-card.example:hover {
+  transform: translateY(-2px);
 }
 
 .app.dark .automation-card:hover {

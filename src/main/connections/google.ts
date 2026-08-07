@@ -18,11 +18,8 @@ import {
 import type { StoredTokens } from './types'
 
 /**
- * Read-only Workspace defaults — agent can see Drive + office suite + mail/calendar.
- * Write scopes intentionally omitted until product tools need them.
- *
- * Note: drive.readonly covers file download/export; Sheets/Docs/Slides scopes
- * enable the dedicated APIs (values, document structure, presentation JSON).
+ * Workspace defaults — read + selective write for agent automation.
+ * Write scopes: Gmail send, Sheets values, Calendar events.
  * After changing this list, users must Disconnect → Connect again.
  */
 export const GOOGLE_DEFAULT_SCOPES = [
@@ -31,13 +28,15 @@ export const GOOGLE_DEFAULT_SCOPES = [
   'profile',
   // Drive (files + export of Docs/Sheets/Slides binaries)
   'https://www.googleapis.com/auth/drive.readonly',
-  // Dedicated Workspace APIs
-  'https://www.googleapis.com/auth/spreadsheets.readonly',
+  // Sheets: read + write values
+  'https://www.googleapis.com/auth/spreadsheets',
   'https://www.googleapis.com/auth/documents.readonly',
   'https://www.googleapis.com/auth/presentations.readonly',
-  // Communication / schedule
+  // Gmail: read + send (compose)
   'https://www.googleapis.com/auth/gmail.readonly',
-  'https://www.googleapis.com/auth/calendar.readonly',
+  'https://www.googleapis.com/auth/gmail.send',
+  // Calendar: read + create events
+  'https://www.googleapis.com/auth/calendar',
   'https://www.googleapis.com/auth/tasks.readonly'
 ].join(' ')
 

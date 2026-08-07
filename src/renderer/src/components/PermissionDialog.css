@@ -1,13 +1,16 @@
 .permission-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px) saturate(1.15);
+  -webkit-backdrop-filter: blur(10px) saturate(1.15);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 2000;
   padding: 24px;
   box-sizing: border-box;
+  animation: fadeIn var(--dur-fast) var(--ease-out-soft);
 }
 
 .permission-dialog {
@@ -17,7 +20,8 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   padding: var(--space-xl);
-  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.35);
+  box-shadow: var(--shadow-elevated, 0 24px 48px rgba(0, 0, 0, 0.35));
+  animation: riseIn var(--dur-med) var(--ease-spring);
 }
 
 .permission-dialog h3 {

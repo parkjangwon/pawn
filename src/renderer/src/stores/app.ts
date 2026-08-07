@@ -33,6 +33,8 @@ interface AppState {
   activeSessionId: string | null
   initialized: boolean
   loadedSessions: Set<string>
+  /** Sessions with an in-flight message fetch (for skeleton UI). */
+  loadingSessions: Set<string>
   init: () => Promise<void>
   addProject: (name: string, paths: string[], id?: string) => void
   removeProject: (id: string) => void
@@ -76,6 +78,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   activeSessionId: null,
   initialized: false,
   loadedSessions: new Set<string>(),
+  loadingSessions: new Set<string>(),
 
   init: async () => {
     if (get().initialized) return
@@ -184,46 +187,89 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setActiveSession: (id) => {
     set({ activeSessionId: id })
+    // Do NOT clearAll streaming buffers here. Live tokens are keyed by message
+    // id; MessageRow only subscribes to its own id. Wiping on switch blanks the
+    // in-progress bubble if the user leaves and returns mid-stream.
     // Trigger lazy message load for the activated session
     if (!id) return
     const state = get()
     const project = state.projects.find((p) => p.sessions.some((s) => s.id === id))
-    if (project && !state.loadedSessions.has(id)) {
+    if (project && !state.loadedSessions.has(id) && !state.loadingSessions.has(id)) {
       state.loadMessages(project.id, id)
     }
   },
 
   loadMessages: async (projectId, sessionId) => {
-    if (get().loadedSessions.has(sessionId)) return
+    // Claim the in-flight slot atomically so two callers can't both fetch.
+    let claimed = false
+    set((s) => {
+      if (s.loadedSessions.has(sessionId) || s.loadingSessions.has(sessionId)) return s
+      claimed = true
+      return { loadingSessions: new Set([...s.loadingSessions, sessionId]) }
+    })
+    if (!claimed) return
     try {
       const raw = await window.api.db.getMessages(sessionId)
       const fetched: Message[] = Array.isArray(raw) ? (raw as Message[]) : []
-      set((s) => ({
-        loadedSessions: new Set([...s.loadedSessions, sessionId]),
-        projects: s.projects.map((p) =>
-          p.id === projectId
-            ? {
-                ...p,
-                sessions: p.sessions.map((ss) => {
-                  if (ss.id !== sessionId) return ss
-                  // A message may have been added locally while the fetch was
-                  // in flight (user sent a message right after opening the
-                  // session); merge by id instead of replacing.
-                  const byId = new Map(fetched.map((m) => [m.id, m]))
-                  const merged = [...fetched]
-                  for (const local of ss.messages) {
-                    if (!byId.has(local.id)) merged.push(local)
-                  }
-                  merged.sort((a, b) => a.createdAt - b.createdAt)
-                  return { ...ss, messages: merged }
-                })
-              }
-            : p
-        )
-      }))
+      set((s) => {
+        // Session may have been deleted while the fetch was in flight.
+        const stillExists = s.projects.some((p) => p.sessions.some((ss) => ss.id === sessionId))
+        const loading = new Set(s.loadingSessions)
+        loading.delete(sessionId)
+        if (!stillExists) {
+          return { loadingSessions: loading }
+        }
+        return {
+          loadingSessions: loading,
+          loadedSessions: new Set([...s.loadedSessions, sessionId]),
+          projects: s.projects.map((p) =>
+            p.id === projectId
+              ? {
+                  ...p,
+                  sessions: p.sessions.map((ss) => {
+                    if (ss.id !== sessionId) return ss
+                    // Merge local + fetched. Prefer local when the same id already
+                    // exists in memory with different content (stream may have
+                    // advanced past the last DB flush mid-fetch).
+                    const byId = new Map(fetched.map((m) => [m.id, m]))
+                    for (const local of ss.messages) {
+                      const remote = byId.get(local.id)
+                      if (!remote) {
+                        byId.set(local.id, local)
+                        continue
+                      }
+                      const localNewer =
+                        (local.createdAt || 0) > (remote.createdAt || 0) ||
+                        (local.content?.length || 0) > (remote.content?.length || 0) ||
+                        Boolean(local.modelLabel && !remote.modelLabel)
+                      if (localNewer) {
+                        byId.set(local.id, {
+                          ...remote,
+                          ...local,
+                          // Keep whichever model label is set.
+                          modelLabel: local.modelLabel || remote.modelLabel
+                        })
+                      }
+                    }
+                    const merged = Array.from(byId.values())
+                    merged.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
+                    return { ...ss, messages: merged }
+                  })
+                }
+              : p
+          )
+        }
+      })
     } catch {
       // Mark as loaded even on error to avoid infinite retries
-      set((s) => ({ loadedSessions: new Set([...s.loadedSessions, sessionId]) }))
+      set((s) => {
+        const loading = new Set(s.loadingSessions)
+        loading.delete(sessionId)
+        return {
+          loadingSessions: loading,
+          loadedSessions: new Set([...s.loadedSessions, sessionId])
+        }
+      })
     }
   },
 

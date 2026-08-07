@@ -133,10 +133,46 @@ const memory_update: ToolHandler = async (call, projectPath, _signal, ctx, api) 
       }
 
 
+const memory_consolidate: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
+  if (!api.memory?.consolidate) {
+    return {
+      toolCallId: call.id,
+      content: 'Memory consolidate is only available in the desktop app.',
+      isError: true
+    }
+  }
+  const projectId = (await import('../../stores/app')).useAppStore.getState().activeProjectId
+  const res = await api.memory.consolidate({
+    projectId: projectId && projectId !== '__general__' ? projectId : null,
+    threshold: call.arguments.threshold != null ? Number(call.arguments.threshold) : undefined,
+    dryRun: call.arguments.dry_run === true
+  })
+  if (!res?.ok) {
+    return { toolCallId: call.id, content: 'Consolidate failed', isError: true }
+  }
+  const pairLines = (res.pairs || [])
+    .slice(0, 20)
+    .map(
+      (p: { kept: string; dropped: string; score: number }) =>
+        `- kept ${p.kept} ← dropped ${p.dropped} (score=${p.score})`
+    )
+  return {
+    toolCallId: call.id,
+    content: [
+      `# Memory consolidate`,
+      `examined: ${res.examined}`,
+      `merged: ${res.merged}${call.arguments.dry_run === true ? ' (dry_run)' : ''}`,
+      '',
+      ...(pairLines.length ? pairLines : ['(no near-duplicates found)'])
+    ].join('\n')
+  }
+}
+
 export const memoryHandlers: Record<string, ToolHandler> = {
-  'memory_search': memory_search,
-  'memory_save': memory_save,
-  'memory_list': memory_list,
-  'memory_forget': memory_forget,
-  'memory_update': memory_update,
+  memory_search,
+  memory_save,
+  memory_list,
+  memory_forget,
+  memory_update,
+  memory_consolidate
 }

@@ -16,12 +16,23 @@ describe('new tools registration', () => {
       'run_checks',
       'codebase_search',
       'git_pr_ready',
+      'git_add',
+      'git_commit',
+      'git_push',
+      'git_branch',
+      'git_stash',
+      'spawn_agent',
+      'parallel_agents',
       'write_artifact',
       'list_artifacts',
       'terminal_list',
       'terminal_read',
       'github_review_pull',
-      'github_draft_issue'
+      'github_draft_issue',
+      'google_gmail_send',
+      'google_sheets_write',
+      'google_calendar_create',
+      'memory_consolidate'
     ]
     for (const n of names) {
       expect(TOOLS.some((t) => t.name === n), n).toBe(true)

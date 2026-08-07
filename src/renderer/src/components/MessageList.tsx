@@ -14,20 +14,48 @@ interface MessageListProps {
   nearTop: boolean
   onShowEarlier: () => void
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void
+  /** Session switch key — remounts list for clean enter animation. */
+  sessionKey?: string
 }
+
+/**
+ * While tokens are streaming, skip full markdown/AST re-parse every frame.
+ * Plain pre-wrap is much cheaper; final content uses MarkdownRenderer.
+ */
+const StreamingPlain = memo(function StreamingPlain({
+  text
+}: {
+  text: string
+}): React.JSX.Element {
+  return (
+    <div className="message-content streaming message-content-live">
+      <pre className="streaming-plaintext">
+        {text}
+        <span className="cursor-blink">▍</span>
+      </pre>
+    </div>
+  )
+})
 
 // Memoized per message: during streaming only the changed message re-renders,
 // so long chats no longer re-parse every markdown block on each token.
-const MessageRow = memo(function MessageRow({ msg }: { msg: Message }): React.JSX.Element {
+const MessageRow = memo(function MessageRow({
+  msg,
+  animateIn,
+  isStreamingTail
+}: {
+  msg: Message
+  animateIn?: boolean
+  /** True when this row is the live streaming assistant bubble. */
+  isStreamingTail?: boolean
+}): React.JSX.Element {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
-  // Live streaming text lives in a dedicated store; falls back to the persisted
-  // content once the round ends.
   const live = useStreamingStore((s) => s.content[msg.id])
   const content = live ?? msg.content
-  // User bubbles embed display-only data-URL images; the clipboard copy should
-  // carry the actual text, not megabyte base64 blobs.
+  const isLive = live !== undefined
   const copyText = msg.role === 'user' ? stripDisplayImages(msg.content) : msg.content
+  const enterClass = animateIn ? ' message-enter' : ''
 
   const handleCopy = async (): Promise<void> => {
     try {
@@ -35,30 +63,29 @@ const MessageRow = memo(function MessageRow({ msg }: { msg: Message }): React.JS
       setCopied(true)
       setTimeout(() => setCopied(false), 1500)
     } catch {
-      // Clipboard can be unavailable (permissions, web preview); ignore.
+      /* clipboard optional */
     }
   }
 
-  // Tool call logs get their own collapsed-by-default row (icon + status,
-  // expand for the raw output) instead of a full message bubble — a turn
-  // with several tool calls would otherwise dump each one open at full height.
   if (msg.role === 'system') {
     return (
-      <div className="message system">
+      <div className={`message system${enterClass}`}>
         <ToolMessage content={content} />
       </div>
     )
   }
 
   return (
-    <div className={`message ${msg.role}`}>
+    <div className={`message ${msg.role}${enterClass}${isStreamingTail || isLive ? ' message-live' : ''}`}>
       <div className="message-role">{msg.role === 'user' ? t('chat.you') : t('chat.assistant')}</div>
       <div className="message-body">
-        <div className="message-content">
-          {/* User bubbles render as markdown too: attached images come through as
-              inline data-URL images (safeHref/CSP still apply). */}
-          <MarkdownRenderer content={content} />
-        </div>
+        {isLive && msg.role === 'assistant' ? (
+          <StreamingPlain text={content} />
+        ) : (
+          <div className={`message-content${isStreamingTail ? ' streaming' : ''}`}>
+            <MarkdownRenderer content={content} />
+          </div>
+        )}
         <button
           className={`message-copy ${copied ? 'copied' : ''}`}
           onClick={() => void handleCopy()}
@@ -78,7 +105,7 @@ const MessageRow = memo(function MessageRow({ msg }: { msg: Message }): React.JS
           {copied ? t('chat.copied') : t('chat.copy')}
         </button>
       </div>
-      {msg.role === 'assistant' && msg.modelLabel && (
+      {msg.role === 'assistant' && msg.modelLabel && !isLive && (
         <div className="message-model-label">{msg.modelLabel}</div>
       )}
     </div>
@@ -86,25 +113,43 @@ const MessageRow = memo(function MessageRow({ msg }: { msg: Message }): React.JS
 })
 
 export default function MessageList({
-  messages, isStreaming, endRef, startIndex, nearTop, onShowEarlier, onScroll
+  messages,
+  isStreaming,
+  endRef,
+  startIndex,
+  nearTop,
+  onShowEarlier,
+  onScroll,
+  sessionKey
 }: MessageListProps): React.JSX.Element {
   const { t } = useTranslation()
   const visible = startIndex > 0 ? messages.slice(startIndex) : messages
+  const now = Date.now()
+  const isFresh = (msg: Message): boolean =>
+    typeof msg.createdAt === 'number' && now - msg.createdAt < 900
+  const lastId = messages[messages.length - 1]?.id
+  const lastRole = messages[messages.length - 1]?.role
+
   return (
-    <div className="chat-messages" onScroll={onScroll}>
+    <div className="chat-messages" onScroll={onScroll} data-session={sessionKey || ''}>
       {startIndex > 0 && nearTop && (
         <button className="message-load-earlier" onClick={onShowEarlier}>
           {t('chat.showEarlier', { count: startIndex })}
         </button>
       )}
       {visible.map((msg) => (
-        <MessageRow key={msg.id} msg={msg} />
+        <MessageRow
+          key={msg.id}
+          msg={msg}
+          animateIn={isFresh(msg)}
+          isStreamingTail={isStreaming && msg.id === lastId && msg.role === 'assistant'}
+        />
       ))}
-      {isStreaming && messages[messages.length - 1]?.role !== 'assistant' && (
-        <div className="message assistant">
-          <div className="message-role">Assistant</div>
+      {isStreaming && lastRole !== 'assistant' && (
+        <div className="message assistant message-enter">
+          <div className="message-role">{t('chat.assistant')}</div>
           <div className="message-content streaming">
-            <span className="cursor-blink">|</span>
+            <span className="cursor-blink">▍</span>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { ipcMain, type IpcMainInvokeEvent } from 'electron'
 import {
   getMemorySettings,
   setMemorySettings,
@@ -14,18 +14,37 @@ import {
   buildInjectBlock,
   ingestTurn,
   exportAll,
-  importMany
+  importMany,
+  consolidateMemories
 } from '../memory'
 import type { MemoryKind, MemoryScope, MemorySettings } from '../memory'
 
-export function registerMemoryIpc(): void {
-  ipcMain.handle('memory:settings', () => getMemorySettings())
+/** Wrap memory handlers so a SQLite/embed failure never crashes the main process. */
+function handleMemory(
+  channel: string,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fn: (event: IpcMainInvokeEvent, ...args: any[]) => unknown,
+  onError?: (err: unknown) => unknown
+): void {
+  ipcMain.handle(channel, async (event, ...args) => {
+    try {
+      return await fn(event, ...args)
+    } catch (err) {
+      console.error(`[ipc] ${channel} failed:`, err)
+      if (onError) return onError(err)
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+}
 
-  ipcMain.handle('memory:setSettings', (_e, partial: Partial<MemorySettings>) => {
+export function registerMemoryIpc(): void {
+  handleMemory('memory:settings', () => getMemorySettings(), () => ({ enabled: false }))
+
+  handleMemory('memory:setSettings', (_e, partial: Partial<MemorySettings>) => {
     return setMemorySettings(partial || {})
   })
 
-  ipcMain.handle('memory:save', (_e, input: Record<string, unknown>) => {
+  handleMemory('memory:save', (_e, input: Record<string, unknown>) => {
     return saveMemory({
       content: String(input?.content ?? ''),
       title: input?.title != null ? String(input.title) : undefined,
@@ -39,7 +58,7 @@ export function registerMemoryIpc(): void {
     })
   })
 
-  ipcMain.handle('memory:update', (_e, id: string, patch: Record<string, unknown>) => {
+  handleMemory('memory:update', (_e, id: string, patch: Record<string, unknown>) => {
     return updateMemory(String(id), {
       content: patch?.content != null ? String(patch.content) : undefined,
       title: patch?.title != null ? String(patch.title) : undefined,
@@ -53,53 +72,62 @@ export function registerMemoryIpc(): void {
     })
   })
 
-  ipcMain.handle('memory:forget', (_e, id: string) => forgetMemory(String(id)))
+  handleMemory('memory:forget', (_e, id: string) => forgetMemory(String(id)))
 
-  ipcMain.handle('memory:forgetMany', (_e, ids: string[]) =>
+  handleMemory('memory:forgetMany', (_e, ids: string[]) =>
     forgetMany(Array.isArray(ids) ? ids.map(String) : [])
   )
 
-  ipcMain.handle(
+  handleMemory(
     'memory:clear',
     (_e, opts?: { projectId?: string | null; scope?: MemoryScope }) => clearMemories(opts || {})
   )
 
-  ipcMain.handle('memory:search', (_e, input: Record<string, unknown>) => {
-    return searchMemories({
-      query: String(input?.query ?? ''),
-      projectId: input?.projectId != null ? String(input.projectId) : input?.project_id != null ? String(input.project_id) : null,
-      kind: input?.kind as MemoryKind | undefined,
-      scope: input?.scope as MemoryScope | undefined,
-      limit: input?.limit != null ? Number(input.limit) : undefined,
-      includeDisabled: input?.includeDisabled === true
-    })
-  })
+  handleMemory(
+    'memory:search',
+    (_e, input: Record<string, unknown>) => {
+      return searchMemories({
+        query: String(input?.query ?? ''),
+        projectId: input?.projectId != null ? String(input.projectId) : input?.project_id != null ? String(input.project_id) : null,
+        kind: input?.kind as MemoryKind | undefined,
+        scope: input?.scope as MemoryScope | undefined,
+        limit: input?.limit != null ? Number(input.limit) : undefined,
+        includeDisabled: input?.includeDisabled === true
+      })
+    },
+    () => []
+  )
 
-  ipcMain.handle('memory:list', (_e, input?: Record<string, unknown>) => {
-    return listMemories({
-      projectId: input?.projectId != null ? String(input.projectId) : null,
-      kind: input?.kind as MemoryKind | undefined,
-      scope: input?.scope as MemoryScope | undefined,
-      limit: input?.limit != null ? Number(input.limit) : undefined,
-      offset: input?.offset != null ? Number(input.offset) : undefined,
-      query: input?.query != null ? String(input.query) : undefined
-    })
-  })
+  handleMemory(
+    'memory:list',
+    (_e, input?: Record<string, unknown>) => {
+      return listMemories({
+        projectId: input?.projectId != null ? String(input.projectId) : null,
+        kind: input?.kind as MemoryKind | undefined,
+        scope: input?.scope as MemoryScope | undefined,
+        limit: input?.limit != null ? Number(input.limit) : undefined,
+        offset: input?.offset != null ? Number(input.offset) : undefined,
+        query: input?.query != null ? String(input.query) : undefined
+      })
+    },
+    () => ({ items: [], total: 0 })
+  )
 
-  ipcMain.handle('memory:get', (_e, id: string) => getMemory(String(id)))
+  handleMemory('memory:get', (_e, id: string) => getMemory(String(id)), () => null)
 
-  ipcMain.handle('memory:stats', () => stats())
+  handleMemory('memory:stats', () => stats(), () => ({ total: 0, pinned: 0, byKind: {}, byScope: {} }))
 
-  ipcMain.handle(
+  handleMemory(
     'memory:injectBlock',
     (_e, opts: { query?: string; projectId?: string | null }) =>
       buildInjectBlock({
         query: String(opts?.query || ''),
         projectId: opts?.projectId ?? null
-      })
+      }),
+    () => ''
   )
 
-  ipcMain.handle('memory:ingestTurn', (_e, input: {
+  handleMemory('memory:ingestTurn', (_e, input: {
     projectId?: string | null
     sessionId?: string
     messages?: Array<{ role: string; content: string }>
@@ -111,9 +139,22 @@ export function registerMemoryIpc(): void {
     })
   )
 
-  ipcMain.handle('memory:export', () => exportAll())
+  handleMemory('memory:export', () => exportAll(), () => [])
 
-  ipcMain.handle('memory:import', (_e, items: unknown[], projectId?: string | null) => {
+  handleMemory(
+    'memory:consolidate',
+    (
+      _e,
+      opts?: { projectId?: string | null; threshold?: number; dryRun?: boolean }
+    ) =>
+      consolidateMemories({
+        projectId: opts?.projectId ?? null,
+        threshold: opts?.threshold != null ? Number(opts.threshold) : undefined,
+        dryRun: opts?.dryRun === true
+      })
+  )
+
+  handleMemory('memory:import', (_e, items: unknown[], projectId?: string | null) => {
     const list = Array.isArray(items)
       ? items.map((it) => {
           const o = it as Record<string, unknown>

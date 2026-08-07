@@ -144,7 +144,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
 
   return (
       <div className="chat-input-wrapper">
-       <div className="chat-input-container">
+       <div className="chat-input-container" role="group" aria-label={t('chat.placeholder')}>
           <TriggerMenu
             open={triggerOpen}
             trigger={trigger?.type ?? null}
@@ -222,6 +222,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
               onPaste={handlePaste}
               placeholder={t('chat.placeholder')}
               rows={1}
+              aria-label={t('chat.placeholder')}
             />
             <div className="input-actions">
               {/* Left: permission mode */}

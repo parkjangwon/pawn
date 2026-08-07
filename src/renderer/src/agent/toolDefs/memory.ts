@@ -82,5 +82,22 @@ export const MEMORY_TOOLS: ToolDefinition[] = [
       },
       required: ['id']
     }
+  },
+  {
+    name: 'memory_consolidate',
+    description:
+      'Merge near-duplicate Memory cards by semantic similarity (local embeddings). ' +
+      'Use when the user asks to clean up memory noise or after many auto-saves. ' +
+      'dry_run:true reports pairs without deleting.',
+    parameters: {
+      type: 'object',
+      properties: {
+        threshold: {
+          type: 'number',
+          description: 'Cosine merge threshold 0.75–0.98 (default 0.9)'
+        },
+        dry_run: { type: 'boolean', description: 'If true, only report pairs' }
+      }
+    }
   }
 ]

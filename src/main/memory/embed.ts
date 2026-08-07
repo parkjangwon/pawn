@@ -1,7 +1,8 @@
 /**
  * Local lightweight embeddings (no model download).
- * Character + word hashed bag into fixed dim — good enough for hybrid ranking
- * with FTS5. Cosine similarity in [0,1] after normalization.
+ * Improved hashed bag-of-features: words + CJK bigrams + char 3-grams +
+ * position-weighted terms. Still not a neural embedder, but far better than
+ * pure random hashing for hybrid FTS ranking. Dim 384.
  */
 
 const DIM = 384
@@ -15,29 +16,50 @@ function hash32(s: string): number {
   return h >>> 0
 }
 
-function tokenize(text: string): string[] {
+function tokenize(text: string): Array<{ t: string; w: number }> {
   const lower = text.toLowerCase()
-  const words = lower.match(/[a-z0-9_#./@+-]{2,}|[\uac00-\ud7a3]{1,}/g) || []
-  const grams: string[] = []
+  const out: Array<{ t: string; w: number }> = []
+
+  // Latin / code tokens
+  const words = lower.match(/[a-z0-9_#./@+-]{2,}/g) || []
+  for (const w of words) out.push({ t: w, w: 1 })
+
+  // Hangul / CJK unigrams + bigrams
+  const cjk = lower.match(/[\uac00-\ud7a3\u3040-\u30ff\u4e00-\u9fff]+/g) || []
+  for (const run of cjk) {
+    for (let i = 0; i < run.length; i++) {
+      out.push({ t: run[i], w: 0.8 })
+      if (i + 1 < run.length) out.push({ t: run.slice(i, i + 2), w: 1.2 })
+    }
+  }
+
+  // Char 3-grams on compact text (stability for typos / partial match)
   const compact = lower.replace(/\s+/g, ' ').slice(0, 2000)
   for (let i = 0; i < compact.length - 2; i++) {
-    grams.push(compact.slice(i, i + 3))
+    out.push({ t: '§' + compact.slice(i, i + 3), w: 0.35 })
   }
-  return [...words, ...grams.slice(0, 400)]
+
+  // Title-weight: first 80 chars tokens heavier
+  const head = lower.slice(0, 80)
+  for (const w of head.match(/[a-z0-9_\uac00-\ud7a3]{2,}/g) || []) {
+    out.push({ t: w, w: 0.5 })
+  }
+
+  return out.slice(0, 800)
 }
 
 export function embedText(text: string): Float32Array {
   const v = new Float32Array(DIM)
   const tokens = tokenize(text || '')
   if (!tokens.length) return v
-  for (const t of tokens) {
+  for (const { t, w } of tokens) {
     const h = hash32(t)
     const idx = h % DIM
     const sign = h & 1 ? 1 : -1
-    v[idx] += sign
-    // second hash for stability
+    v[idx] += sign * w
+    // second hash for stability (feature hashing)
     const h2 = hash32(t + '#')
-    v[h2 % DIM] += (h2 & 1 ? 0.5 : -0.5)
+    v[h2 % DIM] += (h2 & 1 ? 0.5 : -0.5) * w
   }
   // L2 normalize
   let norm = 0

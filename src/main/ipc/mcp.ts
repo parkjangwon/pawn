@@ -15,11 +15,26 @@ function asScope(value: unknown): 'user' | 'project' | null {
 function asServerInput(value: unknown): McpServerInput | null {
   if (typeof value !== 'object' || value === null) return null
   const v = value as Record<string, unknown>
+  const env =
+    typeof v.env === 'object' && v.env !== null
+      ? (Object.fromEntries(
+          Object.entries(v.env as Record<string, unknown>).filter(([, val]) => typeof val === 'string')
+        ) as Record<string, string>)
+      : undefined
+  const headers =
+    typeof v.headers === 'object' && v.headers !== null
+      ? (Object.fromEntries(
+          Object.entries(v.headers as Record<string, unknown>).filter(([, val]) => typeof val === 'string')
+        ) as Record<string, string>)
+      : undefined
+  const url = typeof v.url === 'string' ? v.url : undefined
+  const type =
+    v.type === 'http' || v.type === 'sse' || v.type === 'stdio' ? v.type : undefined
+  if (url || type === 'http' || type === 'sse') {
+    return { url, type: type === 'sse' ? 'sse' : 'http', env, headers }
+  }
   if (typeof v.command !== 'string') return null
   const args = Array.isArray(v.args) ? v.args.filter((a): a is string => typeof a === 'string') : []
-  const env = typeof v.env === 'object' && v.env !== null
-    ? Object.fromEntries(Object.entries(v.env as Record<string, unknown>).filter(([, val]) => typeof val === 'string')) as Record<string, string>
-    : undefined
   return { command: v.command, args, env }
 }
 

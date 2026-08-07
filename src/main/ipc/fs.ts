@@ -83,7 +83,13 @@ const MAX_READ_BYTES = 32 * 1024 * 1024
 // cannot make one call balloon into gigabytes of main-process memory.
 const MAX_READ_TOTAL_BYTES = 96 * 1024 * 1024
 const walkCache = new Map<string, { at: number; result: Array<{ name: string; path: string; isDirectory: boolean }> }>()
+const MAX_WRITE_CHARS = 32 * 1024 * 1024
 
+/** Reject null bytes / non-strings before any fs call. */
+function safePath(p: unknown): string | null {
+  if (typeof p !== 'string' || !p || p.includes('\0')) return null
+  return p
+}
 
 // --- gitignore-style matching (mirrors renderer utils/gitignore.ts) ---
 type IgnoreRule = {
@@ -263,12 +269,14 @@ function walkTreeCached(rootPath: string): Array<{ name: string; path: string; i
 
 export function registerFsIpc(): void {
   handleTrusted('fs:readFile', async (_, filePath: string) => {
+    const path = safePath(filePath)
+    if (!path) return { error: 'Invalid path' }
     try {
-      const s = statSync(filePath)
+      const s = statSync(path)
       if (s.size > MAX_READ_BYTES) {
         return { error: `File too large to read safely (${s.size} bytes, max ${MAX_READ_BYTES})` }
       }
-      return readFileSync(filePath, 'utf-8')
+      return readFileSync(path, 'utf-8')
     } catch (err) {
       return { error: String(err) }
     }
@@ -280,8 +288,9 @@ export function registerFsIpc(): void {
     if (!Array.isArray(paths)) return { error: 'Invalid paths' }
     const out: Array<{ path: string; content?: string; error?: string }> = []
     let totalBytes = 0
-    for (const p of paths.slice(0, 500)) {
-      if (typeof p !== 'string') continue
+    for (const raw of paths.slice(0, 500)) {
+      const p = safePath(raw)
+      if (!p) continue
       try {
         const s = statSync(p)
         if (s.size > MAX_READ_BYTES) {
@@ -302,11 +311,17 @@ export function registerFsIpc(): void {
   })
 
   handleTrusted('fs:writeFile', async (_, filePath: string, content: string) => {
+    const path = safePath(filePath)
+    if (!path) return { error: 'Invalid path' }
+    if (typeof content !== 'string') return { error: 'Invalid content' }
+    if (content.length > MAX_WRITE_CHARS) {
+      return { error: `Content too large to write safely (${content.length} chars, max ${MAX_WRITE_CHARS})` }
+    }
     try {
       // Ensure parent directory exists (agents often write new nested files).
-      const parent = join(filePath, '..')
+      const parent = join(path, '..')
       if (!existsSync(parent)) mkdirSync(parent, { recursive: true })
-      writeFileSync(filePath, content, 'utf-8')
+      writeFileSync(path, content, 'utf-8')
       walkCache.clear()
       return { ok: true }
     } catch (err) {
@@ -315,12 +330,14 @@ export function registerFsIpc(): void {
   })
 
   handleTrusted('fs:listDir', async (_, dirPath: string) => {
+    const path = safePath(dirPath)
+    if (!path) return { error: 'Invalid path' }
     try {
-      const entries = readdirSync(dirPath, { withFileTypes: true })
+      const entries = readdirSync(path, { withFileTypes: true })
       return entries.map((e) => ({
         name: e.name,
         isDirectory: e.isDirectory(),
-        path: join(dirPath, e.name)
+        path: join(path, e.name)
       }))
     } catch (err) {
       return { error: String(err) }
@@ -328,16 +345,20 @@ export function registerFsIpc(): void {
   })
 
   handleTrusted('fs:walk', async (_, rootPath: string) => {
+    const path = safePath(rootPath)
+    if (!path) return { error: 'Invalid path' }
     try {
-      return walkTreeCached(rootPath)
+      return walkTreeCached(path)
     } catch (err) {
       return { error: String(err) }
     }
   })
 
   handleTrusted('fs:stat', async (_, filePath: string) => {
+    const path = safePath(filePath)
+    if (!path) return { error: 'Invalid path' }
     try {
-      const s = statSync(filePath)
+      const s = statSync(path)
       return { size: s.size, isFile: s.isFile(), isDirectory: s.isDirectory(), mtime: s.mtimeMs }
     } catch (err) {
       return { error: String(err) }
@@ -345,8 +366,10 @@ export function registerFsIpc(): void {
   })
 
   handleTrusted('fs:mkdir', async (_, dirPath: string) => {
+    const path = safePath(dirPath)
+    if (!path) return { error: 'Invalid path' }
     try {
-      mkdirSync(dirPath, { recursive: true })
+      mkdirSync(path, { recursive: true })
       walkCache.clear()
       return { ok: true }
     } catch (err) {
@@ -357,18 +380,20 @@ export function registerFsIpc(): void {
   // Agent delete_file: files and empty directories only. Recursive trees use
   // fs:removeDir (skill installer) or shell_exec with an explicit rm -rf.
   handleTrusted('fs:delete', async (_, filePath: string) => {
+    const path = safePath(filePath)
+    if (!path) return { error: 'Invalid path' }
     try {
-      const s = statSync(filePath)
+      const s = statSync(path)
       if (s.isDirectory()) {
         try {
-          rmdirSync(filePath)
+          rmdirSync(path)
         } catch {
           return {
-            error: `Directory not empty: ${filePath}. Remove contents first, or use shell_exec carefully for recursive delete.`
+            error: `Directory not empty: ${path}. Remove contents first, or use shell_exec carefully for recursive delete.`
           }
         }
       } else {
-        unlinkSync(filePath)
+        unlinkSync(path)
       }
       walkCache.clear()
       return { ok: true }
@@ -378,7 +403,9 @@ export function registerFsIpc(): void {
   })
 
   handleTrusted('fs:exists', async (_, filePath: string) => {
-    return existsSync(filePath)
+    const path = safePath(filePath)
+    if (!path) return false
+    return existsSync(path)
   })
 
   handleTrusted('fs:homeDir', async () => {
@@ -393,11 +420,11 @@ export function registerFsIpc(): void {
   // `cp -R` / `rm -rf` invocations, which risked command injection through
   // repo-controlled paths.
   handleTrusted('fs:copyDir', async (_, srcDir: string, destDir: string) => {
-    if (typeof srcDir !== 'string' || typeof destDir !== 'string' || !srcDir || !destDir) {
-      return { error: 'Invalid copy paths' }
-    }
+    const src = safePath(srcDir)
+    const dest = safePath(destDir)
+    if (!src || !dest) return { error: 'Invalid copy paths' }
     try {
-      await cp(srcDir, destDir, { recursive: true, force: true, errorOnExist: false })
+      await cp(src, dest, { recursive: true, force: true, errorOnExist: false })
       walkCache.clear()
       return { ok: true }
     } catch (err) {
@@ -406,9 +433,25 @@ export function registerFsIpc(): void {
   })
 
   handleTrusted('fs:removeDir', async (_, dirPath: string) => {
-    if (typeof dirPath !== 'string' || !dirPath) return { error: 'Invalid path' }
+    const path = safePath(dirPath)
+    if (!path) return { error: 'Invalid path' }
+    // Refuse filesystem roots and bare home — recursive delete is too dangerous.
+    const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '') || '/'
+    if (
+      normalized === '/' ||
+      normalized === '' ||
+      /^[A-Za-z]:$/.test(normalized) ||
+      normalized === '/Users' ||
+      normalized === '/home' ||
+      normalized === '/etc' ||
+      normalized === '/var' ||
+      normalized === '/System' ||
+      normalized === '/Library'
+    ) {
+      return { error: `Refused to remove protected path: ${path}` }
+    }
     try {
-      await rm(dirPath, { recursive: true, force: true })
+      await rm(path, { recursive: true, force: true })
       walkCache.clear()
       return { ok: true }
     } catch (err) {
@@ -418,9 +461,10 @@ export function registerFsIpc(): void {
 
   // Bounded CSV / XLSX read for agent tools (row/col caps inside readSpreadsheet).
   handleTrusted('fs:readSpreadsheet', async (_, filePath: string, opts?: { sheet?: string; maxRows?: number; maxCols?: number }) => {
-    if (typeof filePath !== 'string' || !filePath.trim()) return { error: 'Invalid path' }
+    const path = safePath(filePath)
+    if (!path || !path.trim()) return { error: 'Invalid path' }
     try {
-      return await readSpreadsheet(filePath.trim(), opts || {})
+      return await readSpreadsheet(path.trim(), opts || {})
     } catch (err) {
       return { error: String(err) }
     }
@@ -428,7 +472,7 @@ export function registerFsIpc(): void {
 
   // Fast content search (rg → git-grep). engine=none → renderer JS fallback.
   handleTrusted('fs:contentSearch', async (_, rootPath: string, opts: ContentSearchOpts) => {
-    if (typeof rootPath !== 'string' || !rootPath.trim()) {
+    if (!safePath(rootPath) || !String(rootPath).trim()) {
       return { engine: 'none' as const, matches: [], truncated: false, error: 'Invalid root path' }
     }
     try {

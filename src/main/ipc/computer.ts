@@ -92,7 +92,12 @@ export function registerComputerIpc(): void {
         displayId?: number
       }
     ) => {
-      const p = resolvePoint(Number(x), Number(y), opts?.coordSpace)
+      const nx = Number(x)
+      const ny = Number(y)
+      if (!Number.isFinite(nx) || !Number.isFinite(ny)) {
+        return { error: 'x and y must be finite numbers' }
+      }
+      const p = resolvePoint(nx, ny, opts?.coordSpace)
       const res = await mouseClick(p.x, p.y, { button: opts?.button, clicks: opts?.clicks })
       if (res.error) return res
       const extra = await maybeShot(opts?.returnScreenshot, opts?.displayId)
@@ -103,7 +108,12 @@ export function registerComputerIpc(): void {
   handleTrusted(
     'computer:move',
     async (_e, x: number, y: number, opts?: { coordSpace?: string }) => {
-      const p = resolvePoint(Number(x), Number(y), opts?.coordSpace)
+      const nx = Number(x)
+      const ny = Number(y)
+      if (!Number.isFinite(nx) || !Number.isFinite(ny)) {
+        return { error: 'x and y must be finite numbers' }
+      }
+      const p = resolvePoint(nx, ny, opts?.coordSpace)
       const res = await mouseMove(p.x, p.y)
       if (res.error) return res
       return { ok: true, x: p.x, y: p.y }
@@ -126,8 +136,12 @@ export function registerComputerIpc(): void {
         displayId?: number
       }
     ) => {
-      const a = resolvePoint(Number(fromX), Number(fromY), opts?.coordSpace)
-      const b = resolvePoint(Number(toX), Number(toY), opts?.coordSpace)
+      const coords = [fromX, fromY, toX, toY].map(Number)
+      if (coords.some((n) => !Number.isFinite(n))) {
+        return { error: 'drag coordinates must be finite numbers' }
+      }
+      const a = resolvePoint(coords[0], coords[1], opts?.coordSpace)
+      const b = resolvePoint(coords[2], coords[3], opts?.coordSpace)
       const res = await mouseDrag(a, b, { button: opts?.button, steps: opts?.steps })
       if (res.error) return res
       const extra = await maybeShot(opts?.returnScreenshot, opts?.displayId)
@@ -149,7 +163,12 @@ export function registerComputerIpc(): void {
         displayId?: number
       }
     ) => {
-      const p = resolvePoint(Number(x), Number(y), opts?.coordSpace)
+      const nx = Number(x)
+      const ny = Number(y)
+      if (!Number.isFinite(nx) || !Number.isFinite(ny)) {
+        return { error: 'x and y must be finite numbers' }
+      }
+      const p = resolvePoint(nx, ny, opts?.coordSpace)
       const res = await mouseScroll(p.x, p.y, { dy: opts?.dy, dx: opts?.dx })
       if (res.error) return res
       const extra = await maybeShot(opts?.returnScreenshot, opts?.displayId)
@@ -158,14 +177,18 @@ export function registerComputerIpc(): void {
   )
 
   handleTrusted('computer:type', async (_e, text: string, opts?: { returnScreenshot?: boolean }) => {
-    const res = await typeText(String(text ?? ''))
+    // Bound huge paste payloads that freeze the accessibility layer.
+    const body = String(text ?? '').slice(0, 20_000)
+    const res = await typeText(body)
     if (res.error) return res
     const extra = await maybeShot(opts?.returnScreenshot)
     return { ok: true, ...extra }
   })
 
   handleTrusted('computer:keypress', async (_e, key: string, opts?: { returnScreenshot?: boolean }) => {
-    const res = await keypress(String(key ?? ''))
+    const k = String(key ?? '').slice(0, 64)
+    if (!k) return { error: 'key is required' }
+    const res = await keypress(k)
     if (res.error) return res
     const extra = await maybeShot(opts?.returnScreenshot)
     return { ok: true, ...extra }
@@ -174,12 +197,13 @@ export function registerComputerIpc(): void {
   handleTrusted('computer:clipboard', async (_e, action: string, text?: string) => {
     const a = String(action || 'get').toLowerCase()
     if (a === 'get' || a === 'read') return clipboardRead()
-    if (a === 'set' || a === 'write') return clipboardWrite(String(text ?? ''))
+    if (a === 'set' || a === 'write') return clipboardWrite(String(text ?? '').slice(0, 200_000))
     return { error: 'action must be get or set' }
   })
 
   handleTrusted('computer:wait', async (_e, ms: number) => {
-    await sleep(Number(ms) || 0)
-    return { ok: true, ms: Math.min(Math.max(0, Math.floor(Number(ms) || 0)), 60_000) }
+    const clamped = Math.min(Math.max(0, Math.floor(Number(ms) || 0)), 60_000)
+    await sleep(clamped)
+    return { ok: true, ms: clamped }
   })
 }

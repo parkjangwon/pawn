@@ -22,6 +22,7 @@ import { SYSTEM_PROMPT } from '../agent/prompts'
 import { fireHook } from '../agent/hooksClient'
 import { useChangeLedger } from './changeLedger'
 import { usePrefsStore } from './prefs'
+import { usePermissionStore } from './permission'
 import { useRoutineStore } from './routine'
 import type { ModelTier } from '../types/provider'
 import { filterEnabledSkills } from '../utils/skillVisibility'
@@ -62,8 +63,11 @@ interface ChatState {
 }
 
 let abortController: AbortController | null = null
-
-
+/**
+ * Monotonic turn id. Each new agentLoop claims a fresh epoch so a stale loop's
+ * `finally` cannot clear isStreaming / process the queue after steer replaced it.
+ */
+let streamEpoch = 0
 
 export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
@@ -90,9 +94,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     pushUserBubble(projectId, sessionId, content, attachments)
     autoTitle(projectId, sessionId, content)
 
+    const epoch = ++streamEpoch
     set({ isStreaming: true, streamingSessionId: sessionId })
     window.api.setStreaming?.(true)
-    void agentLoop(projectId, sessionId, content, set, get, attachments)
+    void agentLoop(projectId, sessionId, content, set, get, attachments, epoch)
   },
 
   stopStreaming: () => {
@@ -101,6 +106,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     void window.api.shell?.killAll?.().catch(() => {})
     // Remove the injected AI cursor from the embedded browser page.
     void window.api.browser?.hideCursor?.().catch(() => {})
+    // Dismiss permission prompts so Stop doesn't leave a stuck modal.
+    usePermissionStore.getState().denyAll()
     set({ isStreaming: false, streamingSessionId: null })
     window.api.setStreaming?.(false)
   }
@@ -251,8 +258,12 @@ async function agentLoop(
   userContent: string,
   set: (fn: (s: ChatState) => Partial<ChatState>) => void,
   get: () => ChatState,
-  attachments?: ChatAttachment[]
+  attachments?: ChatAttachment[],
+  epoch: number = streamEpoch
 ): Promise<void> {
+  // Superseded before we even started (steer / newer queue item claimed epoch).
+  if (epoch !== streamEpoch) return
+
   // A live loop owns the turn; only an aborted one may be replaced. This makes
   // concurrent agent loops impossible even if two send paths race.
   if (abortController && !abortController.signal.aborted) return
@@ -260,9 +271,11 @@ async function agentLoop(
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
     systemError(projectId, sessionId, i18n.t('chat.errors.noProvider'))
-    set(() => ({ isStreaming: false, streamingSessionId: null }))
-    window.api.setStreaming?.(false)
-    processQueue(set, get)
+    if (epoch === streamEpoch) {
+      set(() => ({ isStreaming: false, streamingSessionId: null }))
+      window.api.setStreaming?.(false)
+      processQueue(set, get)
+    }
     return
   }
 
@@ -689,12 +702,14 @@ async function agentLoop(
 
       const resultsById = new Map<string, ToolResult>()
       if (safe.length > 0 && !signal.aborted) {
-        const settled = await Promise.all(safe.map((tc) => executeTool(tc, toolCwd, signal, { sessionId })))
+        const settled = await Promise.all(
+          safe.map((tc) => executeTool(tc, toolCwd, signal, { sessionId, projectId }))
+        )
         safe.forEach((tc, i) => resultsById.set(tc.id, settled[i]))
       }
       for (const tc of risky) {
         if (signal.aborted) break
-        resultsById.set(tc.id, await executeTool(tc, toolCwd, signal, { sessionId }))
+        resultsById.set(tc.id, await executeTool(tc, toolCwd, signal, { sessionId, projectId }))
       }
 
       // Always record tool results for completed work. On abort, still persist
@@ -756,7 +771,10 @@ async function agentLoop(
     // Turn finished (normally or aborted) — drop the AI cursor so it doesn't
     // linger on the browser page after browser control ends.
     void window.api.browser?.hideCursor?.().catch(() => {})
-    if (isCurrent) {
+    // Epoch guard: a steer that aborted us may already have started a newer
+    // turn. Clearing flags or draining the queue here would race and leave the
+    // UI stuck (isStreaming false while tokens still flow, or double loops).
+    if (isCurrent && epoch === streamEpoch) {
       set(() => ({ isStreaming: false, streamingSessionId: null }))
       window.api.setStreaming?.(false)
       // Turn finished — Stop hook (advisory; used for notify integrations)
@@ -790,6 +808,17 @@ async function agentLoop(
             sessionId,
             messages: recent
           })
+          // Quiet merge of near-duplicate cards (threshold 0.92) so memory deepens over time.
+          if (
+            useProviderStore.getState().autoMemoryConsolidate &&
+            window.api.memory?.consolidate
+          ) {
+            void window.api.memory.consolidate({
+              projectId: projectId && projectId !== '__general__' ? projectId : null,
+              threshold: 0.92,
+              dryRun: false
+            })
+          }
         } catch {
           /* non-fatal */
         }
@@ -909,8 +938,9 @@ function processQueue(
       return
     }
     autoTitle(next.projectId, next.sessionId, next.content)
+    const epoch = ++streamEpoch
     set(() => ({ isStreaming: true, streamingSessionId: next.sessionId }))
     window.api.setStreaming?.(true)
-    void agentLoop(next.projectId, next.sessionId, next.content, set, get, next.attachments)
+    void agentLoop(next.projectId, next.sessionId, next.content, set, get, next.attachments, epoch)
   }, 50)
 }

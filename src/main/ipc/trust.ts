@@ -15,8 +15,17 @@ export function handleTrusted(
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   listener: (event: IpcMainInvokeEvent, ...args: any[]) => unknown
 ): void {
-  ipcMain.handle(channel, (event, ...args) => {
+  ipcMain.handle(channel, async (event, ...args) => {
     if (!isTrustedSender(event)) return { error: 'Untrusted sender' }
-    return listener(event, ...args)
+    try {
+      return await listener(event, ...args)
+    } catch (err) {
+      // Never let an unhandled throw take down the main process IPC pipeline.
+      console.error(`[ipc] ${channel} failed:`, err)
+      return {
+        error: err instanceof Error ? err.message : String(err),
+        ok: false
+      }
+    }
   })
 }

@@ -12,7 +12,8 @@
   left: 0;
   z-index: 10;
   overflow: hidden;
-  transition: transform 0.2s var(--ease-spring);
+  transition: transform var(--dur-med) var(--ease-spring);
+  will-change: transform;
 }
 
 .sidebar button,
@@ -108,7 +109,10 @@ body.resizing-sidebar .settings-sidebar {
   color: var(--text-secondary);
   font-size: var(--font-md);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition:
+    background var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-instant) var(--ease-spring);
   box-sizing: border-box;
 }
 
@@ -120,6 +124,7 @@ body.resizing-sidebar .settings-sidebar {
 .sidebar-action-btn.active {
   background: var(--bg-active);
   color: var(--text-primary);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .sidebar-action-btn svg {
@@ -212,7 +217,10 @@ body.resizing-sidebar .settings-sidebar {
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-secondary);
-  transition: all 0.12s ease;
+  transition:
+    background var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-instant) var(--ease-spring);
 }
 
 .sidebar-item:hover {
@@ -381,7 +389,10 @@ body.resizing-sidebar .settings-sidebar {
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-muted);
-  transition: all 0.12s ease;
+  transition:
+    background var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-instant) var(--ease-spring);
 }
 
 .tree-session:hover {
@@ -392,6 +403,7 @@ body.resizing-sidebar .settings-sidebar {
 .tree-session.active {
   background: var(--bg-active);
   color: var(--text-primary);
+  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .tree-session svg {

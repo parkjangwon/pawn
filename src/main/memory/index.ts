@@ -17,7 +17,8 @@ export {
   buildInjectBlock,
   ingestTurn,
   exportAll,
-  importMany
+  importMany,
+  consolidateMemories
 } from './store'
 export { closeMemoryDb, getMemoryDb } from './db'
 export type {

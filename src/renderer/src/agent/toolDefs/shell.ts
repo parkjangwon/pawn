@@ -14,6 +14,16 @@ export const SHELL_TOOLS: ToolDefinition[] = [
         background: {
           type: 'boolean',
           description: 'If true, start the command in the background and return a job id immediately.'
+        },
+        sandbox: {
+          type: 'boolean',
+          description:
+            'Apply sandbox policy (env allowlist + dangerous-command block). Default true. Set false only when the user needs full env/secrets for a trusted local tool.'
+        },
+        network: {
+          type: 'boolean',
+          description:
+            'Allow network access (default true). When false on macOS, wraps with sandbox-exec network-deny when available.'
         }
       },
       required: ['command']

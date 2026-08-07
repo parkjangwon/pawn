@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import MessageList from '../MessageList'
-import { useStreamingStore } from '../../stores/streaming'
+import { useStreamingStore, __flushStreamingForTests } from '../../stores/streaming'
 import type { Message } from '../../stores/app'
 
 vi.mock('react-i18next', () => ({
@@ -94,8 +94,10 @@ describe('MessageList', () => {
 
   it('shows live streaming content and falls back to stored content after the flush', () => {
     useStreamingStore.getState().setContent('a1', 'live text')
+    __flushStreamingForTests()
     const { rerender } = renderList({ messages: [msg('a1', 'assistant', 'stored text')] })
-    expect(screen.getByText('live text')).toBeInTheDocument()
+    // Live stream uses plain-text path (pre), not full markdown.
+    expect(screen.getByText(/live text/)).toBeInTheDocument()
 
     useStreamingStore.getState().clear('a1')
     rerender(

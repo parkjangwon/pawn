@@ -91,8 +91,6 @@
   -webkit-app-region: no-drag;
 }
 
-.mobile-title {
-
 /* --- Project header in chat --- */
 .chat-header-project {
   display: flex;
@@ -172,70 +170,99 @@
   background: var(--bg-hover);
   color: var(--text-primary);
 }
-  font-size: var(--font-xl);
-  font-weight: 700;
-  color: var(--text-primary);
+
+.project-menu-dropdown {
+  animation: slideDownIn var(--dur-fast) var(--ease-spring);
 }
 
-/* Welcome */
+/* Welcome — sits in the upper half so the gap to the composer feels intentional */
 .chat-welcome {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: var(--space-md);
-  padding: var(--space-xl);
+  gap: var(--space-sm);
+  /* Extra bottom padding pulls the block toward the input (ChatGPT-like) */
+  padding: var(--space-xl) var(--space-xl) clamp(48px, 12vh, 120px);
+  width: 100%;
+  max-width: var(--chat-content-max, 720px);
+  margin: 0 auto;
+  box-sizing: border-box;
+  animation: riseIn var(--dur-med) var(--ease-spring);
 }
 
 .welcome-icon {
-  margin-bottom: var(--space-sm);
-  opacity: 0.6;
+  margin-bottom: var(--space-xs);
+  opacity: 0.45;
+  color: var(--text-muted);
 }
 
 .chat-welcome h1 {
-  font-size: 20px;
+  font-size: 22px;
   font-weight: 600;
+  letter-spacing: -0.02em;
   color: var(--text-primary);
   text-align: center;
+  line-height: 1.3;
 }
 
 .chat-welcome p {
-  font-size: var(--font-lg);
+  font-size: var(--font-md);
   color: var(--text-muted);
   text-align: center;
+  max-width: 36em;
+  margin: 0;
 }
 
 .welcome-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: var(--space-sm);
-  margin-top: var(--space-lg);
-  max-width: 520px;
+  gap: 10px;
+  margin-top: var(--space-xl);
   width: 100%;
+  max-width: 100%;
 }
 
 .welcome-btn {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--space-sm);
-  padding: var(--space-md) var(--space-lg);
+  gap: 8px;
+  min-height: 72px;
+  padding: 14px 16px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-primary);
+  border-radius: 12px;
+  background: var(--bg-elevated, var(--bg-primary));
   color: var(--text-secondary);
   font-size: var(--font-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-instant) var(--ease-spring),
+    background var(--dur-fast) var(--ease-out-soft);
   text-align: left;
   line-height: 1.4;
 }
 
 .welcome-btn:hover {
-  border-color: var(--accent);
+  border-color: color-mix(in srgb, var(--text-muted) 55%, var(--border-color));
   color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  background: var(--bg-primary);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.06);
+  transform: translateY(-1px);
+}
+
+.app.dark .welcome-btn {
+  background: var(--bg-elevated);
+  border-color: var(--border-strong, var(--border-color));
+}
+
+.app.dark .welcome-btn:hover {
+  border-color: #6e6e73;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
 }
 
 .welcome-btn svg {
@@ -258,11 +285,122 @@
   color: #fff;
 }
 
+/* Session pane: hosts welcome or message list above the composer */
+.session-pane {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.session-pane-enter {
+  animation: sessionPaneIn var(--dur-fast) var(--ease-out-soft) both;
+}
+
+@keyframes sessionPaneIn {
+  from {
+    opacity: 0.6;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* Skeleton while history loads */
+.chat-skeleton {
+  flex: 1;
+  overflow: hidden;
+  padding: var(--space-xl);
+  max-width: var(--chat-content-max, 720px);
+  width: 100%;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+  box-sizing: border-box;
+}
+
+.chat-skeleton-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 92%;
+}
+
+.chat-skeleton-row.user {
+  align-self: flex-end;
+  align-items: flex-end;
+}
+
+.chat-skeleton-line,
+.chat-skeleton-bubble {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-hover) 0%,
+    var(--bg-active) 45%,
+    var(--bg-hover) 90%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.1s ease-in-out infinite;
+}
+
+.chat-skeleton-line {
+  width: 100%;
+}
+
+.chat-skeleton-line.short {
+  width: 28%;
+  height: 10px;
+  opacity: 0.7;
+}
+
+.chat-skeleton-line.med {
+  width: 62%;
+}
+
+.chat-skeleton-bubble {
+  width: min(280px, 70vw);
+  height: 44px;
+  border-radius: 12px;
+}
+
+.chat-skeleton-bubble.short {
+  width: min(160px, 50vw);
+  height: 36px;
+}
+
+/* Live stream: cheap plain text (no markdown AST every frame) */
+.streaming-plaintext {
+  margin: 0;
+  font-family: inherit;
+  font-size: inherit;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  padding: 0;
+}
+
+.message-content-live {
+  min-height: 1.2em;
+}
+
 /* Messages */
 .chat-messages {
   flex: 1;
   overflow-y: auto;
   padding: var(--space-xl) 0;
+  scroll-behavior: auto; /* stick-to-bottom is JS-driven; smooth would fight streaming */
+  /* Contain paint for long threads */
+  contain: content;
 }
 
 .message-load-earlier {
@@ -282,10 +420,18 @@
 }
 
 .message {
-  max-width: 760px;
+  max-width: var(--chat-content-max, 720px);
   margin: 0 auto;
   padding: var(--space-md) var(--space-xl);
   width: 100%;
+  box-sizing: border-box;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 120px;
+}
+
+/* New messages (user + assistant) ease in — only last few via class from MessageList */
+.message.message-enter {
+  animation: messageIn var(--dur-med) var(--ease-spring) both;
 }
 
 .message-role {
@@ -370,13 +516,23 @@
 }
 
 .message-content.streaming .cursor-blink {
-  animation: blink 1s step-end infinite;
+  animation: blink 0.9s step-end infinite;
   color: var(--accent);
   font-weight: bold;
+  display: inline-block;
+  width: 0.55em;
+  margin-left: 1px;
+  vertical-align: baseline;
 }
 
 @keyframes blink {
-  50% { opacity: 0; }
+  0%, 49% { opacity: 1; }
+  50%, 100% { opacity: 0; }
+}
+
+/* Soft streaming “live” sheen on the active assistant bubble */
+.message.assistant .message-content.streaming {
+  position: relative;
 }
 
 /* Tool/system messages render as a collapsed ToolMessage row (see
@@ -385,41 +541,77 @@
   padding: 2px var(--space-xl);
 }
 
-/* Input area - Codex style */
+/* Input area — same max-width as welcome/messages so the column reads as one unit */
 .chat-input-wrapper {
-  padding: 0 var(--space-xl) var(--space-lg);
   flex-shrink: 0;
+  width: 100%;
+  padding: 0 var(--space-xl) 20px;
   overflow: visible;
   position: relative;
   z-index: 20;
+  /* Soft fade so the composer is grounded, not a floating island */
+  background: linear-gradient(
+    to top,
+    var(--bg-primary) 65%,
+    color-mix(in srgb, var(--bg-primary) 70%, transparent) 100%
+  );
 }
 
 .chat-input-container {
-  max-width: 760px;
+  max-width: var(--chat-content-max, 720px);
+  width: 100%;
   margin: 0 auto;
   position: relative;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-input);
+  border: 1px solid var(--border-strong, var(--border-color));
+  border-radius: 16px;
+  background: var(--bg-elevated, var(--bg-input));
   overflow: visible;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.05);
-  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--border-color) 40%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 12px 32px rgba(0, 0, 0, 0.06);
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-fast) var(--ease-out-soft);
 }
 
+/* No focus ring/outline on the composer — caret is enough (avoids tacky glow). */
 .chat-input-container:focus-within {
-  border-color: var(--focus-ring);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 18px rgba(0, 0, 0, 0.08);
+  border-color: var(--border-strong, var(--border-color));
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--border-color) 40%, transparent),
+    0 2px 8px rgba(0, 0, 0, 0.04),
+    0 12px 32px rgba(0, 0, 0, 0.06);
 }
 
-/* Dark composer: stronger edge + soft lift (reads like ChatGPT/Copilot input card) */
+.chat-input-container:focus-within,
+.chat-input-container *:focus,
+.chat-input-container *:focus-visible {
+  outline: none;
+}
+
+/* Dark composer: stronger edge + soft lift */
+.app.dark .chat-input-wrapper {
+  background: linear-gradient(
+    to top,
+    var(--bg-primary) 70%,
+    color-mix(in srgb, var(--bg-primary) 55%, transparent) 100%
+  );
+}
+
 .app.dark .chat-input-container {
   border-color: var(--border-strong, var(--border-color));
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.04), 0 10px 28px rgba(0, 0, 0, 0.35);
+  background: var(--bg-elevated);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
 .app.dark .chat-input-container:focus-within {
-  border-color: rgba(255, 255, 255, 0.28);
-  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.45);
+  border-color: var(--border-strong, var(--border-color));
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.05),
+    0 10px 28px rgba(0, 0, 0, 0.35);
 }
 
 .app.dark .message-model-label {
@@ -730,6 +922,8 @@
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   z-index: 50;
   overflow: hidden;
+  animation: riseIn var(--dur-fast) var(--ease-spring);
+  transform-origin: bottom center;
 }
 
 .picker-list {
@@ -751,7 +945,9 @@
   font-size: var(--font-md);
   cursor: pointer;
   text-align: left;
-  transition: background 0.1s;
+  transition:
+    background var(--dur-instant) var(--ease-out-soft),
+    color var(--dur-instant) var(--ease-out-soft);
 }
 
 .picker-item:hover {
@@ -791,7 +987,8 @@
 .chat-input-box {
   display: flex;
   flex-direction: column;
-  padding: 0 var(--space-md) var(--space-sm);
+  padding: 12px 14px 10px;
+  gap: 2px;
 }
 
 .chat-input-box textarea {
@@ -800,12 +997,14 @@
   outline: none;
   background: none;
   resize: none;
-  font-size: var(--font-lg);
+  font-size: 15px;
   line-height: 1.5;
   color: var(--text-primary);
   font-family: inherit;
   max-height: 200px;
-  padding: var(--space-xs) 0;
+  min-height: 24px;
+  padding: 2px 2px 6px;
+  field-sizing: content;
 }
 
 .chat-input-box textarea::placeholder {
@@ -817,9 +1016,9 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-sm);
-  padding-top: var(--space-xs);
+  padding-top: 4px;
   flex-wrap: nowrap;
-  min-height: 32px;
+  min-height: 34px;
 }
 
 .attachment-bar {
@@ -1209,16 +1408,25 @@
   color: var(--on-accent, #fff);
   cursor: pointer;
   flex-shrink: 0;
-  transition: background 0.15s, opacity 0.15s, color 0.15s;
+  transition:
+    background var(--dur-fast) var(--ease-out-soft),
+    opacity var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-instant) var(--ease-spring),
+    box-shadow var(--dur-fast) var(--ease-out-soft);
 }
 
 .send-btn:hover:not(:disabled) {
   background: var(--accent-hover);
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--accent) 35%, transparent);
+  transform: scale(1.04);
 }
 
 .send-btn:disabled {
   opacity: 0.45;
   cursor: default;
+  box-shadow: none;
+  transform: none;
 }
 
 /* Dark: light disc + dark arrow (same rule as primary buttons) */
@@ -1278,6 +1486,9 @@
   }
   .chat-input-wrapper {
     padding: 0 var(--space-md) var(--space-md);
+  }
+  .chat-welcome {
+    padding: var(--space-lg) var(--space-md) var(--space-xl);
   }
   .welcome-actions {
     grid-template-columns: 1fr;

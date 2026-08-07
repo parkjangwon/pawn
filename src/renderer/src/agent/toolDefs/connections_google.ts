@@ -35,7 +35,7 @@ export const GOOGLE_CONNECTION_TOOLS: ToolDefinition[] = [
 {
     name: 'google_gmail_search',
     description:
-      'Search Gmail (read-only). query uses Gmail search syntax (e.g. "from:alice newer_than:7d", "subject:invoice"). Cannot send mail. Returns message ids + metadata. Requires Google connection.',
+      'Search Gmail. query uses Gmail search syntax (e.g. "from:alice newer_than:7d", "subject:invoice"). Returns message ids + metadata. To send mail use google_gmail_send. Requires Google connection.',
     parameters: {
       type: 'object',
       properties: {
@@ -109,6 +109,62 @@ export const GOOGLE_CONNECTION_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: { presentation_id: { type: 'string', description: 'Presentation id' } },
       required: ['presentation_id']
+    }
+  },
+{
+    name: 'google_gmail_send',
+    description:
+      'Send an email via Gmail. Requires Google re-connect after write scopes were added (Settings → Connections). Always confirm recipients with the user before sending. Plain-text body only.',
+    parameters: {
+      type: 'object',
+      properties: {
+        to: { type: 'string', description: 'Recipient email (required)' },
+        subject: { type: 'string', description: 'Subject (required)' },
+        body: { type: 'string', description: 'Plain-text body' },
+        cc: { type: 'string', description: 'Optional Cc' },
+        bcc: { type: 'string', description: 'Optional Bcc' }
+      },
+      required: ['to', 'subject', 'body']
+    }
+  },
+{
+    name: 'google_sheets_write',
+    description:
+      'Write values to a Google Sheet range (USER_ENTERED). values is a 2D array (or JSON string of one). Requires re-connect for write scopes. Prefer small ranges.',
+    parameters: {
+      type: 'object',
+      properties: {
+        spreadsheet_id: { type: 'string', description: 'Spreadsheet id' },
+        range: { type: 'string', description: 'A1 range e.g. Sheet1!A1:B10' },
+        values: {
+          type: 'array',
+          description: '2D array of cell values (rows)',
+          items: { type: 'array', items: {} }
+        }
+      },
+      required: ['spreadsheet_id', 'range', 'values']
+    }
+  },
+{
+    name: 'google_calendar_create',
+    description:
+      'Create a Google Calendar event. start/end as ISO8601 dateTime or date. Requires re-connect for calendar write scope. Confirm with the user before creating.',
+    parameters: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string', description: 'Event title' },
+        start: { type: 'string', description: 'ISO start' },
+        end: { type: 'string', description: 'ISO end' },
+        description: { type: 'string' },
+        location: { type: 'string' },
+        calendar_id: { type: 'string', description: 'Default primary' },
+        attendees: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional attendee emails'
+        }
+      },
+      required: ['summary', 'start', 'end']
     }
   }
 ]

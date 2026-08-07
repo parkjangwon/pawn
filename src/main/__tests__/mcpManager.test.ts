@@ -39,10 +39,9 @@ describe('discoverConfigs', () => {
     expect(await discoverConfigs(projectDir)).toEqual([])
   })
 
-  it('skips non-stdio (http/sse) entries — remote connectors are out of scope', async () => {
+  it('accepts http remote entries alongside stdio', async () => {
     mkdirSync(projectDir, { recursive: true })
     await writeServerConfig('project', projectDir, 'local', { command: 'npx', args: ['pkg'] })
-    // Hand-write a second, non-stdio entry alongside the one writeServerConfig made.
     const fs = await import('fs/promises')
     const path = join(projectDir, '.mcp.json')
     const file = JSON.parse(await fs.readFile(path, 'utf-8'))
@@ -50,7 +49,27 @@ describe('discoverConfigs', () => {
     await fs.writeFile(path, JSON.stringify(file, null, 2))
 
     const configs = await discoverConfigs(projectDir)
-    expect(configs.map((c) => c.id)).toEqual(['local'])
+    expect(configs.map((c) => c.id).sort()).toEqual(['local', 'remote'])
+    const remote = configs.find((c) => c.id === 'remote')
+    expect(remote?.transport).toBe('http')
+    expect(remote?.url).toBe('https://example.com/mcp')
+  })
+
+  it('writes http server config via writeServerConfig', async () => {
+    const res = await writeServerConfig('project', projectDir, 'cloud', {
+      type: 'http',
+      url: 'https://mcp.example.com/v1'
+    })
+    expect(res.ok).toBe(true)
+    const configs = await discoverConfigs(projectDir)
+    expect(configs).toEqual([
+      expect.objectContaining({
+        id: 'cloud',
+        transport: 'http',
+        url: 'https://mcp.example.com/v1',
+        source: 'project'
+      })
+    ])
   })
 })
 
@@ -60,7 +79,15 @@ describe('writeServerConfig', () => {
     expect(res.ok).toBe(true)
     const configs = await discoverConfigs(projectDir)
     expect(configs).toEqual([
-      { id: 'my-tool', command: 'npx', args: ['-y', 'my-tool-mcp'], env: undefined, cwd: projectDir, source: 'project' }
+      {
+        id: 'my-tool',
+        transport: 'stdio',
+        command: 'npx',
+        args: ['-y', 'my-tool-mcp'],
+        env: undefined,
+        cwd: projectDir,
+        source: 'project'
+      }
     ])
   })
 
@@ -68,7 +95,17 @@ describe('writeServerConfig', () => {
     const res = await writeServerConfig('user', undefined, 'global-tool', { command: 'global-tool', args: [] })
     expect(res.ok).toBe(true)
     const configs = await discoverConfigs(projectDir)
-    expect(configs).toEqual([{ id: 'global-tool', command: 'global-tool', args: [], env: undefined, cwd: undefined, source: 'user-pawn' }])
+    expect(configs).toEqual([
+      {
+        id: 'global-tool',
+        transport: 'stdio',
+        command: 'global-tool',
+        args: [],
+        env: undefined,
+        cwd: undefined,
+        source: 'user-pawn'
+      }
+    ])
     // And it's visible even with no project open at all.
     expect(await discoverConfigs(undefined)).toEqual(configs)
   })

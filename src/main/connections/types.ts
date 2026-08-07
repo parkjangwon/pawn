@@ -33,6 +33,12 @@ export interface ConnectionStatus {
   updatedAt?: number
   /** Non-secret metadata shown in UI (GitLab host / AWS region). */
   hostHint?: string
+  /**
+   * Google: whether write scopes (gmail.send, spreadsheets, calendar) appear
+   * granted. False after scope upgrades until user re-connects.
+   */
+  writeScopesReady?: boolean
+  writeScopesMissing?: string[]
 }
 
 export interface OAuthClientConfig {

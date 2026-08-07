@@ -1,7 +1,7 @@
 {
   "name": "pawn",
-  "version": "0.7.0",
-  "description": "AI Desktop Coding Agent — Code, Browse, Automate. BYOK, no harness, fully extensible.",
+  "version": "0.8.0",
+  "description": "AI Desktop Coding Agent \u2014 Code, Browse, Automate. BYOK, no harness, fully extensible.",
   "main": "./out/main/index.js",
   "author": "parkjangwon",
   "license": "MIT",

@@ -21,7 +21,17 @@
   --font-xl: 16px;
   --font-2xl: 20px;
   --font-3xl: 24px;
+  /* Motion system — snappy spring + short durations for “instant but alive” feel */
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-instant: 80ms;
+  --dur-fast: 120ms;
+  --dur-med: 180ms;
+  --dur-slow: 280ms;
+  --press-scale: 0.97;
+  /* Shared chat column width: welcome, messages, composer stay aligned */
+  --chat-content-max: 720px;
 }
 
 * {
@@ -61,6 +71,129 @@ body {
   font-size: var(--font-lg);
   line-height: 1.6;
   text-rendering: optimizeLegibility;
+  /* Reduce paint cost when scrolling long chats */
+  overscroll-behavior: none;
+}
+
+/* Skip link — off-screen until focused via Tab (keyboard a11y only).
+   Never cover macOS traffic lights: sit below the titlebar, inset from left. */
+.skip-link {
+  position: fixed;
+  left: 50%;
+  top: 12px;
+  z-index: 10000;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--accent, #2c2c2c);
+  color: var(--on-accent, #fff);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  /* Fully clipped when not focused — not just translated (avoids peeking) */
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  clip-path: none;
+  width: auto;
+  height: auto;
+  overflow: visible;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.app.platform-mac .skip-link:focus,
+.app.platform-mac .skip-link:focus-visible {
+  /* Below traffic lights / titlebar (~48px header) */
+  top: 52px;
+}
+
+#main-content:focus {
+  outline: none;
+}
+
+/* —— Interactive primitives (buttons, chips, list rows) —— */
+button,
+[role='button'] {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+/* Shared press feedback for clickable chrome (opt-in via .pressable or native button-ish) */
+.pressable,
+.sidebar-action-btn,
+.sidebar-item,
+.tree-session,
+.sidebar-toggle-btn,
+.project-menu-btn,
+.nav-btn,
+.send-btn,
+.stop-btn,
+.welcome-btn,
+.automation-card,
+.picker-item,
+.confirm-btn,
+.permission-actions button,
+.model-chip-btn,
+.context-chip,
+.test-btn,
+.add-btn-full,
+.btn-primary,
+.btn-cancel {
+  transition:
+    background var(--dur-fast) var(--ease-out-soft),
+    color var(--dur-fast) var(--ease-out-soft),
+    border-color var(--dur-fast) var(--ease-out-soft),
+    box-shadow var(--dur-fast) var(--ease-out-soft),
+    opacity var(--dur-fast) var(--ease-out-soft),
+    transform var(--dur-instant) var(--ease-spring);
+}
+
+.pressable:active:not(:disabled),
+.sidebar-action-btn:active:not(:disabled),
+.sidebar-item:active,
+.tree-session:active,
+.sidebar-toggle-btn:active:not(:disabled),
+.project-menu-btn:active:not(:disabled),
+.nav-btn:active:not(:disabled),
+.send-btn:active:not(:disabled),
+.stop-btn:active:not(:disabled),
+.welcome-btn:active:not(:disabled),
+.automation-card:active,
+.picker-item:active:not(:disabled),
+.confirm-btn:active:not(:disabled),
+.model-chip-btn:active:not(:disabled),
+.context-chip:active:not(:disabled),
+.test-btn:active:not(:disabled),
+.btn-primary:active:not(:disabled),
+.btn-cancel:active:not(:disabled) {
+  transform: scale(var(--press-scale));
+}
+
+/* Keyboard focus that feels modern without fighting drag regions */
+button:focus-visible,
+a:focus-visible,
+[role='button']:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* Smooth theme paint: surfaces inherit color transitions lightly */
+.app {
+  transition: background-color var(--dur-med) var(--ease-out-soft), color var(--dur-med) var(--ease-out-soft);
 }
 
 .app {
@@ -81,7 +214,8 @@ body {
   height: 100%;
   overflow: hidden;
   margin-left: var(--sidebar-width);
-  transition: margin-left 0.2s var(--ease-spring);
+  transition: margin-left var(--dur-med) var(--ease-spring);
+  will-change: margin-left;
 }
 
 .workspace-top {
@@ -197,30 +331,41 @@ body {
   --control-border: #525256;
 }
 
-/* Scrollbar */
+/* Scrollbar — thin, fade-in on hover for a calmer chrome */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: var(--border-color);
-  border-radius: 3px;
-  transition: background 0.2s;
+  background: transparent;
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+  transition: background-color var(--dur-fast) ease;
 }
+*:hover > ::-webkit-scrollbar-thumb,
+*:focus-within > ::-webkit-scrollbar-thumb,
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--text-muted);
+  background-color: color-mix(in srgb, var(--text-muted) 55%, transparent);
+  background-clip: padding-box;
 }
-.app.dark ::-webkit-scrollbar-thumb {
-  background: #48484a;
-}
+.app.dark *:hover > ::-webkit-scrollbar-thumb,
+.app.dark *:focus-within > ::-webkit-scrollbar-thumb,
 .app.dark ::-webkit-scrollbar-thumb:hover {
-  background: #636366;
+  background-color: color-mix(in srgb, #98989f 50%, transparent);
+  background-clip: padding-box;
 }
 ::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+/* Always-visible thin track for always-scrolling panels */
+.chat-messages::-webkit-scrollbar-thumb,
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: color-mix(in srgb, var(--text-muted) 28%, transparent);
 }
 
 /* xterm: hide the hidden textarea used for keyboard input */
@@ -269,6 +414,74 @@ body {
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes riseIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes slideDownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes messageIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes shimmer {
+  0% { background-position: 100% 0; }
+  100% { background-position: -100% 0; }
+}
+
+/* Modal / popover spring entrance */
+.modal-enter,
+.confirm-overlay,
+.permission-overlay {
+  animation: fadeIn var(--dur-fast) var(--ease-out-soft);
+}
+
+.modal-panel-enter,
+.confirm-dialog,
+.permission-dialog {
+  animation: riseIn var(--dur-med) var(--ease-spring);
+}
+
+/* Respect reduced motion — still usable, just no thrash */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .pressable:active:not(:disabled),
+  .sidebar-action-btn:active:not(:disabled),
+  .send-btn:active:not(:disabled) {
+    transform: none !important;
+  }
 }
 
 @media (min-width: 769px) {

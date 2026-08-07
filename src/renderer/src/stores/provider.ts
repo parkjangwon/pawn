@@ -19,6 +19,12 @@ interface ProviderState {
   agentMode: AgentMode
   /** Auto-verify after code edits: off | typecheck | test. */
   doneGate: DoneGate
+  /** Agent shell_exec sandbox defaults. */
+  shellSandbox: boolean
+  shellNetwork: boolean
+  shellCwdJail: boolean
+  /** Merge near-duplicate memories after each agent turn. */
+  autoMemoryConsolidate: boolean
   initialized: boolean
   init: () => Promise<void>
 
@@ -42,6 +48,10 @@ interface ProviderState {
   setAgentMode: (mode: AgentMode) => void
   toggleAgentMode: () => void
   setDoneGate: (gate: DoneGate) => void
+  setShellSandbox: (v: boolean) => void
+  setShellNetwork: (v: boolean) => void
+  setShellCwdJail: (v: boolean) => void
+  setAutoMemoryConsolidate: (v: boolean) => void
 }
 
 function hydrateModel(m: ModelEntry): ModelEntry {
@@ -76,7 +86,11 @@ function saveToBackend(state: ProviderState): void {
       permissionMode: state.permissionMode,
       reasoningEffort: state.reasoningEffort,
       agentMode: state.agentMode,
-      doneGate: state.doneGate
+      doneGate: state.doneGate,
+      shellSandbox: state.shellSandbox,
+      shellNetwork: state.shellNetwork,
+      shellCwdJail: state.shellCwdJail,
+      autoMemoryConsolidate: state.autoMemoryConsolidate
     }
   })
 }
@@ -92,6 +106,10 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   reasoningEffort: 'auto',
   agentMode: 'build',
   doneGate: 'typecheck',
+  shellSandbox: true,
+  shellNetwork: true,
+  shellCwdJail: true,
+  autoMemoryConsolidate: true,
   initialized: false,
 
   init: async () => {
@@ -125,6 +143,10 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         reasoningEffort: (settings.reasoningEffort as 'auto' | 'low' | 'medium' | 'high') || 'auto',
         agentMode: parseAgentMode(settings.agentMode),
         doneGate: parseDoneGate(settings.doneGate),
+        shellSandbox: settings.shellSandbox !== false,
+        shellNetwork: settings.shellNetwork !== false,
+        shellCwdJail: settings.shellCwdJail !== false,
+        autoMemoryConsolidate: settings.autoMemoryConsolidate !== false,
         initialized: true
       })
     } catch {
@@ -252,6 +274,35 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const next = { ...s, doneGate: gate }
       saveToBackend(next)
       return { doneGate: gate }
+    })
+  },
+
+  setShellSandbox: (v) => {
+    set((s) => {
+      const next = { ...s, shellSandbox: v }
+      saveToBackend(next)
+      return { shellSandbox: v }
+    })
+  },
+  setShellNetwork: (v) => {
+    set((s) => {
+      const next = { ...s, shellNetwork: v }
+      saveToBackend(next)
+      return { shellNetwork: v }
+    })
+  },
+  setShellCwdJail: (v) => {
+    set((s) => {
+      const next = { ...s, shellCwdJail: v }
+      saveToBackend(next)
+      return { shellCwdJail: v }
+    })
+  },
+  setAutoMemoryConsolidate: (v) => {
+    set((s) => {
+      const next = { ...s, autoMemoryConsolidate: v }
+      saveToBackend(next)
+      return { autoMemoryConsolidate: v }
     })
   }
 }))

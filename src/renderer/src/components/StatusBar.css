@@ -30,7 +30,8 @@
 
 .status-dot.streaming {
   background: var(--accent);
-  animation: pulse 1.5s ease-in-out infinite;
+  animation: pulse 1.2s ease-in-out infinite;
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 40%, transparent);
 }
 
 .status-dot.disconnected {
@@ -57,4 +58,19 @@
   background: var(--bg-hover);
   color: var(--text-muted);
   font-size: 11px;
+}
+
+.status-subagents {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.status-usage {
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
 }

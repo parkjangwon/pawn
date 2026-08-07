@@ -1,4 +1,5 @@
 import { ipcMain, powerSaveBlocker, type WebContents } from 'electron'
+import { watch, type FSWatcher } from 'fs'
 import { handleTrusted, isTrustedSender } from './trust'
 import { closeHeadlessWindow, ensureHeadlessWindow, getHeadlessWindow, getMainWindow } from '../window'
 import * as db from '../db'
@@ -6,6 +7,7 @@ import { loadConfig } from '../config'
 import { computeNextRun, MAX_TIMEOUT_MS, parseSchedule } from '../routineSchedule'
 
 const timers = new Map<string, NodeJS.Timeout>()
+const fileWatchers = new Map<string, FSWatcher>()
 let powerBlockerId: number | null = null
 
 // --- Headless routine execution ---------------------------------------------
@@ -49,6 +51,38 @@ function clearTimer(id: string): void {
     clearTimeout(timer)
     timers.delete(id)
   }
+  const w = fileWatchers.get(id)
+  if (w) {
+    try {
+      w.close()
+    } catch {
+      /* ignore */
+    }
+    fileWatchers.delete(id)
+  }
+}
+
+function fireRoutine(row: db.RoutineRow, schedule: NonNullable<ReturnType<typeof parseSchedule>>): void {
+  const next = computeNextRun(schedule)
+  db.setRoutineRunState(row.id, next, Date.now(), '')
+
+  const win = getMainWindow()
+  if (win) {
+    deliverFire(win.webContents, row, next)
+  } else {
+    // No window: run headlessly in a hidden renderer.
+    const hw = ensureHeadlessWindow()
+    headlessActive.add(row.id)
+    armHeadlessWatchdog()
+    if (headlessReady) {
+      deliverFire(hw.webContents, row, next)
+    } else {
+      pendingHeadlessFires.push({ row, next })
+    }
+  }
+  // Re-arm from the DB so edits made since this timer was scheduled win.
+  const fresh = db.getAllRoutines().find((r) => r.id === row.id)
+  if (fresh) armTimer(fresh)
 }
 
 function armTimer(row: db.RoutineRow): void {
@@ -57,28 +91,27 @@ function armTimer(row: db.RoutineRow): void {
   const schedule = parseSchedule(row.schedule)
   if (!schedule) return
 
+  // File-event trigger: watch path and debounce.
+  if (schedule.type === 'file_watch') {
+    const debounceMs = Math.max(1, schedule.debounceMinutes || 1) * 60_000
+    let lastFire = 0
+    try {
+      const watcher = watch(schedule.path, { persistent: false }, () => {
+        const now = Date.now()
+        if (now - lastFire < debounceMs) return
+        lastFire = now
+        const fresh = db.getAllRoutines().find((r) => r.id === row.id)
+        if (fresh?.enabled) fireRoutine(fresh, schedule)
+      })
+      fileWatchers.set(row.id, watcher)
+    } catch {
+      // Path missing — fall through to poll timer so user can create it later.
+    }
+  }
+
   const fire = (): void => {
     clearTimer(row.id)
-    const next = computeNextRun(schedule)
-    db.setRoutineRunState(row.id, next, Date.now(), '')
-
-    const win = getMainWindow()
-    if (win) {
-      deliverFire(win.webContents, row, next)
-    } else {
-      // No window: run headlessly in a hidden renderer.
-      const hw = ensureHeadlessWindow()
-      headlessActive.add(row.id)
-      armHeadlessWatchdog()
-      if (headlessReady) {
-        deliverFire(hw.webContents, row, next)
-      } else {
-        pendingHeadlessFires.push({ row, next })
-      }
-    }
-    // Re-arm from the DB so edits made since this timer was scheduled win.
-    const fresh = db.getAllRoutines().find((r) => r.id === row.id)
-    if (fresh) armTimer(fresh)
+    fireRoutine(row, schedule)
   }
 
   const delay = Math.max(0, row.nextRunAt - Date.now())

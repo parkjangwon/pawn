@@ -1,4 +1,4 @@
-import { ipcMain } from 'electron'
+import { handleTrusted } from './trust'
 import {
   getHooksSettings,
   setHooksSettings,
@@ -9,19 +9,19 @@ import {
 } from '../hooks'
 
 export function registerHooksIpc(): void {
-  ipcMain.handle('hooks:settings', () => getHooksSettings())
+  handleTrusted('hooks:settings', async () => getHooksSettings())
 
-  ipcMain.handle('hooks:setSettings', (_e, partial: Partial<HooksSettings>) => {
+  handleTrusted('hooks:setSettings', async (_e, partial: Partial<HooksSettings>) => {
     return setHooksSettings(partial || {})
   })
 
-  ipcMain.handle('hooks:list', (_e, projectPath?: string | null) => {
+  handleTrusted('hooks:list', async (_e, projectPath?: string | null) => {
     return listHooksSummary(projectPath || null)
   })
 
-  ipcMain.handle(
+  handleTrusted(
     'hooks:run',
-    (
+    async (
       _e,
       input: {
         event: HookEventName
@@ -40,13 +40,23 @@ export function registerHooksIpc(): void {
           errors: ['event is required']
         }
       }
-      return runHooks({
-        event: input.event,
-        sessionId: input.sessionId,
-        projectPath: input.projectPath ?? null,
-        cwd: input.cwd,
-        payload: input.payload || {}
-      })
+      try {
+        return await runHooks({
+          event: input.event,
+          sessionId: input.sessionId,
+          projectPath: input.projectPath ?? null,
+          cwd: input.cwd,
+          payload: input.payload || {}
+        })
+      } catch (err) {
+        return {
+          ok: false,
+          decision: 'none',
+          additionalContext: [],
+          ran: 0,
+          errors: [err instanceof Error ? err.message : String(err)]
+        }
+      }
     }
   )
 }

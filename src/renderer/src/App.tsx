@@ -105,7 +105,10 @@ export default function App(): React.JSX.Element {
         return prev
       }
       const snapshot: NavSnapshot = { showSettings, mainView, projectId: activeProjectId, sessionId: activeSessionId }
-      const list = [...prev.list.slice(0, prev.index + 1), snapshot]
+      let list = [...prev.list.slice(0, prev.index + 1), snapshot]
+      // Cap history so long sessions do not retain unbounded nav state.
+      const MAX_NAV = 80
+      if (list.length > MAX_NAV) list = list.slice(list.length - MAX_NAV)
       return { list, index: list.length - 1 }
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -239,8 +242,11 @@ export default function App(): React.JSX.Element {
 
   return (
     <div className={`app ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'} ${window.api?.platform === 'darwin' ? 'platform-mac' : ''}`}>
+      <a href="#main-content" className="skip-link">
+        본문으로 건너뛰기
+      </a>
       {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={closeSidebar} />
+        <div className="sidebar-overlay" onClick={closeSidebar} role="presentation" />
       )}
       <Sidebar
         onOpenSettings={() => setShowSettings(true)}
@@ -252,7 +258,7 @@ export default function App(): React.JSX.Element {
       />
       <div className="workspace">
         <div className="workspace-top">
-          <div className="main-column">
+          <div className="main-column" id="main-content" tabIndex={-1}>
             {mainView === 'chat' ? (
               <ChatArea
                 onToggleSidebar={toggleSidebar}

@@ -54,7 +54,7 @@ export const AGENT_TOOLS: ToolDefinition[] = [
     parameters: {
       type: 'object',
       properties: {
-        max_files: { type: 'number', description: 'Max source files to include (default 80, max 200)' },
+        max_files: { type: 'number', description: 'Max source files to include (default 120, max 300)' },
         rootPath: { type: 'string', description: 'Project root (optional)' }
       }
     }
@@ -147,6 +147,67 @@ export const AGENT_TOOLS: ToolDefinition[] = [
         }
       },
       required: ['repo']
+    }
+  },
+  {
+    name: 'spawn_agent',
+    description:
+      'Delegate a focused sub-task to a nested agent with its own tool loop. ' +
+      'mode=explore (default): read/search only — map code, gather facts, draft plans. ' +
+      'mode=worker: may edit files and run checks (cannot spawn further agents). ' +
+      'Use for large refactors, multi-module investigation, or when work would exceed one loop. ' +
+      'Returns a structured summary. Prefer parallel_agents when tasks are independent.',
+    parameters: {
+      type: 'object',
+      properties: {
+        prompt: {
+          type: 'string',
+          description: 'Full task instructions for the subagent (be specific about goals and constraints)'
+        },
+        name: { type: 'string', description: 'Short label for this subagent (optional)' },
+        mode: {
+          type: 'string',
+          description: 'explore | worker (default explore)'
+        },
+        max_rounds: {
+          type: 'number',
+          description: 'Max tool rounds for the child (default 12, max 25)'
+        },
+        isolation: {
+          type: 'string',
+          description:
+            'none | worktree. Worker defaults to worktree (isolated git worktree). Explore defaults to none.'
+        }
+      },
+      required: ['prompt']
+    }
+  },
+  {
+    name: 'parallel_agents',
+    description:
+      'Run up to 6 independent subagents in parallel and return combined summaries. ' +
+      'Each task has prompt, optional name/mode/max_rounds/isolation. Ideal for multi-module ' +
+      'investigations or parallel research. Do not use for dependent sequential steps.',
+    parameters: {
+      type: 'object',
+      properties: {
+        tasks: {
+          type: 'array',
+          description: 'Independent tasks (max 6)',
+          items: {
+            type: 'object',
+            properties: {
+              prompt: { type: 'string' },
+              name: { type: 'string' },
+              mode: { type: 'string', description: 'explore | worker' },
+              max_rounds: { type: 'number' },
+              isolation: { type: 'string', description: 'none | worktree' }
+            },
+            required: ['prompt']
+          }
+        }
+      },
+      required: ['tasks']
     }
   }
 ]

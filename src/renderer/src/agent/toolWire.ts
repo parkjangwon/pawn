@@ -2,23 +2,48 @@ import { TOOLS, type ToolDefinition } from './toolDefinitions'
 import { filterToolsForAgentMode, type AgentMode } from './agentMode'
 import { useProviderStore } from '../stores/provider'
 
-function activeToolList(extra: ToolDefinition[] = [], mode?: AgentMode): ToolDefinition[] {
-  const agentMode = mode ?? useProviderStore.getState().agentMode
-  return filterToolsForAgentMode([...TOOLS, ...extra], agentMode)
+export type ToolListOpts = {
+  mode?: AgentMode
+  allowlist?: string[]
+  denylist?: string[]
+}
+
+function activeToolList(extra: ToolDefinition[] = [], opts?: ToolListOpts | AgentMode): ToolDefinition[] {
+  const normalized: ToolListOpts =
+    typeof opts === 'string' || opts == null
+      ? { mode: opts as AgentMode | undefined }
+      : opts
+  const agentMode = normalized.mode ?? useProviderStore.getState().agentMode
+  let list = filterToolsForAgentMode([...TOOLS, ...extra], agentMode)
+  if (normalized.allowlist?.length) {
+    const allow = new Set(normalized.allowlist)
+    list = list.filter((t) => allow.has(t.name))
+  }
+  if (normalized.denylist?.length) {
+    const deny = new Set(normalized.denylist)
+    list = list.filter((t) => !deny.has(t.name))
+  }
+  return list
 }
 
 // Convert tools to OpenAI format. `extra` carries dynamically-discovered
 // tools (currently just MCP servers) that aren't part of the static TOOLS list.
-export function toolsToOpenAI(extra: ToolDefinition[] = [], mode?: AgentMode): Array<Record<string, unknown>> {
-  return activeToolList(extra, mode).map((t) => ({
+export function toolsToOpenAI(
+  extra: ToolDefinition[] = [],
+  modeOrOpts?: AgentMode | ToolListOpts
+): Array<Record<string, unknown>> {
+  return activeToolList(extra, modeOrOpts).map((t) => ({
     type: 'function',
     function: { name: t.name, description: t.description, parameters: t.parameters }
   }))
 }
 
 // Convert tools to Claude format
-export function toolsToClaude(extra: ToolDefinition[] = [], mode?: AgentMode): Array<Record<string, unknown>> {
-  const tools: Array<Record<string, unknown>> = activeToolList(extra, mode).map((t) => ({
+export function toolsToClaude(
+  extra: ToolDefinition[] = [],
+  modeOrOpts?: AgentMode | ToolListOpts
+): Array<Record<string, unknown>> {
+  const tools: Array<Record<string, unknown>> = activeToolList(extra, modeOrOpts).map((t) => ({
     name: t.name,
     description: t.description,
     input_schema: t.parameters

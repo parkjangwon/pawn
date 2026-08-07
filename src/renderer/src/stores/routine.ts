@@ -78,17 +78,63 @@ function ensureRoutineSession(routine: Routine): { projectId: string; sessionId:
   return { projectId, sessionId }
 }
 
-async function waitForIdle(timeoutMs: number): Promise<void> {
+/** Wait until chat is idle. Returns false if still streaming after timeout. */
+async function waitForIdle(timeoutMs: number): Promise<boolean> {
   const start = Date.now()
   while (Date.now() - start < timeoutMs) {
-    if (!useChatStore.getState().isStreaming) return
+    if (!useChatStore.getState().isStreaming) return true
     await new Promise((r) => setTimeout(r, 500))
+  }
+  return !useChatStore.getState().isStreaming
+}
+
+function parsePolicyFromSchedule(scheduleJson: string): {
+  maxRetries: number
+  retryDelaySec: number
+  steps: string[]
+  dependsOn: string[]
+  skipIfRunning: boolean
+} {
+  try {
+    const s = JSON.parse(scheduleJson) as Record<string, unknown>
+    return {
+      maxRetries: Math.min(5, Math.max(0, Math.floor(Number(s.maxRetries) || 0))),
+      retryDelaySec: Math.min(3600, Math.max(10, Math.floor(Number(s.retryDelaySec) || 60))),
+      steps: Array.isArray(s.steps)
+        ? s.steps.map(String).map((x) => x.trim()).filter(Boolean).slice(0, 20)
+        : [],
+      dependsOn: Array.isArray(s.dependsOn) ? s.dependsOn.map(String).filter(Boolean) : [],
+      skipIfRunning: s.skipIfRunning === true
+    }
+  } catch {
+    return { maxRetries: 0, retryDelaySec: 60, steps: [], dependsOn: [], skipIfRunning: false }
   }
 }
 
 export async function runRoutine(routine: Routine): Promise<void> {
   const bound = ensureRoutineSession(routine)
   if (!bound) return
+
+  const policy = parsePolicyFromSchedule(routine.schedule)
+
+  if (policy.skipIfRunning && useRoutineStore.getState().runningIds.has(routine.id)) {
+    return
+  }
+
+  // Dependency gate: required routines must not have lastResult starting with FAIL
+  if (policy.dependsOn.length) {
+    const all = useRoutineStore.getState().routines
+    for (const depId of policy.dependsOn) {
+      const dep = all.find((r) => r.id === depId || r.name === depId)
+      if (!dep) continue
+      const lr = (dep.lastResult || '').trim()
+      if (/^FAIL\b/i.test(lr) || lr.startsWith('error:')) {
+        const msg = `FAIL: dependency ${dep.name || depId} not successful`
+        void window.api.routine?.recordResult?.(routine.id, msg)?.catch?.(() => {})
+        return
+      }
+    }
+  }
 
   if (routine.projectId !== bound.projectId || routine.sessionId !== bound.sessionId) {
     void window.api.routine?.update(routine.id, {
@@ -105,15 +151,55 @@ export async function runRoutine(routine: Routine): Promise<void> {
   useRoutineStore.setState((s) => ({ runningIds: new Set(s.runningIds).add(routine.id) }))
   window.api.notification?.send?.(i18n.t('notifications.automationStarted'), routine.name)?.catch?.(() => {})
 
-  try {
-    useChatStore.getState().sendMessage(bound.projectId, bound.sessionId, routine.prompt, 'queue')
-    await waitForIdle(ROUTINE_IDLE_TIMEOUT)
+  const prompts =
+    policy.steps.length > 0 ? policy.steps : [routine.prompt]
 
-    const session = useAppStore.getState().projects
-      .find((p) => p.id === bound.projectId)
-      ?.sessions.find((s) => s.id === bound.sessionId)
-    const lastAssistant = [...(session?.messages || [])].reverse().find((m) => m.role === 'assistant')
-    const result = lastAssistant?.content?.trim() || 'Task completed.'
+  try {
+    let attempt = 0
+    let result = ''
+    let failed = false
+
+    while (attempt <= policy.maxRetries) {
+      failed = false
+      const parts: string[] = []
+      for (let i = 0; i < prompts.length; i++) {
+        const stepPrompt =
+          prompts.length > 1
+            ? `[Automation step ${i + 1}/${prompts.length}]\n${prompts[i]}`
+            : prompts[i]
+        useChatStore.getState().sendMessage(bound.projectId, bound.sessionId, stepPrompt, 'queue')
+        const idle = await waitForIdle(ROUTINE_IDLE_TIMEOUT)
+        if (!idle) {
+          // Bound hang: stop the stuck turn so later steps / retries can proceed.
+          useChatStore.getState().stopStreaming()
+          await waitForIdle(15_000)
+          parts.push(`FAIL: automation step timed out after ${ROUTINE_IDLE_TIMEOUT / 60000} minutes`)
+          failed = true
+          break
+        }
+        const session = useAppStore.getState().projects
+          .find((p) => p.id === bound.projectId)
+          ?.sessions.find((s) => s.id === bound.sessionId)
+        const lastAssistant = [...(session?.messages || [])]
+          .reverse()
+          .find((m) => m.role === 'assistant')
+        const stepResult = lastAssistant?.content?.trim() || 'Task completed.'
+        parts.push(stepResult)
+        if (/^FAIL\b/i.test(stepResult) || /\[auto_verify[^\]]*\][\s\S]*\bFAIL\b/i.test(stepResult)) {
+          failed = true
+          break
+        }
+      }
+      result = parts.join('\n\n---\n\n') || 'Task completed.'
+      if (!failed) break
+      attempt++
+      if (attempt <= policy.maxRetries) {
+        await new Promise((r) => setTimeout(r, policy.retryDelaySec * 1000))
+      }
+    }
+
+    if (failed) result = `FAIL (after ${attempt} attempts)\n\n${result}`
+
     void window.api.routine?.recordResult?.(routine.id, result.slice(0, 2000))?.catch?.(() => {})
     const reportPath = await saveAutomationReport(routine, result)
     const note = reportPath ? `\nReport: ${reportPath}` : ''

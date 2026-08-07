@@ -34,6 +34,9 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
   const truncated = remaining.length > 300 && !showAll
   const displayContent = showAll ? remaining : remaining.slice(0, 300)
 
+  const structureWarn = remaining.includes('[structure_check:')
+  const isSubagentTool = toolName === 'spawn_agent' || toolName === 'parallel_agents'
+
   const toolLabels: Record<string, { icon: string; label: string }> = {
     read_file: { icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', label: t('toolMessage.read') },
     write_file: { icon: 'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z', label: t('toolMessage.write') },
@@ -46,6 +49,13 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
     git_status: { icon: 'M6 3v12M18 9a3 3 0 11-6 0 3 3 0 016 0zM6 15a3 3 0 100 6 3 3 0 000-6z', label: t('toolMessage.gitStatus') },
     git_diff: { icon: 'M16 18l6-6-6-6M8 6l-6 6 6 6', label: t('toolMessage.gitDiff') },
     git_log: { icon: 'M12 8v4l3 3', label: t('toolMessage.gitLog') },
+    git_add: { icon: 'M12 5v14M5 12h14', label: 'git add' },
+    git_commit: { icon: 'M12 8v4l3 3', label: 'git commit' },
+    git_push: { icon: 'M12 19V5M5 12l7-7 7 7', label: 'git push' },
+    git_branch: { icon: 'M6 3v12M18 9a3 3 0 11-6 0 3 3 0 016 0z', label: 'git branch' },
+    git_stash: { icon: 'M21 8v13H3V8M1 3h22v5H1z', label: 'git stash' },
+    spawn_agent: { icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75', label: 'subagent' },
+    parallel_agents: { icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75', label: 'parallel agents' },
     update_plan: { icon: 'M9 11l3 3L22 4', label: t('toolMessage.plan') },
     computer_screenshot: { icon: 'M11 4a2 2 0 118 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z', label: t('toolMessage.screenshot') },
     computer_displays: { icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z', label: t('toolMessage.displays', { defaultValue: 'Displays' }) },
@@ -63,7 +73,9 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
   const info = toolLabels[toolName] || { icon: '', label: toolName }
 
   return (
-    <div className={`tool-message ${isError ? 'tool-error' : ''} ${isRunning ? 'tool-running' : ''}`}>
+    <div
+      className={`tool-message ${isError ? 'tool-error' : ''} ${isRunning ? 'tool-running' : ''} ${structureWarn ? 'tool-structure-warn' : ''} ${isSubagentTool ? 'tool-subagent' : ''}`}
+    >
       <div className="tool-message-header" onClick={() => setCollapsed(!collapsed)}>
         <svg
           width="10"
@@ -82,6 +94,7 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
           </svg>
         )}
         <span className="tool-name">{info.label}</span>
+        {structureWarn && <span className="tool-badge-warn" title="Structure check warnings">structure</span>}
         <span className={`tool-status ${isRunning ? 'running' : isError ? 'error' : 'ok'}`}>
           {isRunning ? '⋯' : isError ? 'ERR' : 'OK'}
         </span>

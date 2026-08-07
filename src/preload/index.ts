@@ -41,13 +41,35 @@ const api = {
     ) => ipcRenderer.invoke('fs:contentSearch', rootPath, opts)
   },
 
-  // Shell
+  // Git worktree isolation for subagents
+  worktree: {
+    create: (projectPath: string, runId: string) =>
+      ipcRenderer.invoke('worktree:create', projectPath, runId),
+    remove: (projectPath: string, worktreePath: string, branch?: string) =>
+      ipcRenderer.invoke('worktree:remove', projectPath, worktreePath, branch),
+    diffStat: (worktreePath: string) => ipcRenderer.invoke('worktree:diffStat', worktreePath)
+  },
+
+  // Shell (sandbox opts: { enabled?, network?, projectRoot?, jailCwd? })
   shell: {
-    exec: (command: string, cwd?: string, timeoutMs?: number) =>
-      ipcRenderer.invoke('shell:exec', command, cwd, timeoutMs),
-    execFile: (file: string, args: string[], cwd?: string, timeoutMs?: number) =>
-      ipcRenderer.invoke('shell:execFile', file, args, cwd, timeoutMs),
-    start: (command: string, cwd?: string) => ipcRenderer.invoke('shell:start', command, cwd),
+    exec: (
+      command: string,
+      cwd?: string,
+      timeoutMs?: number,
+      sandbox?: { enabled?: boolean; network?: boolean; projectRoot?: string }
+    ) => ipcRenderer.invoke('shell:exec', command, cwd, timeoutMs, sandbox),
+    execFile: (
+      file: string,
+      args: string[],
+      cwd?: string,
+      timeoutMs?: number,
+      sandbox?: { enabled?: boolean; network?: boolean; projectRoot?: string }
+    ) => ipcRenderer.invoke('shell:execFile', file, args, cwd, timeoutMs, sandbox),
+    start: (
+      command: string,
+      cwd?: string,
+      sandbox?: { enabled?: boolean; network?: boolean; projectRoot?: string }
+    ) => ipcRenderer.invoke('shell:start', command, cwd, sandbox),
     poll: (jobId: string) => ipcRenderer.invoke('shell:poll', jobId),
     kill: (jobId: string) => ipcRenderer.invoke('shell:kill', jobId),
     killAll: () => ipcRenderer.invoke('shell:killAll')
@@ -351,6 +373,8 @@ const api = {
       messages?: Array<{ role: string; content: string }>
     }) => ipcRenderer.invoke('memory:ingestTurn', input || {}),
     export: () => ipcRenderer.invoke('memory:export'),
+    consolidate: (opts?: { projectId?: string | null; threshold?: number; dryRun?: boolean }) =>
+      ipcRenderer.invoke('memory:consolidate', opts || {}),
     import: (items: unknown[], projectId?: string | null) =>
       ipcRenderer.invoke('memory:import', items, projectId)
   },

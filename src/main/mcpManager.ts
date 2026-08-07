@@ -3,6 +3,8 @@ import { join, dirname } from 'path'
 import { readFile, writeFile, mkdir } from 'fs/promises'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
+import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { getPawnDir } from './config'
 
 /** Where a server's config came from — controls whether Settings offers a
@@ -10,14 +12,24 @@ import { getPawnDir } from './config'
  *  own file); the other two are files Pawn itself owns and can edit. */
 export type McpServerSource = 'user-claude' | 'user-pawn' | 'project'
 
-/** A normalized, stdio-only MCP server entry ready to spawn. HTTP/SSE remote
- *  servers (OAuth connectors) are out of scope — see the MCP plan doc. */
+export type McpTransportKind = 'stdio' | 'http' | 'sse'
+
+/**
+ * Normalized MCP server entry.
+ * - stdio: local process (command + args)
+ * - http: Streamable HTTP remote (url)
+ * - sse: legacy SSE remote (url)
+ * Bearer token via headers.Authorization or env when present in config.
+ */
 export interface McpServerConfig {
   id: string
+  transport: McpTransportKind
   command: string
   args: string[]
   env?: Record<string, string>
   cwd?: string
+  url?: string
+  headers?: Record<string, string>
   source: McpServerSource
 }
 
@@ -44,7 +56,8 @@ function projectConfigPath(projectPath: string): string {
 
 interface ServerEntry {
   client: Client
-  transport: StdioClientTransport
+  // Stdio | StreamableHTTP | SSE — all implement the SDK Transport interface.
+  transport: { close?: () => Promise<void> | void }
   tools: McpToolInfo[]
 }
 
@@ -69,18 +82,81 @@ function sanitizeId(id: string): string {
   return id.replace(/__+/g, '_')
 }
 
+function parseHeaders(raw: unknown): Record<string, string> | undefined {
+  if (typeof raw !== 'object' || raw === null) return undefined
+  const out = Object.fromEntries(
+    Object.entries(raw as Record<string, unknown>).filter(([, v]) => typeof v === 'string')
+  ) as Record<string, string>
+  return Object.keys(out).length ? out : undefined
+}
+
 function normalizeEntry(id: string, raw: unknown, source: McpServerSource, cwd?: string): McpServerConfig | null {
   if (typeof raw !== 'object' || raw === null) return null
   const r = raw as Record<string, unknown>
-  // Only local, unauthenticated stdio servers are supported — remote
-  // http/sse connectors are explicitly out of scope for this integration.
-  if (typeof r.type === 'string' && r.type !== 'stdio') return null
+  const typeRaw = typeof r.type === 'string' ? r.type.toLowerCase() : ''
+  const url = typeof r.url === 'string' ? r.url.trim() : ''
+  const headers = parseHeaders(r.headers)
+  const env =
+    typeof r.env === 'object' && r.env !== null
+      ? (Object.fromEntries(
+          Object.entries(r.env as Record<string, unknown>).filter(([, v]) => typeof v === 'string')
+        ) as Record<string, string>)
+      : undefined
+
+  // Remote HTTP / SSE
+  if (typeRaw === 'http' || typeRaw === 'streamable-http' || typeRaw === 'streamablehttp') {
+    if (!url || !/^https?:\/\//i.test(url)) return null
+    return {
+      id: sanitizeId(id),
+      transport: 'http',
+      command: '',
+      args: [],
+      url,
+      headers,
+      env,
+      source
+    }
+  }
+  if (typeRaw === 'sse') {
+    if (!url || !/^https?:\/\//i.test(url)) return null
+    return {
+      id: sanitizeId(id),
+      transport: 'sse',
+      command: '',
+      args: [],
+      url,
+      headers,
+      env,
+      source
+    }
+  }
+  // URL without type → prefer streamable HTTP
+  if (url && /^https?:\/\//i.test(url) && (typeRaw === '' || typeRaw === 'remote')) {
+    return {
+      id: sanitizeId(id),
+      transport: 'http',
+      command: '',
+      args: [],
+      url,
+      headers,
+      env,
+      source
+    }
+  }
+
+  // stdio (default)
+  if (typeRaw && typeRaw !== 'stdio') return null
   if (typeof r.command !== 'string' || !r.command) return null
   const args = Array.isArray(r.args) ? r.args.filter((a): a is string => typeof a === 'string') : []
-  const env = typeof r.env === 'object' && r.env !== null
-    ? Object.fromEntries(Object.entries(r.env as Record<string, unknown>).filter(([, v]) => typeof v === 'string')) as Record<string, string>
-    : undefined
-  return { id: sanitizeId(id), command: r.command, args, env, cwd, source }
+  return {
+    id: sanitizeId(id),
+    transport: 'stdio',
+    command: r.command,
+    args,
+    env,
+    cwd,
+    source
+  }
 }
 
 function entriesOf(raw: Record<string, unknown> | null, source: McpServerSource, cwd: string | undefined, byId: Map<string, McpServerConfig>): void {
@@ -115,20 +191,45 @@ function serverKey(config: McpServerConfig): string {
   return `${config.id}:${config.cwd || ''}`
 }
 
+function buildRemoteHeaders(config: McpServerConfig): Record<string, string> | undefined {
+  const headers: Record<string, string> = { ...(config.headers || {}) }
+  // Convenience: env.MCP_TOKEN / Authorization in env
+  const token =
+    config.env?.MCP_TOKEN ||
+    config.env?.MCP_ACCESS_TOKEN ||
+    config.env?.BEARER_TOKEN ||
+    config.env?.AUTHORIZATION
+  if (token && !headers.Authorization && !headers.authorization) {
+    headers.Authorization = token.startsWith('Bearer ') ? token : `Bearer ${token}`
+  }
+  return Object.keys(headers).length ? headers : undefined
+}
+
 async function connect(config: McpServerConfig, key: string): Promise<McpServerStatus> {
   try {
-    const transport = new StdioClientTransport({
-      command: config.command,
-      args: config.args,
-      // Full env inheritance matches this app's existing shell_exec/terminal
-      // behavior (see src/main/ipc/terminal.ts) rather than the SDK's more
-      // conservative default allowlist — these are servers the user already
-      // configured themselves, not untrusted input.
-      env: { ...process.env, ...config.env } as Record<string, string>,
-      cwd: config.cwd
-    })
+    let transport: ServerEntry['transport']
+    if (config.transport === 'http' && config.url) {
+      const headers = buildRemoteHeaders(config)
+      transport = new StreamableHTTPClientTransport(new URL(config.url), {
+        requestInit: headers ? { headers } : undefined
+      })
+    } else if (config.transport === 'sse' && config.url) {
+      const headers = buildRemoteHeaders(config)
+      transport = new SSEClientTransport(new URL(config.url), {
+        requestInit: headers ? { headers } : undefined
+      })
+    } else {
+      transport = new StdioClientTransport({
+        command: config.command,
+        args: config.args,
+        // Full env inheritance matches shell_exec for local user-configured servers.
+        env: { ...process.env, ...config.env } as Record<string, string>,
+        cwd: config.cwd
+      })
+    }
     const client = new Client({ name: 'pawn', version: '1.0.0' })
-    await client.connect(transport)
+    // SDK Transport union (stdio | streamable HTTP | SSE)
+    await client.connect(transport as Parameters<Client['connect']>[0])
     const { tools } = await client.listTools()
     const toolInfos: McpToolInfo[] = tools.map((t) => ({
       name: t.name,
@@ -192,14 +293,26 @@ export async function callTool(
     return { content: `MCP server "${config.id}" is not connected (${errors.get(key) || 'unknown error'})`, isError: true }
   }
   try {
-    const result = await entry.client.callTool({ name: toolName, arguments: args })
+    // Bound hang risk — a stuck MCP server must not freeze the agent turn forever.
+    const result = await Promise.race([
+      entry.client.callTool({ name: toolName, arguments: args }),
+      new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error(`MCP tool "${toolName}" timed out after 120s`)), 120_000)
+      })
+    ])
     const blocks = Array.isArray(result.content) ? result.content : []
     const text = blocks
       .map((b) => (b.type === 'text' ? b.text : `[${b.type} content omitted]`))
       .join('\n')
     return { content: text || '(no output)', isError: result.isError === true }
   } catch (err) {
-    return { content: err instanceof Error ? err.message : String(err), isError: true }
+    const message = err instanceof Error ? err.message : String(err)
+    // Drop a dead transport so the next call reconnects cleanly.
+    if (/closed|EPIPE|not connected|terminated|destroyed|timeout|ECONNRESET|fetch failed/i.test(message)) {
+      disconnect(key)
+      errors.set(key, message)
+    }
+    return { content: message, isError: true }
   }
 }
 
@@ -233,9 +346,13 @@ async function writeMcpServersFile(path: string, contents: Record<string, unknow
 }
 
 export interface McpServerInput {
-  command: string
-  args: string[]
+  command?: string
+  args?: string[]
   env?: Record<string, string>
+  /** Remote server URL (http/sse). */
+  url?: string
+  type?: 'stdio' | 'http' | 'sse'
+  headers?: Record<string, string>
 }
 
 /** Registers a new server (or overwrites an existing one with the same id)
@@ -250,12 +367,31 @@ export async function writeServerConfig(
   if (scope === 'project' && !projectPath) return { ok: false, error: 'No active project to add a project-scoped server to.' }
   const safeId = sanitizeId(id.trim())
   if (!safeId) return { ok: false, error: 'Server id is required.' }
-  if (!input.command.trim()) return { ok: false, error: 'Command is required.' }
 
   const path = scope === 'user' ? userPawnConfigPath() : projectConfigPath(projectPath!)
   const file = await readMcpServersFile(path)
   const servers = file.mcpServers as Record<string, unknown>
-  servers[safeId] = { command: input.command.trim(), args: input.args, ...(input.env && Object.keys(input.env).length ? { env: input.env } : {}) }
+
+  const url = (input.url || '').trim()
+  const type = input.type || (url ? 'http' : 'stdio')
+  if (type === 'http' || type === 'sse') {
+    if (!url || !/^https?:\/\//i.test(url)) {
+      return { ok: false, error: 'Remote MCP server requires a valid http(s) url.' }
+    }
+    servers[safeId] = {
+      type,
+      url,
+      ...(input.headers && Object.keys(input.headers).length ? { headers: input.headers } : {}),
+      ...(input.env && Object.keys(input.env).length ? { env: input.env } : {})
+    }
+  } else {
+    if (!input.command?.trim()) return { ok: false, error: 'Command is required for stdio servers.' }
+    servers[safeId] = {
+      command: input.command.trim(),
+      args: input.args || [],
+      ...(input.env && Object.keys(input.env).length ? { env: input.env } : {})
+    }
+  }
   await writeMcpServersFile(path, file)
 
   // A previous connection under this id may now be stale (command/args/env

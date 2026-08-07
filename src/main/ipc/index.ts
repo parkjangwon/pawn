@@ -14,6 +14,7 @@ import { registerConnectionsIpc } from './connections'
 import { registerResearchIpc } from './research'
 import { registerMemoryIpc } from './memory'
 import { registerHooksIpc } from './hooks'
+import { registerWorktreeIpc } from './worktree'
 
 /** Register every main-process IPC handler in one place. */
 export function registerAllIpc(): void {
@@ -33,4 +34,5 @@ export function registerAllIpc(): void {
   registerResearchIpc()
   registerMemoryIpc()
   registerHooksIpc()
+  registerWorktreeIpc()
 }

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { memo, useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
@@ -29,7 +29,7 @@ function safeUrlTransform(url: string): string {
   return defaultUrlTransform(url)
 }
 
-function MarkdownRenderer({ content }: Props): React.JSX.Element {
+function MarkdownRendererInner({ content }: Props): React.JSX.Element {
   const { t } = useTranslation()
   const [lightbox, setLightbox] = useState<LightboxState | null>(null)
 
@@ -203,7 +203,8 @@ function decodeFilePath(href: string): string {
 
 // Streaming appends content one chunk at a time; memoizing keeps earlier
 // messages from being re-parsed on every token.
-export default React.memo(MarkdownRenderer)
+const MarkdownRenderer = memo(MarkdownRendererInner)
+export default MarkdownRenderer
 
 function extractLang(children: React.ReactNode): string {
   if (React.isValidElement<{ className?: string }>(children) && children.props?.className) {

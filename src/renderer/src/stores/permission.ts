@@ -28,6 +28,8 @@ interface PermissionState {
   alwaysRules: AllowRule[]
   request: (req: Omit<PermissionRequest, 'id'>, signal?: AbortSignal) => Promise<boolean>
   resolve: (id: string, approved: boolean) => void
+  /** Deny every pending prompt (Stop / session teardown). */
+  denyAll: () => void
   approveSession: (type: PermissionType) => void
   addRule: (
     rule:
@@ -38,6 +40,8 @@ interface PermissionState {
   removeRule: (id: string) => void
   isAllowedByRules: (type: PermissionType, opts?: { path?: string; command?: string }) => boolean
 }
+
+const MAX_PENDING = 24
 
 interface PendingEntry {
   resolve: (approved: boolean) => void
@@ -85,6 +89,10 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
 
   request: (req, signal) => {
     return new Promise<boolean>((resolve) => {
+      if (get().pending.length >= MAX_PENDING) {
+        resolve(false)
+        return
+      }
       const id = `perm-${++counter}`
       function onAbort(): void {
         resolvers.delete(id)
@@ -108,12 +116,35 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
 
   resolve: (id, approved) => {
     const entry = resolvers.get(id)
-    if (entry) {
-      entry.cleanup()
-      entry.resolve(approved)
+    if (!entry) {
+      // Already resolved / aborted — drop a stale pending row if any.
+      set((s) =>
+        s.pending.some((p) => p.id === id)
+          ? { pending: s.pending.filter((p) => p.id !== id) }
+          : s
+      )
+      return
+    }
+    entry.cleanup()
+    entry.resolve(approved)
+    resolvers.delete(id)
+    set((s) => ({ pending: s.pending.filter((p) => p.id !== id) }))
+  },
+
+  denyAll: () => {
+    const ids = Array.from(resolvers.keys())
+    for (const id of ids) {
+      const entry = resolvers.get(id)
+      if (!entry) continue
+      try {
+        entry.cleanup()
+        entry.resolve(false)
+      } catch {
+        /* ignore */
+      }
       resolvers.delete(id)
     }
-    set((s) => ({ pending: s.pending.filter((p) => p.id !== id) }))
+    set({ pending: [] })
   },
 
   approveSession: (type) => {

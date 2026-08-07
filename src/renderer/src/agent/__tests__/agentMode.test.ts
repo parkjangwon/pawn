@@ -14,6 +14,9 @@ describe('agentMode', () => {
     expect(isMutatingTool('shell_exec')).toBe(true)
     expect(isMutatingTool('browser_click')).toBe(true)
     expect(isMutatingTool('github_create_pull')).toBe(true)
+    expect(isMutatingTool('git_commit')).toBe(true)
+    expect(isMutatingTool('spawn_agent')).toBe(true)
+    expect(isMutatingTool('google_gmail_send')).toBe(true)
   })
 
   it('keeps reads and planning tools non-mutating', () => {
@@ -23,6 +26,7 @@ describe('agentMode', () => {
     expect(isMutatingTool('update_plan')).toBe(false)
     expect(isMutatingTool('run_checks')).toBe(false)
     expect(isMutatingTool('shell_poll')).toBe(false)
+    expect(isMutatingTool('git_status')).toBe(false)
   })
 
   it('blocks mutating tools only in plan mode', () => {

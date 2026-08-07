@@ -60,4 +60,14 @@ describe('permission store', () => {
     await expect(promise).resolves.toBe(false)
     expect(usePermissionStore.getState().pending).toHaveLength(0)
   })
+
+  it('denyAll rejects every pending prompt', async () => {
+    const a = usePermissionStore.getState().request({ type: 'shell_exec', description: 'A' })
+    const b = usePermissionStore.getState().request({ type: 'file_write', description: 'B' })
+    expect(usePermissionStore.getState().pending).toHaveLength(2)
+    usePermissionStore.getState().denyAll()
+    await expect(a).resolves.toBe(false)
+    await expect(b).resolves.toBe(false)
+    expect(usePermissionStore.getState().pending).toHaveLength(0)
+  })
 })

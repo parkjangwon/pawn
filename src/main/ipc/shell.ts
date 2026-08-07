@@ -1,5 +1,6 @@
 import { handleTrusted } from './trust'
 import { spawn, type ChildProcess } from 'child_process'
+import { planExecFile, planShellSpawn, type SandboxOptions } from '../shellSandbox'
 
 /** Agent-controlled timeout: 5s..5min, default 30s. */
 function clampTimeout(timeoutMs: unknown): number {
@@ -100,13 +101,14 @@ function runSpawned(
   file: string,
   args: string[],
   cwd: string | undefined,
-  timeoutMs: number
+  timeoutMs: number,
+  env?: Record<string, string>
 ): Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }> {
   return new Promise((resolve) => {
     const isWin = process.platform === 'win32'
     const child = spawn(file, args, {
       cwd: cwd || undefined,
-      env: process.env,
+      env: env || process.env,
       detached: !isWin,
       windowsHide: true,
       stdio: ['ignore', 'pipe', 'pipe']
@@ -166,28 +168,55 @@ function runSpawned(
 function runShellCommand(
   command: string,
   cwd: string | undefined,
-  timeoutMs: number
-): Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }> {
-  const isWin = process.platform === 'win32'
-  const file = isWin ? process.env.ComSpec || 'cmd.exe' : process.env.SHELL || '/bin/bash'
-  const args = isWin ? ['/d', '/s', '/c', command] : ['-lc', command]
-  return runSpawned(file, args, cwd, timeoutMs)
+  timeoutMs: number,
+  sandbox: SandboxOptions = {}
+): Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean; sandboxNote?: string }> {
+  const planned = planShellSpawn(command, cwd, sandbox)
+  if (!planned.ok) {
+    return Promise.resolve({
+      stdout: '',
+      stderr: planned.error,
+      exitCode: 126,
+      killed: false,
+      sandboxNote: 'blocked'
+    })
+  }
+  return runSpawned(
+    planned.plan.file,
+    planned.plan.args,
+    planned.plan.cwd,
+    timeoutMs,
+    planned.plan.env
+  ).then((r) => ({ ...r, sandboxNote: planned.plan.sandboxNote }))
 }
 
 function startBackgroundJob(
   command: string,
-  cwd: string | undefined
-): { jobId: string; pid?: number } {
+  cwd: string | undefined,
+  sandbox: SandboxOptions = {}
+): { jobId: string; pid?: number; error?: string; sandboxNote?: string } {
+  pruneBackgroundJobs()
+  const running = Array.from(backgroundJobs.values()).filter((j) => j.exitCode === null).length
+  if (running >= MAX_BG_JOBS) {
+    return { jobId: '', error: `Too many background jobs (max ${MAX_BG_JOBS}). Kill finished ones first.` }
+  }
+  const planned = planShellSpawn(command, cwd, sandbox)
+  if (!planned.ok) {
+    return { jobId: '', error: planned.error }
+  }
   const isWin = process.platform === 'win32'
-  const file = isWin ? process.env.ComSpec || 'cmd.exe' : process.env.SHELL || '/bin/bash'
-  const args = isWin ? ['/d', '/s', '/c', command] : ['-lc', command]
-  const child = spawn(file, args, {
-    cwd: cwd || undefined,
-    env: process.env,
-    detached: !isWin,
-    windowsHide: true,
-    stdio: ['ignore', 'pipe', 'pipe']
-  })
+  let child: ChildProcess
+  try {
+    child = spawn(planned.plan.file, planned.plan.args, {
+      cwd: planned.plan.cwd || undefined,
+      env: planned.plan.env,
+      detached: !isWin,
+      windowsHide: true,
+      stdio: ['ignore', 'pipe', 'pipe']
+    })
+  } catch (err) {
+    return { jobId: '', error: err instanceof Error ? err.message : String(err) }
+  }
   const id = `job-${++jobSeq}`
   const job: BgJob = {
     id,
@@ -231,51 +260,121 @@ function startBackgroundJob(
     }
   }, 30 * 60 * 1000)
 
-  return { jobId: id, pid: child.pid }
+  return { jobId: id, pid: child.pid, sandboxNote: planned.plan.sandboxNote }
+}
+
+function parseSandboxOpts(raw: unknown): SandboxOptions {
+  if (!raw || typeof raw !== 'object') {
+    // Default: sandbox ON for agent shells (env allowlist + denylist)
+    return { enabled: true, network: true }
+  }
+  const o = raw as Record<string, unknown>
+  return {
+    enabled: o.enabled !== false && o.sandbox !== false,
+    network: o.network !== false,
+    projectRoot: typeof o.projectRoot === 'string' ? o.projectRoot : undefined,
+    // Renderer may opt out of cwd jail; default remains on when projectRoot set.
+    jailCwd: o.jailCwd !== false && o.jail_cwd !== false
+  }
+}
+
+const MAX_BG_JOBS = 40
+const BG_JOB_TTL_MS = 30 * 60 * 1000
+
+/** Drop finished background jobs so the map cannot grow without bound. */
+function pruneBackgroundJobs(): void {
+  const now = Date.now()
+  for (const [id, job] of Array.from(backgroundJobs.entries())) {
+    if (job.exitCode === null) continue
+    if (now - job.startedAt > BG_JOB_TTL_MS) {
+      backgroundJobs.delete(id)
+    }
+  }
+  // Hard cap: remove oldest finished first
+  if (backgroundJobs.size > MAX_BG_JOBS) {
+    const finished = Array.from(backgroundJobs.values())
+      .filter((j) => j.exitCode !== null)
+      .sort((a, b) => a.startedAt - b.startedAt)
+    while (backgroundJobs.size > MAX_BG_JOBS && finished.length) {
+      const drop = finished.shift()
+      if (drop) backgroundJobs.delete(drop.id)
+    }
+  }
 }
 
 export function registerShellIpc(): void {
-  handleTrusted('shell:exec', async (_, command: string, cwd?: string, timeoutMs?: number) => {
-    if (typeof command !== 'string' || !command.trim()) {
-      return { stdout: '', stderr: 'Empty command', exitCode: 1 }
+  handleTrusted(
+    'shell:exec',
+    async (_, command: string, cwd?: string, timeoutMs?: number, sandboxOpts?: unknown) => {
+      if (typeof command !== 'string' || !command.trim()) {
+        return { stdout: '', stderr: 'Empty command', exitCode: 1 }
+      }
+      try {
+        return await runShellCommand(
+          command,
+          typeof cwd === 'string' ? cwd : undefined,
+          clampTimeout(timeoutMs),
+          parseSandboxOpts(sandboxOpts)
+        )
+      } catch (err: unknown) {
+        return errorPayload(err)
+      }
     }
-    try {
-      return await runShellCommand(command, typeof cwd === 'string' ? cwd : undefined, clampTimeout(timeoutMs))
-    } catch (err: unknown) {
-      return errorPayload(err)
-    }
-  })
+  )
 
-  handleTrusted('shell:execFile', async (_event, file: string, args: unknown, cwd?: string, timeoutMs?: number) => {
-    if (typeof file !== 'string' || !file.trim()) return { error: 'Invalid command' }
-    const argList = Array.isArray(args)
-      ? args.filter((a): a is string => typeof a === 'string')
-      : []
-    try {
-      return await runSpawned(
-        file,
-        argList,
-        typeof cwd === 'string' && cwd.length > 0 ? cwd : undefined,
-        clampTimeout(timeoutMs)
-      )
-    } catch (err: unknown) {
-      return errorPayload(err)
+  handleTrusted(
+    'shell:execFile',
+    async (_event, file: string, args: unknown, cwd?: string, timeoutMs?: number, sandboxOpts?: unknown) => {
+      if (typeof file !== 'string' || !file.trim()) return { error: 'Invalid command' }
+      const argList = Array.isArray(args)
+        ? args.filter((a): a is string => typeof a === 'string')
+        : []
+      try {
+        const planned = planExecFile(
+          file,
+          argList,
+          typeof cwd === 'string' && cwd.length > 0 ? cwd : undefined,
+          parseSandboxOpts(sandboxOpts ?? { enabled: true, network: true })
+        )
+        if (!planned.ok) {
+          return { stdout: '', stderr: planned.error, exitCode: 126 }
+        }
+        return await runSpawned(
+          planned.plan.file,
+          planned.plan.args,
+          planned.plan.cwd,
+          clampTimeout(timeoutMs),
+          planned.plan.env
+        )
+      } catch (err: unknown) {
+        return errorPayload(err)
+      }
     }
-  })
+  )
 
-  handleTrusted('shell:start', async (_, command: string, cwd?: string) => {
-    if (typeof command !== 'string' || !command.trim()) {
-      return { error: 'Empty command' }
+  handleTrusted(
+    'shell:start',
+    async (_, command: string, cwd?: string, sandboxOpts?: unknown) => {
+      if (typeof command !== 'string' || !command.trim()) {
+        return { error: 'Empty command' }
+      }
+      try {
+        const started = startBackgroundJob(
+          command,
+          typeof cwd === 'string' ? cwd : undefined,
+          parseSandboxOpts(sandboxOpts)
+        )
+        if (started.error) return { error: started.error }
+        return started
+      } catch (err) {
+        return { error: String(err) }
+      }
     }
-    try {
-      return startBackgroundJob(command, typeof cwd === 'string' ? cwd : undefined)
-    } catch (err) {
-      return { error: String(err) }
-    }
-  })
+  )
 
   handleTrusted('shell:poll', async (_, jobId: string) => {
     if (typeof jobId !== 'string' || !jobId) return { error: 'Invalid job id' }
+    pruneBackgroundJobs()
     const job = backgroundJobs.get(jobId)
     if (!job) return { error: `Unknown job: ${jobId}` }
     return {

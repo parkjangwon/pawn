@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRoutineStore } from '../stores/routine'
 import { useAppStore } from '../stores/app'
+import { activateOnKey } from '../utils/focusTrap'
 import ConfirmDialog from './ConfirmDialog'
 import NavControls from './NavControls'
 import './AutomationView.css'
 
-type TriggerType = 'interval' | 'daily' | 'weekly'
+type TriggerType = 'interval' | 'daily' | 'weekly' | 'cron' | 'file_watch'
 
 interface AutomationViewProps {
   onToggleSidebar: () => void
@@ -23,6 +24,12 @@ interface DraftState {
   minute: string
   weekday: string
   intervalMin: string
+  cronExpr: string
+  watchPath: string
+  debounceMin: string
+  stepsText: string
+  maxRetries: string
+  retryDelaySec: string
   prompt: string
   projectId: string
 }
@@ -36,18 +43,34 @@ export default function AutomationView({
   const [showCreate, setShowCreate] = useState(false)
   const [confirmDeleteRoutine, setConfirmDeleteRoutine] = useState<{ id: string; name: string } | null>(null)
   const [importMsg, setImportMsg] = useState('')
-  const [draft, setDraft] = useState<DraftState>({
-    name: '', trigger: 'daily', hour: '09', minute: '00', weekday: '1', intervalMin: '30', prompt: '', projectId: activeProjectId || ''
+  const emptyDraft = (): DraftState => ({
+    name: '',
+    trigger: 'daily',
+    hour: '09',
+    minute: '00',
+    weekday: '1',
+    intervalMin: '30',
+    cronExpr: '0 9 * * 1-5',
+    watchPath: '',
+    debounceMin: '1',
+    stepsText: '',
+    maxRetries: '0',
+    retryDelaySec: '60',
+    prompt: '',
+    projectId: activeProjectId || ''
   })
 
+  const [draft, setDraft] = useState<DraftState>(emptyDraft)
+
   const userProjects = projects.filter((p) => p.id !== '__general__')
-  const canCreate = draft.name.trim().length > 0 && draft.prompt.trim().length > 0
+  const canCreate =
+    draft.name.trim().length > 0 &&
+    (draft.prompt.trim().length > 0 || draft.stepsText.trim().length > 0) &&
+    (draft.trigger !== 'cron' || draft.cronExpr.trim().split(/\s+/).length === 5) &&
+    (draft.trigger !== 'file_watch' || draft.watchPath.trim().length > 0)
 
   const openCreate = (preset?: Partial<DraftState>): void => {
-    setDraft({
-      name: '', trigger: 'daily', hour: '09', minute: '00', weekday: '1', intervalMin: '30', prompt: '', projectId: activeProjectId || '',
-      ...preset
-    })
+    setDraft({ ...emptyDraft(), projectId: activeProjectId || '', ...preset })
     setShowCreate(true)
   }
 
@@ -66,6 +89,8 @@ export default function AutomationView({
       const parsed = JSON.parse(scheduleJson) as { type: TriggerType }
       if (parsed.type === 'daily') return t('automation.daily')
       if (parsed.type === 'weekly') return t('automation.weekly')
+      if (parsed.type === 'cron') return 'Cron'
+      if (parsed.type === 'file_watch') return 'File watch'
       return t('automation.interval')
     } catch {
       return t('automation.manual')
@@ -76,9 +101,20 @@ export default function AutomationView({
     try {
       const s = JSON.parse(scheduleJson) as RoutineSchedule
       if (s.type === 'interval') return t('settings.automationSection.everyMinutes', { minutes: s.minutes })
-      const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`
-      if (s.type === 'daily') return t('settings.automationSection.dailyAt', { time })
-      return t('settings.automationSection.weeklyAt', { weekday: t(`settings.automationSection.weekdays.${s.weekday}`), time })
+      if (s.type === 'cron') return `cron: ${s.expr}`
+      if (s.type === 'file_watch') return `watch: ${s.path}`
+      if (s.type === 'daily') {
+        const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`
+        return t('settings.automationSection.dailyAt', { time })
+      }
+      if (s.type === 'weekly') {
+        const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`
+        return t('settings.automationSection.weeklyAt', {
+          weekday: t(`settings.automationSection.weekdays.${s.weekday}`),
+          time
+        })
+      }
+      return ''
     } catch {
       return ''
     }
@@ -91,13 +127,47 @@ export default function AutomationView({
 
   const createAutomation = async (): Promise<void> => {
     if (!canCreate) return
-    const schedule =
-      draft.trigger === 'interval'
-        ? { type: 'interval' as const, minutes: Math.max(1, Number(draft.intervalMin) || 30) }
-        : draft.trigger === 'daily'
-          ? { type: 'daily' as const, hour: Number(draft.hour), minute: Number(draft.minute) }
-          : { type: 'weekly' as const, weekday: Number(draft.weekday), hour: Number(draft.hour), minute: Number(draft.minute) }
-    await add({ name: draft.name.trim(), prompt: draft.prompt.trim(), schedule, projectId: draft.projectId || undefined })
+    let base: RoutineSchedule
+    if (draft.trigger === 'interval') {
+      base = { type: 'interval', minutes: Math.max(1, Number(draft.intervalMin) || 30) }
+    } else if (draft.trigger === 'daily') {
+      base = { type: 'daily', hour: Number(draft.hour), minute: Number(draft.minute) }
+    } else if (draft.trigger === 'weekly') {
+      base = {
+        type: 'weekly',
+        weekday: Number(draft.weekday),
+        hour: Number(draft.hour),
+        minute: Number(draft.minute)
+      }
+    } else if (draft.trigger === 'cron') {
+      base = { type: 'cron', expr: draft.cronExpr.trim() }
+    } else {
+      base = {
+        type: 'file_watch',
+        path: draft.watchPath.trim(),
+        debounceMinutes: Math.max(1, Number(draft.debounceMin) || 1)
+      }
+    }
+    const steps = draft.stepsText
+      .split('\n')
+      .map((s) => s.trim())
+      .filter(Boolean)
+      .slice(0, 20)
+    const schedulePayload = {
+      ...base,
+      maxRetries: Math.min(5, Math.max(0, Math.floor(Number(draft.maxRetries) || 0))),
+      retryDelaySec: Math.min(3600, Math.max(10, Math.floor(Number(draft.retryDelaySec) || 60))),
+      ...(steps.length ? { steps } : {})
+    }
+    const prompt =
+      draft.prompt.trim() ||
+      (steps[0] ? steps[0] : 'Run automation steps.')
+    await add({
+      name: draft.name.trim(),
+      prompt,
+      schedule: schedulePayload as RoutineSchedule,
+      projectId: draft.projectId || undefined
+    })
     setShowCreate(false)
   }
 
@@ -197,16 +267,17 @@ export default function AutomationView({
               <h3>{t('automation.templates.title')}</h3>
             </div>
             <div className="automation-grid">
-              {templates.map((card) => (
+              {templates.map((card) => {
+                const open = (): void =>
+                  openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger, ...card.preset })
+                return (
                 <article
                   key={card.title}
                   className="automation-card example"
                   role="button"
                   tabIndex={0}
-                  onClick={() => openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger, ...card.preset })}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger, ...card.preset })
-                  }}
+                  onClick={open}
+                  onKeyDown={(e) => activateOnKey(e, open)}
                 >
                   <div className="automation-card-head">
                     <h4>{card.title}</h4>
@@ -214,7 +285,8 @@ export default function AutomationView({
                   </div>
                   <p className="automation-card-desc">{card.desc}</p>
                 </article>
-              ))}
+                )
+              })}
             </div>
           </div>
 
@@ -271,6 +343,8 @@ export default function AutomationView({
                     <option value="daily">{t('automation.daily')}</option>
                     <option value="weekly">{t('automation.weekly')}</option>
                     <option value="interval">{t('automation.interval')}</option>
+                    <option value="cron">Cron</option>
+                    <option value="file_watch">File watch</option>
                   </select>
                 </div>
                 {draft.trigger === 'weekly' && (
@@ -281,12 +355,13 @@ export default function AutomationView({
                     </select>
                   </div>
                 )}
-                {draft.trigger === 'interval' ? (
+                {draft.trigger === 'interval' && (
                   <div className="automation-field">
                     <label>{t('automation.minutes')}</label>
                     <input type="number" min={1} value={draft.intervalMin} onChange={(e) => setDraft((d) => ({ ...d, intervalMin: e.target.value }))} />
                   </div>
-                ) : (
+                )}
+                {(draft.trigger === 'daily' || draft.trigger === 'weekly') && (
                   <>
                     <div className="automation-field">
                       <label>{t('automation.hour')}</label>
@@ -302,6 +377,59 @@ export default function AutomationView({
                     </div>
                   </>
                 )}
+                {draft.trigger === 'cron' && (
+                  <div className="automation-field">
+                    <label>Cron (min hour dom mon dow)</label>
+                    <input
+                      value={draft.cronExpr}
+                      onChange={(e) => setDraft((d) => ({ ...d, cronExpr: e.target.value }))}
+                      placeholder="0 9 * * 1-5"
+                    />
+                  </div>
+                )}
+                {draft.trigger === 'file_watch' && (
+                  <>
+                    <div className="automation-field">
+                      <label>Watch path</label>
+                      <input
+                        value={draft.watchPath}
+                        onChange={(e) => setDraft((d) => ({ ...d, watchPath: e.target.value }))}
+                        placeholder="/path/to/file-or-dir"
+                      />
+                    </div>
+                    <div className="automation-field">
+                      <label>Debounce (min)</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={draft.debounceMin}
+                        onChange={(e) => setDraft((d) => ({ ...d, debounceMin: e.target.value }))}
+                      />
+                    </div>
+                  </>
+                )}
+              </div>
+
+              <div className="automation-form-row">
+                <div className="automation-field">
+                  <label>Max retries</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={draft.maxRetries}
+                    onChange={(e) => setDraft((d) => ({ ...d, maxRetries: e.target.value }))}
+                  />
+                </div>
+                <div className="automation-field">
+                  <label>Retry delay (sec)</label>
+                  <input
+                    type="number"
+                    min={10}
+                    value={draft.retryDelaySec}
+                    onChange={(e) => setDraft((d) => ({ ...d, retryDelaySec: e.target.value }))}
+                  />
+                </div>
               </div>
 
               <div className="automation-field">
@@ -315,7 +443,17 @@ export default function AutomationView({
 
               <div className="automation-field">
                 <label>{t('automation.prompt')}</label>
-                <textarea value={draft.prompt} onChange={(e) => setDraft((d) => ({ ...d, prompt: e.target.value }))} rows={5} placeholder={t('automation.promptPlaceholder')} />
+                <textarea value={draft.prompt} onChange={(e) => setDraft((d) => ({ ...d, prompt: e.target.value }))} rows={4} placeholder={t('automation.promptPlaceholder')} />
+              </div>
+
+              <div className="automation-field">
+                <label>Multi-step prompts (one per line, optional)</label>
+                <textarea
+                  value={draft.stepsText}
+                  onChange={(e) => setDraft((d) => ({ ...d, stepsText: e.target.value }))}
+                  rows={3}
+                  placeholder={'Step 1: …\nStep 2: …'}
+                />
               </div>
             </div>
 
