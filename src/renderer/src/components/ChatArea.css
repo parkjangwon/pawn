@@ -1826,3 +1826,83 @@
   background: color-mix(in srgb, var(--accent) 12%, var(--bg-primary));
   font-weight: 600;
 }
+
+/* Thinking / reasoning */
+.message-thinking {
+  margin-bottom: 8px;
+  border: 1px solid color-mix(in srgb, var(--border-color) 85%, transparent);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--bg-secondary) 88%, transparent);
+  overflow: hidden;
+}
+.message-thinking.live {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border-color));
+}
+.message-thinking-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  text-align: left;
+}
+.message-thinking-body {
+  margin: 0;
+  padding: 0 10px 10px;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 220px;
+  overflow: auto;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+.message-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+}
+.message-action-btn {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.message-action-btn:hover {
+  color: var(--text-primary);
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border-color));
+}
+.message-action-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+.message-edit textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 88px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--accent);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  resize: vertical;
+}
+.message-edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  justify-content: flex-end;
+}

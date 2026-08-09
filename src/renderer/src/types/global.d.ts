@@ -73,6 +73,14 @@ declare global {
         cancelled?: boolean
         error?: string
       }>
+      importBackup: () => Promise<{
+        ok?: boolean
+        path?: string
+        cancelled?: boolean
+        error?: string
+        backupOfPrevious?: string
+        needsRestart?: boolean
+      }>
       selectFolder: () => Promise<string | null>
       saveFile: (defaultName: string, content: string) => Promise<string | null>
       openFile: () => Promise<string | null>

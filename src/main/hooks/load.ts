@@ -44,8 +44,10 @@ function parseHooksObject(raw: unknown): HooksConfig {
         const hh = h as Record<string, unknown>
         const type = hh.type === 'http' ? 'http' : hh.type === 'command' || hh.command ? 'command' : null
         if (!type) continue
-        // Skip prompt/agent handlers (Claude advanced) — not supported yet
-        if (hh.type === 'prompt' || hh.type === 'agent' || hh.type === 'mcp_tool') continue
+        // Claude advanced types: map `prompt` hooks that still include a shell
+        // command field; skip pure agent/mcp_tool (no local runner yet).
+        if (hh.type === 'agent' || hh.type === 'mcp_tool') continue
+        if (hh.type === 'prompt' && !hh.command) continue
         if (type === 'http') {
           const url = String(hh.url || '').trim()
           if (!url) continue

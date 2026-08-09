@@ -18,6 +18,14 @@ const api = {
     cancelled?: boolean
     error?: string
   }> => ipcRenderer.invoke('app:exportBackup'),
+  importBackup: (): Promise<{
+    ok?: boolean
+    path?: string
+    cancelled?: boolean
+    error?: string
+    backupOfPrevious?: string
+    needsRestart?: boolean
+  }> => ipcRenderer.invoke('app:importBackup'),
 
   // Dialog
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),

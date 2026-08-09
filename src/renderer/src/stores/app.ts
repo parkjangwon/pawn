@@ -19,6 +19,8 @@ export interface Message {
   createdAt: number
   /** Display label of the model that produced this message (auto mode only). */
   modelLabel?: string
+  /** Model reasoning / chain-of-thought shown in a collapsible block (not in content). */
+  thinking?: string
 }
 
 export interface Project {
@@ -61,7 +63,21 @@ interface AppState {
     content: string,
     persist?: boolean
   ) => void
+  updateMessageThinking: (
+    projectId: string,
+    sessionId: string,
+    messageId: string,
+    thinking: string
+  ) => void
   updateMessageModel: (projectId: string, sessionId: string, messageId: string, modelLabel: string) => void
+  /** Drop messages from index of messageId (inclusive) through the end. */
+  truncateMessagesFrom: (
+    projectId: string,
+    sessionId: string,
+    messageId: string,
+    opts?: { includeSelf?: boolean }
+  ) => void
+  updateSessionPath: (projectId: string, sessionId: string, path: string) => void
   removeMessage: (projectId: string, sessionId: string, messageId: string) => void
   updateSessionTitle: (projectId: string, sessionId: string, title: string) => void
   clearMessages: (projectId: string, sessionId: string) => void
@@ -317,6 +333,75 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
+  },
+
+  updateMessageThinking: (projectId, sessionId, messageId, thinking) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              sessions: p.sessions.map((ss) =>
+                ss.id === sessionId
+                  ? {
+                      ...ss,
+                      messages: ss.messages.map((m) =>
+                        m.id === messageId ? { ...m, thinking } : m
+                      )
+                    }
+                  : ss
+              )
+            }
+          : p
+      )
+    }))
+    // Thinking is display-only for now (not in SQLite schema) — survives the session in memory.
+  },
+
+  truncateMessagesFrom: (projectId, sessionId, messageId, opts) => {
+    const includeSelf = opts?.includeSelf !== false
+    const session = get()
+      .projects.find((p) => p.id === projectId)
+      ?.sessions.find((s) => s.id === sessionId)
+    if (!session) return
+    const idx = session.messages.findIndex((m) => m.id === messageId)
+    if (idx < 0) return
+    const from = includeSelf ? idx : idx + 1
+    const doomed = session.messages.slice(from)
+    for (const m of doomed) messagePersistTimes.delete(m.id)
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              sessions: p.sessions.map((ss) =>
+                ss.id === sessionId
+                  ? { ...ss, messages: ss.messages.slice(0, from) }
+                  : ss
+              )
+            }
+          : p
+      )
+    }))
+    for (const m of doomed) {
+      enqueueDbWrite(`msg:del:${m.id}`, () => window.api.db.deleteMessage(m.id))
+    }
+  },
+
+  updateSessionPath: (projectId, sessionId, path) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? {
+              ...p,
+              sessions: p.sessions.map((ss) =>
+                ss.id === sessionId ? { ...ss, path } : ss
+              )
+            }
+          : p
+      )
+    }))
+    void window.api.db.updateSessionPath?.(sessionId, path)?.catch?.(() => {})
   },
 
   removeMessage: (projectId, sessionId, messageId) => {

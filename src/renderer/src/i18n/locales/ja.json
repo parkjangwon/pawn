@@ -63,7 +63,7 @@
     "imageLightbox": "拡大画像",
     "copy": "コピー",
     "copied": "コピーしました",
-    "thinking": "考え中...",
+    "thinking": "思考",
     "noProvider": "プロバイダーが設定されていません",
     "taskComplete": "タスク完了",
     "modelSelected": "モデルが選択されました",
@@ -143,7 +143,11 @@
       "openProject": "方法",
       "connectGithub": "接続",
       "projectHint": "サイドバーからプロジェクトを開くか追加してください。コードの読み書きができるようになります。"
-    }
+    },
+    "thinkingLive": "思考中…",
+    "edit": "編集",
+    "regenerate": "再生成",
+    "saveAndResend": "保存して再送"
   },
   "automation": {
     "title": "自動化",
@@ -626,7 +630,12 @@
       "desktopOnly": "デスクトップアプリで利用可能",
       "importOk": "{{count}} 件をインポート",
       "importEmpty": "ファイルにプロバイダ/モデルがありません",
-      "importFailed": "インポート失敗: {{error}}"
+      "importFailed": "インポート失敗: {{error}}",
+      "restoreBackup": "バックアップを復元",
+      "restoreConfirm": "復元するとローカルの Pawn データ（~/.pawn）が置き換わります。現在のフォルダは退避されます。復元後に再起動してください。続けますか？",
+      "restoreOk": "復元しました。以前のデータ: {{path}}。Pawn を再起動してください。",
+      "restoreFailed": "復元に失敗",
+      "keysEncrypted": "API キーは可能なら OS キーチェーンで暗号化して保存します。"
     },
     "system": "システム",
     "connectionsSection": {

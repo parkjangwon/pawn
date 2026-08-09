@@ -63,7 +63,7 @@
     "imageLightbox": "확대된 이미지",
     "copy": "복사",
     "copied": "복사됨",
-    "thinking": "생각 중...",
+    "thinking": "사고 과정",
     "noProvider": "설정된 프로바이더가 없습니다",
     "taskComplete": "작업 완료",
     "modelSelected": "모델 선택됨",
@@ -143,7 +143,11 @@
       "openProject": "방법",
       "connectGithub": "연결",
       "projectHint": "사이드바에서 프로젝트를 열거나 추가해 주세요. 그러면 코드를 읽고 수정할 수 있습니다."
-    }
+    },
+    "thinkingLive": "생각 중…",
+    "edit": "편집",
+    "regenerate": "다시 생성",
+    "saveAndResend": "저장 후 다시 보내기"
   },
   "automation": {
     "title": "자동화",
@@ -626,7 +630,12 @@
       "desktopOnly": "데스크톱 앱에서 사용 가능",
       "importOk": "{{count}}개 항목 가져옴",
       "importEmpty": "파일에 프로바이더/모델이 없습니다",
-      "importFailed": "가져오기 실패: {{error}}"
+      "importFailed": "가져오기 실패: {{error}}",
+      "restoreBackup": "백업 복원",
+      "restoreConfirm": "복원하면 로컬 Pawn 데이터(~/.pawn)가 교체됩니다. 현재 폴더는 백업됩니다. 복원 후 Pawn을 재시작하세요. 계속할까요?",
+      "restoreOk": "복원됨. 이전 데이터: {{path}}. Pawn을 재시작하세요.",
+      "restoreFailed": "복원 실패",
+      "keysEncrypted": "API 키는 가능하면 OS 키체인으로 암호화되어 저장됩니다."
     },
     "system": "시스템",
     "connectionsSection": {

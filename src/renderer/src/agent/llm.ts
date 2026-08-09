@@ -284,53 +284,75 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
 
   // Throttle store updates to one per animation frame: a long stream otherwise
   // re-renders the whole chat on every token.
+  // Content and thinking are separate channels so the UI can show a collapsible
+  // Thinking block without polluting the final answer bubble.
   let lastFlushed = ''
+  let lastThinkingFlushed = ''
   let pendingDisplay: string | null = null
+  let pendingThinking: string | null = null
   let rafId: number | null = null
 
-  const applyFlush = (display: string): void => {
+  const liveThinkingText = (): string => {
+    let claude = ''
+    for (const t of thinkingBuffers.values()) {
+      if (t.thinking) claude += t.thinking
+    }
+    for (const t of thinking) {
+      if (t.type === 'thinking' && t.thinking) claude += t.thinking
+    }
+    return reasoningText || claude
+  }
+
+  const applyFlush = (display: string, think: string): void => {
     lastFlushed = display
-    // Live view only — coalesced again inside the streaming store (rAF).
+    lastThinkingFlushed = think
     useStreamingStore.getState().setContent(assistantMsgId, display)
+    if (think) useStreamingStore.getState().setThinking(assistantMsgId, think)
   }
 
   const flushText = (): void => {
-    const display = reasoningText ? `${reasoningText}${fullText ? '\n\n' + fullText : ''}` : fullText
-    if (display === lastFlushed) return
+    const display = fullText
+    const think = liveThinkingText()
+    if (display === lastFlushed && think === lastThinkingFlushed) return
     pendingDisplay = display
+    pendingThinking = think
     if (rafId !== null) return
     if (typeof requestAnimationFrame === 'function') {
       rafId = requestAnimationFrame(() => {
         rafId = null
-        if (pendingDisplay !== null && pendingDisplay !== lastFlushed) {
-          const next = pendingDisplay
-          pendingDisplay = null
-          applyFlush(next)
+        const next = pendingDisplay ?? lastFlushed
+        const nextT = pendingThinking ?? lastThinkingFlushed
+        pendingDisplay = null
+        pendingThinking = null
+        if (next !== lastFlushed || nextT !== lastThinkingFlushed) {
+          applyFlush(next, nextT)
         }
       })
     } else {
       pendingDisplay = null
-      applyFlush(display)
+      pendingThinking = null
+      applyFlush(display, think)
     }
   }
 
   const flushNow = (): void => {
     if (rafId !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafId)
     rafId = null
-    // Prefer pending frame, else latest built text so we never drop the tail.
-    const display =
-      pendingDisplay !== null
-        ? pendingDisplay
-        : reasoningText
-          ? `${reasoningText}${fullText ? '\n\n' + fullText : ''}`
-          : fullText
+    const display = pendingDisplay !== null ? pendingDisplay : fullText
+    const think =
+      pendingThinking !== null ? pendingThinking : liveThinkingText() || lastThinkingFlushed
     pendingDisplay = null
-    if (display && display !== lastFlushed) {
-      lastFlushed = display
-    }
+    pendingThinking = null
+    lastFlushed = display || lastFlushed
+    lastThinkingFlushed = think || lastThinkingFlushed
     const finalText = lastFlushed || display || fullText
-    // Final flush: immediate store write + persist + drop live buffer.
     useStreamingStore.getState().setContentNow(assistantMsgId, finalText)
+    if (lastThinkingFlushed) {
+      useStreamingStore.getState().setThinkingNow(assistantMsgId, lastThinkingFlushed)
+      useAppStore
+        .getState()
+        .updateMessageThinking?.(projectId, sessionId, assistantMsgId, lastThinkingFlushed)
+    }
     useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, finalText, true)
     useStreamingStore.getState().clear(assistantMsgId)
   }
@@ -407,6 +429,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
               } else if (d?.type === 'thinking_delta') {
                 const buf = thinkingBuffers.get(parsed.index)
                 if (buf) buf.thinking = (buf.thinking || '') + d.thinking
+                flushText()
               } else if (d?.type === 'signature_delta') {
                 const buf = thinkingBuffers.get(parsed.index)
                 if (buf) buf.signature = (buf.signature || '') + d.signature

@@ -1,10 +1,13 @@
 import { handleTrusted } from './trust'
-import { getConfigPath, getPawnDir, loadConfig, saveConfig } from '../config'
+import { getConfigPath, getPawnDir, loadConfig, saveConfig, type PawnConfig } from '../config'
+import { decryptProvidersInConfig, encryptProvidersInConfig } from '../providerSecrets'
 
 export function registerConfigIpc(): void {
   handleTrusted('config:load', async () => {
     try {
-      return loadConfig()
+      const raw = loadConfig()
+      // Decrypt apiKeys so the renderer always sees plaintext for HTTP calls.
+      return decryptProvidersInConfig(raw)
     } catch (err) {
       console.error('[ipc] config:load failed:', err)
       return {}
@@ -15,7 +18,9 @@ export function registerConfigIpc(): void {
       return { ok: false, error: 'Invalid config payload' }
     }
     try {
-      saveConfig(config)
+      // Encrypt keys before they hit disk. Merge happens inside saveConfig.
+      const sealed = encryptProvidersInConfig(config as PawnConfig)
+      saveConfig(sealed)
       return { ok: true }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }

@@ -19,13 +19,11 @@ describe('estimateTokens', () => {
       },
       { role: 'tool', toolCallId: 't1', name: 'read_file', content: 'contents' }
     ]
-    const chars =
-      5 + // hello
-      5 + // world
-      'read_file'.length + JSON.stringify({ path: '/a' }).length +
-      'pondering'.length +
-      'contents'.length
-    expect(estimateTokens(entries)).toBe(Math.ceil(chars / 3.6))
+    // Script-aware estimate: always positive and scales with content size.
+    expect(estimateTokens(entries)).toBeGreaterThan(10)
+    expect(estimateTokens([...entries, user('x'.repeat(400))])).toBeGreaterThan(
+      estimateTokens(entries)
+    )
   })
 })
 

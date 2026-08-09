@@ -6,6 +6,7 @@ import { useStreamingStore, __flushStreamingForTests } from '../../stores/stream
 import type { Message } from '../../stores/app'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) => (opts ? `${key}:${opts.count}` : key)
   })
@@ -33,7 +34,7 @@ function renderList(props: Partial<Parameters<typeof MessageList>[0]> = {}): Ret
 }
 
 beforeEach(() => {
-  useStreamingStore.setState({ content: {} })
+  useStreamingStore.setState({ content: {}, thinking: {} })
 })
 
 describe('MessageList', () => {

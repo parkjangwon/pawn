@@ -63,7 +63,7 @@
     "imageLightbox": "Enlarged image",
     "copy": "Copy",
     "copied": "Copied",
-    "thinking": "Thinking...",
+    "thinking": "Thinking",
     "noProvider": "No provider configured",
     "taskComplete": "Task complete",
     "modelSelected": "Model selected",
@@ -143,7 +143,11 @@
       "openProject": "How?",
       "connectGithub": "Connect",
       "projectHint": "Open a project from the sidebar (folder icon) or use Add Project so I can read and edit your code."
-    }
+    },
+    "thinkingLive": "Thinking…",
+    "edit": "Edit",
+    "regenerate": "Regenerate",
+    "saveAndResend": "Save & resend"
   },
   "automation": {
     "title": "Automations",
@@ -626,7 +630,12 @@
       "desktopOnly": "Available in the desktop app",
       "importOk": "Imported {{count}} item(s)",
       "importEmpty": "No providers or models found in that file",
-      "importFailed": "Import failed: {{error}}"
+      "importFailed": "Import failed: {{error}}",
+      "restoreBackup": "Restore backup",
+      "restoreConfirm": "Restore will replace local Pawn data (~/.pawn). A copy of the current folder is kept. Restart Pawn after restore. Continue?",
+      "restoreOk": "Restored. Previous data saved at {{path}}. Please restart Pawn.",
+      "restoreFailed": "Restore failed",
+      "keysEncrypted": "API keys are encrypted at rest with the OS keychain when available."
     },
     "system": "System",
     "connectionsSection": {

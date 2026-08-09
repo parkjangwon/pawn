@@ -728,7 +728,15 @@ export default function ChatArea({
                 type="button"
                 className={`multi-root-chip ${i === rootIndex ? 'active' : ''}`}
                 title={p}
-                onClick={() => setRootIndex(i)}
+                onClick={() => {
+                  setRootIndex(i)
+                  // Bind tool cwd for this session so agent loop uses the selected root.
+                  if (activeSessionId && activeProjectId) {
+                    useAppStore
+                      .getState()
+                      .updateSessionPath(activeProjectId, activeSessionId, p)
+                  }
+                }}
               >
                 {i === 0 ? '★ ' : ''}
                 {label}
@@ -777,6 +785,8 @@ export default function ChatArea({
             onShowEarlier={() => setStartIndex(Math.max(0, effectiveStart - EARLIER_BATCH))}
             onScroll={handleMessageScroll}
             sessionKey={activeSessionId || ''}
+            projectId={activeProjectId}
+            sessionId={activeSessionId}
           />
         )}
       </div>

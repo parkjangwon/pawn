@@ -141,34 +141,69 @@ export interface StoredTranscript {
   lastActivity?: number
 }
 
-/** Rough token estimate. Deliberately cheap — only used for compaction thresholds. */
+/**
+ * Char → token estimate that accounts for CJK density.
+ * Latin ≈ 4 chars/token; CJK ≈ 1.5–2 chars/token. Blended by script share.
+ */
+export function estimateCharsAsTokens(text: string): number {
+  if (!text) return 0
+  let cjk = 0
+  let other = 0
+  for (let i = 0; i < text.length; i++) {
+    const c = text.charCodeAt(i)
+    // CJK Unified + Hangul + Hiragana/Katakana + fullwidth forms
+    if (
+      (c >= 0x4e00 && c <= 0x9fff) ||
+      (c >= 0x3400 && c <= 0x4dbf) ||
+      (c >= 0xac00 && c <= 0xd7af) ||
+      (c >= 0x3040 && c <= 0x30ff) ||
+      (c >= 0xff00 && c <= 0xffef)
+    ) {
+      cjk++
+    } else {
+      other++
+    }
+  }
+  return Math.ceil(cjk / 1.7 + other / 4)
+}
+
+/** Rough token estimate for compaction thresholds and the context meter. */
 export function estimateTokens(entries: TranscriptEntry[]): number {
-  let chars = 0
+  let tokens = 0
   let imageTokens = 0
   for (const e of entries) {
     if (e.role === 'assistant') {
-      chars += e.content.length
-      for (const tc of e.toolCalls || []) chars += tc.name.length + JSON.stringify(tc.arguments).length
-      for (const th of e.thinking || []) chars += (th.thinking || th.data || '').length
+      tokens += estimateCharsAsTokens(e.content)
+      for (const tc of e.toolCalls || []) {
+        tokens += estimateCharsAsTokens(tc.name + JSON.stringify(tc.arguments || {}))
+      }
+      for (const th of e.thinking || []) {
+        tokens += estimateCharsAsTokens(th.thinking || th.data || '')
+      }
+      if (e.reasoningContent) tokens += estimateCharsAsTokens(e.reasoningContent)
     } else if (e.role === 'tool') {
       const url = typeof e.content === 'string' ? extractImageDataUrl(e.content) : null
       if (url) {
         imageTokens += IMAGE_TOKEN_ESTIMATE
-        chars += Math.max(0, e.content.length - url.length)
+        tokens += estimateCharsAsTokens(
+          e.content.length > url.length ? e.content.slice(0, e.content.indexOf(url)) : ''
+        )
       } else {
-        chars += e.content.length
+        tokens += estimateCharsAsTokens(e.content)
       }
     } else {
-      chars += e.content.length
+      tokens += estimateCharsAsTokens(e.content)
       if (e.role === 'user') {
         for (const a of e.attachments || []) {
           if (a.dataUrl?.startsWith('data:image/')) imageTokens += IMAGE_TOKEN_ESTIMATE
-          else chars += (a.dataUrl || '').length
+          else tokens += estimateCharsAsTokens(a.dataUrl || '')
         }
       }
     }
   }
-  return Math.ceil(chars / 3.6) + imageTokens
+  // Per-message overhead (role tags, separators) — small but real.
+  tokens += entries.length * 4
+  return tokens + imageTokens
 }
 
 /**
@@ -191,43 +226,97 @@ export function compactTranscript(entries: TranscriptEntry[], keepEntries = 30):
   const older = entries.slice(0, cut)
   const recent = entries.slice(cut)
 
- const asks: string[] = []
- const toolNames = new Map<string, number>()
- const files = new Set<string>()
+  const asks: string[] = []
+  const conclusions: string[] = []
+  const toolNames = new Map<string, number>()
+  const files = new Set<string>()
+  const decisions: string[] = []
   const preservedResults: string[] = []
-  const MAX_PRESERVED_CHARS = 3000
- for (const e of older) {
-   if (e.role === 'user') asks.push(e.content.slice(0, 300))
-   if (e.role === 'summary') asks.unshift(e.content)
-   if (e.role === 'assistant') {
-     for (const tc of e.toolCalls || []) {
-       toolNames.set(tc.name, (toolNames.get(tc.name) || 0) + 1)
-       const p = tc.arguments.path || tc.arguments.file_path
-       if (typeof p === 'string') files.add(p)
-     }
-   }
-    if (e.role === 'tool') {
-      // Preserve errors and small outputs so the model retains continuity after
-      // compaction. Dropping every tool result (the old behaviour) left the
-      // model unable to recall a file it already read or a command it already ran.
-      if (e.isError) {
-        preservedResults.push(`[${e.name} ERROR] ${e.content.slice(0, 300)}`)
-      } else if (e.content.length <= 500) {
-        preservedResults.push(`[${e.name}] ${e.content}`)
-      } else if (e.name === 'read_file' || e.name === 'list_dir' || e.name === 'grep_search' || e.name === 'search_files') {
-        preservedResults.push(`[${e.name}] ${e.content.slice(0, 200)}...`)
+  const MAX_PRESERVED_CHARS = 4500
+  for (const e of older) {
+    if (e.role === 'user') asks.push(e.content.slice(0, 400))
+    if (e.role === 'summary') asks.unshift(e.content)
+    if (e.role === 'assistant') {
+      // Keep short final answers / conclusions (not tool-call scaffolding).
+      const text = (e.content || '').trim()
+      if (text && !e.toolCalls?.length) {
+        conclusions.push(text.slice(0, 500))
+      } else if (text.length > 80 && text.length < 1200) {
+        conclusions.push(text.slice(0, 400))
+      }
+      for (const tc of e.toolCalls || []) {
+        toolNames.set(tc.name, (toolNames.get(tc.name) || 0) + 1)
+        const p = tc.arguments.path || tc.arguments.file_path || tc.arguments.cwd
+        if (typeof p === 'string') files.add(p)
+        if (tc.name === 'edit_file' || tc.name === 'write_file' || tc.name === 'git_commit') {
+          decisions.push(`${tc.name}${typeof p === 'string' ? ` → ${p}` : ''}`)
+        }
       }
     }
- }
+    if (e.role === 'tool') {
+      if (e.isError) {
+        preservedResults.push(`[${e.name} ERROR] ${e.content.slice(0, 400)}`)
+      } else if (e.content.length <= 600) {
+        preservedResults.push(`[${e.name}] ${e.content}`)
+      } else if (
+        e.name === 'read_file' ||
+        e.name === 'list_dir' ||
+        e.name === 'grep_search' ||
+        e.name === 'search_files' ||
+        e.name === 'git_status' ||
+        e.name === 'git_diff' ||
+        e.name === 'run_checks'
+      ) {
+        preservedResults.push(`[${e.name}] ${e.content.slice(0, 280)}...`)
+      }
+    }
+  }
 
   const parts = ['--- Earlier conversation (compacted) ---']
-  if (asks.length) parts.push('User asked:\n' + asks.map((a) => `- ${a}`).join('\n'))
-  if (toolNames.size) {
-    parts.push('Tools used: ' + Array.from(toolNames.entries()).map(([n, c]) => `${n}x${c}`).join(', '))
+  if (asks.length) {
+    parts.push(
+      'User asked:\n' +
+        asks
+          .slice(-12)
+          .map((a) => `- ${a}`)
+          .join('\n')
+    )
   }
- if (files.size) parts.push('Files touched:\n' + Array.from(files).slice(0, 40).map((f) => `- ${f}`).join('\n'))
-  // Cap preserved results so the summary doesn't balloon past the point of being
-  // cheaper than keeping the raw entries.
+  if (conclusions.length) {
+    parts.push(
+      'Assistant conclusions (earlier):\n' +
+        conclusions
+          .slice(-8)
+          .map((c) => `- ${c.replace(/\n+/g, ' ')}`)
+          .join('\n')
+    )
+  }
+  if (decisions.length) {
+    parts.push(
+      'Key actions:\n' +
+        [...new Set(decisions)]
+          .slice(0, 24)
+          .map((d) => `- ${d}`)
+          .join('\n')
+    )
+  }
+  if (toolNames.size) {
+    parts.push(
+      'Tools used: ' +
+        Array.from(toolNames.entries())
+          .map(([n, c]) => `${n}×${c}`)
+          .join(', ')
+    )
+  }
+  if (files.size) {
+    parts.push(
+      'Files touched:\n' +
+        Array.from(files)
+          .slice(0, 50)
+          .map((f) => `- ${f}`)
+          .join('\n')
+    )
+  }
   let usedChars = 0
   const keptResults: string[] = []
   for (const r of preservedResults) {
@@ -238,7 +327,9 @@ export function compactTranscript(entries: TranscriptEntry[], keepEntries = 30):
   if (keptResults.length > 0) {
     parts.push('Key results from earlier:\n' + keptResults.map((r) => `- ${r}`).join('\n'))
   }
- parts.push('Re-read any file above before editing it; its contents are no longer in context.')
+  parts.push(
+    'Re-read any file above before editing it; full contents are no longer in context. Prefer git_status/git_diff if unsure what landed.'
+  )
 
   return [{ role: 'summary', content: parts.join('\n\n') }, ...recent]
 }

@@ -70,6 +70,18 @@ interface ChatState {
   /** Flat queue for UI; also keyed per session via sessionQueues. */
   queue: QueueItem[]
   sendMessage: (projectId: string, sessionId: string, content: string, mode: SendMode, attachments?: ChatAttachment[]) => void
+  /**
+   * Edit a past user message: truncate UI + transcript from that message,
+   * then re-run the agent with the new content.
+   */
+  editAndResend: (
+    projectId: string,
+    sessionId: string,
+    userMessageId: string,
+    newContent: string
+  ) => Promise<void>
+  /** Regenerate the assistant reply for the preceding user turn. */
+  regenerate: (projectId: string, sessionId: string, assistantMessageId: string) => Promise<void>
   /** Stop one session, or every session when omitted. */
   stopStreaming: (sessionId?: string) => void
   isSessionStreaming: (sessionId: string) => boolean
@@ -181,6 +193,88 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const epoch = bumpSessionEpoch(sessionId)
     setSessionStreamingFlags(set, get, sessionId, true)
     void agentLoop(projectId, sessionId, content, set, get, attachments, epoch)
+  },
+
+  editAndResend: async (projectId, sessionId, userMessageId, newContent) => {
+    const text = newContent.trim()
+    if (!text) return
+    if (get().streamingSessionIds.includes(sessionId)) {
+      get().stopStreaming(sessionId)
+    }
+    // Truncate UI messages from this user turn (inclusive).
+    useAppStore.getState().truncateMessagesFrom(projectId, sessionId, userMessageId, {
+      includeSelf: true
+    })
+    // Truncate durable transcript to the entry before this user message.
+    try {
+      const entries = await loadTranscript(projectId, sessionId)
+      // Drop trailing incomplete tool pairs and everything after last full user before cut.
+      // Simpler: rebuild from remaining UI messages is cold-path; here we slice by count.
+      const remaining = useAppStore
+        .getState()
+        .projects.find((p) => p.id === projectId)
+        ?.sessions.find((s) => s.id === sessionId)?.messages || []
+      // Keep only transcript entries that map to remaining non-system messages —
+      // safest: compact rebuild from remaining history.
+      const rebuilt: TranscriptEntry[] = []
+      for (const m of remaining) {
+        if (m.role === 'system' || !m.content.trim()) continue
+        if (m.role === 'user') rebuilt.push({ role: 'user', content: stripDisplayImages(m.content) })
+        else rebuilt.push({ role: 'assistant', content: m.content })
+      }
+      persistTranscript(sessionId, rebuilt, '', undefined)
+      void entries
+    } catch {
+      /* continue with empty */
+    }
+    clearSessionRoute(sessionId)
+    get().sendMessage(projectId, sessionId, text, 'steer')
+  },
+
+  regenerate: async (projectId, sessionId, assistantMessageId) => {
+    if (get().streamingSessionIds.includes(sessionId)) {
+      get().stopStreaming(sessionId)
+    }
+    const session = useAppStore
+      .getState()
+      .projects.find((p) => p.id === projectId)
+      ?.sessions.find((s) => s.id === sessionId)
+    if (!session) return
+    const idx = session.messages.findIndex((m) => m.id === assistantMessageId)
+    if (idx < 0) return
+    // Find preceding user message
+    let userIdx = -1
+    for (let i = idx - 1; i >= 0; i--) {
+      if (session.messages[i].role === 'user') {
+        userIdx = i
+        break
+      }
+    }
+    if (userIdx < 0) return
+    const userMsg = session.messages[userIdx]
+    const userContent = stripDisplayImages(userMsg.content).trim()
+    if (!userContent) return
+    // Remove the user bubble and everything after — sendMessage will re-add it.
+    useAppStore.getState().truncateMessagesFrom(projectId, sessionId, userMsg.id, {
+      includeSelf: true
+    })
+    try {
+      const remaining = useAppStore
+        .getState()
+        .projects.find((p) => p.id === projectId)
+        ?.sessions.find((s) => s.id === sessionId)?.messages || []
+      const rebuilt: TranscriptEntry[] = []
+      for (const m of remaining) {
+        if (m.role === 'system' || !m.content.trim()) continue
+        if (m.role === 'user') rebuilt.push({ role: 'user', content: stripDisplayImages(m.content) })
+        else rebuilt.push({ role: 'assistant', content: m.content })
+      }
+      persistTranscript(sessionId, rebuilt, '', undefined)
+    } catch {
+      /* ignore */
+    }
+    clearSessionRoute(sessionId)
+    get().sendMessage(projectId, sessionId, userContent, 'steer')
   },
 
   stopStreaming: (sessionId) => {
@@ -550,8 +644,11 @@ async function agentLoop(
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
     const projectPaths = (project?.paths || []).filter(Boolean)
-    const projectPath = projectPaths[0]
     const session = project?.sessions.find((s) => s.id === sessionId)
+    // Selected multi-root path (session.path) wins over primary paths[0].
+    const projectPath =
+      (session?.path && projectPaths.includes(session.path) ? session.path : null) ||
+      projectPaths[0]
     const cwd = session?.path || projectPath || ''
 
     // System prompt as ordered layers. Caching is a prefix match, so the most
@@ -1198,8 +1295,11 @@ async function agentLoop(
       // Turn finished — Stop hook (advisory; used for notify integrations)
       if (!aborted) {
         const project = useAppStore.getState().projects.find((p) => p.id === projectId)
-        const projectPath = project?.paths?.[0]
+        const projectPaths = (project?.paths || []).filter(Boolean)
         const session = project?.sessions.find((s) => s.id === sessionId)
+        const projectPath =
+          (session?.path && projectPaths.includes(session.path) ? session.path : null) ||
+          projectPaths[0]
         const cwd = session?.path || projectPath || ''
         void fireHook({
           event: 'Stop',

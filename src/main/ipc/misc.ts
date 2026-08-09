@@ -195,6 +195,65 @@ export function registerMiscIpc(): void {
     }
   })
 
+  /**
+   * Restore a previously exported ~/.pawn zip.
+   * Writes into a staging dir then swaps key files; requires app restart to reopen DBs.
+   */
+  handleTrusted('app:importBackup', async () => {
+    try {
+      const { dialog } = await import('electron')
+      const { mkdtempSync, rmSync, cpSync, existsSync: ex, mkdirSync, renameSync } = await import('fs')
+      const { tmpdir } = await import('os')
+      const { join: pathJoin } = await import('path')
+      const win = getMainWindow()
+      const open = win
+        ? await dialog.showOpenDialog(win, {
+            filters: [{ name: 'Zip', extensions: ['zip'] }],
+            properties: ['openFile']
+          })
+        : await dialog.showOpenDialog({
+            filters: [{ name: 'Zip', extensions: ['zip'] }],
+            properties: ['openFile']
+          })
+      if (open.canceled || !open.filePaths?.[0]) return { ok: false, cancelled: true }
+      const zipPath = open.filePaths[0]
+      const stage = mkdtempSync(pathJoin(tmpdir(), 'pawn-restore-'))
+      try {
+        await execFileAsync('unzip', ['-o', '-q', zipPath, '-d', stage], {
+          maxBuffer: 64 * 1024 * 1024
+        })
+        const pawnDir = getPawnDir()
+        // Safety: snapshot current dir
+        const bak = `${pawnDir}.pre-restore-${Date.now()}`
+        if (ex(pawnDir)) {
+          try {
+            renameSync(pawnDir, bak)
+          } catch {
+            // If rename fails (open handles), copy overlay style
+            mkdirSync(bak, { recursive: true })
+            cpSync(pawnDir, bak, { recursive: true })
+          }
+        }
+        mkdirSync(pawnDir, { recursive: true })
+        cpSync(stage, pawnDir, { recursive: true })
+        return {
+          ok: true,
+          path: pawnDir,
+          backupOfPrevious: bak,
+          needsRestart: true
+        }
+      } finally {
+        try {
+          rmSync(stage, { recursive: true, force: true })
+        } catch {
+          /* ignore */
+        }
+      }
+    } catch (e) {
+      return { ok: false, error: String(e) }
+    }
+  })
+
   /** Close the main window only (macOS dock app stays alive). Used by progressive Cmd+W. */
   handleTrusted('window:close', async () => {
     const win = getMainWindow()

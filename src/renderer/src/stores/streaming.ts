@@ -10,26 +10,36 @@ import { create } from 'zustand'
  */
 interface StreamingState {
   content: Record<string, string>
+  /** Live reasoning / thinking channel (shown collapsed separately). */
+  thinking: Record<string, string>
   setContent: (id: string, text: string) => void
+  setThinking: (id: string, text: string) => void
   /** Immediate write (final flush) — bypasses rAF coalescing. */
   setContentNow: (id: string, text: string) => void
+  setThinkingNow: (id: string, text: string) => void
   clear: (id: string) => void
   /** Drop all live buffers (session switch / stop). */
   clearAll: () => void
 }
 
 const pending = new Map<string, string>()
+const pendingThinking = new Map<string, string>()
 let rafId: number | null = null
 
-function scheduleFlush(apply: (patch: Record<string, string>) => void): void {
+function scheduleFlush(
+  apply: (contentPatch: Record<string, string>, thinkingPatch: Record<string, string>) => void
+): void {
   if (rafId !== null) return
   const run = (): void => {
     rafId = null
-    if (pending.size === 0) return
-    const patch: Record<string, string> = {}
-    for (const [id, text] of pending) patch[id] = text
+    if (pending.size === 0 && pendingThinking.size === 0) return
+    const contentPatch: Record<string, string> = {}
+    const thinkingPatch: Record<string, string> = {}
+    for (const [id, text] of pending) contentPatch[id] = text
+    for (const [id, text] of pendingThinking) thinkingPatch[id] = text
     pending.clear()
-    apply(patch)
+    pendingThinking.clear()
+    apply(contentPatch, thinkingPatch)
   }
   if (typeof requestAnimationFrame === 'function') {
     rafId = requestAnimationFrame(run)
@@ -40,23 +50,56 @@ function scheduleFlush(apply: (patch: Record<string, string>) => void): void {
 
 export const useStreamingStore = create<StreamingState>((set, get) => ({
   content: {},
+  thinking: {},
 
   setContent: (id, text) => {
-    // Identical text → skip schedule entirely (avoids store notify).
     if (get().content[id] === text && !pending.has(id)) return
     if (pending.get(id) === text) return
     pending.set(id, text)
-    scheduleFlush((patch) => {
+    scheduleFlush((contentPatch, thinkingPatch) => {
       set((s) => {
         let changed = false
-        const next = { ...s.content }
-        for (const [pid, ptext] of Object.entries(patch)) {
-          if (next[pid] !== ptext) {
-            next[pid] = ptext
+        const nextC = { ...s.content }
+        const nextT = { ...s.thinking }
+        for (const [pid, ptext] of Object.entries(contentPatch)) {
+          if (nextC[pid] !== ptext) {
+            nextC[pid] = ptext
             changed = true
           }
         }
-        return changed ? { content: next } : s
+        for (const [pid, ptext] of Object.entries(thinkingPatch)) {
+          if (nextT[pid] !== ptext) {
+            nextT[pid] = ptext
+            changed = true
+          }
+        }
+        return changed ? { content: nextC, thinking: nextT } : s
+      })
+    })
+  },
+
+  setThinking: (id, text) => {
+    if (get().thinking[id] === text && !pendingThinking.has(id)) return
+    if (pendingThinking.get(id) === text) return
+    pendingThinking.set(id, text)
+    scheduleFlush((contentPatch, thinkingPatch) => {
+      set((s) => {
+        let changed = false
+        const nextC = { ...s.content }
+        const nextT = { ...s.thinking }
+        for (const [pid, ptext] of Object.entries(contentPatch)) {
+          if (nextC[pid] !== ptext) {
+            nextC[pid] = ptext
+            changed = true
+          }
+        }
+        for (const [pid, ptext] of Object.entries(thinkingPatch)) {
+          if (nextT[pid] !== ptext) {
+            nextT[pid] = ptext
+            changed = true
+          }
+        }
+        return changed ? { content: nextC, thinking: nextT } : s
       })
     })
   },
@@ -69,23 +112,37 @@ export const useStreamingStore = create<StreamingState>((set, get) => ({
     })
   },
 
+  setThinkingNow: (id, text) => {
+    pendingThinking.delete(id)
+    set((s) => {
+      if (s.thinking[id] === text) return s
+      return { thinking: { ...s.thinking, [id]: text } }
+    })
+  },
+
   clear: (id) => {
     pending.delete(id)
+    pendingThinking.delete(id)
     set((s) => {
-      if (!(id in s.content)) return s
-      const next = { ...s.content }
-      delete next[id]
-      return { content: next }
+      const hasC = id in s.content
+      const hasT = id in s.thinking
+      if (!hasC && !hasT) return s
+      const nextC = { ...s.content }
+      const nextT = { ...s.thinking }
+      delete nextC[id]
+      delete nextT[id]
+      return { content: nextC, thinking: nextT }
     })
   },
 
   clearAll: () => {
     pending.clear()
+    pendingThinking.clear()
     if (rafId !== null && typeof cancelAnimationFrame === 'function') {
       cancelAnimationFrame(rafId)
       rafId = null
     }
-    set({ content: {} })
+    set({ content: {}, thinking: {} })
   }
 }))
 
@@ -95,12 +152,15 @@ export function __flushStreamingForTests(): void {
     cancelAnimationFrame(rafId)
     rafId = null
   }
-  if (pending.size === 0) return
-  const patch: Record<string, string> = {}
-  for (const [id, text] of pending) patch[id] = text
+  if (pending.size === 0 && pendingThinking.size === 0) return
+  const contentPatch: Record<string, string> = {}
+  const thinkingPatch: Record<string, string> = {}
+  for (const [id, text] of pending) contentPatch[id] = text
+  for (const [id, text] of pendingThinking) thinkingPatch[id] = text
   pending.clear()
-  useStreamingStore.setState((s) => {
-    const next = { ...s.content, ...patch }
-    return { content: next }
-  })
+  pendingThinking.clear()
+  useStreamingStore.setState((s) => ({
+    content: { ...s.content, ...contentPatch },
+    thinking: { ...s.thinking, ...thinkingPatch }
+  }))
 }

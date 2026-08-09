@@ -1865,22 +1865,47 @@ export default function Settings({
                     {backupMsg || t('settings.dataSection.fullBackupDesc')}
                   </span>
                 </div>
-                <button
-                  className="btn-action"
-                  onClick={() => {
-                    if (!window.api?.exportBackup) {
-                      setBackupMsg(t('settings.dataSection.desktopOnly'))
-                      return
-                    }
-                    void window.api.exportBackup().then((r) => {
-                      if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
-                      else if (r.ok && r.path) setBackupMsg(t('settings.dataSection.backupOk', { path: r.path }))
-                      else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
-                    })
-                  }}
-                >
-                  {t('settings.dataSection.fullBackup')}
-                </button>
+                <div className="settings-row-actions" style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    className="btn-action"
+                    onClick={() => {
+                      if (!window.api?.exportBackup) {
+                        setBackupMsg(t('settings.dataSection.desktopOnly'))
+                        return
+                      }
+                      void window.api.exportBackup().then((r) => {
+                        if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
+                        else if (r.ok && r.path)
+                          setBackupMsg(t('settings.dataSection.backupOk', { path: r.path }))
+                        else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
+                      })
+                    }}
+                  >
+                    {t('settings.dataSection.fullBackup')}
+                  </button>
+                  <button
+                    className="btn-action"
+                    onClick={() => {
+                      if (!window.api?.importBackup) {
+                        setBackupMsg(t('settings.dataSection.desktopOnly'))
+                        return
+                      }
+                      if (!window.confirm(t('settings.dataSection.restoreConfirm'))) return
+                      void window.api.importBackup().then((r) => {
+                        if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
+                        else if (r.ok)
+                          setBackupMsg(
+                            t('settings.dataSection.restoreOk', {
+                              path: r.backupOfPrevious || ''
+                            })
+                          )
+                        else setBackupMsg(r.error || t('settings.dataSection.restoreFailed'))
+                      })
+                    }}
+                  >
+                    {t('settings.dataSection.restoreBackup')}
+                  </button>
+                </div>
               </div>
             </div>
             <div className="settings-card">

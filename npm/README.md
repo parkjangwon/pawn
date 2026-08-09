@@ -22,6 +22,7 @@ pawn
 
 - macOS — universal `.dmg` (Apple Silicon + Intel)
 - Windows — x64 and arm64 `.exe` installers
+- Linux — `.AppImage` and `.deb` (x64 + arm64) from GitHub Releases
 
 The matching installer is cached under `~/.pawn/installers/` and reused when the
 latest release hasn't changed.
