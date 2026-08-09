@@ -272,7 +272,11 @@ export const useAppStore = create<AppState>((set, get) => ({
                         })
                       }
                     }
-                    const merged = Array.from(byId.values())
+                    const merged = Array.from(byId.values()).map((m) => ({
+                      ...m,
+                      thinking: m.thinking || undefined,
+                      modelLabel: m.modelLabel || undefined
+                    }))
                     merged.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
                     return { ...ss, messages: merged }
                   })
@@ -333,6 +337,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
+    enqueueDbWrite(`msg:model:${messageId}`, () =>
+      window.api.db.updateMessageMeta?.(messageId, { modelLabel })
+    )
   },
 
   updateMessageThinking: (projectId, sessionId, messageId, thinking) => {
@@ -355,7 +362,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
-    // Thinking is display-only for now (not in SQLite schema) — survives the session in memory.
+    enqueueDbWrite(`msg:meta:${messageId}`, () =>
+      window.api.db.updateMessageMeta?.(messageId, { thinking })
+    )
   },
 
   truncateMessagesFrom: (projectId, sessionId, messageId, opts) => {

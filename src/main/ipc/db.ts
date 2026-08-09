@@ -46,16 +46,50 @@ export function registerDbIpc(): void {
     db.removeSession(id)
     return { ok: true }
   })
-  handleTrusted('db:addMessage', async (_, id, sessionId, role, content) => {
+  handleTrusted('db:addMessage', async (_, id, sessionId, role, content, meta?) => {
     if (typeof id !== 'string' || typeof sessionId !== 'string') {
       return { ok: false, error: 'Invalid message args' }
     }
-    db.addMessage(id, sessionId, String(role || 'user'), typeof content === 'string' ? content : '')
+    const m =
+      meta && typeof meta === 'object'
+        ? (meta as { thinking?: string; modelLabel?: string })
+        : undefined
+    db.addMessage(id, sessionId, String(role || 'user'), typeof content === 'string' ? content : '', m)
     return { ok: true }
   })
   handleTrusted('db:updateMessageContent', async (_, id, content) => {
     if (typeof id !== 'string') return { ok: false, error: 'Invalid id' }
     db.updateMessageContent(id, typeof content === 'string' ? content : '')
+    return { ok: true }
+  })
+  handleTrusted(
+    'db:updateMessageMeta',
+    async (_, id, meta: { thinking?: string; modelLabel?: string; content?: string }) => {
+      if (typeof id !== 'string') return { ok: false, error: 'Invalid id' }
+      db.updateMessageMeta(id, meta || {})
+      return { ok: true }
+    }
+  )
+  handleTrusted('db:getSessionPlan', async (_, sessionId) => {
+    if (typeof sessionId !== 'string' || !sessionId) return null
+    return db.getSessionPlan(sessionId)
+  })
+  handleTrusted('db:saveSessionPlan', async (_, sessionId, json) => {
+    if (typeof sessionId !== 'string' || typeof json !== 'string') {
+      return { ok: false, error: 'Invalid args' }
+    }
+    db.saveSessionPlan(sessionId, json)
+    return { ok: true }
+  })
+  handleTrusted('db:getSessionAgentMode', async (_, sessionId) => {
+    if (typeof sessionId !== 'string' || !sessionId) return null
+    return db.getSessionAgentMode(sessionId)
+  })
+  handleTrusted('db:saveSessionAgentMode', async (_, sessionId, mode) => {
+    if (typeof sessionId !== 'string' || typeof mode !== 'string') {
+      return { ok: false, error: 'Invalid args' }
+    }
+    db.saveSessionAgentMode(sessionId, mode)
     return { ok: true }
   })
   handleTrusted('db:deleteMessage', async (_, id) => {

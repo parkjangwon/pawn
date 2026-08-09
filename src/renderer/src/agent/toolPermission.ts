@@ -49,10 +49,13 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   browser_read_text: 'safe',
   browser_screenshot: 'safe',
   browser_back: 'safe',
+  browser_wait: 'safe',
+  browser_scroll: 'safe',
   install_skill: 'risky',
   browser_open_external: 'risky',
   browser_click: 'risky',
   browser_fill: 'risky',
+  browser_select: 'risky',
   browser_eval: 'risky',
   web_fetch: 'safe',
   web_research: 'safe',
@@ -153,6 +156,9 @@ function permissionTypeFor(callName: string): PermissionType {
     browser_eval: 'browser',
     browser_click: 'browser',
     browser_fill: 'browser',
+    browser_select: 'browser',
+    browser_scroll: 'browser',
+    browser_wait: 'browser',
     browser_open_external: 'browser',
     shell_exec: 'shell_exec',
     shell_kill: 'shell_exec',
@@ -259,7 +265,8 @@ export async function checkPermission(
   projectPath?: string,
   opts?: { sessionId?: string; cwd?: string }
 ): Promise<boolean> {
-  const { permissionMode: mode, agentMode } = useProviderStore.getState()
+  const { permissionMode: mode } = useProviderStore.getState()
+  const agentMode = useProviderStore.getState().agentModeFor(opts?.sessionId)
 
   // Plan mode hard-blocks mutating tools before YOLO/hooks can approve them.
   if (!isToolAllowedInAgentMode(callName, agentMode)) {
@@ -353,8 +360,11 @@ export async function checkPermission(
     browser_read_text: 'Read Page Text',
     browser_screenshot: 'Take Page Screenshot',
     browser_back: 'Browser Back',
+    browser_wait: 'Wait in Browser',
+    browser_scroll: 'Scroll Browser',
     browser_click: 'Click in Browser',
     browser_fill: 'Type in Browser',
+    browser_select: 'Select Option',
     browser_eval: 'Evaluate JS in Page',
     browser_open_external: 'Open External Browser',
     load_skill: 'Load Skill',

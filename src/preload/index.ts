@@ -99,7 +99,8 @@ const api = {
     ) => ipcRenderer.invoke('shell:start', command, cwd, sandbox),
     poll: (jobId: string) => ipcRenderer.invoke('shell:poll', jobId),
     kill: (jobId: string) => ipcRenderer.invoke('shell:kill', jobId),
-    killAll: () => ipcRenderer.invoke('shell:killAll')
+    killAll: () => ipcRenderer.invoke('shell:killAll'),
+    killSession: (sessionId: string) => ipcRenderer.invoke('shell:killSession', sessionId)
   },
 
   // Main-process streaming flag: multi-session aware.
@@ -194,6 +195,12 @@ const api = {
       ipcRenderer.invoke('browser:fill', ref || '', selector || '', value, submit === true),
     readText: (selector?: string) => ipcRenderer.invoke('browser:readText', selector || ''),
     screenshot: () => ipcRenderer.invoke('browser:screenshot'),
+    wait: (opts?: { ms?: number; selector?: string; text?: string; timeoutMs?: number }) =>
+      ipcRenderer.invoke('browser:wait', opts || {}),
+    scroll: (opts?: { dy?: number; dx?: number; selector?: string }) =>
+      ipcRenderer.invoke('browser:scroll', opts || {}),
+    select: (opts?: { ref?: string; selector?: string; value?: string }) =>
+      ipcRenderer.invoke('browser:select', opts || {}),
     devtools: () => ipcRenderer.invoke('browser:devtools'),
     setBounds: (x: number, y: number, w: number, h: number) => ipcRenderer.invoke('browser:bounds', x, y, w, h),
     getURL: () => ipcRenderer.invoke('browser:getURL'),
@@ -239,14 +246,30 @@ const api = {
     updateSessionTitle: (id: string, title: string) => ipcRenderer.invoke('db:updateSessionTitle', id, title),
     updateSessionPath: (id: string, path: string) => ipcRenderer.invoke('db:updateSessionPath', id, path),
     removeSession: (id: string) => ipcRenderer.invoke('db:removeSession', id),
-    addMessage: (id: string, sessionId: string, role: string, content: string) => ipcRenderer.invoke('db:addMessage', id, sessionId, role, content),
+    addMessage: (
+      id: string,
+      sessionId: string,
+      role: string,
+      content: string,
+      meta?: { thinking?: string; modelLabel?: string }
+    ) => ipcRenderer.invoke('db:addMessage', id, sessionId, role, content, meta),
     updateMessageContent: (id: string, content: string) => ipcRenderer.invoke('db:updateMessageContent', id, content),
+    updateMessageMeta: (
+      id: string,
+      meta: { thinking?: string; modelLabel?: string; content?: string }
+    ) => ipcRenderer.invoke('db:updateMessageMeta', id, meta),
     deleteMessage: (id: string) => ipcRenderer.invoke('db:deleteMessage', id),
     clearMessages: (sessionId: string) => ipcRenderer.invoke('db:clearMessages', sessionId),
     getMessages: (sessionId: string) => ipcRenderer.invoke('db:getMessages', sessionId),
     getTranscript: (sessionId: string) => ipcRenderer.invoke('db:getTranscript', sessionId),
     saveTranscript: (sessionId: string, json: string) => ipcRenderer.invoke('db:saveTranscript', sessionId, json),
     clearTranscript: (sessionId: string) => ipcRenderer.invoke('db:clearTranscript', sessionId),
+    getSessionPlan: (sessionId: string) => ipcRenderer.invoke('db:getSessionPlan', sessionId),
+    saveSessionPlan: (sessionId: string, json: string) =>
+      ipcRenderer.invoke('db:saveSessionPlan', sessionId, json),
+    getSessionAgentMode: (sessionId: string) => ipcRenderer.invoke('db:getSessionAgentMode', sessionId),
+    saveSessionAgentMode: (sessionId: string, mode: string) =>
+      ipcRenderer.invoke('db:saveSessionAgentMode', sessionId, mode),
     addUsage: (row: unknown) => ipcRenderer.invoke('db:addUsage', row),
     getUsageBySession: (sessionId: string) => ipcRenderer.invoke('db:getUsageBySession', sessionId),
     getUsageSummary: (since: number) => ipcRenderer.invoke('db:getUsageSummary', since),

@@ -29,6 +29,12 @@ import type { ModelTier } from '../types/provider'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildDisplayContent, buildTranscriptText, imageAttachments, stripDisplayImages, type ChatAttachment } from '../utils/attachments'
 import {
+  displayUserIndex,
+  sealTranscriptTail,
+  truncateAfterUserIndex,
+  truncateBeforeUserIndex
+} from '../agent/transcriptTruncate'
+import {
   saveTurnCheckpoint,
   clearTurnCheckpoint,
   listRunningTurnCheckpoints,
@@ -201,32 +207,26 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (get().streamingSessionIds.includes(sessionId)) {
       get().stopStreaming(sessionId)
     }
-    // Truncate UI messages from this user turn (inclusive).
+    const session = useAppStore
+      .getState()
+      .projects.find((p) => p.id === projectId)
+      ?.sessions.find((s) => s.id === sessionId)
+    if (!session) return
+    const uIdx = displayUserIndex(session.messages, userMessageId)
+    if (uIdx < 0) return
+
+    // Durable transcript: keep everything *before* this user turn (tool pairs intact).
+    try {
+      const entries = await loadTranscript(projectId, sessionId)
+      const kept = sealTranscriptTail(truncateBeforeUserIndex(entries, uIdx))
+      persistTranscript(sessionId, kept, '', undefined)
+    } catch {
+      /* optional */
+    }
+
     useAppStore.getState().truncateMessagesFrom(projectId, sessionId, userMessageId, {
       includeSelf: true
     })
-    // Truncate durable transcript to the entry before this user message.
-    try {
-      const entries = await loadTranscript(projectId, sessionId)
-      // Drop trailing incomplete tool pairs and everything after last full user before cut.
-      // Simpler: rebuild from remaining UI messages is cold-path; here we slice by count.
-      const remaining = useAppStore
-        .getState()
-        .projects.find((p) => p.id === projectId)
-        ?.sessions.find((s) => s.id === sessionId)?.messages || []
-      // Keep only transcript entries that map to remaining non-system messages —
-      // safest: compact rebuild from remaining history.
-      const rebuilt: TranscriptEntry[] = []
-      for (const m of remaining) {
-        if (m.role === 'system' || !m.content.trim()) continue
-        if (m.role === 'user') rebuilt.push({ role: 'user', content: stripDisplayImages(m.content) })
-        else rebuilt.push({ role: 'assistant', content: m.content })
-      }
-      persistTranscript(sessionId, rebuilt, '', undefined)
-      void entries
-    } catch {
-      /* continue with empty */
-    }
     clearSessionRoute(sessionId)
     get().sendMessage(projectId, sessionId, text, 'steer')
   },
@@ -242,7 +242,6 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!session) return
     const idx = session.messages.findIndex((m) => m.id === assistantMessageId)
     if (idx < 0) return
-    // Find preceding user message
     let userIdx = -1
     for (let i = idx - 1; i >= 0; i--) {
       if (session.messages[i].role === 'user') {
@@ -254,27 +253,40 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const userMsg = session.messages[userIdx]
     const userContent = stripDisplayImages(userMsg.content).trim()
     if (!userContent) return
-    // Remove the user bubble and everything after — sendMessage will re-add it.
-    useAppStore.getState().truncateMessagesFrom(projectId, sessionId, userMsg.id, {
-      includeSelf: true
-    })
+    const uOrdinal = displayUserIndex(session.messages, userMsg.id)
+    if (uOrdinal < 0) return
+
+    // Keep transcript through the preceding user entry (attachments + all prior tools).
+    let attachments: ChatAttachment[] | undefined
     try {
-      const remaining = useAppStore
-        .getState()
-        .projects.find((p) => p.id === projectId)
-        ?.sessions.find((s) => s.id === sessionId)?.messages || []
-      const rebuilt: TranscriptEntry[] = []
-      for (const m of remaining) {
-        if (m.role === 'system' || !m.content.trim()) continue
-        if (m.role === 'user') rebuilt.push({ role: 'user', content: stripDisplayImages(m.content) })
-        else rebuilt.push({ role: 'assistant', content: m.content })
+      const entries = await loadTranscript(projectId, sessionId)
+      const kept = sealTranscriptTail(truncateAfterUserIndex(entries, uOrdinal))
+      // Drop the trailing user entry — agentLoop will append the user message again
+      // via sendMessage; keep prior history only.
+      const withoutTailUser =
+        kept.length && kept[kept.length - 1].role === 'user' ? kept.slice(0, -1) : kept
+      // Preserve attachments from the transcript user entry for vision regenerate.
+      const lastUser = kept[kept.length - 1]
+      if (lastUser?.role === 'user' && lastUser.attachments?.length) {
+        attachments = lastUser.attachments.map((a, i) => ({
+          id: `regen-${i}`,
+          name: a.name || 'image',
+          kind: 'image' as const,
+          dataUrl: a.dataUrl,
+          bytes: a.dataUrl?.length || 0
+        }))
       }
-      persistTranscript(sessionId, rebuilt, '', undefined)
+      persistTranscript(sessionId, withoutTailUser, '', undefined)
     } catch {
       /* ignore */
     }
+
+    // Remove from the user bubble onward so sendMessage re-appends a clean user turn.
+    useAppStore.getState().truncateMessagesFrom(projectId, sessionId, userMsg.id, {
+      includeSelf: true
+    })
     clearSessionRoute(sessionId)
-    get().sendMessage(projectId, sessionId, userContent, 'steer')
+    get().sendMessage(projectId, sessionId, userContent, 'steer', attachments)
   },
 
   stopStreaming: (sessionId) => {
@@ -282,9 +294,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       bumpSessionEpoch(sessionId)
       stopSessionController(sessionId)
       clearTurnCheckpoint(sessionId, 'aborted')
-      // Shell jobs are not session-tagged yet — kill live agent shells so Stop
-      // never leaves `npm test` running. Concurrent sessions may re-spawn tools.
-      void window.api.shell?.killAll?.().catch(() => {})
+      // Kill only this session's agent shells (other sessions keep running).
+      void window.api.shell?.killSession?.(sessionId)?.catch?.(() => {})
       setSessionStreamingFlags(set, get, sessionId, false)
       if (get().streamingSessionIds.length === 0) {
         void window.api.browser?.hideCursor?.().catch(() => {})
@@ -298,6 +309,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       bumpSessionEpoch(id)
       stopSessionController(id)
       clearTurnCheckpoint(id, 'aborted')
+      void window.api.shell?.killSession?.(id)?.catch?.(() => {})
     }
     for (const c of sessionControllers.values()) {
       if (!c.signal.aborted) c.abort()
@@ -699,7 +711,7 @@ async function agentLoop(
       // prefix (https://api-docs.deepseek.com/guides/kv_cache/). A rotating map
       // forces full re-prime every TTL. Use the repo_map tool on demand instead.
     }
-    const agentMode = useProviderStore.getState().agentMode
+    const agentMode = useProviderStore.getState().agentModeFor(sessionId)
     if (agentMode === 'plan') {
       projectPreamble +=
         (projectPreamble ? '\n\n' : '') +
@@ -1099,7 +1111,8 @@ async function agentLoop(
         // asking. Green → surface OK and stop (no extra LLM round). Fail → feed
         // results back and continue so the agent can fix. Only auto/yolo (ask would
         // spam permission prompts). No paid services.
-        const { permissionMode: perm, doneGate, agentMode } = useProviderStore.getState()
+        const { permissionMode: perm, doneGate } = useProviderStore.getState()
+        const agentMode = useProviderStore.getState().agentModeFor(sessionId)
         const gateKind = doneGate === 'test' ? 'test' : doneGate === 'typecheck' ? 'typecheck' : null
         const canAuto =
           agentMode === 'build' &&

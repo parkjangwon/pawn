@@ -38,7 +38,8 @@ const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
           enabled: sandboxEnabled,
           network,
           projectRoot: projectPath,
-          jailCwd: prefs.shellCwdJail !== false
+          jailCwd: prefs.shellCwdJail !== false,
+          sessionId: ctx?.sessionId
         }
         if (background) {
           const started = await api.shell.start(command, workDir, sandbox)
@@ -54,15 +55,18 @@ const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
             content: `Background job started: ${started.jobId}${started.pid ? ` (pid ${started.pid})` : ''}${started.sandboxNote ? `\n(${started.sandboxNote})` : ''}\nUse shell_poll with job_id to check output; shell_kill to stop.`
           }
         }
-        // Stop/steer aborts kill live shells via shell.killAll; race the exec so
-        // we return promptly instead of waiting for the full timeout.
+        // Stop/steer aborts kill this session's shells only (not other concurrent turns).
         const execPromise = api.shell.exec(command, workDir, timeoutMs, sandbox)
         const result = signal
           ? await Promise.race([
               execPromise,
               new Promise<Awaited<typeof execPromise>>((resolve) => {
                 const onAbort = (): void => {
-                  void api.shell.killAll?.().catch?.(() => {})
+                  if (ctx?.sessionId && api.shell.killSession) {
+                    void api.shell.killSession(ctx.sessionId).catch(() => {})
+                  } else {
+                    void api.shell.killAll?.().catch?.(() => {})
+                  }
                   resolve({
                     stdout: '',
                     stderr: 'Command aborted (run stopped)',

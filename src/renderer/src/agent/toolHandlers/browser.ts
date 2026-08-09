@@ -109,6 +109,46 @@ const browser_open_external: ToolHandler = async (call, projectPath, _signal, ct
         return { toolCallId: call.id, content: `Opened in the system browser: ${call.arguments.url}` }
       }
 
+const browser_wait: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+  const b = await requireBrowser()
+  if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+  const res = await b.agent.wait({
+    ms: call.arguments.ms != null ? Number(call.arguments.ms) : undefined,
+    selector: call.arguments.selector != null ? String(call.arguments.selector) : undefined,
+    text: call.arguments.text != null ? String(call.arguments.text) : undefined,
+    timeoutMs:
+      call.arguments.timeout_ms != null ? Number(call.arguments.timeout_ms) : undefined
+  })
+  if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+  return { toolCallId: call.id, content: `Waited ${res.waitedMs ?? 0}ms` }
+}
+
+const browser_scroll: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+  const b = await requireBrowser()
+  if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+  const res = await b.agent.scroll({
+    dy: call.arguments.dy != null ? Number(call.arguments.dy) : undefined,
+    dx: call.arguments.dx != null ? Number(call.arguments.dx) : undefined,
+    selector: call.arguments.selector != null ? String(call.arguments.selector) : undefined
+  })
+  if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+  return {
+    toolCallId: call.id,
+    content: `Scrolled dy=${call.arguments.dy ?? 0} dx=${call.arguments.dx ?? 0}`
+  }
+}
+
+const browser_select: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+  const b = await requireBrowser()
+  if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+  const res = await b.agent.select({
+    ref: call.arguments.ref != null ? String(call.arguments.ref) : undefined,
+    selector: call.arguments.selector != null ? String(call.arguments.selector) : undefined,
+    value: String(call.arguments.value ?? '')
+  })
+  if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+  return { toolCallId: call.id, content: res.message || 'Selected' }
+}
 
 export const browserHandlers: Record<string, ToolHandler> = {
   'browser_navigate': browser_navigate,
@@ -120,4 +160,7 @@ export const browserHandlers: Record<string, ToolHandler> = {
   'browser_back': browser_back,
   'browser_screenshot': browser_screenshot,
   'browser_open_external': browser_open_external,
+  'browser_wait': browser_wait,
+  'browser_scroll': browser_scroll,
+  'browser_select': browser_select,
 }

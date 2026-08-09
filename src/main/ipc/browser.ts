@@ -523,4 +523,96 @@ export function registerBrowserIpc(): void {
     if (!browserView || browserView.webContents.isDestroyed()) return { error: 'Browser not created' }
     return { url: browserView.webContents.getURL() }
   })
+
+  /** Wait fixed ms and/or until selector/text appears (timeout default 15s). */
+  handleTrusted(
+    'browser:wait',
+    async (
+      _,
+      opts?: { ms?: number; selector?: string; text?: string; timeoutMs?: number }
+    ) => {
+      const guard = requireView()
+      if ('error' in guard) return guard
+      const timeout = Math.min(60_000, Math.max(100, Math.floor(Number(opts?.timeoutMs) || 15_000)))
+      const fixedMs = opts?.ms != null ? Math.min(30_000, Math.max(0, Math.floor(Number(opts.ms)))) : 0
+      const selector = opts?.selector ? String(opts.selector) : ''
+      const text = opts?.text ? String(opts.text) : ''
+      if (fixedMs > 0 && !selector && !text) {
+        await new Promise((r) => setTimeout(r, fixedMs))
+        return { ok: true, waitedMs: fixedMs }
+      }
+      try {
+        const res = await guard.view.webContents.executeJavaScript(
+          `(async function(){
+            const timeout = ${timeout};
+            const selector = ${JSON.stringify(selector)};
+            const text = ${JSON.stringify(text)};
+            const start = Date.now();
+            function ready() {
+              if (selector) {
+                try { if (!document.querySelector(selector)) return false } catch (e) { return false }
+              }
+              if (text) {
+                const body = (document.body && document.body.innerText) || '';
+                if (!body.includes(text)) return false;
+              }
+              return true;
+            }
+            if (ready()) return { ok: true, waitedMs: 0 };
+            while (Date.now() - start < timeout) {
+              await new Promise(r => setTimeout(r, 120));
+              if (ready()) return { ok: true, waitedMs: Date.now() - start };
+            }
+            return { ok: false, error: 'wait timed out after ' + timeout + 'ms', waitedMs: Date.now() - start };
+          })()`,
+          true
+        )
+        return res
+      } catch (err) {
+        return { ok: false, error: String(err) }
+      }
+    }
+  )
+
+  handleTrusted(
+    'browser:scroll',
+    async (_, opts?: { dy?: number; dx?: number; selector?: string }) => {
+      const dy = Math.floor(Number(opts?.dy) || 0)
+      const dx = Math.floor(Number(opts?.dx) || 0)
+      const selector = opts?.selector ? String(opts.selector) : ''
+      return runInPage(`(function(){
+        var dy = ${dy}, dx = ${dx};
+        var s = ${JSON.stringify(selector)};
+        var el = s ? null : window;
+        if (s) { try { el = document.querySelector(s) } catch (e) { el = null } }
+        if (s && !el) return { error: 'No element matched selector' };
+        if (el === window) window.scrollBy(dx, dy);
+        else el.scrollBy(dx, dy);
+        return { ok: true, dx: dx, dy: dy };
+      })()`)
+    }
+  )
+
+  handleTrusted(
+    'browser:select',
+    async (_, opts?: { ref?: string; selector?: string; value?: string }) => {
+      const ref = opts?.ref ? String(opts.ref) : ''
+      const selector = opts?.selector ? String(opts.selector) : ''
+      const value = opts?.value != null ? String(opts.value) : ''
+      return runInPage(`(function(){
+        var ref = ${JSON.stringify(ref)};
+        var selector = ${JSON.stringify(selector)};
+        var value = ${JSON.stringify(value)};
+        var el = null;
+        if (ref && window.__pawnRefs && window.__pawnRefs[ref]) el = window.__pawnRefs[ref];
+        if (!el && selector) { try { el = document.querySelector(selector) } catch (e) {} }
+        if (!el) return { error: 'Element not found' };
+        if (el.tagName !== 'SELECT') return { error: 'Element is not a <select>' };
+        el.value = value;
+        el.dispatchEvent(new Event('input', { bubbles: true }));
+        el.dispatchEvent(new Event('change', { bubbles: true }));
+        return { ok: true, value: el.value, message: 'Selected ' + JSON.stringify(el.value) };
+      })()`)
+    }
+  )
 }

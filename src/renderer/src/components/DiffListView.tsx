@@ -12,7 +12,12 @@ export default function DiffListView(): React.JSX.Element {
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
   const messages = activeSession?.messages || []
-  const projectPath = activeProject?.paths?.[0] || ''
+  const projectPath = (() => {
+    const paths = activeProject?.paths || []
+    if (!paths.length) return ''
+    if (activeSession?.path && paths.includes(activeSession.path)) return activeSession.path
+    return paths[0] || ''
+  })()
 
   const diffMessages = messages.filter((m) => m.role === 'system' && m.content.includes(DIFF_MARKER))
 

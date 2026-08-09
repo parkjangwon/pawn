@@ -14,12 +14,41 @@ export function getDb(): Database.Database {
   db.pragma('journal_mode = WAL')
   db.pragma('foreign_keys = ON')
   initSchema(db)
+  migrateSchema(db)
   return db
 }
 
 export function closeDb(): void {
   db?.close()
   db = null
+}
+
+
+function migrateSchema(db: Database.Database): void {
+  const cols = db.prepare('PRAGMA table_info(messages)').all() as Array<{ name: string }>
+  const names = new Set(cols.map((c) => c.name))
+  if (!names.has('thinking')) {
+    db.exec("ALTER TABLE messages ADD COLUMN thinking TEXT NOT NULL DEFAULT ''")
+  }
+  if (!names.has('model_label')) {
+    db.exec("ALTER TABLE messages ADD COLUMN model_label TEXT NOT NULL DEFAULT ''")
+  }
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_plans (
+      session_id TEXT PRIMARY KEY,
+      json TEXT NOT NULL,
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    );
+  `)
+  db.exec(`
+    CREATE TABLE IF NOT EXISTS session_modes (
+      session_id TEXT PRIMARY KEY,
+      agent_mode TEXT NOT NULL DEFAULT 'build',
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    );
+  `)
 }
 
 function initSchema(db: Database.Database): void {
@@ -177,12 +206,83 @@ export function removeSession(id: string): void {
 
 // --- Messages ---
 
-export function getMessagesBySession(sessionId: string): Array<{ id: string; role: string; content: string; createdAt: number }> {
-  return getDb().prepare('SELECT id, role, content, created_at as createdAt FROM messages WHERE session_id = ? ORDER BY created_at').all(sessionId) as never[]
+export function getMessagesBySession(sessionId: string): Array<{
+  id: string
+  role: string
+  content: string
+  createdAt: number
+  thinking?: string
+  modelLabel?: string
+}> {
+  return getDb()
+    .prepare(
+      `SELECT id, role, content, created_at as createdAt,
+              thinking, model_label as modelLabel
+       FROM messages WHERE session_id = ? ORDER BY created_at`
+    )
+    .all(sessionId) as never[]
 }
 
-export function addMessage(id: string, sessionId: string, role: string, content: string): void {
-  getDb().prepare('INSERT INTO messages (id, session_id, role, content) VALUES (?, ?, ?, ?)').run(id, sessionId, role, content)
+export function addMessage(
+  id: string,
+  sessionId: string,
+  role: string,
+  content: string,
+  meta?: { thinking?: string; modelLabel?: string }
+): void {
+  getDb()
+    .prepare(
+      'INSERT INTO messages (id, session_id, role, content, thinking, model_label) VALUES (?, ?, ?, ?, ?, ?)'
+    )
+    .run(id, sessionId, role, content, meta?.thinking || '', meta?.modelLabel || '')
+}
+
+export function updateMessageMeta(
+  id: string,
+  meta: { thinking?: string; modelLabel?: string; content?: string }
+): void {
+  const d = getDb()
+  if (meta.content !== undefined) {
+    d.prepare('UPDATE messages SET content = ? WHERE id = ?').run(meta.content, id)
+  }
+  if (meta.thinking !== undefined) {
+    d.prepare('UPDATE messages SET thinking = ? WHERE id = ?').run(meta.thinking, id)
+  }
+  if (meta.modelLabel !== undefined) {
+    d.prepare('UPDATE messages SET model_label = ? WHERE id = ?').run(meta.modelLabel, id)
+  }
+}
+
+export function getSessionPlan(sessionId: string): string | null {
+  const row = getDb().prepare('SELECT json FROM session_plans WHERE session_id = ?').get(sessionId) as
+    | { json: string }
+    | undefined
+  return row?.json ?? null
+}
+
+export function saveSessionPlan(sessionId: string, json: string): void {
+  getDb()
+    .prepare(
+      `INSERT INTO session_plans (session_id, json, updated_at) VALUES (?, ?, unixepoch())
+       ON CONFLICT(session_id) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at`
+    )
+    .run(sessionId, json)
+}
+
+export function getSessionAgentMode(sessionId: string): string | null {
+  const row = getDb().prepare('SELECT agent_mode FROM session_modes WHERE session_id = ?').get(sessionId) as
+    | { agent_mode: string }
+    | undefined
+  return row?.agent_mode ?? null
+}
+
+export function saveSessionAgentMode(sessionId: string, mode: string): void {
+  getDb()
+    .prepare(
+      `INSERT INTO session_modes (session_id, agent_mode, updated_at) VALUES (?, ?, unixepoch())
+       ON CONFLICT(session_id) DO UPDATE SET agent_mode = excluded.agent_mode, updated_at = excluded.updated_at`
+    )
+    .run(sessionId, mode)
 }
 
 export function deleteMessage(id: string): void {

@@ -15,8 +15,10 @@ interface ProviderState {
   defaultSendMode: 'queue' | 'steer'
   permissionMode: 'ask' | 'auto' | 'yolo'
   reasoningEffort: 'auto' | 'low' | 'medium' | 'high'
-  /** Plan = read-only explore; Build = full tools (OpenCode/Cline-inspired). */
+  /** Plan = read-only explore; Build = full tools (OpenCode/Cline-inspired). Default for new sessions. */
   agentMode: AgentMode
+  /** Per-session overrides (Plan/Build). */
+  sessionAgentModes: Record<string, AgentMode>
   /** Auto-verify after code edits: off | typecheck | test. */
   doneGate: DoneGate
   /** Agent shell_exec sandbox defaults. */
@@ -57,7 +59,10 @@ interface ProviderState {
   setDefaultSendMode: (mode: 'queue' | 'steer') => void
   setPermissionMode: (mode: 'ask' | 'auto' | 'yolo') => void
   setReasoningEffort: (effort: 'auto' | 'low' | 'medium' | 'high') => void
-  setAgentMode: (mode: AgentMode) => void
+  setAgentMode: (mode: AgentMode, sessionId?: string | null) => void
+  /** Effective mode for a session (session override → global default). */
+  agentModeFor: (sessionId?: string | null) => AgentMode
+  hydrateSessionAgentMode: (sessionId: string) => Promise<void>
   toggleAgentMode: () => void
   setDoneGate: (gate: DoneGate) => void
   setShellSandbox: (v: boolean) => void
@@ -136,6 +141,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   permissionMode: 'ask',
   reasoningEffort: 'auto',
   agentMode: 'build',
+  sessionAgentModes: {},
   doneGate: 'typecheck',
   shellSandbox: true,
   shellNetwork: true,
@@ -293,12 +299,40 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     set((s) => { const next = { ...s, reasoningEffort: effort }; saveToBackend(next); return { reasoningEffort: effort } })
   },
 
-  setAgentMode: (mode) => {
+  setAgentMode: (mode, sessionId) => {
+    if (sessionId) {
+      set((s) => ({
+        sessionAgentModes: { ...s.sessionAgentModes, [sessionId]: mode }
+      }))
+      void window.api?.db?.saveSessionAgentMode?.(sessionId, mode)?.catch?.(() => {})
+      return
+    }
     set((s) => {
       const next = { ...s, agentMode: mode }
       saveToBackend(next)
       return { agentMode: mode }
     })
+  },
+
+  agentModeFor: (sessionId) => {
+    if (sessionId && get().sessionAgentModes[sessionId]) {
+      return get().sessionAgentModes[sessionId]
+    }
+    return get().agentMode
+  },
+
+  hydrateSessionAgentMode: async (sessionId) => {
+    if (!sessionId || get().sessionAgentModes[sessionId]) return
+    try {
+      const mode = await window.api?.db?.getSessionAgentMode?.(sessionId)
+      if (mode === 'plan' || mode === 'build') {
+        set((s) => ({
+          sessionAgentModes: { ...s.sessionAgentModes, [sessionId]: mode }
+        }))
+      }
+    } catch {
+      /* optional */
+    }
   },
 
   toggleAgentMode: () => {

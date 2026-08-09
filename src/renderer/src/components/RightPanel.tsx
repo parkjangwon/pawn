@@ -63,9 +63,15 @@ export default function RightPanel(): React.JSX.Element | null {
     document.body.classList.remove('resizing-right-panel')
   }, [])
 
-  const { projects, activeProjectId } = useAppStore()
+  const { projects, activeProjectId, activeSessionId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
-  const projectPath = activeProject?.paths?.[0] || ''
+  const projectPath = (() => {
+    const paths = activeProject?.paths || []
+    if (!paths.length) return ''
+    const session = activeProject?.sessions.find((s) => s.id === activeSessionId)
+    if (session?.path && paths.includes(session.path)) return session.path
+    return paths[0] || ''
+  })()
 
   // Apply panelWidth from state to DOM. The opening render starts at width 0 so
   // the transition slides the panel in; closing animates it back out.
@@ -89,10 +95,10 @@ export default function RightPanel(): React.JSX.Element | null {
 
   const requestHide = useCallback((): void => {
     if (closingRef.current) return
-    // Closing the panel closes the browser along with it: drop the native page
-    // so reopening the browser doesn't resurrect the last visited site.
+    // Hide the embedded browser but keep the page alive so agent runs can resume
+    // after the panel is reopened (destroy only on explicit close/quit).
     if (openTabsRef.current.includes('browser')) {
-      window.api.browser?.destroy?.()
+      void window.api.browser?.setVisible?.(false)?.catch?.(() => {})
     }
     setClosing(true)
     hideTimer.current = window.setTimeout(() => {

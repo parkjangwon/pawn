@@ -27,7 +27,8 @@ function errorPayload(err: unknown): { stdout: string; stderr: string; exitCode:
   }
 }
 
-const liveChildren = new Set<ChildProcess>()
+/** Live foreground children keyed by process → owning session (if any). */
+const liveChildren = new Map<ChildProcess, string | undefined>()
 
 interface BgJob {
   id: string
@@ -38,6 +39,7 @@ interface BgJob {
   exitCode: number | null
   killed: boolean
   startedAt: number
+  sessionId?: string
 }
 
 const backgroundJobs = new Map<string, BgJob>()
@@ -82,7 +84,7 @@ function killChild(child: ChildProcess): void {
 
 export function killAllAgentShells(): number {
   let n = 0
-  for (const child of Array.from(liveChildren)) {
+  for (const child of Array.from(liveChildren.keys())) {
     killChild(child)
     n++
   }
@@ -97,12 +99,34 @@ export function killAllAgentShells(): number {
   return n
 }
 
+/** Kill only shells tagged with this session id (and untagged? no — only tagged). */
+export function killSessionAgentShells(sessionId: string): number {
+  if (!sessionId) return 0
+  let n = 0
+  for (const [child, sid] of Array.from(liveChildren.entries())) {
+    if (sid === sessionId) {
+      killChild(child)
+      liveChildren.delete(child)
+      n++
+    }
+  }
+  for (const job of Array.from(backgroundJobs.values())) {
+    if (job.sessionId === sessionId && job.exitCode === null) {
+      killChild(job.child)
+      job.killed = true
+      n++
+    }
+  }
+  return n
+}
+
 function runSpawned(
   file: string,
   args: string[],
   cwd: string | undefined,
   timeoutMs: number,
-  env?: Record<string, string>
+  env?: Record<string, string>,
+  sessionId?: string
 ): Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }> {
   return new Promise((resolve) => {
     const isWin = process.platform === 'win32'
@@ -114,7 +138,7 @@ function runSpawned(
       stdio: ['ignore', 'pipe', 'pipe']
     })
 
-    liveChildren.add(child)
+    liveChildren.set(child, sessionId)
 
     let stdout = ''
     let stderr = ''
@@ -169,7 +193,8 @@ function runShellCommand(
   command: string,
   cwd: string | undefined,
   timeoutMs: number,
-  sandbox: SandboxOptions = {}
+  sandbox: SandboxOptions = {},
+  sessionId?: string
 ): Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean; sandboxNote?: string }> {
   const planned = planShellSpawn(command, cwd, sandbox)
   if (!planned.ok) {
@@ -186,14 +211,16 @@ function runShellCommand(
     planned.plan.args,
     planned.plan.cwd,
     timeoutMs,
-    planned.plan.env
+    planned.plan.env,
+    sessionId
   ).then((r) => ({ ...r, sandboxNote: planned.plan.sandboxNote }))
 }
 
 function startBackgroundJob(
   command: string,
   cwd: string | undefined,
-  sandbox: SandboxOptions = {}
+  sandbox: SandboxOptions = {},
+  sessionId?: string
 ): { jobId: string; pid?: number; error?: string; sandboxNote?: string } {
   pruneBackgroundJobs()
   const running = Array.from(backgroundJobs.values()).filter((j) => j.exitCode === null).length
@@ -226,10 +253,11 @@ function startBackgroundJob(
     stderr: '',
     exitCode: null,
     killed: false,
-    startedAt: Date.now()
+    startedAt: Date.now(),
+    sessionId
   }
   backgroundJobs.set(id, job)
-  liveChildren.add(child)
+  liveChildren.set(child, sessionId)
 
   const trim = (s: string): string => (s.length > MAX_JOB_BUFFER ? s.slice(s.length - MAX_JOB_BUFFER) : s)
   child.stdout?.setEncoding('utf8')
@@ -278,6 +306,12 @@ function parseSandboxOpts(raw: unknown): SandboxOptions {
   }
 }
 
+function sessionIdFromOpts(raw: unknown): string | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const sid = (raw as Record<string, unknown>).sessionId
+  return typeof sid === 'string' && sid ? sid : undefined
+}
+
 const MAX_BG_JOBS = 40
 const BG_JOB_TTL_MS = 30 * 60 * 1000
 
@@ -314,7 +348,8 @@ export function registerShellIpc(): void {
           command,
           typeof cwd === 'string' ? cwd : undefined,
           clampTimeout(timeoutMs),
-          parseSandboxOpts(sandboxOpts)
+          parseSandboxOpts(sandboxOpts),
+          sessionIdFromOpts(sandboxOpts)
         )
       } catch (err: unknown) {
         return errorPayload(err)
@@ -344,7 +379,8 @@ export function registerShellIpc(): void {
           planned.plan.args,
           planned.plan.cwd,
           clampTimeout(timeoutMs),
-          planned.plan.env
+          planned.plan.env,
+          sessionIdFromOpts(sandboxOpts)
         )
       } catch (err: unknown) {
         return errorPayload(err)
@@ -362,7 +398,8 @@ export function registerShellIpc(): void {
         const started = startBackgroundJob(
           command,
           typeof cwd === 'string' ? cwd : undefined,
-          parseSandboxOpts(sandboxOpts)
+          parseSandboxOpts(sandboxOpts),
+          sessionIdFromOpts(sandboxOpts)
         )
         if (started.error) return { error: started.error }
         return started
@@ -402,6 +439,14 @@ export function registerShellIpc(): void {
 
   handleTrusted('shell:killAll', async () => {
     const killed = killAllAgentShells()
+    return { ok: true, killed }
+  })
+
+  handleTrusted('shell:killSession', async (_, sessionId: string) => {
+    if (typeof sessionId !== 'string' || !sessionId) {
+      return { ok: false, error: 'sessionId required', killed: 0 }
+    }
+    const killed = killSessionAgentShells(sessionId)
     return { ok: true, killed }
   })
 }

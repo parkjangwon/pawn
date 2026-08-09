@@ -26,6 +26,20 @@ export interface BrowserAgent {
   evaluate: (code: string) => Promise<{ result: string; error?: string }>
   back: () => Promise<{ url?: string; error?: string }>
   screenshot: () => Promise<{ bytes: number; dataUrl?: string; error?: string }>
+  wait: (opts?: {
+    ms?: number
+    selector?: string
+    text?: string
+    timeoutMs?: number
+  }) => Promise<{ ok?: boolean; waitedMs?: number; error?: string }>
+  scroll: (opts?: { dy?: number; dx?: number; selector?: string }) => Promise<{
+    ok?: boolean
+    error?: string
+  }>
+  select: (opts?: { ref?: string; selector?: string; value?: string }) => Promise<{
+    message?: string
+    error?: string
+  }>
 }
 
 let cached: BrowserAgent | null | undefined
@@ -84,6 +98,24 @@ export function getBrowserAgent(): BrowserAgent | null {
       const res = await api.browser.screenshot()
       if (res.error) return { bytes: 0, error: res.error }
       return { bytes: res.bytes || 0, dataUrl: res.dataUrl }
+    },
+    wait: async (opts) => {
+      const res = await api.browser.wait?.(opts)
+      if (!res) return { error: 'browser.wait unavailable' }
+      if (res.error || res.ok === false) return { error: res.error || 'wait failed', waitedMs: res.waitedMs }
+      return { ok: true, waitedMs: res.waitedMs }
+    },
+    scroll: async (opts) => {
+      const res = await api.browser.scroll?.(opts)
+      if (!res) return { error: 'browser.scroll unavailable' }
+      return res.error ? { error: res.error } : { ok: true }
+    },
+    select: async (opts) => {
+      const res = await api.browser.select?.(opts)
+      if (!res) return { error: 'browser.select unavailable' }
+      return res.error
+        ? { error: res.error }
+        : { message: res.message || 'Selected' }
     }
   }
   return cached

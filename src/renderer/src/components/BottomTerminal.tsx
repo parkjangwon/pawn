@@ -51,9 +51,15 @@ export default function BottomTerminal(): React.JSX.Element {
     document.body.classList.remove('resizing-bottom-terminal')
   }, [])
 
-  const { projects, activeProjectId } = useAppStore()
+  const { projects, activeProjectId, activeSessionId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
-  const projectPath = activeProject?.paths?.[0] || ''
+  const projectPath = (() => {
+    const paths = activeProject?.paths || []
+    if (!paths.length) return ''
+    const session = activeProject?.sessions.find((s) => s.id === activeSessionId)
+    if (session?.path && paths.includes(session.path)) return session.path
+    return paths[0] || ''
+  })()
 
   useLayoutEffect(() => {
     if (!visible) return

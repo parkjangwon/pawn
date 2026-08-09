@@ -54,7 +54,21 @@ export default function ChatArea({
   const { sendMessage, isStreaming, streamingSessionIds, stopStreaming, queue } = useChatStore()
   /** Live tokens / thinking indicator only for the session currently on screen. */
   const sessionStreaming = !!activeSessionId && streamingSessionIds.includes(activeSessionId)
-  const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode, toggleAgentMode, setAgentMode } = useProviderStore()
+  const {
+    models,
+    providers,
+    activeModelId,
+    setActiveModel,
+    permissionMode,
+    setPermissionMode,
+    reasoningEffort,
+    setReasoningEffort,
+    routingMode,
+    setRoutingMode,
+    toggleAgentMode,
+    setAgentMode,
+    hydrateSessionAgentMode
+  } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
   const [showUsagePopover, setShowUsagePopover] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
@@ -93,11 +107,27 @@ export default function ChatArea({
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
   const messages = activeSession?.messages || []
   // Prefer a user-selected root when multi-folder; fall back to primary.
-  const [rootIndex, setRootIndex] = useState(0)
+  // Restore chip selection from session.path when switching sessions.
   const projectPaths = activeProject?.paths || []
+  const [rootIndex, setRootIndex] = useState(0)
   useEffect(() => {
-    setRootIndex(0)
-  }, [activeProject?.id])
+    const paths = activeProject?.paths || []
+    const session = activeProject?.sessions.find((s) => s.id === activeSessionId)
+    if (session?.path && paths.includes(session.path)) {
+      setRootIndex(paths.indexOf(session.path))
+    } else {
+      setRootIndex(0)
+    }
+  }, [activeProject?.id, activeSessionId, activeProject?.paths, activeProject?.sessions])
+
+  // Hydrate durable plan + per-session Plan/Build mode when focusing a session.
+  useEffect(() => {
+    if (!activeSessionId) return
+    void hydrateSessionAgentMode(activeSessionId)
+    void import('../stores/plan').then(({ usePlanStore }) => {
+      void usePlanStore.getState().hydrate(activeSessionId)
+    })
+  }, [activeSessionId, hydrateSessionAgentMode])
   const effectivePath =
     projectPaths[Math.min(rootIndex, Math.max(0, projectPaths.length - 1))] ||
     projectPaths[0] ||

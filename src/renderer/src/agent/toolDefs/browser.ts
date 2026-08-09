@@ -80,5 +80,44 @@ export const BROWSER_TOOLS: ToolDefinition[] = [
       properties: { url: { type: 'string', description: 'URL to open' } },
       required: ['url']
     }
+  },
+  {
+    name: 'browser_wait',
+    description:
+      'Wait for the page: fixed milliseconds and/or until a CSS selector / text appears. Prefer after navigate/click before snapshot.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ms: { type: 'number', description: 'Fixed wait in ms (max 30000)' },
+        selector: { type: 'string', description: 'Wait until this CSS selector matches' },
+        text: { type: 'string', description: 'Wait until this text appears in the page body' },
+        timeout_ms: { type: 'number', description: 'Max wait for selector/text (default 15000)' }
+      }
+    }
+  },
+  {
+    name: 'browser_scroll',
+    description: 'Scroll the page or an element. dy>0 scrolls down.',
+    parameters: {
+      type: 'object',
+      properties: {
+        dy: { type: 'number', description: 'Vertical pixels (positive = down)' },
+        dx: { type: 'number', description: 'Horizontal pixels' },
+        selector: { type: 'string', description: 'Optional element to scroll instead of window' }
+      }
+    }
+  },
+  {
+    name: 'browser_select',
+    description: 'Choose an option in a <select> by value. Prefer ref from browser_snapshot.',
+    parameters: {
+      type: 'object',
+      properties: {
+        ref: { type: 'string', description: 'ref from browser_snapshot' },
+        selector: { type: 'string', description: 'CSS selector if no ref' },
+        value: { type: 'string', description: 'option value to select' }
+      },
+      required: ['value']
+    }
   }
 ]

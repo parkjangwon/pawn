@@ -57,8 +57,15 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const {
     models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode,
     reasoningEffort, setReasoningEffort, routingMode, setRoutingMode,
-    agentMode, setAgentMode, doneGate, setDoneGate
+    agentMode: globalAgentMode,
+    setAgentMode,
+    agentModeFor,
+    doneGate,
+    setDoneGate
   } = useProviderStore()
+  const agentMode = props.activeSessionId
+    ? agentModeFor(props.activeSessionId)
+    : globalAgentMode
   const usageTotals = useUsageStore((s) => (props.activeSessionId ? s.bySession[props.activeSessionId] : undefined))
   const lastRoute = useUsageStore((s) => (props.activeSessionId ? s.lastRoute[props.activeSessionId] : undefined))
   const sessionDiags = useUsageStore((s) => (props.activeSessionId ? s.diagnostics[props.activeSessionId] : undefined))
@@ -195,7 +202,17 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   </div>
                 )}
               </div>
-              <GitSummaryChip projectPath={activeProject?.paths?.[0] || ''} />
+              <GitSummaryChip
+                projectPath={(() => {
+                  const paths = activeProject?.paths || []
+                  if (!paths.length) return ''
+                  const session = activeProject?.sessions?.find(
+                    (s) => s.id === props.activeSessionId
+                  )
+                  if (session?.path && paths.includes(session.path)) return session.path
+                  return paths[0] || ''
+                })()}
+              />
             </div>
           )}
 
@@ -261,7 +278,12 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   <button
                     type="button"
                     className={`perm-chip perm-agent-${agentMode}`}
-                    onClick={() => setAgentMode(agentMode === 'plan' ? 'build' : 'plan')}
+                    onClick={() =>
+                      setAgentMode(
+                        agentMode === 'plan' ? 'build' : 'plan',
+                        props.activeSessionId
+                      )
+                    }
                     title={agentMode === 'plan' ? t('contextBar.agentPlanHint') : t('contextBar.agentBuildHint')}
                     aria-label={agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}
                   >

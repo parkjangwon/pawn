@@ -208,6 +208,7 @@ declare global {
         }>
         kill: (jobId: string) => Promise<{ ok?: boolean; jobId?: string; error?: string }>
         killAll: () => Promise<{ ok?: boolean; killed?: number }>
+        killSession: (sessionId: string) => Promise<{ ok?: boolean; killed?: number; error?: string }>
       }
       setStreaming: (streaming: boolean) => void
       setSessionStreaming?: (sessionId: string, streaming: boolean) => void
@@ -377,6 +378,22 @@ declare global {
         fill: (ref: string | undefined, selector: string | undefined, value: string, submit?: boolean) => Promise<{ message?: string; error?: string }>
         readText: (selector?: string) => Promise<{ text?: string; truncated?: boolean; error?: string }>
         screenshot: () => Promise<{ dataUrl?: string; bytes?: number; error?: string }>
+        wait: (opts?: {
+          ms?: number
+          selector?: string
+          text?: string
+          timeoutMs?: number
+        }) => Promise<{ ok?: boolean; waitedMs?: number; error?: string }>
+        scroll: (opts?: {
+          dy?: number
+          dx?: number
+          selector?: string
+        }) => Promise<{ ok?: boolean; error?: string }>
+        select: (opts?: {
+          ref?: string
+          selector?: string
+          value?: string
+        }) => Promise<{ ok?: boolean; message?: string; error?: string }>
         devtools: () => Promise<{ ok?: boolean; error?: string }>
         setBounds: (x: number, y: number, w: number, h: number) => Promise<{ ok?: boolean; error?: string }>
         getURL: () => Promise<{ url?: string; error?: string }>
@@ -407,14 +424,37 @@ declare global {
         updateSessionTitle: (id: string, title: string) => Promise<{ ok?: boolean }>
         updateSessionPath: (id: string, path: string) => Promise<{ ok?: boolean }>
         removeSession: (id: string) => Promise<{ ok?: boolean }>
-        addMessage: (id: string, sessionId: string, role: string, content: string) => Promise<{ ok?: boolean }>
+        addMessage: (
+          id: string,
+          sessionId: string,
+          role: string,
+          content: string,
+          meta?: { thinking?: string; modelLabel?: string }
+        ) => Promise<{ ok?: boolean }>
         updateMessageContent: (id: string, content: string) => Promise<{ ok?: boolean }>
+        updateMessageMeta: (
+          id: string,
+          meta: { thinking?: string; modelLabel?: string; content?: string }
+        ) => Promise<{ ok?: boolean }>
         deleteMessage: (id: string) => Promise<{ ok?: boolean }>
         clearMessages: (sessionId: string) => Promise<{ ok?: boolean }>
-        getMessages: (sessionId: string) => Promise<Array<{ id: string; role: string; content: string; createdAt: number }>>
+        getMessages: (sessionId: string) => Promise<
+          Array<{
+            id: string
+            role: string
+            content: string
+            createdAt: number
+            thinking?: string
+            modelLabel?: string
+          }>
+        >
         getTranscript: (sessionId: string) => Promise<string | null>
         saveTranscript: (sessionId: string, json: string) => Promise<{ ok?: boolean }>
         clearTranscript: (sessionId: string) => Promise<{ ok?: boolean }>
+        getSessionPlan: (sessionId: string) => Promise<string | null>
+        saveSessionPlan: (sessionId: string, json: string) => Promise<{ ok?: boolean }>
+        getSessionAgentMode: (sessionId: string) => Promise<string | null>
+        saveSessionAgentMode: (sessionId: string, mode: string) => Promise<{ ok?: boolean }>
         addUsage: (row: {
           id: string
           sessionId: string
