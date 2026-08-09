@@ -3,7 +3,10 @@
   "version": "0.9.0",
   "description": "AI Desktop Coding Agent \u2014 Code, Browse, Automate. BYOK, no harness, fully extensible.",
   "main": "./out/main/index.js",
-  "author": "parkjangwon",
+  "author": {
+    "name": "parkjangwon",
+    "email": "vim@kakao.com"
+  },
   "license": "MIT",
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

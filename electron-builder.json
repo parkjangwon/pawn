@@ -58,7 +58,8 @@
       }
     ],
     "artifactName": "pawn-${version}-${arch}.${ext}",
-    "category": "Development"
+    "category": "Development",
+    "maintainer": "parkjangwon <vim@kakao.com>"
   },
   "nsis": {
     "oneClick": false,

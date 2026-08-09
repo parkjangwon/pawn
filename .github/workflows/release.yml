@@ -50,14 +50,32 @@ jobs:
       - name: Build app (injects OAuth via define)
         run: npm run build
 
+      # Empty CSC_LINK/CSC_KEY_PASSWORD env vars make electron-builder try to load
+      # a certificate from the project root and fail with "…/pawn not a file".
+      # Only export signing vars when the secret is actually present.
+      - name: Configure macOS code signing (optional)
+        env:
+          CSC_LINK_SECRET: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD_SECRET: ${{ secrets.CSC_KEY_PASSWORD }}
+        run: |
+          if [ -n "$CSC_LINK_SECRET" ]; then
+            {
+              echo "CSC_LINK<<EOF"
+              echo "$CSC_LINK_SECRET"
+              echo "EOF"
+              echo "CSC_KEY_PASSWORD=$CSC_KEY_PASSWORD_SECRET"
+              echo "CSC_IDENTITY_AUTO_DISCOVERY=true"
+            } >> "$GITHUB_ENV"
+            echo "Code signing enabled (CSC_LINK present)."
+          else
+            echo "CSC_IDENTITY_AUTO_DISCOVERY=false" >> "$GITHUB_ENV"
+            echo "Code signing disabled (no CSC_LINK secret)."
+          fi
+
       - name: Package macOS (universal dmg)
         run: npm run dist:mac -- --publish never
         env:
-          # When CSC_LINK + CSC_KEY_PASSWORD secrets exist, electron-builder signs.
-          # Otherwise fall back to unsigned packaging (still shippable).
-          CSC_LINK: ${{ secrets.CSC_LINK }}
-          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
-          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK && 'true' || 'false' }}
+          # Notarize only when Apple credentials are configured (afterSign hook).
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
