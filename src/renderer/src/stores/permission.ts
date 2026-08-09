@@ -42,6 +42,8 @@ interface PermissionState {
 }
 
 const MAX_PENDING = 24
+/** Unattended / forgotten prompts must not block a turn forever. */
+export const PERMISSION_TIMEOUT_MS = 3 * 60_000
 
 interface PendingEntry {
   resolve: (approved: boolean) => void
@@ -94,22 +96,44 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
         return
       }
       const id = `perm-${++counter}`
+      let settled = false
+      const finish = (approved: boolean): void => {
+        if (settled) return
+        settled = true
+        resolve(approved)
+      }
       function onAbort(): void {
+        const entry = resolvers.get(id)
+        entry?.cleanup()
         resolvers.delete(id)
         set((s) => ({ pending: s.pending.filter((p) => p.id !== id) }))
-        resolve(false)
+        finish(false)
       }
+      const timeoutId = setTimeout(() => {
+        const entry = resolvers.get(id)
+        if (!entry) return
+        try {
+          entry.cleanup()
+        } catch {
+          /* ignore */
+        }
+        resolvers.delete(id)
+        set((s) => ({ pending: s.pending.filter((p) => p.id !== id) }))
+        finish(false)
+      }, PERMISSION_TIMEOUT_MS)
       const cleanup = (): void => {
+        clearTimeout(timeoutId)
         signal?.removeEventListener('abort', onAbort)
       }
       if (signal) {
         if (signal.aborted) {
-          resolve(false)
+          clearTimeout(timeoutId)
+          finish(false)
           return
         }
         signal.addEventListener('abort', onAbort, { once: true })
       }
-      resolvers.set(id, { resolve, cleanup })
+      resolvers.set(id, { resolve: finish, cleanup })
       set((s) => ({ pending: [...s.pending, { ...req, id }] }))
     })
   },

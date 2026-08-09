@@ -2,9 +2,17 @@
  * Git worktree helpers for isolated subagent workers.
  * Creates a disposable worktree under <repo>/.pawn/worktrees/<id>.
  */
-import { mkdirSync, existsSync, rmSync } from 'fs'
+import { mkdirSync, existsSync, rmSync, writeFileSync, readFileSync } from 'fs'
 import { join, resolve, sep } from 'path'
 import { spawnSync } from 'child_process'
+
+function readTextSafe(path: string): string | null {
+  try {
+    return readFileSync(path, 'utf8')
+  } catch {
+    return null
+  }
+}
 
 export type WorktreeResult =
   | { ok: true; path: string; branch: string }
@@ -112,4 +120,161 @@ export function worktreeDiffStat(worktreePath: string): string {
   const st = runGit(worktreePath, ['status', '--short'])
   const parts = [r.stdout.trim(), st.stdout.trim()].filter(Boolean)
   return parts.join('\n') || '(no local changes in worktree)'
+}
+
+/** Unified patch of worktree changes (tracked + untracked as best-effort). */
+export function worktreeDiffPatch(worktreePath: string): string {
+  const wt = resolve(worktreePath)
+  const tracked = runGit(wt, ['diff', 'HEAD', '--'])
+  // Include untracked files as /dev/null diffs when possible.
+  const untracked = runGit(wt, ['ls-files', '--others', '--exclude-standard'])
+  const parts: string[] = []
+  if (tracked.stdout.trim()) parts.push(tracked.stdout.trim())
+  for (const rel of untracked.stdout.split('\n').map((s) => s.trim()).filter(Boolean).slice(0, 80)) {
+    const show = runGit(wt, ['diff', '--no-index', '--', '/dev/null', rel])
+    // git diff --no-index exits 1 when files differ — still has stdout.
+    if (show.stdout.trim()) parts.push(show.stdout.trim())
+  }
+  return parts.join('\n')
+}
+
+export function worktreeChangedFiles(worktreePath: string): string[] {
+  const wt = resolve(worktreePath)
+  const st = runGit(wt, ['status', '--porcelain'])
+  const files: string[] = []
+  for (const line of st.stdout.split('\n')) {
+    if (!line.trim()) continue
+    // " M path", "?? path", "R  old -> new"
+    const rest = line.slice(3).trim()
+    if (rest.includes(' -> ')) {
+      files.push(rest.split(' -> ').pop()!.trim())
+    } else {
+      files.push(rest)
+    }
+  }
+  return Array.from(new Set(files))
+}
+
+/**
+ * Apply worktree file changes onto the main project tree by copying changed
+ * file contents (and deleting removed paths). Safer than merge when the main
+ * tree may have unrelated dirty files.
+ */
+export function applyWorktreeToProject(
+  projectPath: string,
+  worktreePath: string
+): {
+  ok: boolean
+  files: string[]
+  /** Paths where main tree diverged from the worktree base AND from the worktree result. */
+  conflicts?: string[]
+  error?: string
+  note?: string
+} {
+  const root = resolve(projectPath)
+  const wt = resolve(worktreePath)
+  if (!isGitRepo(root)) {
+    return { ok: false, files: [], error: 'Main path is not a git repository' }
+  }
+  const status = runGit(wt, ['status', '--porcelain'])
+  if (status.code !== 0) {
+    return { ok: false, files: [], error: status.stderr || 'worktree status failed' }
+  }
+  if (!status.stdout.trim()) {
+    return { ok: true, files: [], note: 'No worktree changes to apply' }
+  }
+
+  const applied: string[] = []
+  const conflicts: string[] = []
+  const errors: string[] = []
+  for (const line of status.stdout.split('\n')) {
+    if (!line.trim()) continue
+    const code = line.slice(0, 2)
+    let rel = line.slice(3).trim()
+    if (rel.includes(' -> ')) rel = rel.split(' -> ').pop()!.trim()
+    // Reject path escape
+    const dest = resolve(root, rel)
+    const rootPrefix = root.endsWith(sep) ? root : root + sep
+    if (dest !== root && !dest.startsWith(rootPrefix)) {
+      errors.push(`skip unsafe path: ${rel}`)
+      continue
+    }
+    const src = resolve(wt, rel)
+    const deleted = code.includes('D') || code === ' D'
+    try {
+      if (deleted) {
+        // Conflict: main still has the file and it diverged from worktree HEAD.
+        if (existsSync(dest)) {
+          const mainText = readTextSafe(dest)
+          const baseBlob = runGit(wt, ['show', `HEAD:${rel}`])
+          const baseText = baseBlob.code === 0 ? baseBlob.stdout : null
+          if (mainText != null && baseText != null && mainText !== baseText) {
+            conflicts.push(rel)
+          }
+        }
+        try {
+          rmSync(dest, { force: true })
+          applied.push(rel + ' (deleted)')
+        } catch (err) {
+          errors.push(`${rel}: ${String(err)}`)
+        }
+        continue
+      }
+      // Ensure parent dirs
+      const parent = dest.slice(0, dest.lastIndexOf(sep))
+      if (parent && !existsSync(parent)) mkdirSync(parent, { recursive: true })
+      try {
+        let wtContent: string | null = null
+        if (existsSync(src)) {
+          wtContent = readTextSafe(src)
+        } else {
+          const blob = runGit(wt, ['show', `HEAD:${rel}`])
+          if (blob.code === 0) wtContent = blob.stdout
+        }
+        if (wtContent == null) {
+          errors.push(`${rel}: source missing`)
+          continue
+        }
+        // Conflict when main edited the same path after worktree spawn:
+        // main ≠ worktree-base AND main ≠ worktree-result.
+        if (existsSync(dest)) {
+          const mainText = readTextSafe(dest)
+          const baseBlob = runGit(wt, ['show', `HEAD:${rel}`])
+          const baseText = baseBlob.code === 0 ? baseBlob.stdout : null
+          if (
+            mainText != null &&
+            baseText != null &&
+            mainText !== baseText &&
+            mainText !== wtContent
+          ) {
+            conflicts.push(rel)
+          }
+        }
+        writeFileSync(dest, wtContent, 'utf8')
+        applied.push(rel)
+      } catch (err) {
+        errors.push(`${rel}: ${String(err)}`)
+      }
+    } catch (err) {
+      errors.push(`${rel}: ${String(err)}`)
+    }
+  }
+
+  if (applied.length === 0 && errors.length) {
+    return { ok: false, files: [], conflicts, error: errors.slice(0, 5).join('; ') }
+  }
+  const noteParts: string[] = []
+  if (errors.length) noteParts.push(`partial errors: ${errors.slice(0, 3).join('; ')}`)
+  if (conflicts.length) {
+    noteParts.push(
+      `overwrite conflicts (main had diverged edits): ${conflicts.slice(0, 8).join(', ')}` +
+        (conflicts.length > 8 ? ` (+${conflicts.length - 8} more)` : '')
+    )
+  }
+  return {
+    ok: true,
+    files: applied,
+    conflicts: conflicts.length ? conflicts : undefined,
+    note: noteParts.length ? noteParts.join(' · ') : undefined
+  }
 }

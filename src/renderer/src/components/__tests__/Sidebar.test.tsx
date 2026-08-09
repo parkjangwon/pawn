@@ -32,7 +32,7 @@ beforeEach(() => {
     initialized: true,
     loadedSessions: new Set()
   })
-  useChatStore.setState({ isStreaming: false, streamingSessionId: null })
+  useChatStore.setState({ isStreaming: false, streamingSessionId: null, streamingSessionIds: [] })
   try { localStorage.removeItem('pawn-pinned-sessions') } catch {}
   try { localStorage.removeItem('pawn-sidebar-width') } catch {}
   document.documentElement.style.removeProperty('--sidebar-width')
@@ -98,7 +98,7 @@ describe('Sidebar — session deletion', () => {
     useAppStore.getState().addSession('p1', 'Streaming Session')
     const sessionId = useAppStore.getState().activeSessionId!
     const stopStreaming = vi.fn()
-    useChatStore.setState({ isStreaming: true, streamingSessionId: sessionId, stopStreaming })
+    useChatStore.setState({ isStreaming: true, streamingSessionId: sessionId, streamingSessionIds: [sessionId], stopStreaming })
 
     renderSidebar()
     fireEvent.click(screen.getByText('sidebar.recent'))
@@ -113,7 +113,7 @@ describe('Sidebar — session deletion', () => {
     useAppStore.getState().addSession('p1', 'Target')
     const targetId = useAppStore.getState().activeSessionId!
     const stopStreaming = vi.fn()
-    useChatStore.setState({ isStreaming: true, streamingSessionId: 'some-other-session', stopStreaming })
+    useChatStore.setState({ isStreaming: true, streamingSessionId: 'some-other-session', streamingSessionIds: ['some-other-session'], stopStreaming })
 
     renderSidebar()
     fireEvent.click(screen.getByText('sidebar.recent'))

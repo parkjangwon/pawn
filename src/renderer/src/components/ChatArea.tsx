@@ -51,9 +51,9 @@ export default function ChatArea({
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
   const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, startNewChat, clearMessages, updateProjectName, loadedSessions, loadingSessions } = useAppStore()
-  const { sendMessage, isStreaming, streamingSessionId, stopStreaming, queue } = useChatStore()
+  const { sendMessage, isStreaming, streamingSessionIds, stopStreaming, queue } = useChatStore()
   /** Live tokens / thinking indicator only for the session currently on screen. */
-  const sessionStreaming = isStreaming && streamingSessionId === activeSessionId
+  const sessionStreaming = !!activeSessionId && streamingSessionIds.includes(activeSessionId)
   const { models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode, reasoningEffort, setReasoningEffort, routingMode, setRoutingMode, toggleAgentMode, setAgentMode } = useProviderStore()
   const { toggle: toggleTheme } = useThemeStore()
   const [showUsagePopover, setShowUsagePopover] = useState(false)
@@ -763,12 +763,15 @@ export default function ChatArea({
         permPickerRef={permPickerRef}
         modelPickerRef={modelPickerRef}
         usageRef={usageRef}
-        isStreaming={isStreaming}
-        onStop={stopStreaming}
+        isStreaming={sessionStreaming}
+        onStop={() => {
+          if (activeSessionId) stopStreaming(activeSessionId)
+          else stopStreaming()
+        }}
         attachments={attachments}
         sendMode={sendMode}
         onSendModeChange={setSendMode}
-        queueLength={queue.length}
+        queueLength={queue.filter((q) => q.sessionId === activeSessionId).length}
         onAddAttachment={addAttachment}
         onRemoveAttachment={removeAttachment}
       />

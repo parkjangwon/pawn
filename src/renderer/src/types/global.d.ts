@@ -50,6 +50,8 @@ declare global {
     __openRightPanelTab?: (id: string) => void
     __closeRightPanelTab?: (id: string) => void
     __toggleRightPanel?: () => void
+    /** @deprecated use __openRightPanelTab('agents') */
+    __openAgentsPanel?: () => void
     __toggleTerminal?: () => void
     __openTerminal?: () => void
     __closeTerminal?: () => void
@@ -118,6 +120,18 @@ declare global {
           branch?: string
         ) => Promise<{ ok: boolean; error?: string }>
         diffStat: (worktreePath: string) => Promise<string>
+        diffPatch?: (worktreePath: string) => Promise<string>
+        changedFiles?: (worktreePath: string) => Promise<string[]>
+        apply?: (
+          projectPath: string,
+          worktreePath: string
+        ) => Promise<{
+          ok: boolean
+          files?: string[]
+          conflicts?: string[]
+          error?: string
+          note?: string
+        }>
       }
       shell: {
         exec: (
@@ -174,6 +188,8 @@ declare global {
         killAll: () => Promise<{ ok?: boolean; killed?: number }>
       }
       setStreaming: (streaming: boolean) => void
+      setSessionStreaming?: (sessionId: string, streaming: boolean) => void
+      clearStreaming?: () => Promise<{ ok?: boolean }>
       workspace: {
         openIn: (path: string, app: string) => Promise<{ ok?: boolean; error?: string }>
         reveal: (path: string) => Promise<{ ok?: boolean; error?: string }>
@@ -392,6 +408,45 @@ declare global {
           cacheWriteTokens: number
           cost: number
         }>>
+        saveTurnCheckpoint?: (
+          sessionId: string,
+          projectId: string,
+          status: string,
+          json: string
+        ) => Promise<{ ok?: boolean }>
+        clearTurnCheckpoint?: (sessionId: string, status?: string) => Promise<{ ok?: boolean }>
+        listRunningTurnCheckpoints?: () => Promise<
+          Array<{ sessionId: string; projectId: string; status: string; json: string; updatedAt: number }>
+        >
+        getTurnCheckpoint?: (
+          sessionId: string
+        ) => Promise<{
+          sessionId: string
+          projectId: string
+          status: string
+          json: string
+          updatedAt: number
+        } | null>
+        saveChangeLedgerTurn?: (row: {
+          id: string
+          sessionId: string
+          projectId: string
+          createdAt: number
+          label: string
+          json: string
+        }) => Promise<{ ok?: boolean }>
+        listChangeLedgerTurns?: (limit?: number) => Promise<
+          Array<{
+            id: string
+            sessionId: string
+            projectId: string
+            createdAt: number
+            label: string
+            json: string
+          }>
+        >
+        deleteChangeLedgerTurn?: (id: string) => Promise<{ ok?: boolean }>
+        deleteChangeLedgerForSession?: (sessionId: string) => Promise<{ ok?: boolean }>
       }
       terminal: {
         create: (id: string, cols: number, rows: number, cwd?: string) => Promise<{ ok?: boolean; error?: string }>

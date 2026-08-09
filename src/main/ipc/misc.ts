@@ -4,7 +4,7 @@ import { resolve, sep, join } from 'path'
 import { readFile, readdir } from 'fs/promises'
 import { handleTrusted, isTrustedSender } from './trust'
 import { setTrayEnabled, setTrayLanguage, trayEnabled } from '../tray'
-import { setAppStreaming } from '../streamingState'
+import { setAppStreaming, setSessionStreaming, clearAllStreaming } from '../streamingState'
 import { getPawnDir } from '../config'
 import { getMainWindow } from '../window'
 import { isConfirmQuitEnabled, setConfirmQuitEnabled } from '../quit'
@@ -76,9 +76,26 @@ function appleScriptString(value: string): string {
 }
 
 export function registerMiscIpc(): void {
-  ipcMain.on('app:streaming', (event, streaming: boolean) => {
+  // Accept either a boolean (legacy) or { sessionId, streaming } for multi-session.
+  ipcMain.on('app:streaming', (event, payload: unknown) => {
     if (!isTrustedSender(event)) return
-    setAppStreaming(streaming === true)
+    if (typeof payload === 'boolean') {
+      setAppStreaming(payload)
+      return
+    }
+    if (payload && typeof payload === 'object') {
+      const p = payload as { sessionId?: string; streaming?: boolean }
+      if (typeof p.sessionId === 'string' && typeof p.streaming === 'boolean') {
+        setSessionStreaming(p.sessionId, p.streaming)
+        return
+      }
+    }
+  })
+
+  /** Renderer crash / hard stop: clear streaming flags (shells killed separately). */
+  handleTrusted('app:clearStreaming', async () => {
+    clearAllStreaming()
+    return { ok: true }
   })
 
   handleTrusted('app:getVersion', async () => app.getVersion())

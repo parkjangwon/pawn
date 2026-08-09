@@ -25,12 +25,26 @@ import ConfirmDialog from './ConfirmDialog'
 import NavControls from './NavControls'
 import MemorySettingsPanel from './MemorySettingsPanel'
 import HooksSettingsPanel from './HooksSettingsPanel'
+import AgentsSettingsPanel from './AgentsSettingsPanel'
 import logoGitlab from '../assets/logos/gitlab.svg'
 import logoCodeCommit from '../assets/logos/codecommit.svg'
 import { MCP_TEMPLATES } from '../agent/mcpTemplates'
 import './Settings.css'
 
-type SettingsSection = 'appearance' | 'providers' | 'models' | 'agent' | 'plugins' | 'mcp' | 'connections' | 'system' | 'shortcuts' | 'data'
+type SettingsSection =
+  | 'appearance'
+  | 'providers'
+  | 'models'
+  | 'agent'
+  | 'memory'
+  | 'hooks'
+  | 'subagents'
+  | 'plugins'
+  | 'mcp'
+  | 'connections'
+  | 'system'
+  | 'shortcuts'
+  | 'data'
 type SettingsSkillScope = 'all' | 'project' | 'device' | 'builtin'
 type SourceSignalId =
   | 'project-claude'
@@ -63,7 +77,11 @@ const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon:
   { id: 'appearance', labelKey: 'settings.appearance', groupKey: 'settings.groups.general', icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' },
   { id: 'providers', labelKey: 'settings.providers', groupKey: 'settings.groups.general', icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
   { id: 'models', labelKey: 'settings.models', groupKey: 'settings.groups.general', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+  // Coding: split former mega “Agent” page into focused sections
   { id: 'agent', labelKey: 'settings.agent', groupKey: 'settings.groups.coding', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
+  { id: 'memory', labelKey: 'settings.memory', groupKey: 'settings.groups.coding', icon: 'M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7zm-1 18h2v2h-2v-2z' },
+  { id: 'hooks', labelKey: 'settings.hooks', groupKey: 'settings.groups.coding', icon: 'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71' },
+  { id: 'subagents', labelKey: 'settings.subagents', groupKey: 'settings.groups.coding', icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
   { id: 'plugins', labelKey: 'settings.plugins', groupKey: 'settings.groups.integration', icon: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' },
   { id: 'mcp', labelKey: 'settings.mcp', groupKey: 'settings.groups.integration', icon: 'M20 7H4a2 2 0 00-2 2v1a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM6 11h.01M20 15H4a2 2 0 00-2 2v1a2 2 0 002 2h16a2 2 0 002-2v-1a2 2 0 00-2-2zM6 19h.01' },
   { id: 'connections', labelKey: 'settings.connections', groupKey: 'settings.groups.integration', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
@@ -1044,8 +1062,8 @@ export default function Settings({
               </div>
               <div className="settings-row">
                 <div className="settings-row-info">
-                  <span className="settings-row-label">Shell sandbox</span>
-                  <span className="settings-row-desc">Env allowlist + dangerous-command block for agent shell_exec (default on)</span>
+                  <span className="settings-row-label">{t('settings.agentSection.shellSandbox')}</span>
+                  <span className="settings-row-desc">{t('settings.agentSection.shellSandboxDesc')}</span>
                 </div>
                 <label className="toggle-switch">
                   <input type="checkbox" checked={shellSandbox} onChange={(e) => setShellSandbox(e.target.checked)} />
@@ -1054,8 +1072,8 @@ export default function Settings({
               </div>
               <div className="settings-row">
                 <div className="settings-row-info">
-                  <span className="settings-row-label">Shell network</span>
-                  <span className="settings-row-desc">Allow network in sandboxed shells (off uses sandbox-exec on macOS when possible)</span>
+                  <span className="settings-row-label">{t('settings.agentSection.shellNetwork')}</span>
+                  <span className="settings-row-desc">{t('settings.agentSection.shellNetworkDesc')}</span>
                 </div>
                 <label className="toggle-switch">
                   <input type="checkbox" checked={shellNetwork} onChange={(e) => setShellNetwork(e.target.checked)} />
@@ -1064,8 +1082,8 @@ export default function Settings({
               </div>
               <div className="settings-row">
                 <div className="settings-row-info">
-                  <span className="settings-row-label">CWD jail</span>
-                  <span className="settings-row-desc">Refuse shell cwd outside the project root</span>
+                  <span className="settings-row-label">{t('settings.agentSection.cwdJail')}</span>
+                  <span className="settings-row-desc">{t('settings.agentSection.cwdJailDesc')}</span>
                 </div>
                 <label className="toggle-switch">
                   <input type="checkbox" checked={shellCwdJail} onChange={(e) => setShellCwdJail(e.target.checked)} />
@@ -1074,8 +1092,8 @@ export default function Settings({
               </div>
               <div className="settings-row">
                 <div className="settings-row-info">
-                  <span className="settings-row-label">Auto-consolidate memory</span>
-                  <span className="settings-row-desc">Merge near-duplicate memory cards after each turn</span>
+                  <span className="settings-row-label">{t('settings.agentSection.autoMemoryConsolidate')}</span>
+                  <span className="settings-row-desc">{t('settings.agentSection.autoMemoryConsolidateDesc')}</span>
                 </div>
                 <label className="toggle-switch">
                   <input type="checkbox" checked={autoMemoryConsolidate} onChange={(e) => setAutoMemoryConsolidate(e.target.checked)} />
@@ -1083,14 +1101,29 @@ export default function Settings({
                 </label>
               </div>
             </div>
+          </div>
+        )}
 
-            <h3 className="settings-subsection-title">{t('settings.memorySection.title')}</h3>
+        {activeSection === 'memory' && (
+          <div className="settings-section">
+            <h2>{t('settings.memorySection.title')}</h2>
             <p className="settings-desc">{t('settings.memorySection.desc')}</p>
             <MemorySettingsPanel />
+          </div>
+        )}
 
-            <h3 className="settings-subsection-title">{t('settings.hooksSection.title')}</h3>
+        {activeSection === 'hooks' && (
+          <div className="settings-section">
+            <h2>{t('settings.hooksSection.title')}</h2>
             <p className="settings-desc">{t('settings.hooksSection.desc')}</p>
             <HooksSettingsPanel />
+          </div>
+        )}
+
+        {activeSection === 'subagents' && (
+          <div className="settings-section">
+            <h2>{t('settings.agentsSection.title')}</h2>
+            <AgentsSettingsPanel />
           </div>
         )}
 
@@ -1177,7 +1210,7 @@ export default function Settings({
             <p className="settings-desc">{t('settings.mcpSection.desc')}</p>
             <div className="settings-card">
               <div className="settings-row-info" style={{ marginBottom: 8 }}>
-                <span className="settings-row-label">Templates</span>
+                <span className="settings-row-label">{t('settings.mcpSection.templates')}</span>
                 <span className="settings-row-desc">
                   One-click install common MCP servers (stdio or HTTP). Add secrets in env after install.
                 </span>

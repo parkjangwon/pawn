@@ -3,7 +3,8 @@ import { join } from 'path'
 import { is } from '@electron-toolkit/utils'
 import { existsSync } from 'fs'
 import { loadConfig, saveConfig } from './config'
-import { isAppStreaming, setAppStreaming } from './streamingState'
+import { isAppStreaming, setAppStreaming, clearAllStreaming } from './streamingState'
+import { killAllAgentShells } from './ipc/shell'
 
 let mainWindow: BrowserWindow | null = null
 let headlessWindow: BrowserWindow | null = null
@@ -102,6 +103,14 @@ function attachRecovery(win: BrowserWindow, onClosed: () => void): void {
   win.on('closed', onClosed)
   win.webContents.on('render-process-gone', (_event, details) => {
     if (details.reason === 'clean-exit' || win.isDestroyed()) return
+    // Orphaned agent shells / streaming flags would otherwise keep the app
+    // "busy" and leave npm test etc. running after a renderer death.
+    try {
+      killAllAgentShells()
+    } catch {
+      /* ignore */
+    }
+    clearAllStreaming()
     const now = Date.now()
     // Stop auto-reloading after repeated crashes so a broken renderer cannot
     // spin in an endless reload loop.
@@ -114,6 +123,14 @@ function attachRecovery(win: BrowserWindow, onClosed: () => void): void {
     if (now - lastRendererCrashAt < 10_000) return
     lastRendererCrashAt = now
     win.webContents.reload()
+  })
+  // Unresponsive renderer: still kill side effects so Stop/quit is not stuck.
+  win.webContents.on('unresponsive', () => {
+    try {
+      killAllAgentShells()
+    } catch {
+      /* ignore */
+    }
   })
 }
 

@@ -7,12 +7,13 @@ import GitView from './GitView'
 import BrowserView from './BrowserView'
 import DiffListView from './DiffListView'
 import ArtifactsView from './ArtifactsView'
+import SubagentsView from './SubagentsView'
 import { openFileInPanel } from '../stores/filesPanel'
 import './RightPanel.css'
 
 // Terminal lives in BottomTerminal (Codex-style). Callers that still pass
 // 'terminal' to the open/close bridges are redirected there.
-type TabId = 'files' | 'git' | 'browser' | 'diff' | 'artifacts'
+type TabId = 'files' | 'git' | 'browser' | 'diff' | 'artifacts' | 'agents'
 type OpenableId = TabId | 'terminal'
 
 const NOOP = (): void => {}
@@ -22,7 +23,8 @@ const TOOL_ICONS: Record<TabId, string> = {
   git: 'M22 12h-4l-3 9L9 3l-3 9H2',
   browser: 'M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9',
   diff: 'M16 18l6-6-6-6M8 6l-6 6 6 6',
-  artifacts: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z'
+  artifacts: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
+  agents: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75'
 }
 
 // The panel is intentionally ephemeral: every launch starts closed and empty.
@@ -354,6 +356,7 @@ export default function RightPanel(): React.JSX.Element | null {
       case 'browser': return <BrowserView />
       case 'diff': return <DiffListView />
       case 'artifacts': return <ArtifactsView />
+      case 'agents': return <SubagentsView />
       default: return <div className="rp-empty">{t('rightPanel.selectTool')}</div>
     }
   }

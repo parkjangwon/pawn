@@ -9,7 +9,8 @@ import {
   route, estimateComplexity, shouldEscalate, routeKey, setSessionRoute, clearSessionRoute,
   noteProviderFailure, noteProviderSuccess, refreshMeasuredPricing,
   markVisionIncapable, isVisionCapabilityError, describeVisionRouteFailure,
-  type RouteDecision
+  type RouteDecision,
+  type Complexity
 } from '../agent/router'
 import {
   compactTranscript, estimateTokens, transcriptNeedsVision, extractImageDataUrl,
@@ -27,6 +28,13 @@ import { useRoutineStore } from './routine'
 import type { ModelTier } from '../types/provider'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildDisplayContent, buildTranscriptText, imageAttachments, stripDisplayImages, type ChatAttachment } from '../utils/attachments'
+import {
+  saveTurnCheckpoint,
+  clearTurnCheckpoint,
+  listRunningTurnCheckpoints,
+  type AgentTurnCheckpoint
+} from './turnCheckpoint'
+import { enqueueDbWrite } from '../utils/dbWriteQueue'
 import i18n from '../i18n'
 
 export type SendMode = 'queue' | 'steer'
@@ -55,61 +63,178 @@ interface QueueItem {
 
 interface ChatState {
   isStreaming: boolean
-  /** Session currently producing tokens; lets the UI mark it as running. */
+  /** Most recent session that started streaming (status bar / legacy UI). */
   streamingSessionId: string | null
+  /** All sessions currently running an agent turn (multi-session). */
+  streamingSessionIds: string[]
+  /** Flat queue for UI; also keyed per session via sessionQueues. */
   queue: QueueItem[]
   sendMessage: (projectId: string, sessionId: string, content: string, mode: SendMode, attachments?: ChatAttachment[]) => void
-  stopStreaming: () => void
+  /** Stop one session, or every session when omitted. */
+  stopStreaming: (sessionId?: string) => void
+  isSessionStreaming: (sessionId: string) => boolean
+  /** After cold start: resume incomplete turns from durable checkpoints. */
+  resumeInterruptedTurns: () => Promise<number>
 }
 
-let abortController: AbortController | null = null
-/**
- * Monotonic turn id. Each new agentLoop claims a fresh epoch so a stale loop's
- * `finally` cannot clear isStreaming / process the queue after steer replaced it.
- */
-let streamEpoch = 0
+/** Per-session abort + epoch so concurrent project turns never clobber each other. */
+const sessionControllers = new Map<string, AbortController>()
+const sessionEpochs = new Map<string, number>()
+
+/** Refcount of live turns that temporarily forced sleep prevention on. */
+let sleepHoldCount = 0
+let sleepHoldPrev: 'off' | 'sleep' | 'display' | null = null
+
+function bumpSessionEpoch(sessionId: string): number {
+  const next = (sessionEpochs.get(sessionId) || 0) + 1
+  sessionEpochs.set(sessionId, next)
+  return next
+}
+
+function getSessionEpoch(sessionId: string): number {
+  return sessionEpochs.get(sessionId) || 0
+}
+
+function setSessionStreamingFlags(
+  set: (partial: Partial<ChatState> | ((s: ChatState) => Partial<ChatState>)) => void,
+  get: () => ChatState,
+  sessionId: string,
+  streaming: boolean
+): void {
+  const ids = new Set(get().streamingSessionIds)
+  if (streaming) ids.add(sessionId)
+  else ids.delete(sessionId)
+  const list = Array.from(ids)
+  set({
+    streamingSessionIds: list,
+    isStreaming: list.length > 0,
+    streamingSessionId: streaming ? sessionId : list[list.length - 1] || null
+  })
+  if (window.api.setSessionStreaming) {
+    window.api.setSessionStreaming(sessionId, streaming)
+  } else {
+    window.api.setStreaming?.(list.length > 0)
+  }
+}
+
+async function acquireSleepHold(): Promise<void> {
+  sleepHoldCount++
+  if (sleepHoldCount !== 1) return
+  const prefs = usePrefsStore.getState()
+  if (prefs.sleepPrevention !== 'off') {
+    sleepHoldPrev = null
+    return
+  }
+  sleepHoldPrev = 'off'
+  try {
+    await window.api.power?.setSleepPrevention?.('sleep')
+  } catch {
+    sleepHoldPrev = null
+  }
+}
+
+function releaseSleepHold(): void {
+  if (sleepHoldCount <= 0) return
+  sleepHoldCount--
+  if (sleepHoldCount > 0 || sleepHoldPrev === null) return
+  const restore = sleepHoldPrev
+  sleepHoldPrev = null
+  void window.api.power?.setSleepPrevention?.(restore).catch(() => {})
+}
+
+function stopSessionController(sessionId: string): void {
+  const c = sessionControllers.get(sessionId)
+  if (c && !c.signal.aborted) c.abort()
+}
 
 export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
   streamingSessionId: null,
+  streamingSessionIds: [],
   queue: [],
 
-  sendMessage: (projectId, sessionId, content, mode, attachments) => {
-    const state = get()
+  isSessionStreaming: (sessionId) => get().streamingSessionIds.includes(sessionId),
 
+  sendMessage: (projectId, sessionId, content, mode, attachments) => {
     // Refresh measured pricing from recent usage (throttled inside the router)
     // so auto routing tracks real provider rates instead of stale snapshots.
     void refreshMeasuredPricing()
 
-    if (mode === 'queue' && state.isStreaming) {
-      set({ queue: [...state.queue, { projectId, sessionId, content, attachments, displayed: true }] })
+    const sameSessionBusy = get().streamingSessionIds.includes(sessionId)
+
+    // Queue only blocks the *same* session; other sessions run concurrently.
+    if (mode === 'queue' && sameSessionBusy) {
+      set((s) => ({
+        queue: [...s.queue, { projectId, sessionId, content, attachments, displayed: true }]
+      }))
       pushUserBubble(projectId, sessionId, content, attachments)
       return
     }
 
-    if (mode === 'steer' && state.isStreaming) {
-      abortController?.abort()
+    if (mode === 'steer' && sameSessionBusy) {
+      stopSessionController(sessionId)
     }
 
     pushUserBubble(projectId, sessionId, content, attachments)
     autoTitle(projectId, sessionId, content)
 
-    const epoch = ++streamEpoch
-    set({ isStreaming: true, streamingSessionId: sessionId })
-    window.api.setStreaming?.(true)
+    const epoch = bumpSessionEpoch(sessionId)
+    setSessionStreamingFlags(set, get, sessionId, true)
     void agentLoop(projectId, sessionId, content, set, get, attachments, epoch)
   },
 
-  stopStreaming: () => {
-    abortController?.abort()
-    // Kill live shell process groups so `npm test` etc. don't keep running after Stop.
+  stopStreaming: (sessionId) => {
+    if (sessionId) {
+      bumpSessionEpoch(sessionId)
+      stopSessionController(sessionId)
+      clearTurnCheckpoint(sessionId, 'aborted')
+      // Shell jobs are not session-tagged yet — kill live agent shells so Stop
+      // never leaves `npm test` running. Concurrent sessions may re-spawn tools.
+      void window.api.shell?.killAll?.().catch(() => {})
+      setSessionStreamingFlags(set, get, sessionId, false)
+      if (get().streamingSessionIds.length === 0) {
+        void window.api.browser?.hideCursor?.().catch(() => {})
+        usePermissionStore.getState().denyAll()
+      }
+      processQueue(set, get, sessionId)
+      return
+    }
+    // Stop everything.
+    for (const id of [...get().streamingSessionIds]) {
+      bumpSessionEpoch(id)
+      stopSessionController(id)
+      clearTurnCheckpoint(id, 'aborted')
+    }
+    for (const c of sessionControllers.values()) {
+      if (!c.signal.aborted) c.abort()
+    }
+    sessionControllers.clear()
     void window.api.shell?.killAll?.().catch(() => {})
-    // Remove the injected AI cursor from the embedded browser page.
     void window.api.browser?.hideCursor?.().catch(() => {})
-    // Dismiss permission prompts so Stop doesn't leave a stuck modal.
     usePermissionStore.getState().denyAll()
-    set({ isStreaming: false, streamingSessionId: null })
+    set({ isStreaming: false, streamingSessionId: null, streamingSessionIds: [] })
     window.api.setStreaming?.(false)
+    processQueue(set, get)
+  },
+
+  resumeInterruptedTurns: async () => {
+    const cps = await listRunningTurnCheckpoints()
+    if (cps.length === 0) return 0
+    let started = 0
+    for (const cp of cps) {
+      if (get().streamingSessionIds.includes(cp.sessionId)) continue
+      // Notify the user once per resumed session.
+      systemError(
+        cp.projectId,
+        cp.sessionId,
+        i18n.t('chat.diagnostics.resumedTurn')
+      )
+      const epoch = bumpSessionEpoch(cp.sessionId)
+      setSessionStreamingFlags(set, get, cp.sessionId, true)
+      void agentLoop(cp.projectId, cp.sessionId, cp.userContent, set, get, cp.attachments, epoch, cp)
+      started++
+    }
+    return started
   }
 }))
 
@@ -207,8 +332,46 @@ export async function loadTranscript(projectId: string, sessionId: string): Prom
 
 function persistTranscript(sessionId: string, entries: TranscriptEntry[], warmFor: string, warmTier?: ModelTier): void {
   const payload: StoredTranscript = { version: TRANSCRIPT_VERSION, entries, warmFor, warmTier, lastActivity: Date.now() }
-  window.api.db.saveTranscript(sessionId, JSON.stringify(payload)).catch(() => {
-    // Losing a transcript write costs a cache re-prime, never correctness.
+  enqueueDbWrite(`transcript:${sessionId}`, () =>
+    window.api.db.saveTranscript(sessionId, JSON.stringify(payload))
+  )
+}
+
+function checkpointSnapshot(opts: {
+  projectId: string
+  sessionId: string
+  userContent: string
+  attachments?: ChatAttachment[]
+  entries: TranscriptEntry[]
+  round: number
+  consecutiveToolErrors: number
+  emptyResponses: number
+  complexity: Complexity
+  turnHadCodeEdits: boolean
+  turnRanChecks: boolean
+  autoVerifyDone: boolean
+  warmFor?: string
+  warmTier?: ModelTier
+  userMessageAppended: boolean
+}): void {
+  saveTurnCheckpoint({
+    version: 1,
+    projectId: opts.projectId,
+    sessionId: opts.sessionId,
+    userContent: opts.userContent,
+    attachments: opts.attachments,
+    entries: opts.entries,
+    round: opts.round,
+    consecutiveToolErrors: opts.consecutiveToolErrors,
+    emptyResponses: opts.emptyResponses,
+    complexity: opts.complexity,
+    turnHadCodeEdits: opts.turnHadCodeEdits,
+    turnRanChecks: opts.turnRanChecks,
+    autoVerifyDone: opts.autoVerifyDone,
+    warmFor: opts.warmFor,
+    warmTier: opts.warmTier,
+    userMessageAppended: opts.userMessageAppended,
+    lastActivity: Date.now()
   })
 }
 
@@ -252,48 +415,55 @@ export class ToolLoopCounter {
 
 // --- Agent loop -------------------------------------------------------------
 
+type ChatSet = (partial: Partial<ChatState> | ((s: ChatState) => Partial<ChatState>)) => void
+type ChatGet = () => ChatState
+
 async function agentLoop(
   projectId: string,
   sessionId: string,
   userContent: string,
-  set: (fn: (s: ChatState) => Partial<ChatState>) => void,
-  get: () => ChatState,
+  set: ChatSet,
+  get: ChatGet,
   attachments?: ChatAttachment[],
-  epoch: number = streamEpoch
+  epoch: number = getSessionEpoch(sessionId),
+  resumeFrom?: AgentTurnCheckpoint
 ): Promise<void> {
   // Superseded before we even started (steer / newer queue item claimed epoch).
-  if (epoch !== streamEpoch) return
+  if (epoch !== getSessionEpoch(sessionId)) return
 
-  // A live loop owns the turn; only an aborted one may be replaced. This makes
-  // concurrent agent loops impossible even if two send paths race.
-  if (abortController && !abortController.signal.aborted) return
+  // A live loop for *this session* owns the turn; other sessions may run in parallel.
+  const existing = sessionControllers.get(sessionId)
+  if (existing && !existing.signal.aborted) return
 
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
     systemError(projectId, sessionId, i18n.t('chat.errors.noProvider'))
-    if (epoch === streamEpoch) {
-      set(() => ({ isStreaming: false, streamingSessionId: null }))
-      window.api.setStreaming?.(false)
-      processQueue(set, get)
+    if (epoch === getSessionEpoch(sessionId)) {
+      setSessionStreamingFlags(set, get, sessionId, false)
+      processQueue(set, get, sessionId)
     }
     return
   }
 
-  // Each loop owns its controller. `abortController` points at the newest loop
-  // so Stop/steer always abort the live one; the finally below only clears the
-  // reference if this loop is still the newest (a stale loop must never
-  // clobber the controller or the streaming flags of its replacement).
+  // Each loop owns its controller. Only this session's finally clears flags when
+  // it is still the current epoch (a steered replacement must not be clobbered).
   const controller = new AbortController()
-  abortController = controller
+  sessionControllers.set(sessionId, controller)
   const signal = controller.signal
   useChangeLedger.getState().beginTurn(sessionId, projectId, userContent)
+  void acquireSleepHold()
 
   // Hoisted so finally can auto-capture Memory from this turn's transcript.
   let entries: TranscriptEntry[] = []
   /** Code mutations this user turn — drives free local typecheck auto-verify. */
-  let turnHadCodeEdits = false
-  let turnRanChecks = false
-  let autoVerifyDone = false
+  let turnHadCodeEdits = resumeFrom?.turnHadCodeEdits ?? false
+  let turnRanChecks = resumeFrom?.turnRanChecks ?? false
+  let autoVerifyDone = resumeFrom?.autoVerifyDone ?? false
+  let consecutiveToolErrors = resumeFrom?.consecutiveToolErrors ?? 0
+  let emptyResponses = resumeFrom?.emptyResponses ?? 0
+  let round = resumeFrom?.round ?? 0
+  const complexity: Complexity = resumeFrom?.complexity ?? estimateComplexity(userContent)
+  let userMessageAppended = resumeFrom?.userMessageAppended ?? false
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -304,35 +474,35 @@ async function agentLoop(
     // System prompt as ordered layers. Caching is a prefix match, so the most
     // stable content comes first and per-turn content only ever appends at the
     // tail of `messages` — never into the system block.
-   //   layer 0: base prompt        — identical everywhere, shared cache
+    //   layer 0: base prompt        — identical everywhere, shared cache
     //   preamble : cwd + project ctx — injected into messages, not the system block,
     //   so the system cache prefix is shared across all projects and sessions.
-   const systemLayers: string[] = [SYSTEM_PROMPT]
+    const systemLayers: string[] = [SYSTEM_PROMPT]
     let projectPreamble = ''
-   if (cwd) {
+    if (cwd) {
       projectPreamble += `--- Working Directory ---\n${cwd}\nResolve relative paths against this directory unless told otherwise.`
-   }
-   if (projectPath) {
-     try {
-       const ctx = await loadProjectContext(projectPath)
-       const block = buildProjectContextBlock({ ...ctx, skills: filterEnabledSkills(ctx.skills) })
+    }
+    if (projectPath) {
+      try {
+        const ctx = await loadProjectContext(projectPath)
+        const block = buildProjectContextBlock({ ...ctx, skills: filterEnabledSkills(ctx.skills) })
         if (block) projectPreamble += (projectPreamble ? '\n\n' : '') + block
-     } catch {
-       // Missing CLAUDE.md / skills is normal; keep the base layer.
-     }
-     // Do NOT auto-inject repo_map here: DeepSeek disk cache requires a stable
-     // prefix (https://api-docs.deepseek.com/guides/kv_cache/). A rotating map
-     // forces full re-prime every TTL. Use the repo_map tool on demand instead.
-   }
-   const agentMode = useProviderStore.getState().agentMode
-   if (agentMode === 'plan') {
-     projectPreamble +=
-       (projectPreamble ? '\n\n' : '') +
-       '--- Agent mode: PLAN ---\n' +
-       'You are in Plan mode: explore, design, and call update_plan. ' +
-       'Do not edit files, run shell that changes state, or use computer/browser actions that mutate. ' +
-       'When ready to implement, ask the user to switch to Build (or call app_set_agent_mode build if allowed).'
-   }
+      } catch {
+        // Missing CLAUDE.md / skills is normal; keep the base layer.
+      }
+      // Do NOT auto-inject repo_map here: DeepSeek disk cache requires a stable
+      // prefix (https://api-docs.deepseek.com/guides/kv_cache/). A rotating map
+      // forces full re-prime every TTL. Use the repo_map tool on demand instead.
+    }
+    const agentMode = useProviderStore.getState().agentMode
+    if (agentMode === 'plan') {
+      projectPreamble +=
+        (projectPreamble ? '\n\n' : '') +
+        '--- Agent mode: PLAN ---\n' +
+        'You are in Plan mode: explore, design, and call update_plan. ' +
+        'Do not edit files, run shell that changes state, or use computer/browser actions that mutate. ' +
+        'When ready to implement, ask the user to switch to Build (or call app_set_agent_mode build if allowed).'
+    }
     // Long-term Memory injection (local, optional)
     try {
       if (window.api.memory?.injectBlock) {
@@ -350,64 +520,88 @@ async function agentLoop(
     // systemLayers stays [SYSTEM_PROMPT] only — project context is passed as
     // preamble to callLLM, where it is injected into the messages array.
 
-   entries = await loadTranscript(projectId, sessionId)
+    if (resumeFrom?.entries?.length) {
+      entries = resumeFrom.entries
+      userMessageAppended = true
+    } else {
+      entries = await loadTranscript(projectId, sessionId)
+    }
 
     // Lifecycle hooks (Claude/Codex-compatible) — SessionStart once per empty transcript.
-    try {
-      const isFresh = entries.filter((e) => e.role === 'user' || e.role === 'assistant').length === 0
-      if (isFresh) {
-        const start = await fireHook({
-          event: 'SessionStart',
+    // Skip UserPromptSubmit on resume (prompt already accepted before crash).
+    if (!resumeFrom) {
+      try {
+        const isFresh = entries.filter((e) => e.role === 'user' || e.role === 'assistant').length === 0
+        if (isFresh) {
+          const start = await fireHook({
+            event: 'SessionStart',
+            sessionId,
+            projectPath: projectPath || null,
+            cwd: cwd || projectPath || undefined,
+            payload: { source: 'startup' }
+          })
+          if (start.additionalContext.length) {
+            projectPreamble +=
+              (projectPreamble ? '\n\n' : '') +
+              '--- Hook context ---\n' +
+              start.additionalContext.join('\n')
+          }
+        }
+        const submit = await fireHook({
+          event: 'UserPromptSubmit',
           sessionId,
           projectPath: projectPath || null,
           cwd: cwd || projectPath || undefined,
-          payload: { source: 'startup' }
+          payload: { prompt: userContent.slice(0, 8000) }
         })
-        if (start.additionalContext.length) {
+        if (submit.decision === 'deny') {
+          systemError(
+            projectId,
+            sessionId,
+            submit.reason || i18n.t('chat.errors.hookBlocked')
+          )
+          return
+        }
+        if (submit.additionalContext.length) {
           projectPreamble +=
             (projectPreamble ? '\n\n' : '') +
             '--- Hook context ---\n' +
-            start.additionalContext.join('\n')
+            submit.additionalContext.join('\n')
         }
+      } catch {
+        /* hooks optional */
       }
-      const submit = await fireHook({
-        event: 'UserPromptSubmit',
-        sessionId,
-        projectPath: projectPath || null,
-        cwd: cwd || projectPath || undefined,
-        payload: { prompt: userContent.slice(0, 8000) }
-      })
-      if (submit.decision === 'deny') {
-        systemError(
-          projectId,
-          sessionId,
-          submit.reason || i18n.t('chat.errors.hookBlocked', { defaultValue: 'Blocked by hook (UserPromptSubmit)' })
-        )
-        return
-      }
-      if (submit.additionalContext.length) {
-        projectPreamble +=
-          (projectPreamble ? '\n\n' : '') +
-          '--- Hook context ---\n' +
-          submit.additionalContext.join('\n')
-      }
-    } catch {
-      /* hooks optional */
     }
 
-    const imgs = imageAttachments(attachments)
-    entries.push({
-      role: 'user',
-      content: buildTranscriptText(userContent, attachments),
-      ...(imgs.length > 0 ? { attachments: imgs } : {})
-    })
+    if (!userMessageAppended) {
+      const imgs = imageAttachments(attachments)
+      entries.push({
+        role: 'user',
+        content: buildTranscriptText(userContent, attachments),
+        ...(imgs.length > 0 ? { attachments: imgs } : {})
+      })
+      userMessageAppended = true
+    }
 
-    const complexity = estimateComplexity(userContent)
-    let consecutiveToolErrors = 0
-    let emptyResponses = 0
-    let round = 0
     let lastDecision: RouteDecision | null = null
     const loopCounter = new ToolLoopCounter(MAX_REPEATED_TOOL_ROUNDS)
+
+    // Persist immediately so a crash mid-first-LLM-call can still resume.
+    checkpointSnapshot({
+      projectId,
+      sessionId,
+      userContent,
+      attachments,
+      entries,
+      round,
+      consecutiveToolErrors,
+      emptyResponses,
+      complexity,
+      turnHadCodeEdits,
+      turnRanChecks,
+      autoVerifyDone,
+      userMessageAppended
+    })
 
     while (round < MAX_TOOL_ROUNDS) {
       if (signal.aborted) break
@@ -453,10 +647,7 @@ async function agentLoop(
           useUsageStore.getState().noteDiagnostic(
             sessionId,
             'warn',
-            i18n.t('chat.diagnostics.visionDemoted', {
-              defaultValue:
-                'No vision model available — continuing with text-only screenshot stubs. Set a Vision fallback (e.g. Gemini) under Settings → Agent.'
-            })
+            i18n.t('chat.diagnostics.visionDemoted')
           )
           decision = route({
             sessionId,
@@ -554,11 +745,31 @@ async function agentLoop(
             if (!streamed.trim()) useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
             throw err
           }
-          // A genuine failure retries on a different model in the next attempt,
-          // which creates its own fresh bubble — keeping this attempt's partial
-          // text around would leave a confusing duplicate next to the retry.
-          useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
           const message = err instanceof Error ? err.message : String(err)
+          // Preserve partial stream on failover: keep the bubble with a note so
+          // the user never loses text they already read; the next attempt gets
+          // a fresh assistant bubble.
+          if (streamed.trim()) {
+            const note = i18n.t('chat.diagnostics.partialPreserved', {
+              model: decision.model.label || decision.model.modelId,
+              error: message.slice(0, 120)
+            })
+            useAppStore.getState().updateMessageContent(
+              projectId,
+              sessionId,
+              assistantMsgId,
+              `${streamed.trim()}\n\n${note}`,
+              true
+            )
+            useAppStore.getState().updateMessageModel(
+              projectId,
+              sessionId,
+              assistantMsgId,
+              decision.model.label || decision.model.modelId
+            )
+          } else {
+            useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
+          }
 
           // Image-incapable models: free the retry budget for a real vision model.
           // Never session-ban models explicitly marked Vision (Gemini etc.) — broad
@@ -752,6 +963,23 @@ async function agentLoop(
 
       consecutiveToolErrors = roundErrors > 0 ? consecutiveToolErrors + 1 : 0
       persistTranscript(sessionId, entries, decision.key, decision.tier)
+      checkpointSnapshot({
+        projectId,
+        sessionId,
+        userContent,
+        attachments,
+        entries,
+        round,
+        consecutiveToolErrors,
+        emptyResponses,
+        complexity,
+        turnHadCodeEdits,
+        turnRanChecks,
+        autoVerifyDone,
+        warmFor: decision.key,
+        warmTier: decision.tier,
+        userMessageAppended
+      })
 
       if (signal.aborted) break
     }
@@ -762,21 +990,49 @@ async function agentLoop(
   } catch (err) {
     if (!signal.aborted) {
       systemError(projectId, sessionId, i18n.t('chat.errors.agentError', { error: String(err) }))
+      // Keep checkpoint on unexpected error so cold start can resume.
+      if (entries.length > 0) {
+        checkpointSnapshot({
+          projectId,
+          sessionId,
+          userContent,
+          attachments,
+          entries,
+          round,
+          consecutiveToolErrors,
+          emptyResponses,
+          complexity,
+          turnHadCodeEdits,
+          turnRanChecks,
+          autoVerifyDone,
+          userMessageAppended
+        })
+      }
     }
   } finally {
-    const isCurrent = abortController === controller
-    if (isCurrent) abortController = null
+    const isCurrent =
+      sessionControllers.get(sessionId) === controller && epoch === getSessionEpoch(sessionId)
+    if (sessionControllers.get(sessionId) === controller) {
+      sessionControllers.delete(sessionId)
+    }
     const aborted = signal.aborted
     useChangeLedger.getState().endTurn()
+    releaseSleepHold()
     // Turn finished (normally or aborted) — drop the AI cursor so it doesn't
     // linger on the browser page after browser control ends.
-    void window.api.browser?.hideCursor?.().catch(() => {})
+    if (get().streamingSessionIds.length <= 1) {
+      void window.api.browser?.hideCursor?.().catch(() => {})
+    }
     // Epoch guard: a steer that aborted us may already have started a newer
     // turn. Clearing flags or draining the queue here would race and leave the
     // UI stuck (isStreaming false while tokens still flow, or double loops).
-    if (isCurrent && epoch === streamEpoch) {
-      set(() => ({ isStreaming: false, streamingSessionId: null }))
-      window.api.setStreaming?.(false)
+    if (isCurrent) {
+      if (aborted) {
+        clearTurnCheckpoint(sessionId, 'aborted')
+      } else {
+        clearTurnCheckpoint(sessionId, 'completed')
+      }
+      setSessionStreamingFlags(set, get, sessionId, false)
       // Turn finished — Stop hook (advisory; used for notify integrations)
       if (!aborted) {
         const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -836,7 +1092,7 @@ async function agentLoop(
       }
       // Drain the queue even after a manual stop: queued messages were
       // explicitly scheduled and must not wait for the next user input.
-      processQueue(set, get)
+      processQueue(set, get, sessionId)
     }
   }
 }
@@ -914,20 +1170,30 @@ export function truncateToolResult(
   )
 }
 
-function processQueue(
-  set: (fn: (s: ChatState) => Partial<ChatState>) => void,
-  get: () => ChatState
-): void {
+function processQueue(set: ChatSet, get: ChatGet, preferSessionId?: string): void {
   const { queue } = get()
   if (queue.length === 0) return
 
-  const next = queue[0]
-  set((s) => ({ queue: s.queue.slice(1) }))
+  // Prefer the next item for the session that just finished; else any session
+  // that is not currently streaming.
+  let idx = -1
+  if (preferSessionId) {
+    idx = queue.findIndex(
+      (q) => q.sessionId === preferSessionId && !get().streamingSessionIds.includes(q.sessionId)
+    )
+  }
+  if (idx < 0) {
+    idx = queue.findIndex((q) => !get().streamingSessionIds.includes(q.sessionId))
+  }
+  if (idx < 0) return
+
+  const next = queue[idx]
+  set((s) => ({ queue: s.queue.filter((_, i) => i !== idx) }))
 
   setTimeout(() => {
     // A newer message grabbed the turn while we waited (e.g. steer right after
     // Stop). Keep the item queued instead of starting a second concurrent loop.
-    if (get().isStreaming) {
+    if (get().streamingSessionIds.includes(next.sessionId)) {
       set((s) => ({ queue: [next, ...s.queue] }))
       return
     }
@@ -938,9 +1204,8 @@ function processQueue(
       return
     }
     autoTitle(next.projectId, next.sessionId, next.content)
-    const epoch = ++streamEpoch
-    set(() => ({ isStreaming: true, streamingSessionId: next.sessionId }))
-    window.api.setStreaming?.(true)
+    const epoch = bumpSessionEpoch(next.sessionId)
+    setSessionStreamingFlags(set, get, next.sessionId, true)
     void agentLoop(next.projectId, next.sessionId, next.content, set, get, next.attachments, epoch)
   }, 50)
 }

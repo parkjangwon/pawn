@@ -1,14 +1,37 @@
 /**
- * Whether a renderer agent turn is in flight. Kept in its own module so
- * window.ts can guard against closing the window mid-task without creating an
- * import cycle through the IPC layer.
+ * Whether any renderer agent turn is in flight. Multi-session aware:
+ * each session can stream independently; the window close/quit guards
+ * only care if the set is non-empty.
  */
-let streaming = false
+const streamingSessions = new Set<string>()
 
+/** Legacy boolean path still used by a few call sites; prefer session APIs. */
 export function setAppStreaming(value: boolean): void {
-  streaming = value
+  if (value) {
+    if (streamingSessions.size === 0) streamingSessions.add('__legacy__')
+  } else {
+    streamingSessions.clear()
+  }
+}
+
+export function setSessionStreaming(sessionId: string, streaming: boolean): void {
+  if (!sessionId) return
+  if (streaming) {
+    streamingSessions.add(sessionId)
+    if (sessionId !== '__legacy__') streamingSessions.delete('__legacy__')
+  } else {
+    streamingSessions.delete(sessionId)
+  }
+}
+
+export function clearAllStreaming(): void {
+  streamingSessions.clear()
 }
 
 export function isAppStreaming(): boolean {
-  return streaming
+  return streamingSessions.size > 0
+}
+
+export function streamingSessionCount(): number {
+  return streamingSessions.size
 }

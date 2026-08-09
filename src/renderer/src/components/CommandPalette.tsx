@@ -154,7 +154,7 @@ export default function CommandPalette({
         group: 'actions',
         keywords: 'stop cancel abort',
         icon: <Icon d={<rect x="6" y="6" width="12" height="12" rx="1" />} />,
-        action: () => run(() => { if (isStreaming) stopStreaming() })
+        action: () => run(() => { if (isStreaming) stopStreaming() /* all sessions */ })
       }
     ]
 
@@ -176,6 +176,22 @@ export default function CommandPalette({
         group: 'navigation',
         icon: <Icon d={<><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="15" y1="3" x2="15" y2="21" /></>} />,
         action: () => run(() => { (window as unknown as { __toggleRightPanel?: () => void }).__toggleRightPanel?.() })
+      },
+      {
+        id: 'open-agents-panel',
+        label: t('commandPalette.commands.openAgents'),
+        description: t('commandPalette.commands.openAgentsDesc'),
+        group: 'navigation',
+        keywords: 'subagent parallel worker explore agents',
+        icon: <Icon d={<><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></>} />,
+        action: () =>
+          run(() => {
+            try {
+              window.__openRightPanelTab?.('agents')
+            } catch {
+              /* optional */
+            }
+          })
       },
       {
         id: 'toggle-terminal',
@@ -323,7 +339,7 @@ export default function CommandPalette({
         className="cp-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={t('commandPalette.title', { defaultValue: 'Command palette' })}
+        aria-label={t('commandPalette.title')}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="cp-header">

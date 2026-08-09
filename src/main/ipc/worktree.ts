@@ -2,7 +2,10 @@ import { handleTrusted } from './trust'
 import {
   createAgentWorktree,
   removeAgentWorktree,
-  worktreeDiffStat
+  worktreeDiffStat,
+  worktreeDiffPatch,
+  worktreeChangedFiles,
+  applyWorktreeToProject
 } from '../worktree'
 
 export function registerWorktreeIpc(): void {
@@ -31,4 +34,24 @@ export function registerWorktreeIpc(): void {
     if (typeof worktreePath !== 'string' || !worktreePath) return ''
     return worktreeDiffStat(worktreePath)
   })
+
+  handleTrusted('worktree:diffPatch', async (_e, worktreePath: string) => {
+    if (typeof worktreePath !== 'string' || !worktreePath) return ''
+    return worktreeDiffPatch(worktreePath)
+  })
+
+  handleTrusted('worktree:changedFiles', async (_e, worktreePath: string) => {
+    if (typeof worktreePath !== 'string' || !worktreePath) return []
+    return worktreeChangedFiles(worktreePath)
+  })
+
+  handleTrusted(
+    'worktree:apply',
+    async (_e, projectPath: string, worktreePath: string) => {
+      if (typeof projectPath !== 'string' || typeof worktreePath !== 'string') {
+        return { ok: false, files: [], error: 'paths required' }
+      }
+      return applyWorktreeToProject(projectPath, worktreePath)
+    }
+  )
 }

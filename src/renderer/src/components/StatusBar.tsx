@@ -9,9 +9,10 @@ import './StatusBar.css'
 export default function StatusBar(): React.JSX.Element {
   const { t } = useTranslation()
   const { providers, models, routingMode, activeModelId } = useProviderStore()
-  const { isStreaming, streamingSessionId } = useChatStore()
+  const { isStreaming, streamingSessionId, streamingSessionIds } = useChatStore()
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const sessionId = streamingSessionId || activeSessionId || ''
+  const concurrentTurns = streamingSessionIds.length
   const totals = useUsageStore((s) => (sessionId ? s.totalsFor(sessionId) : null))
   const activeSubs = useSubagentRunsStore((s) =>
     sessionId ? s.activeForSession(sessionId) : []
@@ -46,17 +47,33 @@ export default function StatusBar(): React.JSX.Element {
         />
         <span className="status-text">
           {isStreaming
-            ? t('statusBar.working')
+            ? concurrentTurns > 1
+              ? t('statusBar.workingMulti', { count: concurrentTurns })
+              : t('statusBar.working')
             : enabledProviders.length > 0
               ? t('statusBar.ready')
               : t('statusBar.noProvider')}
         </span>
         {subLabel && (
-          <span className="status-subagents" title={activeSubs.map((r) => r.name).join(', ')}>
+          <button
+            type="button"
+            className="status-subagents"
+            title={
+              activeSubs.map((r) => `${r.name} [${r.agent}]`).join(', ') ||
+              t('statusBar.openAgents')
+            }
+            onClick={() => {
+              try {
+                window.__openRightPanelTab?.('agents')
+              } catch {
+                /* optional */
+              }
+            }}
+          >
             {subLabel}
             {activeSubs.length > 0 &&
               ` · r${Math.max(...activeSubs.map((r) => r.rounds), 0)}`}
-          </span>
+          </button>
         )}
       </div>
       <div className="status-right">

@@ -122,6 +122,27 @@ describe('route', () => {
     expect(route({ sessionId: 's', entries, complexity: 'complex' })?.tier).toBe('high')
   })
 
+  it('respects maxTier cost pin for subagents', () => {
+    useProviderStore.setState({
+      providers: [provider('p')],
+      models: [
+        model('p', 'low-model', 'low', { pricing: pricing(1, 2, 0.1, 1) }),
+        model('p', 'mid-model', 'mid', { pricing: pricing(2, 4, 0.2, 2) }),
+        model('p', 'high-model', 'high', { pricing: pricing(4, 8, 0.4, 4) })
+      ],
+      routingMode: 'auto'
+    })
+    const d = route({
+      sessionId: 'sub-explore',
+      entries,
+      complexity: 'complex',
+      maxTier: 'low'
+    })
+    expect(d?.tier).toBe('low')
+    expect(d?.reason).toMatch(/maxTier/)
+  })
+
+
   it('honours a manual pin', () => {
     useProviderStore.setState({
       providers: [provider('p')],

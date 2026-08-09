@@ -384,6 +384,11 @@ export interface RouteRequest {
   newTurn?: boolean
   /** Transcript includes images — prefer vision-capable models / optional fallback. */
   needsVision?: boolean
+  /**
+   * Cap auto-routing at this tier (subagents: explore→low, plan→mid).
+   * Sticky models above the cap are ignored so cost pins are not overridden by a warm high-tier.
+   */
+  maxTier?: ModelTier
 }
 
 /**
@@ -417,11 +422,21 @@ function routeBase(req: RouteRequest): RouteDecision | null {
   const contextLimited = contextFit.length === 0
   const usable = basePool.filter((c) => !exclude.has(routeKey(c.model)))
   const pool = usable.length > 0 ? usable : basePool
-  const sticky = sessionRoutes.get(req.sessionId)
+  const stickyRaw = sessionRoutes.get(req.sessionId)
+  const maxTierIdx =
+    req.maxTier && TIER_ORDER.includes(req.maxTier) ? TIER_ORDER.indexOf(req.maxTier) : -1
+  // Drop sticky if it sits above a cost pin (subagent maxTier).
+  const sticky =
+    stickyRaw &&
+    maxTierIdx >= 0 &&
+    TIER_ORDER.indexOf(stickyRaw.tier) > maxTierIdx
+      ? undefined
+      : stickyRaw
   const warm = sticky && !exclude.has(sticky.key) ? { key: sticky.key, ratio: warmRatio(sticky, promptTokens) } : null
 
   // --- Manual: the user pinned a model. Honour it unless it is unusable. -----
-  if (routingMode === 'manual' && activeModelId) {
+  // Subagent cost pins still apply in auto mode; in manual, pin wins for the main chat.
+  if (routingMode === 'manual' && activeModelId && maxTierIdx < 0) {
     const pinned = pool.find((c) => c.model.id === activeModelId)
     if (pinned) {
       return { ...pinned, key: routeKey(pinned.model), tier: pinned.model.tier, reason: 'manual pin' }
@@ -463,12 +478,20 @@ function routeBase(req: RouteRequest): RouteDecision | null {
     reason = `escalated to ${TIER_ORDER[targetIdx]}`
   }
 
+  // Cost pin for subagents (and any caller that wants a ceiling).
+  if (maxTierIdx >= 0 && targetIdx > maxTierIdx) {
+    targetIdx = maxTierIdx
+    reason = `${reason} (maxTier=${req.maxTier})`
+  }
+
   // Walk outward from the target tier: exact match, then up, then down. Upward
   // first because an over-powered model still produces a correct answer while an
-  // under-powered one may loop.
+  // under-powered one may loop. Never walk above maxTier when set.
   const order: ModelTier[] = [TIER_ORDER[targetIdx]]
   for (let d = 1; d < TIER_ORDER.length; d++) {
-    if (targetIdx + d < TIER_ORDER.length) order.push(TIER_ORDER[targetIdx + d])
+    if (targetIdx + d < TIER_ORDER.length) {
+      if (maxTierIdx < 0 || targetIdx + d <= maxTierIdx) order.push(TIER_ORDER[targetIdx + d])
+    }
     if (targetIdx - d >= 0) order.push(TIER_ORDER[targetIdx - d])
   }
 

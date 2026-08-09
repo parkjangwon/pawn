@@ -88,12 +88,47 @@ function initSchema(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_usage_session ON usage(session_id);
     CREATE INDEX IF NOT EXISTS idx_usage_created ON usage(created_at);
     CREATE INDEX IF NOT EXISTS idx_routines_enabled ON routines(enabled);
+
+    -- Mid-turn agent resume state (one running checkpoint per session).
+    CREATE TABLE IF NOT EXISTS turn_checkpoints (
+      session_id TEXT PRIMARY KEY,
+      project_id TEXT NOT NULL,
+      status TEXT NOT NULL DEFAULT 'running',
+      json TEXT NOT NULL,
+      updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    );
+
+    -- Durable file-change undo ledger (survives app restarts).
+    CREATE TABLE IF NOT EXISTS change_ledger (
+      id TEXT PRIMARY KEY,
+      session_id TEXT NOT NULL,
+      project_id TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      label TEXT NOT NULL DEFAULT '',
+      json TEXT NOT NULL,
+      FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS idx_change_ledger_session ON change_ledger(session_id);
+    CREATE INDEX IF NOT EXISTS idx_change_ledger_created ON change_ledger(created_at);
   `)
 
   // The usage ledger grows one row per LLM call forever; prune anything older
   // than 90 days on every launch so the database does not balloon over time.
   db.prepare('DELETE FROM usage WHERE created_at < ?')
     .run(Math.floor(Date.now() / 1000) - 90 * 86400)
+
+  // Drop abandoned running checkpoints older than 7 days.
+  db.prepare(
+    `DELETE FROM turn_checkpoints WHERE status = 'running' AND updated_at < ?`
+  ).run(Math.floor(Date.now() / 1000) - 7 * 86400)
+
+  // Cap durable change ledger to the newest 200 turns globally.
+  db.prepare(
+    `DELETE FROM change_ledger WHERE id NOT IN (
+       SELECT id FROM change_ledger ORDER BY created_at DESC LIMIT 200
+     )`
+  ).run()
 }
 
 // --- Projects ---
@@ -164,6 +199,7 @@ export function clearMessages(sessionId: string): void {
   // The replayed transcript must die with the visible history, otherwise a
   // "cleared" session keeps sending the old conversation to the model.
   d.prepare('DELETE FROM transcripts WHERE session_id = ?').run(sessionId)
+  d.prepare('DELETE FROM turn_checkpoints WHERE session_id = ?').run(sessionId)
 }
 
 // --- API transcripts ---
@@ -189,6 +225,126 @@ export function saveTranscript(sessionId: string, json: string): void {
 
 export function clearTranscript(sessionId: string): void {
   getDb().prepare('DELETE FROM transcripts WHERE session_id = ?').run(sessionId)
+}
+
+// --- Turn checkpoints (mid-turn resume) ---
+
+export function saveTurnCheckpoint(
+  sessionId: string,
+  projectId: string,
+  status: string,
+  json: string
+): void {
+  getDb()
+    .prepare(
+      `INSERT INTO turn_checkpoints (session_id, project_id, status, json, updated_at)
+       VALUES (?, ?, ?, ?, unixepoch())
+       ON CONFLICT(session_id) DO UPDATE SET
+         project_id = excluded.project_id,
+         status = excluded.status,
+         json = excluded.json,
+         updated_at = excluded.updated_at`
+    )
+    .run(sessionId, projectId, status || 'running', json)
+}
+
+export function clearTurnCheckpoint(sessionId: string, status?: string): void {
+  if (status && status !== 'running') {
+    // Keep a terminal marker briefly so restart does not re-resume a just-finished turn.
+    getDb()
+      .prepare(
+        `UPDATE turn_checkpoints SET status = ?, updated_at = unixepoch() WHERE session_id = ?`
+      )
+      .run(status, sessionId)
+    return
+  }
+  getDb().prepare('DELETE FROM turn_checkpoints WHERE session_id = ?').run(sessionId)
+}
+
+export function listRunningTurnCheckpoints(): Array<{
+  sessionId: string
+  projectId: string
+  status: string
+  json: string
+  updatedAt: number
+}> {
+  return getDb()
+    .prepare(
+      `SELECT session_id as sessionId, project_id as projectId, status, json,
+              updated_at as updatedAt
+       FROM turn_checkpoints WHERE status = 'running' ORDER BY updated_at DESC`
+    )
+    .all() as never[]
+}
+
+export function getTurnCheckpoint(sessionId: string): {
+  sessionId: string
+  projectId: string
+  status: string
+  json: string
+  updatedAt: number
+} | null {
+  const row = getDb()
+    .prepare(
+      `SELECT session_id as sessionId, project_id as projectId, status, json,
+              updated_at as updatedAt
+       FROM turn_checkpoints WHERE session_id = ?`
+    )
+    .get(sessionId) as
+    | { sessionId: string; projectId: string; status: string; json: string; updatedAt: number }
+    | undefined
+  return row ?? null
+}
+
+// --- Durable change ledger ---
+
+export function saveChangeLedgerTurn(row: {
+  id: string
+  sessionId: string
+  projectId: string
+  createdAt: number
+  label: string
+  json: string
+}): void {
+  getDb()
+    .prepare(
+      `INSERT INTO change_ledger (id, session_id, project_id, created_at, label, json)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET json = excluded.json, label = excluded.label`
+    )
+    .run(
+      row.id,
+      row.sessionId,
+      row.projectId,
+      Math.floor(row.createdAt / 1000) || Math.floor(Date.now() / 1000),
+      row.label || '',
+      row.json
+    )
+}
+
+export function listChangeLedgerTurns(limit = 80): Array<{
+  id: string
+  sessionId: string
+  projectId: string
+  createdAt: number
+  label: string
+  json: string
+}> {
+  return getDb()
+    .prepare(
+      `SELECT id, session_id as sessionId, project_id as projectId,
+              created_at as createdAt, label, json
+       FROM change_ledger ORDER BY created_at DESC LIMIT ?`
+    )
+    .all(Math.min(200, Math.max(1, limit))) as never[]
+}
+
+export function deleteChangeLedgerTurn(id: string): void {
+  getDb().prepare('DELETE FROM change_ledger WHERE id = ?').run(id)
+}
+
+export function deleteChangeLedgerForSession(sessionId: string): void {
+  getDb().prepare('DELETE FROM change_ledger WHERE session_id = ?').run(sessionId)
 }
 
 // --- Usage / cost ---

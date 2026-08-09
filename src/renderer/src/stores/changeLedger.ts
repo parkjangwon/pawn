@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { enqueueDbWrite } from '../utils/dbWriteQueue'
 
 /** Max chars of file content kept for undo (per side). Larger files skip revert. */
 export const LEDGER_CONTENT_CAP = 2 * 1024 * 1024
@@ -29,6 +30,7 @@ export interface TurnCheckpoint {
 interface ChangeLedgerState {
   turns: TurnCheckpoint[]
   activeTurnId: string | null
+  hydrated: boolean
   beginTurn: (sessionId: string, projectId: string, label: string) => string
   endTurn: () => void
   recordChange: (change: Omit<FileChange, 'status'>) => void
@@ -36,6 +38,8 @@ interface ChangeLedgerState {
   revertTurn: (turnId?: string) => Promise<{ ok: boolean; reverted: number; error?: string }>
   latestTurn: (sessionId?: string | null) => TurnCheckpoint | null
   clearSession: (sessionId: string) => void
+  /** Load durable turns from SQLite after app start. */
+  hydrate: () => Promise<void>
 }
 
 function capContent(s: string | null | undefined): { text: string | null; oversized: boolean } {
@@ -44,9 +48,64 @@ function capContent(s: string | null | undefined): { text: string | null; oversi
   return { text: s.slice(0, LEDGER_CONTENT_CAP), oversized: true }
 }
 
+function persistTurn(turn: TurnCheckpoint): void {
+  const save = window.api?.db?.saveChangeLedgerTurn
+  if (!save) return
+  enqueueDbWrite(`changeLedger:${turn.id}`, () =>
+    save({
+      id: turn.id,
+      sessionId: turn.sessionId,
+      projectId: turn.projectId,
+      createdAt: turn.createdAt,
+      label: turn.label,
+      json: JSON.stringify(turn)
+    })
+  )
+}
+
+function findTurn(turns: TurnCheckpoint[], id: string | null): TurnCheckpoint | undefined {
+  if (!id) return undefined
+  return turns.find((t) => t.id === id)
+}
+
 export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
   turns: [],
   activeTurnId: null,
+  hydrated: false,
+
+  hydrate: async () => {
+    if (get().hydrated) return
+    const api = window.api?.db
+    if (!api?.listChangeLedgerTurns) {
+      set({ hydrated: true })
+      return
+    }
+    try {
+      const rows = await api.listChangeLedgerTurns(80)
+      const turns: TurnCheckpoint[] = []
+      for (const row of rows || []) {
+        try {
+          const parsed = JSON.parse(row.json) as TurnCheckpoint
+          if (!parsed?.id || !Array.isArray(parsed.changes)) continue
+          turns.push({
+            ...parsed,
+            id: parsed.id || row.id,
+            sessionId: parsed.sessionId || row.sessionId,
+            projectId: parsed.projectId || row.projectId,
+            createdAt: parsed.createdAt || row.createdAt * 1000,
+            label: parsed.label || row.label || ''
+          })
+        } catch {
+          /* skip */
+        }
+      }
+      // Rows come newest-first; keep chronological order in memory.
+      turns.sort((a, b) => a.createdAt - b.createdAt)
+      set({ turns: turns.slice(-80), hydrated: true })
+    } catch {
+      set({ hydrated: true })
+    }
+  },
 
   beginTurn: (sessionId, projectId, label) => {
     const id = `turn-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`
@@ -62,10 +121,16 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
       turns: [...s.turns.slice(-40), turn],
       activeTurnId: id
     }))
+    persistTurn(turn)
     return id
   },
 
-  endTurn: () => set({ activeTurnId: null }),
+  endTurn: () => {
+    const { activeTurnId, turns } = get()
+    const turn = findTurn(turns, activeTurnId)
+    if (turn) persistTurn(turn)
+    set({ activeTurnId: null })
+  },
 
   recordChange: (change) => {
     const { activeTurnId, turns } = get()
@@ -79,12 +144,14 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
       oversized: beforeCap.oversized || afterCap.oversized || change.oversized,
       status: 'applied'
     }
+    let updated: TurnCheckpoint | null = null
     set({
       turns: turns.map((t) => {
         if (t.id !== activeTurnId) return t
         const existing = t.changes.find((c) => c.path === entry.path && c.status === 'applied')
+        let next: TurnCheckpoint
         if (existing) {
-          return {
+          next = {
             ...t,
             changes: t.changes.map((c) =>
               c.path === entry.path && c.status === 'applied'
@@ -98,10 +165,14 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
                 : c
             )
           }
+        } else {
+          next = { ...t, changes: [...t.changes, entry] }
         }
-        return { ...t, changes: [...t.changes, entry] }
+        updated = next
+        return next
       })
     })
+    if (updated) persistTurn(updated)
   },
 
   revertFile: async (path) => {
@@ -120,18 +191,21 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
         const res = await window.api.fs.writeFile(path, change.before)
         if (res && 'error' in res && res.error) return { ok: false, error: res.error }
       }
+      let updated: TurnCheckpoint | null = null
       set((s) => ({
-        turns: s.turns.map((t) =>
-          t.id !== turn.id
-            ? t
-            : {
-                ...t,
-                changes: t.changes.map((c) =>
-                  c.path === path && c.status === 'applied' ? { ...c, status: 'reverted' as const } : c
-                )
-              }
-        )
+        turns: s.turns.map((t) => {
+          if (t.id !== turn.id) return t
+          const next = {
+            ...t,
+            changes: t.changes.map((c) =>
+              c.path === path && c.status === 'applied' ? { ...c, status: 'reverted' as const } : c
+            )
+          }
+          updated = next
+          return next
+        })
       }))
+      if (updated) persistTurn(updated)
       return { ok: true }
     } catch (err) {
       return { ok: false, error: String(err) }
@@ -184,6 +258,8 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
         errors.push(`${change.path}: ${String(err)}`)
       }
     }
+    const latest = get().turns.find((t) => t.id === turn.id)
+    if (latest) persistTurn(latest)
     return {
       ok: reverted > 0,
       reverted,
@@ -207,5 +283,11 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
       activeTurnId:
         s.turns.find((t) => t.id === s.activeTurnId)?.sessionId === sessionId ? null : s.activeTurnId
     }))
+    const api = window.api?.db
+    if (api?.deleteChangeLedgerForSession) {
+      enqueueDbWrite(`changeLedgerClear:${sessionId}`, () =>
+        api.deleteChangeLedgerForSession!(sessionId)
+      )
+    }
   }
 }))

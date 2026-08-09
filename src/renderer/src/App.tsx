@@ -6,6 +6,8 @@ import { usePrefsStore } from './stores/prefs'
 import { useRoutineStore } from './stores/routine'
 import { useMcpStore } from './stores/mcp'
 import { useKeybindingsStore, useKeybinding } from './stores/keybindings'
+import { useChatStore } from './stores/chat'
+import { useChangeLedger } from './stores/changeLedger'
 import { readStoredSidebarWidth, persistSidebarWidth, clampSidebarWidth } from './hooks/useSidebarResize'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
@@ -60,7 +62,13 @@ export default function App(): React.JSX.Element {
     void useRoutineStore.getState().init()
     void useMcpStore.getState().init()
     void useKeybindingsStore.getState().init()
+    void useChangeLedger.getState().hydrate()
+    // After providers/prefs are ready, resume any mid-turn work that survived a crash.
+    const resumeTimer = window.setTimeout(() => {
+      void useChatStore.getState().resumeInterruptedTurns()
+    }, 800)
     void window.api.appVersion().then((v) => { if (v) setAppVersion(v) }).catch(() => {})
+    return () => window.clearTimeout(resumeTimer)
   }, [])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])

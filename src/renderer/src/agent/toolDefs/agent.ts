@@ -152,11 +152,13 @@ export const AGENT_TOOLS: ToolDefinition[] = [
   {
     name: 'spawn_agent',
     description:
-      'Delegate a focused sub-task to a nested agent with its own tool loop. ' +
-      'mode=explore (default): read/search only — map code, gather facts, draft plans. ' +
-      'mode=worker: may edit files and run checks (cannot spawn further agents). ' +
-      'Use for large refactors, multi-module investigation, or when work would exceed one loop. ' +
-      'Returns a structured summary. Prefer parallel_agents when tasks are independent.',
+      'Delegate a focused sub-task to a specialized nested agent with its own context and tool loop. ' +
+      'Built-ins: explore (read-only search), plan (read-only planning research), ' +
+      'worker (implement + verify; worktree + auto-apply), code-reviewer (read-only review). ' +
+      'Custom: .pawn/agents/ or .claude/agents/. Call list_agents for custom names. ' +
+      'For 2+ independent tasks use parallel_agents (true concurrency). ' +
+      'background=true returns a run id immediately (Agents panel + await_agent). ' +
+      'Returns a compact summary; worker apply reports files + overwrite conflicts.',
     parameters: {
       type: 'object',
       properties: {
@@ -164,19 +166,42 @@ export const AGENT_TOOLS: ToolDefinition[] = [
           type: 'string',
           description: 'Full task instructions for the subagent (be specific about goals and constraints)'
         },
-        name: { type: 'string', description: 'Short label for this subagent (optional)' },
+        name: { type: 'string', description: 'Short label for this run (optional)' },
+        agent: {
+          type: 'string',
+          description:
+            'Profile name: explore | plan | worker | code-reviewer | custom agent from .pawn/agents (default explore)'
+        },
         mode: {
           type: 'string',
-          description: 'explore | worker (default explore)'
+          description: 'Legacy alias: explore | worker (prefer `agent`)'
+        },
+        thoroughness: {
+          type: 'string',
+          description: 'For explore/plan: quick | medium | very_thorough'
         },
         max_rounds: {
           type: 'number',
-          description: 'Max tool rounds for the child (default 12, max 25)'
+          description: 'Max tool rounds (profile default; hard max 25)'
         },
         isolation: {
           type: 'string',
           description:
-            'none | worktree. Worker defaults to worktree (isolated git worktree). Explore defaults to none.'
+            'none | worktree. Worker defaults to worktree. Explore/plan/code-reviewer default none.'
+        },
+        apply: {
+          type: 'string',
+          description:
+            'auto | none. When isolation=worktree, auto (default for worker) copies successful changes into the project tree; none discards them.'
+        },
+        model: {
+          type: 'string',
+          description: 'inherit | simple | mid | complex (tier hint for auto routing)'
+        },
+        background: {
+          type: 'boolean',
+          description:
+            'If true, return immediately with a run id; the subagent continues and posts a system message when done. Use await_agent to block on the result.'
         }
       },
       required: ['prompt']
@@ -185,29 +210,99 @@ export const AGENT_TOOLS: ToolDefinition[] = [
   {
     name: 'parallel_agents',
     description:
-      'Run up to 6 independent subagents in parallel and return combined summaries. ' +
-      'Each task has prompt, optional name/mode/max_rounds/isolation. Ideal for multi-module ' +
-      'investigations or parallel research. Do not use for dependent sequential steps.',
+      'Run up to 6 subagents with true concurrency and optional DAG waves. ' +
+      'Independent tasks run in parallel (bounded by Settings pool). ' +
+      'Use depends_on: ["task-name"] so a worker waits for explores; prior summaries are injected as sibling findings. ' +
+      'shared_context on the call (or per task) is prepended to every prompt. ' +
+      'If agent is omitted, infers explore/plan/worker/code-reviewer from the prompt. ' +
+      'background=true returns handles immediately. Prefer this over sequential spawn for multi-module work.',
     parameters: {
       type: 'object',
       properties: {
+        shared_context: {
+          type: 'string',
+          description: 'Brief shared by all tasks (goals, constraints, glossary) — treated as untrusted data'
+        },
+        on_dependency_fail: {
+          type: 'string',
+          description:
+            'When a depends_on task fails: skip (default, do not run dependents) | continue (still run) | stop (skip all later waves)'
+        },
         tasks: {
           type: 'array',
-          description: 'Independent tasks (max 6)',
+          description: 'Tasks (max 6). Use name + depends_on for multi-wave pipelines.',
           items: {
             type: 'object',
             properties: {
               prompt: { type: 'string' },
-              name: { type: 'string' },
-              mode: { type: 'string', description: 'explore | worker' },
+              name: { type: 'string', description: 'Stable label for depends_on and UI' },
+              agent: { type: 'string', description: 'Profile name (explore|plan|worker|code-reviewer|custom)' },
+              mode: { type: 'string', description: 'Legacy: explore | worker' },
+              thoroughness: { type: 'string' },
               max_rounds: { type: 'number' },
-              isolation: { type: 'string', description: 'none | worktree' }
+              isolation: { type: 'string', description: 'none | worktree' },
+              apply: { type: 'string', description: 'auto | none' },
+              model: { type: 'string' },
+              background: { type: 'boolean' },
+              depends_on: {
+                type: 'array',
+                items: { type: 'string' },
+                description: 'Names of sibling tasks that must finish first (DAG wave)'
+              },
+              shared_context: { type: 'string', description: 'Per-task extra shared brief' }
             },
             required: ['prompt']
           }
         }
       },
       required: ['tasks']
+    }
+  },
+  {
+    name: 'list_agents',
+    description:
+      'List built-in and custom subagent profiles available for spawn_agent / parallel_agents ' +
+      '(name, description, source, isolation, model hint, maxTurns). Call when choosing which agent to use.',
+    parameters: {
+      type: 'object',
+      properties: {},
+      required: []
+    }
+  },
+  {
+    name: 'await_agent',
+    description:
+      'Wait for background subagent(s) to finish and return summary. ' +
+      'id = run id or name; comma-separated for several; id="*" waits for all running in this session. ' +
+      'Optional timeout_ms (default 600000). Prefer after spawn_agent/parallel with background=true.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Run id, name, comma-separated list, or * for all session runs'
+        },
+        timeout_ms: {
+          type: 'number',
+          description: 'Max wait in milliseconds (default 600000)'
+        }
+      },
+      required: ['id']
+    }
+  },
+  {
+    name: 'cancel_agent',
+    description:
+      'Cancel a running subagent by run id or name. Pass id="*" to cancel all active subagents for this session.',
+    parameters: {
+      type: 'object',
+      properties: {
+        id: {
+          type: 'string',
+          description: 'Run id, name, or * for all in this session'
+        }
+      },
+      required: ['id']
     }
   }
 ]

@@ -65,9 +65,13 @@ beforeEach(() => {
   useRoutineStore.setState({ routines: [], runningIds: new Set() })
   useChatStore.setState({
     isStreaming: false,
+    streamingSessionId: null,
+    streamingSessionIds: [],
     queue: [],
     sendMessage: sendMessageMock,
-    stopStreaming: () => {}
+    stopStreaming: () => {},
+    isSessionStreaming: () => false,
+    resumeInterruptedTurns: async () => 0
   })
 })
 

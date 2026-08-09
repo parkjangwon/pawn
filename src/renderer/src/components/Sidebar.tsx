@@ -37,7 +37,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     updateSessionTitle,
     updateProjectName
   } = useAppStore()
-  const streamingSessionId = useChatStore((s) => s.streamingSessionId)
+  const streamingSessionIds = useChatStore((s) => s.streamingSessionIds)
   const runningRoutineIds = useRoutineStore((s) => s.runningIds)
   const keybindings = useKeybindingsStore((s) => s.bindings)
   const initialized = useAppStore((s) => s.initialized)
@@ -116,13 +116,15 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     // A deleted session/project can no longer receive the turn's tool
     // results — abort it first so the agent loop doesn't keep streaming
     // into a session that's already gone from the store.
-    const { streamingSessionId, stopStreaming } = useChatStore.getState()
+    const { streamingSessionIds, stopStreaming } = useChatStore.getState()
     if (confirmDelete.type === 'project') {
       const project = projects.find((p) => p.id === confirmDelete.id)
-      if (streamingSessionId && project?.sessions.some((s) => s.id === streamingSessionId)) stopStreaming()
+      for (const sid of streamingSessionIds) {
+        if (project?.sessions.some((s) => s.id === sid)) stopStreaming(sid)
+      }
       removeProject(confirmDelete.id)
     } else if (confirmDelete.type === 'session' && confirmDelete.projectId) {
-      if (streamingSessionId === confirmDelete.id) stopStreaming()
+      if (streamingSessionIds.includes(confirmDelete.id)) stopStreaming(confirmDelete.id)
       removeSession(confirmDelete.projectId, confirmDelete.id)
       // Drop it from the pinned set too, so a stale id doesn't linger in
       // localStorage once its session no longer exists.
@@ -167,7 +169,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     return {
       preview,
       lastActivity: last?.createdAt || session.createdAt,
-      running: runningRoutineIds.has(session.id) || streamingSessionId === session.id
+      running: runningRoutineIds.has(session.id) || streamingSessionIds.includes(session.id)
     }
   }
 

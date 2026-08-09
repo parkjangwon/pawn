@@ -7,11 +7,18 @@ import { validateCommitMessage } from '../gitWrite'
 import {
   isSubagentToolAllowed,
   formatSubagentResults,
-  MAX_PARALLEL_SUBAGENTS
+  MAX_PARALLEL_SUBAGENTS,
+  planExecutionWaves,
+  partitionWaveByFailPolicy,
+  buildSiblingFindingsBlock,
+  checkSubagentToolCall,
+  emptyToolBudget,
+  normalizeSubagentTask
 } from '../subagent'
 import { isMutatingTool, isToolAllowedInAgentMode } from '../agentMode'
 import { TOOLS, TOOL_SAFETY } from '../tools'
 import { MCP_TEMPLATES } from '../mcpTemplates'
+import { getBuiltinProfile } from '../agentProfiles'
 
 describe('hermetic agent ecosystem', () => {
   it('registers critical new tools with safety levels', () => {
@@ -49,8 +56,23 @@ describe('hermetic agent ecosystem', () => {
 
   it('formats multi-subagent results', () => {
     const text = formatSubagentResults([
-      { name: 'a', ok: true, summary: 'mapped module A', rounds: 2, toolsUsed: ['repo_map'] },
-      { name: 'b', ok: false, summary: '', rounds: 1, toolsUsed: [], error: 'aborted' }
+      {
+        name: 'a',
+        agent: 'explore',
+        ok: true,
+        summary: 'mapped module A',
+        rounds: 2,
+        toolsUsed: ['repo_map']
+      },
+      {
+        name: 'b',
+        agent: 'worker',
+        ok: false,
+        summary: '',
+        rounds: 1,
+        toolsUsed: [],
+        error: 'aborted'
+      }
     ])
     expect(text).toContain('## a')
     expect(text).toContain('FAIL')
@@ -60,5 +82,59 @@ describe('hermetic agent ecosystem', () => {
     expect(MCP_TEMPLATES.length).toBeGreaterThanOrEqual(3)
     expect(MCP_TEMPLATES.some((t) => t.input && 'url' in t.input)).toBe(true)
     expect(MCP_TEMPLATES.some((t) => 'command' in t.input && t.input.command)).toBe(true)
+  })
+
+  it('pipeline wave + skip policy + structured siblings (hermetic orchestration)', () => {
+    const tasks = [
+      { name: 'scan-a', prompt: 'map auth' },
+      { name: 'scan-b', prompt: 'map api' },
+      { name: 'impl', prompt: 'implement', dependsOn: ['scan-a', 'scan-b'] }
+    ]
+    const { waves } = planExecutionWaves(tasks)
+    expect(waves).toHaveLength(2)
+
+    const failed = new Set(['scan-a'])
+    const { run, skip } = partitionWaveByFailPolicy(waves[1], failed, 'skip')
+    expect(run).toHaveLength(0)
+    expect(skip[0].task.name).toBe('impl')
+
+    const block = buildSiblingFindingsBlock([
+      {
+        name: 'scan-a',
+        agent: 'explore',
+        ok: false,
+        summary: '- crashed',
+        rounds: 1,
+        toolsUsed: [],
+        error: 'tool loop'
+      },
+      {
+        name: 'scan-b',
+        agent: 'explore',
+        ok: true,
+        summary: '- API in src/api.ts',
+        rounds: 2,
+        toolsUsed: ['grep_search'],
+        filesChanged: ['src/api.ts']
+      }
+    ])
+    expect(block).toContain('claims:')
+    expect(block).toContain('scan-b')
+  })
+
+  it('worker builtin denies .env edits via path policy', () => {
+    const worker = getBuiltinProfile('worker')!
+    const d = checkSubagentToolCall(
+      { name: 'edit_file', arguments: { path: '.env' } },
+      worker,
+      emptyToolBudget()
+    )
+    expect(d.allowed).toBe(false)
+    expect(d.reason).toMatch(/pathDeny|blocked/i)
+  })
+
+  it('normalizes parallel prompts to profiles', () => {
+    expect(normalizeSubagentTask({ prompt: 'Implement the cache layer' }).agent).toBe('worker')
+    expect(normalizeSubagentTask({ prompt: 'Where is auth middleware?' }).agent).toBe('explore')
   })
 })

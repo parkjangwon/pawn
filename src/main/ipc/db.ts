@@ -100,4 +100,63 @@ export function registerDbIpc(): void {
     return db.getUsageBySession(sessionId) || []
   })
   handleTrusted('db:getUsageSummary', async (_, since) => db.getUsageSummary(since))
+
+  // Mid-turn resume checkpoints
+  handleTrusted('db:saveTurnCheckpoint', async (_, sessionId, projectId, status, json) => {
+    if (typeof sessionId !== 'string' || typeof projectId !== 'string' || typeof json !== 'string') {
+      return { ok: false, error: 'Invalid checkpoint args' }
+    }
+    const capped = json.length > 8_000_000 ? json.slice(0, 8_000_000) : json
+    db.saveTurnCheckpoint(sessionId, projectId, String(status || 'running'), capped)
+    return { ok: true }
+  })
+  handleTrusted('db:clearTurnCheckpoint', async (_, sessionId, status) => {
+    if (typeof sessionId !== 'string') return { ok: false, error: 'Invalid session' }
+    db.clearTurnCheckpoint(sessionId, typeof status === 'string' ? status : undefined)
+    return { ok: true }
+  })
+  handleTrusted('db:listRunningTurnCheckpoints', async () => db.listRunningTurnCheckpoints())
+  handleTrusted('db:getTurnCheckpoint', async (_, sessionId) => {
+    if (typeof sessionId !== 'string') return null
+    return db.getTurnCheckpoint(sessionId)
+  })
+
+  // Durable change ledger
+  handleTrusted('db:saveChangeLedgerTurn', async (_, row) => {
+    if (!row || typeof row !== 'object') return { ok: false, error: 'Invalid ledger row' }
+    const r = row as {
+      id?: string
+      sessionId?: string
+      projectId?: string
+      createdAt?: number
+      label?: string
+      json?: string
+    }
+    if (typeof r.id !== 'string' || typeof r.sessionId !== 'string' || typeof r.json !== 'string') {
+      return { ok: false, error: 'Invalid ledger fields' }
+    }
+    const capped = r.json.length > 12_000_000 ? r.json.slice(0, 12_000_000) : r.json
+    db.saveChangeLedgerTurn({
+      id: r.id,
+      sessionId: r.sessionId,
+      projectId: String(r.projectId || ''),
+      createdAt: Number(r.createdAt) || Date.now(),
+      label: String(r.label || ''),
+      json: capped
+    })
+    return { ok: true }
+  })
+  handleTrusted('db:listChangeLedgerTurns', async (_, limit) =>
+    db.listChangeLedgerTurns(typeof limit === 'number' ? limit : 80)
+  )
+  handleTrusted('db:deleteChangeLedgerTurn', async (_, id) => {
+    if (typeof id !== 'string') return { ok: false, error: 'Invalid id' }
+    db.deleteChangeLedgerTurn(id)
+    return { ok: true }
+  })
+  handleTrusted('db:deleteChangeLedgerForSession', async (_, sessionId) => {
+    if (typeof sessionId !== 'string') return { ok: false, error: 'Invalid session' }
+    db.deleteChangeLedgerForSession(sessionId)
+    return { ok: true }
+  })
 }

@@ -25,6 +25,18 @@ interface ProviderState {
   shellCwdJail: boolean
   /** Merge near-duplicate memories after each agent turn. */
   autoMemoryConsolidate: boolean
+  /**
+   * Subagent tier pin policy for cost control:
+   * frugal | balanced (default) | quality
+   */
+  subagentCostMode: 'frugal' | 'balanced' | 'quality'
+  /**
+   * Max concurrent foreground subagents inside parallel_agents (1–6).
+   * Caps worktree/CPU pressure while still fanning out.
+   */
+  maxParallelSubagents: number
+  /** Auto-open Agents right panel when spawn/parallel starts. */
+  autoOpenAgentsPanel: boolean
   initialized: boolean
   init: () => Promise<void>
 
@@ -52,6 +64,22 @@ interface ProviderState {
   setShellNetwork: (v: boolean) => void
   setShellCwdJail: (v: boolean) => void
   setAutoMemoryConsolidate: (v: boolean) => void
+  setSubagentCostMode: (mode: 'frugal' | 'balanced' | 'quality') => void
+  setMaxParallelSubagents: (n: number) => void
+  setAutoOpenAgentsPanel: (v: boolean) => void
+}
+
+export type SubagentCostMode = 'frugal' | 'balanced' | 'quality'
+
+export function parseSubagentCostMode(raw: unknown): SubagentCostMode {
+  if (raw === 'frugal' || raw === 'quality' || raw === 'balanced') return raw
+  return 'balanced'
+}
+
+export function parseMaxParallelSubagents(raw: unknown): number {
+  const n = Math.floor(Number(raw))
+  if (!Number.isFinite(n)) return 4
+  return Math.min(6, Math.max(1, n))
 }
 
 function hydrateModel(m: ModelEntry): ModelEntry {
@@ -90,7 +118,10 @@ function saveToBackend(state: ProviderState): void {
       shellSandbox: state.shellSandbox,
       shellNetwork: state.shellNetwork,
       shellCwdJail: state.shellCwdJail,
-      autoMemoryConsolidate: state.autoMemoryConsolidate
+      autoMemoryConsolidate: state.autoMemoryConsolidate,
+      subagentCostMode: state.subagentCostMode,
+      maxParallelSubagents: state.maxParallelSubagents,
+      autoOpenAgentsPanel: state.autoOpenAgentsPanel
     }
   })
 }
@@ -110,6 +141,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   shellNetwork: true,
   shellCwdJail: true,
   autoMemoryConsolidate: true,
+  subagentCostMode: 'balanced',
+  maxParallelSubagents: 4,
+  autoOpenAgentsPanel: true,
   initialized: false,
 
   init: async () => {
@@ -147,6 +181,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         shellNetwork: settings.shellNetwork !== false,
         shellCwdJail: settings.shellCwdJail !== false,
         autoMemoryConsolidate: settings.autoMemoryConsolidate !== false,
+        subagentCostMode: parseSubagentCostMode(settings.subagentCostMode),
+        maxParallelSubagents: parseMaxParallelSubagents(settings.maxParallelSubagents),
+        autoOpenAgentsPanel: settings.autoOpenAgentsPanel !== false,
         initialized: true
       })
     } catch {
@@ -303,6 +340,31 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const next = { ...s, autoMemoryConsolidate: v }
       saveToBackend(next)
       return { autoMemoryConsolidate: v }
+    })
+  },
+  setSubagentCostMode: (mode) => {
+    const m = parseSubagentCostMode(mode)
+    set((s) => {
+      const next = { ...s, subagentCostMode: m }
+      saveToBackend(next)
+      return { subagentCostMode: m }
+    })
+  },
+
+  setMaxParallelSubagents: (n) => {
+    const v = parseMaxParallelSubagents(n)
+    set((s) => {
+      const next = { ...s, maxParallelSubagents: v }
+      saveToBackend(next)
+      return { maxParallelSubagents: v }
+    })
+  },
+
+  setAutoOpenAgentsPanel: (v) => {
+    set((s) => {
+      const next = { ...s, autoOpenAgentsPanel: !!v }
+      saveToBackend(next)
+      return { autoOpenAgentsPanel: !!v }
     })
   }
 }))

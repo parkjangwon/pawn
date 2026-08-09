@@ -1,0 +1,488 @@
+.agents-settings {
+  margin-top: 4px;
+}
+
+.agents-settings-subhint {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.agents-cost-mode {
+  margin-bottom: 14px;
+  padding: 12px 14px;
+  border-radius: 12px;
+}
+
+.agents-cost-mode .settings-row {
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.agents-cost-toggle {
+  flex-shrink: 0;
+}
+
+.agents-cost-hint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.agents-perf-block {
+  margin-top: 14px;
+  padding-top: 4px;
+  border-top: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.agents-perf-settings-row {
+  align-items: center !important;
+  gap: 16px;
+  padding: 12px 0 4px;
+}
+
+.agents-perf-settings-row .settings-row-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.agents-perf-settings-row .settings-row-desc {
+  max-width: 42rem;
+  line-height: 1.45;
+}
+
+.agents-pool-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+}
+
+.agents-pool-toggle button {
+  min-width: 2rem;
+  padding-left: 0.55rem;
+  padding-right: 0.55rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Compact toggle aligned with cost-mode segment control */
+.agents-switch {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  cursor: pointer;
+  user-select: none;
+}
+
+.agents-switch input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.agents-switch-track {
+  width: 40px;
+  height: 22px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--border-color) 80%, var(--bg-secondary));
+  border: 1px solid var(--border-color);
+  transition: background 0.15s ease, border-color 0.15s ease;
+  position: relative;
+}
+
+.agents-switch-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--bg-primary);
+  box-shadow: 0 1px 3px color-mix(in srgb, #000 18%, transparent);
+  transition: transform 0.15s ease;
+}
+
+.agents-switch input:checked + .agents-switch-track {
+  background: color-mix(in srgb, var(--accent) 75%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border-color));
+}
+
+.agents-switch input:checked + .agents-switch-track::after {
+  transform: translateX(18px);
+}
+
+.agents-switch input:focus-visible + .agents-switch-track {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+.agents-settings-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.agents-settings-head .settings-row-desc {
+  margin: 0;
+  flex: 1;
+}
+
+.agents-settings-head-actions {
+  display: flex;
+  flex-shrink: 0;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.agents-settings-refresh,
+.agents-settings-primary {
+  border: 1px solid var(--border-color);
+  background: transparent;
+  color: var(--text-primary);
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 6px 14px;
+  cursor: pointer;
+  transition: background 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
+}
+
+.agents-settings-refresh:hover {
+  background: var(--bg-secondary);
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border-color));
+}
+
+.agents-settings-primary {
+  border-color: transparent;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 60%, #7c5cff)
+  );
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 28%, transparent);
+}
+
+.agents-settings-primary:hover {
+  filter: brightness(1.06);
+}
+
+.agents-settings-primary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.agents-search-row {
+  margin-bottom: 12px;
+}
+
+.agents-search {
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 8px 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.agents-search:focus {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent);
+}
+
+.agents-templates {
+  margin-bottom: 14px;
+}
+
+.agents-templates-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+.agents-templates-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.agents-template-chip {
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--border-color));
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  color: var(--text-primary);
+  border-radius: 999px;
+  font-size: 12px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.agents-template-chip:hover {
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  transform: translateY(-1px);
+}
+
+.agents-settings-ok {
+  font-size: 12px;
+  color: #2a9d5c;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #3ecf8e 12%, transparent);
+}
+
+.agents-card-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 12px;
+}
+
+.agents-link-btn {
+  border: none;
+  background: none;
+  padding: 0;
+  font-size: 12px;
+  color: var(--accent);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.agents-link-btn.danger {
+  color: #e55;
+}
+
+.agents-editor {
+  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-color));
+  border-radius: 14px;
+  background:
+    radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 50%),
+    var(--bg-secondary);
+  padding: 16px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 6%, transparent);
+}
+
+.agents-editor-title {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.agents-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.agents-field > span:first-child {
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.agents-field-hint {
+  color: var(--text-secondary);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.agents-field input,
+.agents-field select,
+.agents-field textarea {
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 8px 10px;
+  font-family: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.agents-field input:focus,
+.agents-field select:focus,
+.agents-field textarea:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.agents-field textarea {
+  resize: vertical;
+  min-height: 64px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  line-height: 1.45;
+}
+
+.agents-field-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.agents-editor-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.agents-settings-h {
+  margin: 18px 0 10px;
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.agents-settings-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.agents-settings-list.agents-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.agents-card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.agents-card:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border-color));
+  box-shadow: 0 6px 16px color-mix(in srgb, #000 6%, transparent);
+  transform: translateY(-1px);
+}
+
+.agents-card-top {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.agents-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+  flex-shrink: 0;
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 50%, #7c5cff)
+  );
+}
+
+.agents-avatar.source-project {
+  background: linear-gradient(135deg, #3ecf8e, #2a9d5c);
+}
+
+.agents-avatar.source-user {
+  background: linear-gradient(135deg, #c9a227, #a67c00);
+}
+
+.agents-avatar.source-builtin {
+  background: linear-gradient(
+    135deg,
+    var(--accent),
+    color-mix(in srgb, var(--accent) 50%, #7c5cff)
+  );
+}
+
+.agents-card-head {
+  min-width: 0;
+  flex: 1;
+}
+
+.agents-settings-name {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.agents-settings-tag {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.agents-settings-tag.soft {
+  background: color-mix(in srgb, var(--bg-primary) 60%, transparent);
+  border: 1px solid var(--border-color);
+}
+
+.agents-settings-desc {
+  margin-top: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.agents-settings-meta {
+  margin-top: 8px;
+  font-size: 11px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--text-secondary);
+  word-break: break-all;
+}
+
+.agents-settings-muted {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+  padding: 12px;
+  border: 1px dashed var(--border-color);
+  border-radius: 12px;
+}
+
+.agents-settings-error {
+  font-size: 12px;
+  color: #e55;
+  margin-bottom: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, #e55 10%, transparent);
+}

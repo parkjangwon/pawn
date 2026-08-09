@@ -16,7 +16,9 @@ import {
   addMessage, getMessagesBySession, updateMessageContent, deleteMessage, clearMessages,
   saveTranscript, getTranscript, clearTranscript,
   addUsage, getUsageBySession, getUsageSummary, loadFullState,
-  addRoutine, getAllRoutines, updateRoutine, removeRoutine, setRoutineRunState
+  addRoutine, getAllRoutines, updateRoutine, removeRoutine, setRoutineRunState,
+  saveTurnCheckpoint, listRunningTurnCheckpoints, clearTurnCheckpoint, getTurnCheckpoint,
+  saveChangeLedgerTurn, listChangeLedgerTurns, deleteChangeLedgerForSession
 } from '../db'
 
 beforeAll(() => {
@@ -201,5 +203,39 @@ describe('routines', () => {
     expect(row.sessionId).toBe('s')
     expect(row.prompt).toBe('P2')
     removeRoutine('r2')
+  })
+})
+
+describe('turn checkpoints', () => {
+  it('saves, lists, and clears running checkpoints', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s1', 'proj', 'S', '/p')
+    saveTurnCheckpoint('s1', 'proj', 'running', JSON.stringify({ version: 1, sessionId: 's1' }))
+    const listed = listRunningTurnCheckpoints()
+    expect(listed).toHaveLength(1)
+    expect(listed[0].sessionId).toBe('s1')
+    expect(getTurnCheckpoint('s1')?.status).toBe('running')
+    clearTurnCheckpoint('s1', 'completed')
+    expect(listRunningTurnCheckpoints()).toHaveLength(0)
+    expect(getTurnCheckpoint('s1')?.status).toBe('completed')
+  })
+})
+
+describe('change ledger durability', () => {
+  it('persists and lists ledger turns', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s1', 'proj', 'S', '/p')
+    saveChangeLedgerTurn({
+      id: 'turn-1',
+      sessionId: 's1',
+      projectId: 'proj',
+      createdAt: Date.now(),
+      label: 'edit',
+      json: JSON.stringify({ id: 'turn-1', changes: [] })
+    })
+    const list = listChangeLedgerTurns(10)
+    expect(list.some((r) => r.id === 'turn-1')).toBe(true)
+    deleteChangeLedgerForSession('s1')
+    expect(listChangeLedgerTurns(10).some((r) => r.id === 'turn-1')).toBe(false)
   })
 })

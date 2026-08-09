@@ -47,7 +47,12 @@ const api = {
       ipcRenderer.invoke('worktree:create', projectPath, runId),
     remove: (projectPath: string, worktreePath: string, branch?: string) =>
       ipcRenderer.invoke('worktree:remove', projectPath, worktreePath, branch),
-    diffStat: (worktreePath: string) => ipcRenderer.invoke('worktree:diffStat', worktreePath)
+    diffStat: (worktreePath: string) => ipcRenderer.invoke('worktree:diffStat', worktreePath),
+    diffPatch: (worktreePath: string) => ipcRenderer.invoke('worktree:diffPatch', worktreePath),
+    changedFiles: (worktreePath: string) =>
+      ipcRenderer.invoke('worktree:changedFiles', worktreePath),
+    apply: (projectPath: string, worktreePath: string) =>
+      ipcRenderer.invoke('worktree:apply', projectPath, worktreePath)
   },
 
   // Shell (sandbox opts: { enabled?, network?, projectRoot?, jailCwd? })
@@ -75,9 +80,12 @@ const api = {
     killAll: () => ipcRenderer.invoke('shell:killAll')
   },
 
-  // Main-process streaming flag: lets the window guard against closing while
-  // an agent turn is in flight.
+  // Main-process streaming flag: multi-session aware.
+  // Prefer setSessionStreaming; setStreaming(boolean) remains for legacy/clear-all.
   setStreaming: (streaming: boolean) => ipcRenderer.send('app:streaming', streaming === true),
+  setSessionStreaming: (sessionId: string, streaming: boolean) =>
+    ipcRenderer.send('app:streaming', { sessionId, streaming: streaming === true }),
+  clearStreaming: () => ipcRenderer.invoke('app:clearStreaming'),
 
   workspace: {
     openIn: (path: string, app: string) => ipcRenderer.invoke('workspace:openIn', path, app),
@@ -218,7 +226,25 @@ const api = {
     clearTranscript: (sessionId: string) => ipcRenderer.invoke('db:clearTranscript', sessionId),
     addUsage: (row: unknown) => ipcRenderer.invoke('db:addUsage', row),
     getUsageBySession: (sessionId: string) => ipcRenderer.invoke('db:getUsageBySession', sessionId),
-    getUsageSummary: (since: number) => ipcRenderer.invoke('db:getUsageSummary', since)
+    getUsageSummary: (since: number) => ipcRenderer.invoke('db:getUsageSummary', since),
+    saveTurnCheckpoint: (sessionId: string, projectId: string, status: string, json: string) =>
+      ipcRenderer.invoke('db:saveTurnCheckpoint', sessionId, projectId, status, json),
+    clearTurnCheckpoint: (sessionId: string, status?: string) =>
+      ipcRenderer.invoke('db:clearTurnCheckpoint', sessionId, status),
+    listRunningTurnCheckpoints: () => ipcRenderer.invoke('db:listRunningTurnCheckpoints'),
+    getTurnCheckpoint: (sessionId: string) => ipcRenderer.invoke('db:getTurnCheckpoint', sessionId),
+    saveChangeLedgerTurn: (row: {
+      id: string
+      sessionId: string
+      projectId: string
+      createdAt: number
+      label: string
+      json: string
+    }) => ipcRenderer.invoke('db:saveChangeLedgerTurn', row),
+    listChangeLedgerTurns: (limit?: number) => ipcRenderer.invoke('db:listChangeLedgerTurns', limit),
+    deleteChangeLedgerTurn: (id: string) => ipcRenderer.invoke('db:deleteChangeLedgerTurn', id),
+    deleteChangeLedgerForSession: (sessionId: string) =>
+      ipcRenderer.invoke('db:deleteChangeLedgerForSession', sessionId)
   },
 
   terminal: {

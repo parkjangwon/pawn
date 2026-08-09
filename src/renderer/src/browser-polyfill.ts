@@ -108,6 +108,8 @@ if (typeof window !== 'undefined' && !window.api) {
       ready: () => {}
     },
     setStreaming: () => {},
+    setSessionStreaming: () => {},
+    clearStreaming: async () => ({ ok: true }),
     tray: {
       getEnabled: async () => true,
       setEnabled: async () => ({ ok: true }),
@@ -169,7 +171,15 @@ if (typeof window !== 'undefined' && !window.api) {
       getUsageBySession: async (sessionId: string) => { const res = await fetch('/api/db/getUsageBySession', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); return res.json() },
       getUsageSummary: async (since: number) => { const res = await fetch('/api/db/getUsageSummary', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ since }) }); return res.json() },
       getMessages: async (sessionId: string) => { const res = await fetch('/api/db/getMessages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); return res.json() },
-      clearMessages: async (sessionId: string) => { await fetch('/api/db/clearMessages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); return { ok: true } }
+      clearMessages: async (sessionId: string) => { await fetch('/api/db/clearMessages', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sessionId }) }); return { ok: true } },
+      saveTurnCheckpoint: async () => ({ ok: true }),
+      clearTurnCheckpoint: async () => ({ ok: true }),
+      listRunningTurnCheckpoints: async () => [],
+      getTurnCheckpoint: async () => null,
+      saveChangeLedgerTurn: async () => ({ ok: true }),
+      listChangeLedgerTurns: async () => [],
+      deleteChangeLedgerTurn: async () => ({ ok: true }),
+      deleteChangeLedgerForSession: async () => ({ ok: true })
     }
   }
 }

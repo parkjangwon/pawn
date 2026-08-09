@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { uid } from '../utils/uid'
 import { clearSessionRoute } from '../agent/router'
 import { useUsageStore } from './usage'
+import { enqueueDbWrite } from '../utils/dbWriteQueue'
 
 export interface Session {
   id: string
@@ -281,7 +282,9 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
-    window.api.db.addMessage(message.id, sessionId, message.role, message.content).catch(() => {})
+    enqueueDbWrite(`msg:add:${message.id}`, () =>
+      window.api.db.addMessage(message.id, sessionId, message.role, message.content)
+    )
   },
 
   updateMessageContent: (projectId, sessionId, messageId, content, persist = true) => {
@@ -296,7 +299,9 @@ export const useAppStore = create<AppState>((set, get) => ({
     const last = messagePersistTimes.get(messageId) || 0
     if (persist || now - last >= MESSAGE_PERSIST_INTERVAL_MS) {
       messagePersistTimes.set(messageId, now)
-      window.api.db.updateMessageContent(messageId, content).catch(() => {})
+      enqueueDbWrite(`msg:upd:${messageId}`, () =>
+        window.api.db.updateMessageContent(messageId, content)
+      )
     }
   },
 
@@ -319,7 +324,7 @@ export const useAppStore = create<AppState>((set, get) => ({
           : p
       )
     }))
-    window.api.db.deleteMessage(messageId).catch(() => {})
+    enqueueDbWrite(`msg:del:${messageId}`, () => window.api.db.deleteMessage(messageId))
   },
 
   updateSessionTitle: (projectId, sessionId, title) => {
