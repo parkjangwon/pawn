@@ -305,7 +305,9 @@
     "auto": "自動",
     "manual": "手動",
     "workingMulti": "作業中（{{count}} セッション）",
-    "openAgents": "エージェントパネルを開く"
+    "openAgents": "エージェントパネルを開く",
+    "subagentsRunning": "エージェント {{count}}",
+    "subagentError": "エージェントエラー"
   },
   "settings": {
     "title": "設定",
@@ -635,7 +637,10 @@
       "restoreConfirm": "復元するとローカルの Pawn データ（~/.pawn）が置き換わります。現在のフォルダは退避されます。復元後に再起動してください。続けますか？",
       "restoreOk": "復元しました。以前のデータ: {{path}}。Pawn を再起動してください。",
       "restoreFailed": "復元に失敗",
-      "keysEncrypted": "API キーは可能なら OS キーチェーンで暗号化して保存します。"
+      "keysEncrypted": "API キーは可能なら OS キーチェーンで暗号化して保存します。",
+      "fullBackupSafe": "バックアップ（秘密情報なし）",
+      "backupOkSafe": "安全バックアップ保存: {{path}}（APIキー除去）",
+      "backupFullConfirm": "フルバックアップには API キーと接続トークンが含まれます。zip を安全に保管してください。続けますか？"
     },
     "system": "システム",
     "connectionsSection": {
@@ -734,7 +739,11 @@
       "checking": "確認中…",
       "updateAvailable": "更新あり: {{latest}}（現在 {{current}}）",
       "upToDate": "最新です（{{current}}）",
-      "desktopOnly": "デスクトップアプリで利用可能"
+      "desktopOnly": "デスクトップアプリで利用可能",
+      "downloadInstall": "ダウンロードして開く",
+      "downloading": "インストーラをダウンロード中…",
+      "downloadOpened": "インストーラを開きました: {{path}}",
+      "downloadFailed": "ダウンロード失敗"
     },
     "shortcuts": "ショートカット",
     "shortcutSection": {

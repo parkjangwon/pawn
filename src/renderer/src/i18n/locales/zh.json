@@ -305,7 +305,9 @@
     "auto": "自动",
     "manual": "手动",
     "workingMulti": "工作中（{{count}} 个会话）",
-    "openAgents": "打开代理面板"
+    "openAgents": "打开代理面板",
+    "subagentsRunning": "{{count}} 个代理",
+    "subagentError": "代理错误"
   },
   "settings": {
     "title": "设置",
@@ -635,7 +637,10 @@
       "restoreConfirm": "恢复将替换本机 Pawn 数据（~/.pawn）。当前目录会先备份。恢复后请重启 Pawn。继续？",
       "restoreOk": "已恢复。原数据在 {{path}}。请重启 Pawn。",
       "restoreFailed": "恢复失败",
-      "keysEncrypted": "在可用时，API 密钥会用系统密钥链加密存储。"
+      "keysEncrypted": "在可用时，API 密钥会用系统密钥链加密存储。",
+      "fullBackupSafe": "备份（不含密钥）",
+      "backupOkSafe": "安全备份已保存：{{path}}（已去除 API 密钥）",
+      "backupFullConfirm": "完整备份包含 API 密钥与连接令牌。请妥善保管 zip。继续？"
     },
     "system": "系统",
     "connectionsSection": {
@@ -734,7 +739,11 @@
       "checking": "检查中…",
       "updateAvailable": "有更新：{{latest}}（当前 {{current}}）",
       "upToDate": "已是最新（{{current}}）",
-      "desktopOnly": "仅桌面应用可用"
+      "desktopOnly": "仅桌面应用可用",
+      "downloadInstall": "下载并打开",
+      "downloading": "正在下载安装包…",
+      "downloadOpened": "已打开安装包：{{path}}",
+      "downloadFailed": "下载失败"
     },
     "shortcuts": "快捷键",
     "shortcutSection": {

@@ -31,6 +31,36 @@ async function zipDirectory(srcDir: string, outZip: string): Promise<void> {
   })
 }
 
+/** Pick the best GitHub release asset for this OS/arch. */
+function pickReleaseAsset(
+  assets: Array<{ name?: string; browser_download_url?: string; size?: number }>
+): { name?: string; browser_download_url?: string; size?: number } | null {
+  const names = assets.filter((a) => a.name && a.browser_download_url)
+  if (!names.length) return null
+  const plat = process.platform
+  const arch = process.arch
+  const prefer: string[] = []
+  if (plat === 'darwin') {
+    prefer.push('universal', 'dmg', arch === 'arm64' ? 'arm64' : 'x64')
+  } else if (plat === 'win32') {
+    prefer.push(arch === 'arm64' ? 'arm64' : 'x64', 'setup', 'exe')
+  } else {
+    prefer.push(arch === 'arm64' ? 'arm64' : 'x64', 'AppImage', 'deb')
+  }
+  const scored = names.map((a) => {
+    const n = (a.name || '').toLowerCase()
+    let score = 0
+    for (const p of prefer) if (n.includes(p.toLowerCase())) score += 2
+    if (plat === 'darwin' && n.endsWith('.dmg')) score += 5
+    if (plat === 'win32' && n.endsWith('.exe')) score += 5
+    if (plat === 'linux' && n.endsWith('.appimage')) score += 5
+    if (plat === 'linux' && n.endsWith('.deb')) score += 3
+    return { a, score }
+  })
+  scored.sort((x, y) => y.score - x.score)
+  return scored[0]?.score > 0 ? scored[0].a : names[0]
+}
+
 /** Modern (10.7+) ICNS chunk types that embed a PNG directly, smallest-first
  *  — a menu-row icon never needs more than ~64-128px, and skipping the large
  *  ic09/ic10/ic14 (512-1024px) variants keeps the payload small. */
@@ -149,6 +179,7 @@ export function registerMiscIpc(): void {
         tag_name?: string
         html_url?: string
         name?: string
+        assets?: Array<{ name?: string; browser_download_url?: string; size?: number }>
       }
       const latest = String(data.tag_name || '')
         .replace(/^v/i, '')
@@ -157,43 +188,210 @@ export function registerMiscIpc(): void {
         return { current, updateAvailable: false, error: 'No release tag' }
       }
       const updateAvailable = compareSemver(latest, current) > 0
+      const asset = pickReleaseAsset(data.assets || [])
       return {
         current,
         latest,
         updateAvailable,
         releaseUrl: data.html_url || 'https://github.com/parkjangwon/pawn/releases/latest',
-        releaseName: data.name || latest
+        releaseName: data.name || latest,
+        downloadUrl: asset?.browser_download_url,
+        downloadName: asset?.name,
+        downloadSize: asset?.size
       }
     } catch (e) {
       return { current, updateAvailable: false, error: String(e) }
     }
   })
 
-  /** Zip a portable backup of ~/.pawn (config, db, memory — no attempt to encrypt). */
-  handleTrusted('app:exportBackup', async () => {
+  /**
+   * Download the matching platform installer into ~/.pawn/installers and open it.
+   * Avoids electron-updater dependency; user completes install via OS installer.
+   */
+  handleTrusted('app:downloadUpdate', async () => {
+    const current = app.getVersion()
     try {
-      const pawnDir = getPawnDir()
-      const { dialog } = await import('electron')
-      const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
-      const defaultName = `pawn-backup-${stamp}.zip`
-      const win = getMainWindow()
-      const save = win
-        ? await dialog.showSaveDialog(win, {
-            defaultPath: defaultName,
-            filters: [{ name: 'Zip', extensions: ['zip'] }]
-          })
-        : await dialog.showSaveDialog({
-            defaultPath: defaultName,
-            filters: [{ name: 'Zip', extensions: ['zip'] }]
-          })
-      if (save.canceled || !save.filePath) return { ok: false, cancelled: true }
-      const outPath = save.filePath.endsWith('.zip') ? save.filePath : `${save.filePath}.zip`
-      await zipDirectory(pawnDir, outPath)
-      return { ok: true, path: outPath }
+      const check = await (async () => {
+        const res = await fetch(
+          'https://api.github.com/repos/parkjangwon/pawn/releases/latest',
+          {
+            headers: {
+              Accept: 'application/vnd.github+json',
+              'User-Agent': `Pawn/${current}`
+            }
+          }
+        )
+        if (!res.ok) throw new Error(`GitHub API ${res.status}`)
+        return (await res.json()) as {
+          tag_name?: string
+          assets?: Array<{ name?: string; browser_download_url?: string }>
+        }
+      })()
+      const latest = String(check.tag_name || '').replace(/^v/i, '')
+      const asset = pickReleaseAsset(check.assets || [])
+      if (!asset?.browser_download_url || !asset.name) {
+        return { ok: false, error: 'No installer asset for this platform' }
+      }
+      if (compareSemver(latest, current) <= 0) {
+        return { ok: true, alreadyLatest: true, current }
+      }
+      const { mkdirSync, existsSync, createWriteStream } = await import('fs')
+      const { pipeline } = await import('stream/promises')
+      const { Readable } = await import('stream')
+      const dir = join(getPawnDir(), 'installers')
+      if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+      const dest = join(dir, asset.name)
+      const dl = await fetch(asset.browser_download_url, {
+        headers: { 'User-Agent': `Pawn/${current}` }
+      })
+      if (!dl.ok || !dl.body) {
+        return { ok: false, error: `Download failed (${dl.status})` }
+      }
+      const nodeStream = Readable.fromWeb(dl.body as import('stream/web').ReadableStream)
+      await pipeline(nodeStream, createWriteStream(dest))
+      await shell.openPath(dest)
+      return {
+        ok: true,
+        path: dest,
+        latest,
+        current,
+        opened: true
+      }
     } catch (e) {
       return { ok: false, error: String(e) }
     }
   })
+
+  /** Zip a portable backup of ~/.pawn. Optional exclude of config secrets. */
+  handleTrusted(
+    'app:exportBackup',
+    async (_, opts?: { excludeSecrets?: boolean }) => {
+      try {
+        const pawnDir = getPawnDir()
+        const { dialog } = await import('electron')
+        const { mkdtempSync, rmSync, cpSync, mkdirSync, existsSync, readFileSync, writeFileSync } =
+          await import('fs')
+        const { tmpdir } = await import('os')
+        const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
+        const defaultName = `pawn-backup-${stamp}.zip`
+        const win = getMainWindow()
+        const save = win
+          ? await dialog.showSaveDialog(win, {
+              defaultPath: defaultName,
+              filters: [{ name: 'Zip', extensions: ['zip'] }]
+            })
+          : await dialog.showSaveDialog({
+              defaultPath: defaultName,
+              filters: [{ name: 'Zip', extensions: ['zip'] }]
+            })
+        if (save.canceled || !save.filePath) return { ok: false, cancelled: true }
+        const outPath = save.filePath.endsWith('.zip') ? save.filePath : `${save.filePath}.zip`
+
+        let srcDir = pawnDir
+        let stage: string | null = null
+        if (opts?.excludeSecrets) {
+          stage = mkdtempSync(join(tmpdir(), 'pawn-bak-'))
+          cpSync(pawnDir, stage, { recursive: true })
+          // Strip provider apiKeys and MCP sealed env from staged copy
+          try {
+            const cfgPath = join(stage, 'config.toml')
+            if (existsSync(cfgPath)) {
+              let raw = readFileSync(cfgPath, 'utf-8')
+              // Blank apiKey lines in TOML (best-effort; keys may be nested)
+              raw = raw.replace(/apiKey\s*=\s*"[^"]*"/gi, 'apiKey = ""')
+              raw = raw.replace(/api_key\s*=\s*"[^"]*"/gi, 'api_key = ""')
+              writeFileSync(cfgPath, raw, 'utf-8')
+            }
+            const mcpPath = join(stage, 'mcp.json')
+            if (existsSync(mcpPath)) {
+              const j = JSON.parse(readFileSync(mcpPath, 'utf-8')) as {
+                mcpServers?: Record<string, { env?: Record<string, string>; headers?: Record<string, string> }>
+              }
+              if (j.mcpServers) {
+                for (const s of Object.values(j.mcpServers)) {
+                  if (s.env) s.env = Object.fromEntries(Object.keys(s.env).map((k) => [k, '']))
+                  if (s.headers)
+                    s.headers = Object.fromEntries(Object.keys(s.headers).map((k) => [k, '']))
+                }
+                writeFileSync(mcpPath, JSON.stringify(j, null, 2) + '\n', 'utf-8')
+              }
+            }
+            // Drop OAuth token blobs
+            const conn = join(stage, 'connections')
+            if (existsSync(conn)) {
+              rmSync(conn, { recursive: true, force: true })
+            }
+          } catch {
+            /* best effort scrub */
+          }
+          srcDir = stage
+        }
+        try {
+          await zipDirectory(srcDir, outPath)
+        } finally {
+          if (stage) {
+            try {
+              rmSync(stage, { recursive: true, force: true })
+            } catch {
+              /* ignore */
+            }
+          }
+        }
+        return { ok: true, path: outPath, excludeSecrets: Boolean(opts?.excludeSecrets) }
+      } catch (e) {
+        return { ok: false, error: String(e) }
+      }
+    }
+  )
+
+  /** Export one session as markdown (UI messages + optional transcript). */
+  handleTrusted(
+    'app:exportSession',
+    async (
+      _,
+      payload: {
+        title?: string
+        messages?: Array<{ role: string; content: string; modelLabel?: string }>
+        includeTranscript?: boolean
+        transcriptJson?: string
+      }
+    ) => {
+      try {
+        const { dialog } = await import('electron')
+        const title = String(payload?.title || 'session').replace(/[^\w.-]+/g, '_').slice(0, 60)
+        const win = getMainWindow()
+        const save = win
+          ? await dialog.showSaveDialog(win, {
+              defaultPath: `pawn-${title}.md`,
+              filters: [{ name: 'Markdown', extensions: ['md'] }]
+            })
+          : await dialog.showSaveDialog({
+              defaultPath: `pawn-${title}.md`,
+              filters: [{ name: 'Markdown', extensions: ['md'] }]
+            })
+        if (save.canceled || !save.filePath) return { ok: false, cancelled: true }
+        const lines = [
+          `# ${payload?.title || 'Session'}`,
+          '',
+          `_Exported ${new Date().toISOString()}_`,
+          ''
+        ]
+        for (const m of payload?.messages || []) {
+          const role = m.role === 'user' ? 'User' : m.role === 'assistant' ? 'Assistant' : 'System'
+          lines.push(`## ${role}${m.modelLabel ? ` (${m.modelLabel})` : ''}`, '', m.content || '', '')
+        }
+        if (payload?.includeTranscript && payload.transcriptJson) {
+          lines.push('---', '', '## Transcript (JSON)', '', '```json', payload.transcriptJson.slice(0, 500_000), '```')
+        }
+        const { writeFileSync } = await import('fs')
+        const path = save.filePath.endsWith('.md') ? save.filePath : `${save.filePath}.md`
+        writeFileSync(path, lines.join('\n'), 'utf-8')
+        return { ok: true, path }
+      } catch (e) {
+        return { ok: false, error: String(e) }
+      }
+    }
+  )
 
   /**
    * Restore a previously exported ~/.pawn zip.

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useProviderStore, type SubagentCostMode } from '../stores/provider'
 import {
   loadAgentProfiles,
@@ -122,7 +123,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
   const { t } = useTranslation()
   const projectPath = useAppStore((s) => {
     const p = s.projects.find((x) => x.id === s.activeProjectId)
-    return p?.paths?.[0] || ''
+    return getEffectiveProjectPath(p, useAppStore.getState().activeSessionId)
   })
   const subagentCostMode = useProviderStore((s) => s.subagentCostMode)
   const setSubagentCostMode = useProviderStore((s) => s.setSubagentCostMode)

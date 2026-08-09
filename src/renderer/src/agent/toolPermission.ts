@@ -393,7 +393,8 @@ export async function checkPermission(
       description,
       details: JSON.stringify(args, null, 2).slice(0, 500),
       path: pathArg,
-      command
+      command,
+      sessionId: opts?.sessionId
     },
     signal
   )

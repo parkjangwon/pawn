@@ -61,3 +61,43 @@ export function decryptProvidersInConfig(cfg: PawnConfig): PawnConfig {
     )
   }
 }
+
+/** Encrypt secret-looking env/header values (API keys, tokens, passwords). */
+export function encryptSecretMap(
+  map: Record<string, string> | undefined
+): Record<string, string> | undefined {
+  if (!map) return map
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(map)) {
+    if (typeof v !== 'string') continue
+    if (looksLikeSecretKey(k) || looksLikeSecretValue(v)) {
+      out[k] = encryptApiKey(v) || v
+    } else {
+      out[k] = v
+    }
+  }
+  return out
+}
+
+export function decryptSecretMap(
+  map: Record<string, string> | undefined
+): Record<string, string> | undefined {
+  if (!map) return map
+  const out: Record<string, string> = {}
+  for (const [k, v] of Object.entries(map)) {
+    out[k] = decryptApiKey(v) ?? v
+  }
+  return out
+}
+
+function looksLikeSecretKey(k: string): boolean {
+  return /token|secret|password|api[_-]?key|auth|bearer|credential/i.test(k)
+}
+
+function looksLikeSecretValue(v: string): boolean {
+  if (v.startsWith(ENC_PREFIX)) return true
+  if (/^sk-[A-Za-z0-9_-]{10,}/.test(v)) return true
+  if (/^gh[pousr]_[A-Za-z0-9]{10,}/.test(v)) return true
+  if (/^Bearer\s+/i.test(v)) return true
+  return false
+}

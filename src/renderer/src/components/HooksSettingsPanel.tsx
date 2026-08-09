@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { getEffectiveProjectPath } from '../utils/projectPath'
 
 interface HooksSettings {
   enabled: boolean
@@ -27,7 +28,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
   const { t } = useTranslation()
   const projectPath = useAppStore((s) => {
     const p = s.projects.find((x) => x.id === s.activeProjectId)
-    return p?.paths?.[0] || null
+    return getEffectiveProjectPath(p, useAppStore.getState().activeSessionId) || null
   })
   const [settings, setSettings] = useState<HooksSettings>(defaultSettings)
   const [hooks, setHooks] = useState<HookRow[]>([])

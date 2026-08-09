@@ -78,8 +78,9 @@ export default function App(): React.JSX.Element {
       if (!window.api?.checkForUpdates) return
       void window.api.checkForUpdates().then((r) => {
         if (!r.updateAvailable || !r.latest) return
+        // i18n may not be ready on first paint — use a simple bilingual-safe toast.
         setAppToast(
-          `Pawn ${r.latest} available (you have ${r.current}). Settings → System to open the release.`
+          `Pawn ${r.latest} → Settings → System (${r.current})`
         )
         window.setTimeout(() => setAppToast(null), 8000)
       })

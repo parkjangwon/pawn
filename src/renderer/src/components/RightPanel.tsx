@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useKeybinding } from '../stores/keybindings'
 import FilesView from './FilesView'
 import GitView from './GitView'
@@ -65,13 +66,7 @@ export default function RightPanel(): React.JSX.Element | null {
 
   const { projects, activeProjectId, activeSessionId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
-  const projectPath = (() => {
-    const paths = activeProject?.paths || []
-    if (!paths.length) return ''
-    const session = activeProject?.sessions.find((s) => s.id === activeSessionId)
-    if (session?.path && paths.includes(session.path)) return session.path
-    return paths[0] || ''
-  })()
+  const projectPath = getEffectiveProjectPath(activeProject, activeSessionId)
 
   // Apply panelWidth from state to DOM. The opening render starts at width 0 so
   // the transition slides the panel in; closing animates it back out.

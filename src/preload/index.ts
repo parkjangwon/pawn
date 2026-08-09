@@ -10,14 +10,29 @@ const api = {
     updateAvailable: boolean
     releaseUrl?: string
     releaseName?: string
+    downloadUrl?: string
+    downloadName?: string
+    downloadSize?: number
     error?: string
   }> => ipcRenderer.invoke('app:checkForUpdates'),
-  exportBackup: (): Promise<{
+  downloadUpdate: (): Promise<{
+    ok?: boolean
+    path?: string
+    latest?: string
+    current?: string
+    opened?: boolean
+    alreadyLatest?: boolean
+    error?: string
+  }> => ipcRenderer.invoke('app:downloadUpdate'),
+  exportBackup: (opts?: {
+    excludeSecrets?: boolean
+  }): Promise<{
     ok?: boolean
     path?: string
     cancelled?: boolean
     error?: string
-  }> => ipcRenderer.invoke('app:exportBackup'),
+    excludeSecrets?: boolean
+  }> => ipcRenderer.invoke('app:exportBackup', opts || {}),
   importBackup: (): Promise<{
     ok?: boolean
     path?: string
@@ -26,6 +41,13 @@ const api = {
     backupOfPrevious?: string
     needsRestart?: boolean
   }> => ipcRenderer.invoke('app:importBackup'),
+  exportSession: (payload: {
+    title?: string
+    messages?: Array<{ role: string; content: string; modelLabel?: string }>
+    includeTranscript?: boolean
+    transcriptJson?: string
+  }): Promise<{ ok?: boolean; path?: string; cancelled?: boolean; error?: string }> =>
+    ipcRenderer.invoke('app:exportSession', payload),
 
   // Dialog
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),
@@ -174,6 +196,8 @@ const api = {
   browser: {
     open: (url: string) => ipcRenderer.invoke('browser:open', url),
     ensure: () => ipcRenderer.invoke('browser:ensure'),
+    claim: (sessionId: string) => ipcRenderer.invoke('browser:claim', sessionId),
+    release: (sessionId?: string) => ipcRenderer.invoke('browser:release', sessionId),
     create: () => ipcRenderer.invoke('browser:create'),
     destroy: () => ipcRenderer.invoke('browser:destroy'),
     setVisible: (visible: boolean) => ipcRenderer.invoke('browser:setVisible', visible),

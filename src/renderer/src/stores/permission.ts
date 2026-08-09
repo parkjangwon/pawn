@@ -16,6 +16,8 @@ interface PermissionRequest {
   path?: string
   /** Shell command when known */
   command?: string
+  /** Owning chat session (multi-session isolation). */
+  sessionId?: string
 }
 
 interface PermissionState {
@@ -30,6 +32,8 @@ interface PermissionState {
   resolve: (id: string, approved: boolean) => void
   /** Deny every pending prompt (Stop / session teardown). */
   denyAll: () => void
+  /** Deny only pending prompts for one chat session. */
+  denyForSession: (sessionId: string) => void
   approveSession: (type: PermissionType) => void
   addRule: (
     rule:
@@ -190,6 +194,27 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
       resolvers.delete(id)
     }
     set({ pending: [] })
+  },
+
+  denyForSession: (sessionId) => {
+    if (!sessionId) {
+      get().denyAll()
+      return
+    }
+    const pending = get().pending
+    const drop = pending.filter((p) => p.sessionId === sessionId)
+    for (const p of drop) {
+      const entry = resolvers.get(p.id)
+      if (!entry) continue
+      try {
+        entry.cleanup()
+        entry.resolve(false)
+      } catch {
+        /* ignore */
+      }
+      resolvers.delete(p.id)
+    }
+    set((s) => ({ pending: s.pending.filter((p) => p.sessionId !== sessionId) }))
   },
 
   approveSession: (type) => {

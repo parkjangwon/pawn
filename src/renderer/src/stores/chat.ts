@@ -215,9 +215,28 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const uIdx = displayUserIndex(session.messages, userMessageId)
     if (uIdx < 0) return
 
-    // Durable transcript: keep everything *before* this user turn (tool pairs intact).
+    // Preserve vision attachments from the original user transcript entry.
+    let attachments: ChatAttachment[] | undefined
     try {
       const entries = await loadTranscript(projectId, sessionId)
+      // Find the user entry at this ordinal for attachments before truncating.
+      let seen = 0
+      for (const e of entries) {
+        if (e.role !== 'user') continue
+        if (seen === uIdx) {
+          if (e.attachments?.length) {
+            attachments = e.attachments.map((a, i) => ({
+              id: `edit-${i}`,
+              name: a.name || 'image',
+              kind: 'image' as const,
+              dataUrl: a.dataUrl,
+              bytes: a.dataUrl?.length || 0
+            }))
+          }
+          break
+        }
+        seen++
+      }
       const kept = sealTranscriptTail(truncateBeforeUserIndex(entries, uIdx))
       persistTranscript(sessionId, kept, '', undefined)
     } catch {
@@ -228,7 +247,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       includeSelf: true
     })
     clearSessionRoute(sessionId)
-    get().sendMessage(projectId, sessionId, text, 'steer')
+    get().sendMessage(projectId, sessionId, text, 'steer', attachments)
   },
 
   regenerate: async (projectId, sessionId, assistantMessageId) => {
@@ -296,7 +315,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
       clearTurnCheckpoint(sessionId, 'aborted')
       // Kill only this session's agent shells (other sessions keep running).
       void window.api.shell?.killSession?.(sessionId)?.catch?.(() => {})
+      void window.api.browser?.release?.(sessionId)?.catch?.(() => {})
       setSessionStreamingFlags(set, get, sessionId, false)
+      usePermissionStore.getState().denyForSession?.(sessionId)
       if (get().streamingSessionIds.length === 0) {
         void window.api.browser?.hideCursor?.().catch(() => {})
         usePermissionStore.getState().denyAll()
@@ -678,8 +699,18 @@ async function agentLoop(
       projectPreamble +=
         (projectPreamble ? '\n\n' : '') +
         `--- Project roots (multi-folder) ---\n` +
-        projectPaths.map((p, i) => `${i === 0 ? 'primary' : `extra-${i}`}: ${p}`).join('\n') +
-        `\nPrimary cwd for tools is the first root. When the user names a path under another root, resolve absolute paths against that root.`
+        projectPaths
+          .map((p, i) => {
+            const tag =
+              projectPath && p === projectPath
+                ? 'active'
+                : i === 0
+                  ? 'primary'
+                  : `extra-${i}`
+            return `${tag}: ${p}`
+          })
+          .join('\n') +
+        `\nActive tool cwd is the path marked active (session root chip). When the user names a path under another root, resolve absolute paths against that root.`
     }
     if (projectPath) {
       try {

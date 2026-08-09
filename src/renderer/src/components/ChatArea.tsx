@@ -266,6 +266,37 @@ export default function ChatArea({
 
   const handleExport = (): void => {
     if (!activeSession || messages.length === 0) return
+    const payload = {
+      title: activeSession.title,
+      messages: messages
+        .filter((m) => m.role !== 'system')
+        .map((m) => ({
+          role: m.role,
+          content: m.content,
+          modelLabel: m.modelLabel
+        }))
+    }
+    if (window.api?.exportSession) {
+      void window.api
+        .exportSession(payload)
+        .then((r) => {
+          if (r.ok && r.path) {
+            try {
+              window.dispatchEvent(
+                new CustomEvent('pawn:toast', {
+                  detail: { kind: 'info', message: `Exported → ${r.path}` }
+                })
+              )
+            } catch {
+              /* ignore */
+            }
+          }
+        })
+        .catch(() => {
+          /* fall through browser path */
+        })
+      return
+    }
     let md = `# ${activeSession.title}\n\n`
     for (const msg of messages) {
       if (msg.role === 'system') continue
@@ -327,12 +358,12 @@ export default function ChatArea({
       {
         id: 'plan', label: t('chat.slash.plan'), description: t('chat.slash.planDesc'),
         icon: ic(<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><path d="M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2" /></>),
-        action: () => setAgentMode('plan')
+        action: () => setAgentMode('plan', activeSessionId)
       },
       {
         id: 'build', label: t('chat.slash.build'), description: t('chat.slash.buildDesc'),
         icon: ic(<><path d="M12 19V5M5 12l7-7 7 7" /></>),
-        action: () => setAgentMode('build')
+        action: () => setAgentMode('build', activeSessionId)
       },
       {
         id: 'issue-pr',

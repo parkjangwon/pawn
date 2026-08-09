@@ -28,9 +28,9 @@ export default function StatusBar(): React.JSX.Element {
 
   const subLabel =
     activeSubs.length > 0
-      ? `${activeSubs.length} subagent${activeSubs.length > 1 ? 's' : ''}`
+      ? t('statusBar.subagentsRunning', { count: activeSubs.length })
       : recentSubs.some((r) => r.status === 'error')
-        ? 'subagent err'
+        ? t('statusBar.subagentError')
         : null
 
   return (

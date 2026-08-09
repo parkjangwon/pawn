@@ -36,6 +36,8 @@ function normalizeBrowserUrl(rawUrl: string): string | null {
 let browserView: WebContentsView | null = null
 let browserVisible = false
 let pickerActive = false
+/** Session currently driving the shared browser (multi-session isolation). */
+let browserOwnerSessionId: string | null = null
 const browserLogs: string[] = []
 
 function emitBrowserEvent(payload: Record<string, unknown>): void {
@@ -56,8 +58,20 @@ function browserState(): Record<string, unknown> {
     loading: wc.isLoading(),
     canGoBack: nav ? nav.canGoBack() : false,
     canGoForward: nav ? nav.canGoForward() : false,
-    visible: browserVisible
+    visible: browserVisible,
+    ownerSessionId: browserOwnerSessionId
   }
+}
+
+function claimBrowserOwner(sessionId?: string | null): { error?: string } {
+  if (!sessionId) return {}
+  if (browserOwnerSessionId && browserOwnerSessionId !== sessionId) {
+    return {
+      error: `Browser is in use by another session (${browserOwnerSessionId.slice(0, 8)}…). Stop that turn or wait.`
+    }
+  }
+  browserOwnerSessionId = sessionId
+  return {}
 }
 
 function ensureBrowserView(): WebContentsView {
@@ -160,6 +174,24 @@ function resolverExpr(ref: string, selector: string): string {
 }
 
 export function registerBrowserIpc(): void {
+  handleTrusted('browser:claim', async (_, sessionId?: string) => {
+    const claim = claimBrowserOwner(typeof sessionId === 'string' ? sessionId : undefined)
+    if (claim.error) return { ok: false, ...claim, ...browserState() }
+    return { ok: true, ...browserState() }
+  })
+
+  handleTrusted('browser:release', async (_, sessionId?: string) => {
+    if (
+      typeof sessionId === 'string' &&
+      browserOwnerSessionId &&
+      browserOwnerSessionId !== sessionId
+    ) {
+      return { ok: false, error: 'Not the browser owner' }
+    }
+    browserOwnerSessionId = null
+    return { ok: true, ...browserState() }
+  })
+
   handleTrusted('browser:ensure', async () => {
     try {
       ensureBrowserView()
@@ -188,6 +220,7 @@ export function registerBrowserIpc(): void {
       browserView = null
       browserVisible = false
       pickerActive = false
+      browserOwnerSessionId = null
       browserLogs.length = 0
       return { ok: true }
     } catch (err) {
@@ -263,7 +296,9 @@ export function registerBrowserIpc(): void {
   handleTrusted('browser:state', async () => browserState())
   handleTrusted('browser:logs', async () => browserLogs.slice(-50))
 
-  handleTrusted('browser:navigate', async (_, rawUrl: string) => {
+  handleTrusted('browser:navigate', async (_, rawUrl: string, sessionId?: string) => {
+    const claim = claimBrowserOwner(typeof sessionId === 'string' ? sessionId : undefined)
+    if (claim.error) return claim
     const view = ensureBrowserView()
     const wc = view.webContents
     const url = normalizeBrowserUrl(rawUrl)

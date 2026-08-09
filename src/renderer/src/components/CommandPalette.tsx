@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useChatStore } from '../stores/chat'
 import { useThemeStore } from '../stores/theme'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
@@ -260,8 +261,8 @@ export default function CommandPalette({
     const projectCmds: Command[] = projectEntries.map((p) => ({
       id: `project-${p.id}`,
       label: p.name,
-      description: p.paths?.[0]
-        ? t('commandPalette.projectPath', { path: p.paths[0] })
+      description: getEffectiveProjectPath(p)
+        ? t('commandPalette.projectPath', { path: getEffectiveProjectPath(p) })
         : t('commandPalette.projectNoPath'),
       group: 'projects' as GroupId,
       keywords: `${p.name} ${p.paths?.join(' ') || ''}`,

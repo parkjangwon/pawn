@@ -6,6 +6,7 @@ import { StdioClientTransport } from '@modelcontextprotocol/sdk/client/stdio.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { SSEClientTransport } from '@modelcontextprotocol/sdk/client/sse.js'
 import { getPawnDir } from './config'
+import { decryptSecretMap, encryptSecretMap } from './providerSecrets'
 
 /** Where a server's config came from — controls whether Settings offers a
  *  delete button. `user-claude` is read-only (we never write Claude Code's
@@ -92,7 +93,10 @@ function parseHeaders(raw: unknown): Record<string, string> | undefined {
 
 function normalizeEntry(id: string, raw: unknown, source: McpServerSource, cwd?: string): McpServerConfig | null {
   if (typeof raw !== 'object' || raw === null) return null
-  const r = raw as Record<string, unknown>
+  // Decrypt sealed env/headers when reading Pawn's global mcp.json.
+  const unsealed = source === 'user-pawn' ? unsealMcpServerEntry(raw) : raw
+  if (typeof unsealed !== 'object' || unsealed === null) return null
+  const r = unsealed as Record<string, unknown>
   const typeRaw = typeof r.type === 'string' ? r.type.toLowerCase() : ''
   const url = typeof r.url === 'string' ? r.url.trim() : ''
   const headers = parseHeaders(r.headers)
@@ -342,7 +346,46 @@ async function readMcpServersFile(path: string): Promise<Record<string, unknown>
 
 async function writeMcpServersFile(path: string, contents: Record<string, unknown>): Promise<void> {
   await mkdir(dirname(path), { recursive: true })
-  await writeFile(path, JSON.stringify(contents, null, 2) + '\n', 'utf-8')
+  // Seal secret env/headers only for the user-global registry (OS keychain).
+  // Project `.mcp.json` stays plain for team sharing; users should use env refs.
+  let toWrite = contents
+  if (path === userPawnConfigPath()) {
+    toWrite = sealMcpFileSecrets(contents)
+  }
+  await writeFile(path, JSON.stringify(toWrite, null, 2) + '\n', 'utf-8')
+}
+
+function sealMcpFileSecrets(contents: Record<string, unknown>): Record<string, unknown> {
+  const servers = contents.mcpServers
+  if (typeof servers !== 'object' || servers === null) return contents
+  const next: Record<string, unknown> = {}
+  for (const [id, raw] of Object.entries(servers as Record<string, unknown>)) {
+    if (typeof raw !== 'object' || raw === null) {
+      next[id] = raw
+      continue
+    }
+    const r = { ...(raw as Record<string, unknown>) }
+    if (r.env && typeof r.env === 'object') {
+      r.env = encryptSecretMap(r.env as Record<string, string>)
+    }
+    if (r.headers && typeof r.headers === 'object') {
+      r.headers = encryptSecretMap(r.headers as Record<string, string>)
+    }
+    next[id] = r
+  }
+  return { ...contents, mcpServers: next }
+}
+
+function unsealMcpServerEntry(raw: unknown): unknown {
+  if (typeof raw !== 'object' || raw === null) return raw
+  const r = { ...(raw as Record<string, unknown>) }
+  if (r.env && typeof r.env === 'object') {
+    r.env = decryptSecretMap(r.env as Record<string, string>)
+  }
+  if (r.headers && typeof r.headers === 'object') {
+    r.headers = decryptSecretMap(r.headers as Record<string, string>)
+  }
+  return r
 }
 
 export interface McpServerInput {

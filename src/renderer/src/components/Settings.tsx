@@ -5,6 +5,7 @@ import { useThemeStore } from '../stores/theme'
 import { useMcpStore } from '../stores/mcp'
 import { usePrefsStore } from '../stores/prefs'
 import { useAppStore } from '../stores/app'
+import { getEffectiveProjectPath } from '../utils/projectPath'
 import {
   KEYBINDING_IDS, DEFAULT_KEYBINDINGS, comboToString, formatCombo,
   useKeybindingsStore, type KeyBindingId
@@ -216,7 +217,7 @@ export default function Settings({
   })
   const { projects, activeProjectId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
-  const projectPath = activeProject?.paths?.[0] || ''
+  const projectPath = getEffectiveProjectPath(activeProject, useAppStore.getState().activeSessionId)
 
   const applyModelIdGuess = (modelId: string): void => {
     const guess = guessPricing(modelId)
@@ -1716,45 +1717,82 @@ export default function Settings({
                     {updateMsg || t('settings.systemSection.checkUpdatesDesc')}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="btn-action"
-                  disabled={updateChecking}
-                  onClick={() => {
-                    if (!window.api?.checkForUpdates) {
-                      setUpdateMsg(t('settings.systemSection.desktopOnly'))
-                      return
-                    }
-                    setUpdateChecking(true)
-                    void window.api
-                      .checkForUpdates()
-                      .then((r) => {
-                        if (r.error && !r.latest) {
-                          setUpdateMsg(r.error)
-                          return
-                        }
-                        if (r.updateAvailable) {
-                          setUpdateMsg(
-                            t('settings.systemSection.updateAvailable', {
-                              latest: r.latest,
-                              current: r.current
-                            })
-                          )
-                          if (r.releaseUrl) void window.api.browser?.open?.(r.releaseUrl)
-                        } else {
-                          setUpdateMsg(
-                            t('settings.systemSection.upToDate', { current: r.current })
-                          )
-                        }
-                      })
-                      .catch((e) => setUpdateMsg(String(e)))
-                      .finally(() => setUpdateChecking(false))
-                  }}
-                >
-                  {updateChecking
-                    ? t('settings.systemSection.checking')
-                    : t('settings.systemSection.checkUpdates')}
-                </button>
+                <div className="settings-row-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  <button
+                    type="button"
+                    className="btn-action"
+                    disabled={updateChecking}
+                    onClick={() => {
+                      if (!window.api?.checkForUpdates) {
+                        setUpdateMsg(t('settings.systemSection.desktopOnly'))
+                        return
+                      }
+                      setUpdateChecking(true)
+                      void window.api
+                        .checkForUpdates()
+                        .then((r) => {
+                          if (r.error && !r.latest) {
+                            setUpdateMsg(r.error)
+                            return
+                          }
+                          if (r.updateAvailable) {
+                            setUpdateMsg(
+                              t('settings.systemSection.updateAvailable', {
+                                latest: r.latest,
+                                current: r.current
+                              })
+                            )
+                          } else {
+                            setUpdateMsg(
+                              t('settings.systemSection.upToDate', { current: r.current })
+                            )
+                          }
+                        })
+                        .catch((e) => setUpdateMsg(String(e)))
+                        .finally(() => setUpdateChecking(false))
+                    }}
+                  >
+                    {updateChecking
+                      ? t('settings.systemSection.checking')
+                      : t('settings.systemSection.checkUpdates')}
+                  </button>
+                  <button
+                    type="button"
+                    className="btn-action"
+                    disabled={updateChecking}
+                    onClick={() => {
+                      if (!window.api?.downloadUpdate) {
+                        setUpdateMsg(t('settings.systemSection.desktopOnly'))
+                        return
+                      }
+                      setUpdateChecking(true)
+                      setUpdateMsg(t('settings.systemSection.downloading'))
+                      void window.api
+                        .downloadUpdate()
+                        .then((r) => {
+                          if (r.alreadyLatest) {
+                            setUpdateMsg(
+                              t('settings.systemSection.upToDate', {
+                                current: r.current || ''
+                              })
+                            )
+                            return
+                          }
+                          if (r.ok && r.path) {
+                            setUpdateMsg(
+                              t('settings.systemSection.downloadOpened', { path: r.path })
+                            )
+                          } else {
+                            setUpdateMsg(r.error || t('settings.systemSection.downloadFailed'))
+                          }
+                        })
+                        .catch((e) => setUpdateMsg(String(e)))
+                        .finally(() => setUpdateChecking(false))
+                    }}
+                  >
+                    {t('settings.systemSection.downloadInstall')}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -1873,7 +1911,27 @@ export default function Settings({
                         setBackupMsg(t('settings.dataSection.desktopOnly'))
                         return
                       }
-                      void window.api.exportBackup().then((r) => {
+                      void window.api.exportBackup({ excludeSecrets: true }).then((r) => {
+                        if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
+                        else if (r.ok && r.path)
+                          setBackupMsg(
+                            t('settings.dataSection.backupOkSafe', { path: r.path })
+                          )
+                        else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
+                      })
+                    }}
+                  >
+                    {t('settings.dataSection.fullBackupSafe')}
+                  </button>
+                  <button
+                    className="btn-action"
+                    onClick={() => {
+                      if (!window.api?.exportBackup) {
+                        setBackupMsg(t('settings.dataSection.desktopOnly'))
+                        return
+                      }
+                      if (!window.confirm(t('settings.dataSection.backupFullConfirm'))) return
+                      void window.api.exportBackup({ excludeSecrets: false }).then((r) => {
                         if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
                         else if (r.ok && r.path)
                           setBackupMsg(t('settings.dataSection.backupOk', { path: r.path }))

@@ -69,18 +69,15 @@ export function displayUserIndex(
 }
 
 /**
- * Drop trailing incomplete assistant/tool pairs (shouldn't happen at user cut,
- * but defensive for corrupt transcripts).
+ * Drop a trailing assistant that still expects tool results (no tool entries after it).
+ * Complete tool pairs at the end are kept intact.
  */
 export function sealTranscriptTail(entries: TranscriptEntry[]): TranscriptEntry[] {
   if (!entries.length) return entries
   const out = entries.slice()
-  while (out.length && out[out.length - 1].role === 'tool') {
-    out.pop()
-  }
   const last = out[out.length - 1]
+  // Orphan tool_use: assistant ended with toolCalls but no following tool results.
   if (last?.role === 'assistant' && last.toolCalls?.length) {
-    // Assistant requested tools but results missing — drop that assistant too.
     out.pop()
   }
   return out

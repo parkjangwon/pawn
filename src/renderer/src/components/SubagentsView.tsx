@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { getEffectiveProjectPath } from '../utils/projectPath'
 import {
   useSubagentRunsStore,
   sessionTotals,
@@ -50,7 +51,10 @@ export default function SubagentsView(): React.JSX.Element {
   const activeProjectId = useAppStore((s) => s.activeProjectId)
   const projects = useAppStore((s) => s.projects)
   const projectPath =
-    projects.find((p) => p.id === activeProjectId)?.paths?.[0] || undefined
+    getEffectiveProjectPath(
+      projects.find((p) => p.id === activeProjectId),
+      activeSessionId
+    ) || undefined
   const runs = useSubagentRunsStore((s) => s.runs)
   const cancel = useSubagentRunsStore((s) => s.cancel)
   const cancelAllForSession = useSubagentRunsStore((s) => s.cancelAllForSession)

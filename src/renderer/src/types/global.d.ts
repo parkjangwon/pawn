@@ -65,13 +65,28 @@ declare global {
         updateAvailable: boolean
         releaseUrl?: string
         releaseName?: string
+        downloadUrl?: string
+        downloadName?: string
+        downloadSize?: number
         error?: string
       }>
-      exportBackup: () => Promise<{
+      downloadUpdate: () => Promise<{
+        ok?: boolean
+        path?: string
+        latest?: string
+        current?: string
+        opened?: boolean
+        alreadyLatest?: boolean
+        error?: string
+      }>
+      exportBackup: (opts?: {
+        excludeSecrets?: boolean
+      }) => Promise<{
         ok?: boolean
         path?: string
         cancelled?: boolean
         error?: string
+        excludeSecrets?: boolean
       }>
       importBackup: () => Promise<{
         ok?: boolean
@@ -81,6 +96,12 @@ declare global {
         backupOfPrevious?: string
         needsRestart?: boolean
       }>
+      exportSession: (payload: {
+        title?: string
+        messages?: Array<{ role: string; content: string; modelLabel?: string }>
+        includeTranscript?: boolean
+        transcriptJson?: string
+      }) => Promise<{ ok?: boolean; path?: string; cancelled?: boolean; error?: string }>
       selectFolder: () => Promise<string | null>
       saveFile: (defaultName: string, content: string) => Promise<string | null>
       openFile: () => Promise<string | null>
@@ -334,6 +355,8 @@ declare global {
       browser: {
         open: (url: string) => Promise<{ ok?: boolean }>
         ensure: () => Promise<{ ok?: boolean; error?: string }>
+        claim: (sessionId: string) => Promise<{ ok?: boolean; error?: string; ownerSessionId?: string }>
+        release: (sessionId?: string) => Promise<{ ok?: boolean; error?: string }>
         create: () => Promise<{ ok?: boolean; error?: string }>
         destroy: () => Promise<{ ok?: boolean; error?: string }>
         setVisible: (visible: boolean) => Promise<{ ok?: boolean }>

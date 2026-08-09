@@ -3,7 +3,7 @@ import type { ToolHandler } from './types'
 
 
 const browser_navigate: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser()
+        const b = await requireBrowser(ctx?.sessionId)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.navigate(call.arguments.url as string)
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -15,7 +15,7 @@ const browser_navigate: ToolHandler = async (call, projectPath, _signal, ctx, ap
 
 
 const browser_snapshot: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser()
+        const b = await requireBrowser(ctx?.sessionId)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.snapshot((call.arguments.filter as string) || '')
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -39,7 +39,7 @@ const browser_snapshot: ToolHandler = async (call, projectPath, _signal, ctx, ap
 
 
 const browser_click: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser()
+        const b = await requireBrowser(ctx?.sessionId)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.click(call.arguments.ref as string, call.arguments.selector as string)
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -48,7 +48,7 @@ const browser_click: ToolHandler = async (call, projectPath, _signal, ctx, api) 
 
 
 const browser_fill: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser()
+        const b = await requireBrowser(ctx?.sessionId)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.fill(
           call.arguments.ref as string,
@@ -62,7 +62,7 @@ const browser_fill: ToolHandler = async (call, projectPath, _signal, ctx, api) =
 
 
 const browser_read_text: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser()
+        const b = await requireBrowser(ctx?.sessionId)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.readText((call.arguments.selector as string) || '')
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -71,7 +71,7 @@ const browser_read_text: ToolHandler = async (call, projectPath, _signal, ctx, a
 
 
 const browser_eval: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser()
+        const b = await requireBrowser(ctx?.sessionId)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.evaluate(call.arguments.code as string)
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -80,7 +80,7 @@ const browser_eval: ToolHandler = async (call, projectPath, _signal, ctx, api) =
 
 
 const browser_back: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser()
+        const b = await requireBrowser(ctx?.sessionId)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.back()
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -89,7 +89,7 @@ const browser_back: ToolHandler = async (call, projectPath, _signal, ctx, api) =
 
 
 const browser_screenshot: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser()
+        const b = await requireBrowser(ctx?.sessionId)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.screenshot()
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -110,7 +110,7 @@ const browser_open_external: ToolHandler = async (call, projectPath, _signal, ct
       }
 
 const browser_wait: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-  const b = await requireBrowser()
+  const b = await requireBrowser(ctx?.sessionId)
   if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
   const res = await b.agent.wait({
     ms: call.arguments.ms != null ? Number(call.arguments.ms) : undefined,
@@ -124,7 +124,7 @@ const browser_wait: ToolHandler = async (call, projectPath, _signal, ctx, api) =
 }
 
 const browser_scroll: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-  const b = await requireBrowser()
+  const b = await requireBrowser(ctx?.sessionId)
   if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
   const res = await b.agent.scroll({
     dy: call.arguments.dy != null ? Number(call.arguments.dy) : undefined,
@@ -139,7 +139,7 @@ const browser_scroll: ToolHandler = async (call, projectPath, _signal, ctx, api)
 }
 
 const browser_select: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-  const b = await requireBrowser()
+  const b = await requireBrowser(ctx?.sessionId)
   if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
   const res = await b.agent.select({
     ref: call.arguments.ref != null ? String(call.arguments.ref) : undefined,

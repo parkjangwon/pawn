@@ -69,6 +69,16 @@ pawn
 | Windows | `Pawn-<version>-x64-setup.exe` or `…-arm64-setup.exe` |
 | Linux | `.AppImage` / `.deb` (or build with `npm run dist:linux`) |
 
+
+### Signing / notarization (maintainers)
+
+Release builds are unsigned by default. To ship Gatekeeper-friendly macOS builds, set these GitHub Actions secrets on the repo:
+
+- `CSC_LINK` / `CSC_KEY_PASSWORD` — Developer ID certificate (p12)
+- `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID` — notarization
+
+The `afterSign` hook (`build/notarize.cjs`) runs only when those vars are present.
+
 **Requirements:** macOS 10.12+ / Windows 10+ / Linux · OpenAI- or Claude-compatible API key (BYOK)
 
 After launch: add your API key in Settings, open a project folder, and chat.

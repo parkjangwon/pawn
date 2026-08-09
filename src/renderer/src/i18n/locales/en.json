@@ -305,7 +305,9 @@
     "auto": "Auto",
     "manual": "Manual",
     "workingMulti": "Working ({{count}} sessions)",
-    "openAgents": "Open Agents panel"
+    "openAgents": "Open Agents panel",
+    "subagentsRunning": "{{count}} agent(s)",
+    "subagentError": "agent error"
   },
   "settings": {
     "title": "Settings",
@@ -635,7 +637,10 @@
       "restoreConfirm": "Restore will replace local Pawn data (~/.pawn). A copy of the current folder is kept. Restart Pawn after restore. Continue?",
       "restoreOk": "Restored. Previous data saved at {{path}}. Please restart Pawn.",
       "restoreFailed": "Restore failed",
-      "keysEncrypted": "API keys are encrypted at rest with the OS keychain when available."
+      "keysEncrypted": "API keys are encrypted at rest with the OS keychain when available.",
+      "fullBackupSafe": "Backup (no secrets)",
+      "backupOkSafe": "Safe backup saved to {{path}} (API keys stripped)",
+      "backupFullConfirm": "Full backup includes API keys and connection tokens. Store the zip securely. Continue?"
     },
     "system": "System",
     "connectionsSection": {
@@ -734,7 +739,11 @@
       "checking": "Checking…",
       "updateAvailable": "Update available: {{latest}} (you have {{current}})",
       "upToDate": "You’re up to date ({{current}})",
-      "desktopOnly": "Available in the desktop app"
+      "desktopOnly": "Available in the desktop app",
+      "downloadInstall": "Download & open",
+      "downloading": "Downloading installer…",
+      "downloadOpened": "Installer opened: {{path}}",
+      "downloadFailed": "Download failed"
     },
     "shortcuts": "Shortcuts",
     "shortcutSection": {

@@ -305,7 +305,9 @@
     "auto": "자동",
     "manual": "수동",
     "workingMulti": "작업 중 ({{count}}개 세션)",
-    "openAgents": "에이전트 패널 열기"
+    "openAgents": "에이전트 패널 열기",
+    "subagentsRunning": "에이전트 {{count}}",
+    "subagentError": "에이전트 오류"
   },
   "settings": {
     "title": "설정",
@@ -635,7 +637,10 @@
       "restoreConfirm": "복원하면 로컬 Pawn 데이터(~/.pawn)가 교체됩니다. 현재 폴더는 백업됩니다. 복원 후 Pawn을 재시작하세요. 계속할까요?",
       "restoreOk": "복원됨. 이전 데이터: {{path}}. Pawn을 재시작하세요.",
       "restoreFailed": "복원 실패",
-      "keysEncrypted": "API 키는 가능하면 OS 키체인으로 암호화되어 저장됩니다."
+      "keysEncrypted": "API 키는 가능하면 OS 키체인으로 암호화되어 저장됩니다.",
+      "fullBackupSafe": "백업 (시크릿 제외)",
+      "backupOkSafe": "안전 백업 저장: {{path}} (API 키 제거됨)",
+      "backupFullConfirm": "전체 백업에는 API 키와 연결 토큰이 포함됩니다. zip을 안전하게 보관하세요. 계속할까요?"
     },
     "system": "시스템",
     "connectionsSection": {
@@ -734,7 +739,11 @@
       "checking": "확인 중…",
       "updateAvailable": "업데이트 가능: {{latest}} (현재 {{current}})",
       "upToDate": "최신입니다 ({{current}})",
-      "desktopOnly": "데스크톱 앱에서 사용 가능"
+      "desktopOnly": "데스크톱 앱에서 사용 가능",
+      "downloadInstall": "다운로드 후 열기",
+      "downloading": "설치 파일 다운로드 중…",
+      "downloadOpened": "설치 파일 열림: {{path}}",
+      "downloadFailed": "다운로드 실패"
     },
     "shortcuts": "단축키",
     "shortcutSection": {

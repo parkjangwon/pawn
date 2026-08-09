@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useKeybinding } from '../stores/keybindings'
 import TerminalView from './TerminalView'
 import './BottomTerminal.css'
@@ -53,13 +54,7 @@ export default function BottomTerminal(): React.JSX.Element {
 
   const { projects, activeProjectId, activeSessionId } = useAppStore()
   const activeProject = projects.find((p) => p.id === activeProjectId)
-  const projectPath = (() => {
-    const paths = activeProject?.paths || []
-    if (!paths.length) return ''
-    const session = activeProject?.sessions.find((s) => s.id === activeSessionId)
-    if (session?.path && paths.includes(session.path)) return session.path
-    return paths[0] || ''
-  })()
+  const projectPath = getEffectiveProjectPath(activeProject, activeSessionId)
 
   useLayoutEffect(() => {
     if (!visible) return
