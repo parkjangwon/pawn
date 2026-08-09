@@ -37,11 +37,16 @@ export type SubagentRun = {
   lastTool?: string
   isolation?: 'none' | 'worktree'
   worktreePath?: string
+  /** Project root for delayed worktree apply/discard. */
+  projectPath?: string
+  worktreeBranch?: string
   summary?: string
   error?: string
   filesChanged?: string[]
   applied?: boolean
   applyConflicts?: string[]
+  /** Waiting for user to apply/discard worktree changes. */
+  applyPending?: boolean
   /** Short preview for list cards. */
   promptPreview?: string
   /** Full prompt for re-run (capped). */
@@ -101,8 +106,28 @@ interface SubagentRunsState {
       filesChanged?: string[]
       applied?: boolean
       applyConflicts?: string[]
+      applyPending?: boolean
+      projectPath?: string
+      worktreePath?: string
+      worktreeBranch?: string
       usage?: SubagentRunUsage
     }
+  ) => void
+  /** Update apply state after user review (apply/discard). */
+  patchRun: (
+    id: string,
+    patch: Partial<
+      Pick<
+        SubagentRun,
+        | 'applied'
+        | 'applyPending'
+        | 'applyConflicts'
+        | 'filesChanged'
+        | 'worktreePath'
+        | 'summary'
+        | 'error'
+      >
+    >
   ) => void
   clearFinished: () => void
   clearFinishedForSession: (sessionId: string) => void
@@ -318,6 +343,12 @@ export const useSubagentRunsStore = create<SubagentRunsState>((set, get) => ({
     }))
     controllers.delete(id)
     if (finished) notifyWaiters(finished)
+  },
+
+  patchRun: (id, patch) => {
+    set((s) => ({
+      runs: s.runs.map((r) => (r.id === id ? { ...r, ...patch } : r))
+    }))
   },
 
   clearFinished: () => {

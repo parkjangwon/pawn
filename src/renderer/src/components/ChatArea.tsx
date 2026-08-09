@@ -92,7 +92,16 @@ export default function ChatArea({
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
   const messages = activeSession?.messages || []
-  const effectivePath = activeProject?.paths?.[0] || ''
+  // Prefer a user-selected root when multi-folder; fall back to primary.
+  const [rootIndex, setRootIndex] = useState(0)
+  const projectPaths = activeProject?.paths || []
+  useEffect(() => {
+    setRootIndex(0)
+  }, [activeProject?.id])
+  const effectivePath =
+    projectPaths[Math.min(rootIndex, Math.max(0, projectPaths.length - 1))] ||
+    projectPaths[0] ||
+    ''
   const lastMessage = messages[messages.length - 1]
   const tailStart = Math.max(0, messages.length - DEFAULT_VISIBLE_MESSAGES)
   const effectiveStart = startIndex === null
@@ -356,19 +365,28 @@ export default function ChatArea({
   }, [fileIndex, t])
 
   const loadFiles = async (): Promise<void> => {
-    if (!effectivePath) return
+    const roots = projectPaths.length ? projectPaths : effectivePath ? [effectivePath] : []
+    if (!roots.length) return
     setFilesLoading(true)
     try {
-      const res = await window.api.fs.walk(effectivePath)
-      if (Array.isArray(res)) {
-        const base = effectivePath.endsWith('/') ? effectivePath : effectivePath + '/'
-        setFileIndex(res.map((f) => ({
-          name: f.name,
-          path: f.path,
-          rel: f.path.startsWith(base) ? f.path.slice(base.length) : f.name,
-          isDirectory: Boolean(f.isDirectory)
-        })))
+      const merged: Array<{ name: string; path: string; rel: string; isDirectory: boolean }> = []
+      for (const root of roots.slice(0, 4)) {
+        const res = await window.api.fs.walk(root)
+        if (!Array.isArray(res)) continue
+        const base = root.endsWith('/') ? root : root + '/'
+        const rootLabel = root.split('/').filter(Boolean).pop() || root
+        for (const f of res) {
+          const relInRoot = f.path.startsWith(base) ? f.path.slice(base.length) : f.name
+          merged.push({
+            name: f.name,
+            path: f.path,
+            // Prefix with root folder name when multi-root so @mentions stay unique.
+            rel: roots.length > 1 ? `${rootLabel}/${relInRoot}` : relInRoot,
+            isDirectory: Boolean(f.isDirectory)
+          })
+        }
       }
+      setFileIndex(merged)
     } finally {
       setFilesLoading(false)
     }
@@ -700,6 +718,25 @@ export default function ChatArea({
         onGoBack={onGoBack}
         onGoForward={onGoForward}
       />
+      {projectPaths.length > 1 && (
+        <div className="multi-root-bar" role="group" aria-label="Project roots">
+          {projectPaths.map((p, i) => {
+            const label = p.split('/').filter(Boolean).pop() || p
+            return (
+              <button
+                key={p}
+                type="button"
+                className={`multi-root-chip ${i === rootIndex ? 'active' : ''}`}
+                title={p}
+                onClick={() => setRootIndex(i)}
+              >
+                {i === 0 ? '★ ' : ''}
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      )}
       <div className={sessionPaneClass} key={activeSessionId || 'none'}>
         {sessionLoading ? (
           <div className="chat-skeleton" aria-busy="true" aria-label="Loading messages">

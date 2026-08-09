@@ -41,7 +41,9 @@
     "rename": "이름 바꾸기",
     "newChat": "새 작업",
     "automations": "자동화",
-    "running": "실행 중"
+    "running": "실행 중",
+    "renameHint": "더블클릭으로 이름 변경",
+    "noSearchResults": "일치하는 세션 없음"
   },
   "chat": {
     "placeholder": "메시지를 입력하세요...",
@@ -73,7 +75,10 @@
       "visionFallback": "{{model}}은(는) 이미지를 처리할 수 없습니다 — 비전 모델로 전환합니다.",
       "visionDemoted": "비전 모델이 없어 스크린샷을 텍스트 요약으로 대체합니다. computer use를 완전히 쓰려면 설정 → 에이전트에서 Vision 폴백(예: Gemini)을 지정하세요.",
       "resumedTurn": "중단된 에이전트 작업을 마지막 체크포인트에서 재개합니다…",
-      "partialPreserved": "_({{model}} 스트림 중단 — 부분 응답을 보존했습니다. 다른 모델로 재시도 중…)_"
+      "partialPreserved": "_({{model}} 스트림 중단 — 부분 응답을 보존했습니다. 다른 모델로 재시도 중…)_",
+      "sessionBudget": "세션 예산 도달 (${{cost}} / ${{cap}})",
+      "dailyBudget": "일일 예산 도달 (${{cost}} / ${{cap}})",
+      "compactedManual": "컨텍스트를 수동으로 압축했습니다"
     },
     "errors": {
       "noProvider": "프로바이더나 모델이 설정되지 않았습니다. 설정 → 프로바이더, 설정 → 모델에서 추가하세요.",
@@ -86,7 +91,9 @@
       "maxRounds": "최종 답변 없이 {{rounds}}라운드 후 중단되었습니다.",
       "agentError": "에이전트 루프 오류: {{error}}",
       "emptyResponse": "모델이 빈 응답을 반환했습니다. 다시 시도하거나 더 나은 모델로 바꿔 보세요. (메일 보내기는 지원하지 않습니다 — Google은 읽기 전용 연동입니다.)",
-      "hookBlocked": "훅에 의해 차단됨 (UserPromptSubmit)"
+      "hookBlocked": "훅에 의해 차단됨 (UserPromptSubmit)",
+      "sessionBudgetHit": "중지: 세션 비용 ${{cost}} (한도 ${{cap}}). Settings → Usage에서 한도를 올리거나 새 세션을 시작하세요.",
+      "dailyBudgetHit": "중지: 오늘 비용 ${{cost}} (한도 ${{cap}}). Settings → Usage에서 한도를 올리세요."
     },
     "showEarlier": "이전 메시지 보기 ({{count}}개)",
     "suggestions": {
@@ -226,7 +233,12 @@
     "doneGateTypecheck": "타입검사",
     "doneGateTypecheckDesc": "코드 수정 후 자동 타입검사 (auto/yolo)",
     "doneGateTest": "테스트",
-    "doneGateTestDesc": "코드 수정 후 자동 테스트 (auto/yolo)"
+    "doneGateTestDesc": "코드 수정 후 자동 테스트 (auto/yolo)",
+    "contextFill": "컨텍스트 {{pct}}% ({{used}} / {{total}})",
+    "contextWindow": "컨텍스트 윈도우",
+    "contextCompacted": "공간을 위해 대화가 압축되었습니다",
+    "compactNow": "지금 컨텍스트 압축",
+    "compacting": "압축 중…"
   },
   "modelPicker": {
     "noModels": "사용 가능한 모델이 없습니다",
@@ -483,7 +495,8 @@
       "template_research": "조사",
       "template_implementer": "구현",
       "template_reviewer": "리뷰",
-      "parallelHint": "일을 나눌 수 있으면 도우미 여러 명을 동시에 돌릴 수 있습니다(최대 6명). 독립된 작업이 더 빨리 끝납니다. 진행 상황은 Agents 패널에서 확인하세요."
+      "parallelHint": "일을 나눌 수 있으면 도우미 여러 명을 동시에 돌릴 수 있습니다(최대 6명). 독립된 작업이 더 빨리 끝납니다. 진행 상황은 Agents 패널에서 확인하세요.",
+      "applyReview": "적용 전 검토"
     },
     "hooksSection": {
       "title": "훅",
@@ -604,7 +617,16 @@
       "configFile": "설정 파일",
       "configFileDesc": "원시 설정 파일 보기 및 편집",
       "database": "데이터베이스",
-      "databaseDesc": "로컬 데이터베이스 관리"
+      "databaseDesc": "로컬 데이터베이스 관리",
+      "fullBackup": "전체 로컬 백업",
+      "fullBackupDesc": "~/.pawn을 zip으로 저장 (설정, 채팅 DB, 메모리). config.json의 API 키 포함 — 안전하게 보관하세요.",
+      "backupOk": "백업 저장: {{path}}",
+      "backupFailed": "백업 실패",
+      "backupCancelled": "백업 취소됨",
+      "desktopOnly": "데스크톱 앱에서 사용 가능",
+      "importOk": "{{count}}개 항목 가져옴",
+      "importEmpty": "파일에 프로바이더/모델이 없습니다",
+      "importFailed": "가져오기 실패: {{error}}"
     },
     "system": "시스템",
     "connectionsSection": {
@@ -695,7 +717,15 @@
       "taskNotifications": "작업 완료 알림",
       "taskNotificationsDesc": "Pawn이 백그라운드에 있을 때 턴(채팅 응답·코딩 작업)이 끝나면 OS 알림을 한 번 표시합니다.",
       "confirmQuit": "종료 전 확인",
-      "confirmQuitDesc": "⌘Q / Ctrl+Q 또는 트레이 종료로 앱을 끌 때 확인합니다. 종료 대화상자의 “다시 묻지 않기”로도 끌 수 있습니다."
+      "confirmQuitDesc": "⌘Q / Ctrl+Q 또는 트레이 종료로 앱을 끌 때 확인합니다. 종료 대화상자의 “다시 묻지 않기”로도 끌 수 있습니다.",
+      "checkUpdatesOnLaunch": "시작 시 업데이트 확인",
+      "checkUpdatesOnLaunchDesc": "시작 시 GitHub Releases와 조용히 비교",
+      "checkUpdates": "업데이트 확인",
+      "checkUpdatesDesc": "현재 빌드와 최신 릴리스 비교",
+      "checking": "확인 중…",
+      "updateAvailable": "업데이트 가능: {{latest}} (현재 {{current}})",
+      "upToDate": "최신입니다 ({{current}})",
+      "desktopOnly": "데스크톱 앱에서 사용 가능"
     },
     "shortcuts": "단축키",
     "shortcutSection": {
@@ -745,7 +775,11 @@
       "colProvider": "프로바이더",
       "colCalls": "호출",
       "colTokens": "토큰",
-      "colCost": "비용"
+      "colCost": "비용",
+      "sessionBudget": "세션 비용 한도 ($)",
+      "sessionBudgetDesc": "이 세션 USD 비용이 한도에 도달하면 에이전트를 부드럽게 중지합니다. 0 = 무제한.",
+      "dailyBudget": "일일 비용 한도 ($)",
+      "dailyBudgetDesc": "오늘 이 기기 사용량이 한도에 도달하면 중지합니다. 0 = 무제한."
     }
   },
   "projectEdit": {
@@ -791,7 +825,25 @@
       "commitPlaceholder": "커밋 메시지...",
       "history": "기록 ({{count}})",
       "checkoutFailed": "브랜치를 전환할 수 없습니다",
-      "noBranches": "브랜치가 없습니다"
+      "noBranches": "브랜치가 없습니다",
+      "commit": "커밋",
+      "push": "푸시",
+      "staged": "스테이징됨",
+      "unstaged": "변경 사항",
+      "stage": "스테이징",
+      "unstage": "언스테이징",
+      "stageAll": "모두 스테이징",
+      "openPr": "PR 열기",
+      "openingPr": "여는 중…",
+      "openPrHint": "{{repo}}에 GitHub PR 생성",
+      "prNeedGithub": "Settings → Connections에서 GitHub 연결",
+      "prOpened": "Pull request 생성됨",
+      "errCheckout": "체크아웃 실패 ({{code}})",
+      "errStage": "스테이징 실패",
+      "errUnstage": "언스테이징 실패",
+      "errCommit": "커밋 실패 ({{code}})",
+      "errPush": "푸시 실패 ({{code}})",
+      "errPr": "PR을 열 수 없음"
     },
     "openTool": "도구 열기",
     "toolDescs": {
@@ -1065,6 +1117,13 @@
     "rerun": "다시 실행",
     "rerunStarted": "다시 시작함 ({{id}})",
     "rerunNoPrompt": "다시 실행할 내용이 없어요",
-    "rerunNoSession": "활성 채팅이 없어요"
+    "rerunNoSession": "활성 채팅이 없어요",
+    "chipPendingApply": "검토",
+    "applyChanges": "변경 적용",
+    "discardChanges": "폐기",
+    "applyOk": "프로젝트에 적용됨",
+    "applyFail": "적용 실패",
+    "discardOk": "워크트리 폐기됨",
+    "discardFail": "폐기 실패"
   }
 }

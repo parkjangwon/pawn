@@ -37,21 +37,34 @@ export interface CacheDiagnostic {
   at: number
 }
 
+/** Live context-window fill estimate for the session transcript. */
+export interface ContextMeter {
+  tokens: number
+  window: number
+  ratio: number
+  compacted: boolean
+  updatedAt: number
+}
+
 interface UsageState {
   /** Per-session running totals for the current app run. */
   bySession: Record<string, UsageTotals>
   lastRoute: Record<string, { label: string; reason: string }>
   /** Per-session cache diagnostics — helps the user understand why costs vary. */
   diagnostics: Record<string, CacheDiagnostic[]>
+  /** Per-session context window meter (tokens vs model limit). */
+  contextBySession: Record<string, ContextMeter>
   /** Sessions already loaded from SQLite (avoid re-hydrate wiping live totals). */
   hydrated: Set<string>
   record: (sessionId: string, model: ModelEntry, usage: CallUsage) => void
   noteRoute: (sessionId: string, label: string, reason: string) => void
   noteDiagnostic: (sessionId: string, level: CacheDiagnosticLevel, message: string) => void
+  noteContext: (sessionId: string, tokens: number, window: number, compacted?: boolean) => void
   /** Load durable usage rows for a session after reload / switch. */
   hydrateSession: (sessionId: string) => Promise<void>
   reset: (sessionId: string) => void
   totalsFor: (sessionId: string) => UsageTotals
+  contextFor: (sessionId: string) => ContextMeter | null
 }
 
 const EMPTY: UsageTotals = {
@@ -87,6 +100,7 @@ export const useUsageStore = create<UsageState>((set, get) => ({
   bySession: {},
   lastRoute: {},
   diagnostics: {},
+  contextBySession: {},
   hydrated: new Set(),
 
   record: (sessionId, model, usage) => {
@@ -156,6 +170,26 @@ export const useUsageStore = create<UsageState>((set, get) => ({
       return { diagnostics: { ...s.diagnostics, [sessionId]: all } }
     }),
 
+  noteContext: (sessionId, tokens, window, compacted) => {
+    const w = Math.max(1, Math.floor(window) || 128_000)
+    const tok = Math.max(0, Math.floor(tokens) || 0)
+    set((s) => {
+      const prev = s.contextBySession[sessionId]
+      return {
+        contextBySession: {
+          ...s.contextBySession,
+          [sessionId]: {
+            tokens: tok,
+            window: w,
+            ratio: Math.min(1, tok / w),
+            compacted: compacted === true || Boolean(prev?.compacted),
+            updatedAt: Date.now()
+          }
+        }
+      }
+    })
+  },
+
   hydrateSession: async (sessionId) => {
     if (!sessionId || get().hydrated.has(sessionId)) return
     // Mark first so concurrent hydrate calls don't double-fetch.
@@ -190,12 +224,20 @@ export const useUsageStore = create<UsageState>((set, get) => ({
       delete next[sessionId]
       const nextDiags = { ...s.diagnostics }
       delete nextDiags[sessionId]
+      const nextCtx = { ...s.contextBySession }
+      delete nextCtx[sessionId]
       const hyd = new Set(s.hydrated)
       hyd.delete(sessionId)
-      return { bySession: next, diagnostics: nextDiags, hydrated: hyd }
+      return {
+        bySession: next,
+        diagnostics: nextDiags,
+        contextBySession: nextCtx,
+        hydrated: hyd
+      }
     }),
 
-  totalsFor: (sessionId) => get().bySession[sessionId] || EMPTY
+  totalsFor: (sessionId) => get().bySession[sessionId] || EMPTY,
+  contextFor: (sessionId) => get().contextBySession[sessionId] || null
 }))
 
 export function diagnosticsFor(sessionId: string): CacheDiagnostic[] {

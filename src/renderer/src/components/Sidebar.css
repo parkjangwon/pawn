@@ -494,3 +494,31 @@ body.resizing-sidebar .settings-sidebar {
   padding: 12px var(--space-md);
   flex-shrink: 0;
 }
+
+.sidebar-search {
+  padding: 0 12px 8px;
+}
+.sidebar-search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  background: var(--bg-elevated, var(--bg-primary));
+  color: var(--text-primary);
+  font-size: 12px;
+}
+.sidebar-search input:focus {
+  outline: none;
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--border-color));
+}
+.tree-session-rename {
+  flex: 1;
+  min-width: 0;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  border: 1px solid var(--accent);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}

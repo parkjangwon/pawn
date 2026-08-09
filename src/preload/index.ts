@@ -4,6 +4,20 @@ import { electronAPI } from '@electron-toolkit/preload'
 const api = {
   platform: process.platform,
   appVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
+  checkForUpdates: (): Promise<{
+    current: string
+    latest?: string
+    updateAvailable: boolean
+    releaseUrl?: string
+    releaseName?: string
+    error?: string
+  }> => ipcRenderer.invoke('app:checkForUpdates'),
+  exportBackup: (): Promise<{
+    ok?: boolean
+    path?: string
+    cancelled?: boolean
+    error?: string
+  }> => ipcRenderer.invoke('app:exportBackup'),
 
   // Dialog
   selectFolder: (): Promise<string | null> => ipcRenderer.invoke('dialog:selectFolder'),

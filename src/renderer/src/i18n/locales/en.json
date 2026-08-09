@@ -41,7 +41,9 @@
     "rename": "Rename",
     "newChat": "New chat",
     "automations": "Automations",
-    "running": "Running"
+    "running": "Running",
+    "renameHint": "Double-click to rename",
+    "noSearchResults": "No matching sessions"
   },
   "chat": {
     "placeholder": "Send a message...",
@@ -73,7 +75,10 @@
       "visionFallback": "{{model}} cannot handle images — trying a vision-capable model.",
       "visionDemoted": "No vision model available — screenshots demoted to text stubs. Set a Vision fallback (e.g. Gemini) under Settings → Agent for full computer use.",
       "resumedTurn": "Resuming interrupted agent turn from the last checkpoint…",
-      "partialPreserved": "_(Stream interrupted on {{model}} — partial reply preserved. Retrying…)_"
+      "partialPreserved": "_(Stream interrupted on {{model}} — partial reply preserved. Retrying…)_",
+      "sessionBudget": "Session budget hit (${{cost}} / ${{cap}})",
+      "dailyBudget": "Daily budget hit (${{cost}} / ${{cap}})",
+      "compactedManual": "Context compacted manually"
     },
     "errors": {
       "noProvider": "No provider or model configured. Open Settings → Providers, then Settings → Models.",
@@ -86,7 +91,9 @@
       "maxRounds": "Stopped after {{rounds}} tool rounds without a final answer.",
       "agentError": "Agent loop error: {{error}}",
       "emptyResponse": "The model returned an empty reply. Try again, or switch to a stronger model. (Gmail send is not supported — Google is connected for read-only tools only.)",
-      "hookBlocked": "Blocked by hook (UserPromptSubmit)"
+      "hookBlocked": "Blocked by hook (UserPromptSubmit)",
+      "sessionBudgetHit": "Stopped: session spend reached ${{cost}} (cap ${{cap}}). Raise the limit under Settings → Usage, or start a new session.",
+      "dailyBudgetHit": "Stopped: today's spend reached ${{cost}} (cap ${{cap}}). Raise the limit under Settings → Usage."
     },
     "showEarlier": "Show earlier messages ({{count}})",
     "suggestions": {
@@ -226,7 +233,12 @@
     "doneGateTypecheck": "Typecheck",
     "doneGateTypecheckDesc": "Auto typecheck after code edits (auto/yolo)",
     "doneGateTest": "Test",
-    "doneGateTestDesc": "Auto test after code edits (auto/yolo)"
+    "doneGateTestDesc": "Auto test after code edits (auto/yolo)",
+    "contextFill": "{{pct}}% context ({{used}} / {{total}})",
+    "contextWindow": "Context window",
+    "contextCompacted": "Transcript was compacted to free space",
+    "compactNow": "Compact context now",
+    "compacting": "Compacting…"
   },
   "modelPicker": {
     "noModels": "No models available",
@@ -483,7 +495,8 @@
       "template_research": "Research",
       "template_implementer": "Implementer",
       "template_reviewer": "Reviewer",
-      "parallelHint": "When work can be split up, Pawn can run several helpers at the same time (up to six) so independent tasks finish faster. Watch them in the Agents panel."
+      "parallelHint": "When work can be split up, Pawn can run several helpers at the same time (up to six) so independent tasks finish faster. Watch them in the Agents panel.",
+      "applyReview": "Review before applying"
     },
     "hooksSection": {
       "title": "Hooks",
@@ -604,7 +617,16 @@
       "configFile": "Config File",
       "configFileDesc": "View and edit the raw configuration file",
       "database": "Database",
-      "databaseDesc": "Manage the local database"
+      "databaseDesc": "Manage the local database",
+      "fullBackup": "Full local backup",
+      "fullBackupDesc": "Zip ~/.pawn (config, chats DB, memory). API keys in config.json are included — store the zip safely.",
+      "backupOk": "Saved backup to {{path}}",
+      "backupFailed": "Backup failed",
+      "backupCancelled": "Backup cancelled",
+      "desktopOnly": "Available in the desktop app",
+      "importOk": "Imported {{count}} item(s)",
+      "importEmpty": "No providers or models found in that file",
+      "importFailed": "Import failed: {{error}}"
     },
     "system": "System",
     "connectionsSection": {
@@ -695,7 +717,15 @@
       "taskNotifications": "Task complete notification",
       "taskNotificationsDesc": "Show a notification once when a turn finishes (chat replies and coding work) while Pawn is in the background.",
       "confirmQuit": "Confirm before quitting",
-      "confirmQuitDesc": "Ask for confirmation when quitting with ⌘Q / Ctrl+Q or the tray Quit item. You can also uncheck “Don’t ask again” on the quit dialog."
+      "confirmQuitDesc": "Ask for confirmation when quitting with ⌘Q / Ctrl+Q or the tray Quit item. You can also uncheck “Don’t ask again” on the quit dialog.",
+      "checkUpdatesOnLaunch": "Check for updates on launch",
+      "checkUpdatesOnLaunchDesc": "Quietly compare with GitHub Releases when Pawn starts",
+      "checkUpdates": "Check for updates",
+      "checkUpdatesDesc": "Compare this build with the latest GitHub release",
+      "checking": "Checking…",
+      "updateAvailable": "Update available: {{latest}} (you have {{current}})",
+      "upToDate": "You’re up to date ({{current}})",
+      "desktopOnly": "Available in the desktop app"
     },
     "shortcuts": "Shortcuts",
     "shortcutSection": {
@@ -745,7 +775,11 @@
       "colProvider": "Provider",
       "colCalls": "Calls",
       "colTokens": "Tokens",
-      "colCost": "Cost"
+      "colCost": "Cost",
+      "sessionBudget": "Session spend cap ($)",
+      "sessionBudgetDesc": "Soft-stop the agent when this session’s USD cost reaches the cap. 0 = unlimited.",
+      "dailyBudget": "Daily spend cap ($)",
+      "dailyBudgetDesc": "Soft-stop when today’s on-device usage reaches the cap. 0 = unlimited."
     }
   },
   "projectEdit": {
@@ -791,7 +825,25 @@
       "commitPlaceholder": "Commit message...",
       "history": "History ({{count}})",
       "checkoutFailed": "Couldn't switch branches",
-      "noBranches": "No branches found"
+      "noBranches": "No branches found",
+      "commit": "Commit",
+      "push": "Push",
+      "staged": "Staged",
+      "unstaged": "Changes",
+      "stage": "Stage",
+      "unstage": "Unstage",
+      "stageAll": "Stage all",
+      "openPr": "Open PR",
+      "openingPr": "Opening…",
+      "openPrHint": "Create a GitHub pull request for {{repo}}",
+      "prNeedGithub": "Connect GitHub under Settings → Connections",
+      "prOpened": "Pull request created",
+      "errCheckout": "Checkout failed ({{code}})",
+      "errStage": "Stage failed",
+      "errUnstage": "Unstage failed",
+      "errCommit": "Commit failed ({{code}})",
+      "errPush": "Push failed ({{code}})",
+      "errPr": "Could not open PR"
     },
     "openTool": "Open a tool",
     "toolDescs": {
@@ -1065,6 +1117,13 @@
     "rerun": "Run again",
     "rerunStarted": "Started again ({{id}})",
     "rerunNoPrompt": "Nothing saved to run again",
-    "rerunNoSession": "No active chat"
+    "rerunNoSession": "No active chat",
+    "chipPendingApply": "review",
+    "applyChanges": "Apply changes",
+    "discardChanges": "Discard",
+    "applyOk": "Applied to project",
+    "applyFail": "Apply failed",
+    "discardOk": "Worktree discarded",
+    "discardFail": "Discard failed"
   }
 }

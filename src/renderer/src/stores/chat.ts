@@ -418,6 +418,86 @@ export class ToolLoopCounter {
 type ChatSet = (partial: Partial<ChatState> | ((s: ChatState) => Partial<ChatState>)) => void
 type ChatGet = () => ChatState
 
+/** Soft USD budgets — returns a stop message or null to continue. */
+async function checkSpendBudget(sessionId: string): Promise<string | null> {
+  const { sessionBudgetUsd, dailyBudgetUsd } = usePrefsStore.getState()
+  if (sessionBudgetUsd <= 0 && dailyBudgetUsd <= 0) return null
+  const sessionCost = useUsageStore.getState().totalsFor(sessionId).cost
+  if (sessionBudgetUsd > 0 && sessionCost >= sessionBudgetUsd) {
+    useUsageStore.getState().noteDiagnostic(
+      sessionId,
+      'warn',
+      i18n.t('chat.diagnostics.sessionBudget', {
+        cost: sessionCost.toFixed(2),
+        cap: sessionBudgetUsd.toFixed(2)
+      })
+    )
+    return i18n.t('chat.errors.sessionBudgetHit', {
+      cost: sessionCost.toFixed(2),
+      cap: sessionBudgetUsd.toFixed(2)
+    })
+  }
+  if (dailyBudgetUsd > 0 && window.api?.db?.getUsageSummary) {
+    try {
+      const startOfDay = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000)
+      const rows = await window.api.db.getUsageSummary(startOfDay)
+      const dayCost = (Array.isArray(rows) ? rows : []).reduce(
+        (sum, r) => sum + (Number((r as { cost?: number }).cost) || 0),
+        0
+      )
+      if (dayCost >= dailyBudgetUsd) {
+        useUsageStore.getState().noteDiagnostic(
+          sessionId,
+          'warn',
+          i18n.t('chat.diagnostics.dailyBudget', {
+            cost: dayCost.toFixed(2),
+            cap: dailyBudgetUsd.toFixed(2)
+          })
+        )
+        return i18n.t('chat.errors.dailyBudgetHit', {
+          cost: dayCost.toFixed(2),
+          cap: dailyBudgetUsd.toFixed(2)
+        })
+      }
+    } catch {
+      /* accounting optional */
+    }
+  }
+  return null
+}
+
+/**
+ * Manually compact the active session transcript (user-triggered).
+ * Returns true if compaction ran.
+ */
+export async function compactSessionNow(sessionId: string): Promise<boolean> {
+  if (!sessionId) return false
+  try {
+    const project = useAppStore
+      .getState()
+      .projects.find((p) => p.sessions.some((s) => s.id === sessionId))
+    if (!project) return false
+    const entries = await loadTranscript(project.id, sessionId)
+    if (entries.length < 4) return false
+    const before = estimateTokens(entries)
+    const next = compactTranscript(entries)
+    const after = estimateTokens(next)
+    if (after >= before * 0.95) {
+      // Already compact — still refresh meter
+      useUsageStore.getState().noteContext(sessionId, after, DEFAULT_CONTEXT_WINDOW, true)
+      return false
+    }
+    persistTranscript(sessionId, next, '', undefined)
+    useUsageStore.getState().noteContext(sessionId, after, DEFAULT_CONTEXT_WINDOW, true)
+    useUsageStore
+      .getState()
+      .noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.compactedManual'))
+    return true
+  } catch {
+    return false
+  }
+}
+
 async function agentLoop(
   projectId: string,
   sessionId: string,
@@ -469,7 +549,8 @@ async function agentLoop(
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
-    const projectPath = project?.paths?.[0]
+    const projectPaths = (project?.paths || []).filter(Boolean)
+    const projectPath = projectPaths[0]
     const session = project?.sessions.find((s) => s.id === sessionId)
     const cwd = session?.path || projectPath || ''
 
@@ -484,11 +565,36 @@ async function agentLoop(
     if (cwd) {
       projectPreamble += `--- Working Directory ---\n${cwd}\nResolve relative paths against this directory unless told otherwise.`
     }
+    if (projectPaths.length > 1) {
+      projectPreamble +=
+        (projectPreamble ? '\n\n' : '') +
+        `--- Project roots (multi-folder) ---\n` +
+        projectPaths.map((p, i) => `${i === 0 ? 'primary' : `extra-${i}`}: ${p}`).join('\n') +
+        `\nPrimary cwd for tools is the first root. When the user names a path under another root, resolve absolute paths against that root.`
+    }
     if (projectPath) {
       try {
-        const ctx = await loadProjectContext(projectPath)
-        const block = buildProjectContextBlock({ ...ctx, skills: filterEnabledSkills(ctx.skills) })
-        if (block) projectPreamble += (projectPreamble ? '\n\n' : '') + block
+        // Load context from each root; primary first (stable order for cache).
+        const blocks: string[] = []
+        for (const root of projectPaths.slice(0, 4)) {
+          try {
+            const ctx = await loadProjectContext(root)
+            const block = buildProjectContextBlock({
+              ...ctx,
+              skills: filterEnabledSkills(ctx.skills)
+            })
+            if (block) {
+              blocks.push(
+                projectPaths.length > 1 ? `### Root: ${root}\n${block}` : block
+              )
+            }
+          } catch {
+            /* optional per-root */
+          }
+        }
+        if (blocks.length) {
+          projectPreamble += (projectPreamble ? '\n\n' : '') + blocks.join('\n\n')
+        }
       } catch {
         // Missing CLAUDE.md / skills is normal; keep the base layer.
       }
@@ -622,15 +728,28 @@ async function agentLoop(
       if (signal.aborted) break
       round++
 
+      // Soft spend caps (session + daily). 0 = unlimited.
+      const budgetStop = await checkSpendBudget(sessionId)
+      if (budgetStop) {
+        systemError(projectId, sessionId, budgetStop)
+        turnEnd = 'completed'
+        break
+      }
+
       // Compaction runs at a threshold and the result is persisted, so it costs
       // exactly one cache re-prime — unlike a sliding window, which would silently
       // re-prime on every single request.
       const contextWindow = lastDecision?.model.contextWindow || DEFAULT_CONTEXT_WINDOW
-     if (estimateTokens(entries) > contextWindow * COMPACT_AT_RATIO) {
-       entries = compactTranscript(entries)
-       persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
+      const tokenEst = estimateTokens(entries)
+      useUsageStore.getState().noteContext(sessionId, tokenEst, contextWindow, false)
+      if (tokenEst > contextWindow * COMPACT_AT_RATIO) {
+        entries = compactTranscript(entries)
+        persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
         useUsageStore.getState().noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.compacted'))
-     }
+        useUsageStore
+          .getState()
+          .noteContext(sessionId, estimateTokens(entries), contextWindow, true)
+      }
 
       const escalate = shouldEscalate({ consecutiveToolErrors, round, emptyResponses })
       const excluded = new Set<string>()

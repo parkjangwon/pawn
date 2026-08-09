@@ -59,6 +59,20 @@ declare global {
     api: {
       platform: string
       appVersion: () => Promise<string>
+      checkForUpdates: () => Promise<{
+        current: string
+        latest?: string
+        updateAvailable: boolean
+        releaseUrl?: string
+        releaseName?: string
+        error?: string
+      }>
+      exportBackup: () => Promise<{
+        ok?: boolean
+        path?: string
+        cancelled?: boolean
+        error?: string
+      }>
       selectFolder: () => Promise<string | null>
       saveFile: (defaultName: string, content: string) => Promise<string | null>
       openFile: () => Promise<string | null>

@@ -41,7 +41,9 @@
     "rename": "重命名",
     "newChat": "新对话",
     "automations": "自动化",
-    "running": "运行中"
+    "running": "运行中",
+    "renameHint": "双击重命名",
+    "noSearchResults": "无匹配会话"
   },
   "chat": {
     "placeholder": "输入消息...",
@@ -73,7 +75,10 @@
       "visionFallback": "{{model}} 无法处理图像 — 正在切换到视觉模型。",
       "visionDemoted": "无可用视觉模型，已将截图降级为文字说明。完整 computer use 请在设置 → 代理中指定 Vision 回退（如 Gemini）。",
       "resumedTurn": "正在从上次检查点恢复被中断的代理任务…",
-      "partialPreserved": "_({{model}} 流中断 — 已保留部分回复。正在重试…)_"
+      "partialPreserved": "_({{model}} 流中断 — 已保留部分回复。正在重试…)_",
+      "sessionBudget": "会话预算已达 (${{cost}} / ${{cap}})",
+      "dailyBudget": "每日预算已达 (${{cost}} / ${{cap}})",
+      "compactedManual": "已手动压缩上下文"
     },
     "errors": {
       "noProvider": "未配置提供商或模型。请打开设置 → 提供商，然后设置 → 模型。",
@@ -86,7 +91,9 @@
       "maxRounds": "{{rounds}}轮工具调用后仍未得到最终答案，已停止。",
       "agentError": "代理循环错误: {{error}}",
       "emptyResponse": "模型返回了空回复。请重试，或换用更强的模型。（不支持发送邮件 — Google 连接仅为只读。）",
-      "hookBlocked": "已被钩子阻止 (UserPromptSubmit)"
+      "hookBlocked": "已被钩子阻止 (UserPromptSubmit)",
+      "sessionBudgetHit": "已停止：会话花费 ${{cost}}（上限 ${{cap}}）。请在 Settings → Usage 提高上限，或新开会话。",
+      "dailyBudgetHit": "已停止：今日花费 ${{cost}}（上限 ${{cap}}）。请在 Settings → Usage 提高上限。"
     },
     "showEarlier": "显示更早的消息 ({{count}}条)",
     "suggestions": {
@@ -226,7 +233,12 @@
     "doneGateTypecheck": "类型检查",
     "doneGateTypecheckDesc": "编辑后自动 typecheck（auto/yolo）",
     "doneGateTest": "测试",
-    "doneGateTestDesc": "编辑后自动测试（auto/yolo）"
+    "doneGateTestDesc": "编辑后自动测试（auto/yolo）",
+    "contextFill": "上下文 {{pct}}% ({{used}} / {{total}})",
+    "contextWindow": "上下文窗口",
+    "contextCompacted": "已压缩对话以释放空间",
+    "compactNow": "立即压缩上下文",
+    "compacting": "压缩中…"
   },
   "modelPicker": {
     "noModels": "没有可用模型",
@@ -483,7 +495,8 @@
       "template_research": "调研",
       "template_implementer": "实现",
       "template_reviewer": "评审",
-      "parallelHint": "任务可以拆分时，Pawn 最多可同时运行 6 个助手，让彼此独立的工作更快完成。可在 Agents 面板查看进度。"
+      "parallelHint": "任务可以拆分时，Pawn 最多可同时运行 6 个助手，让彼此独立的工作更快完成。可在 Agents 面板查看进度。",
+      "applyReview": "应用前审查"
     },
     "hooksSection": {
       "title": "钩子",
@@ -604,7 +617,16 @@
       "configFile": "配置文件",
       "configFileDesc": "查看和编辑原始配置文件",
       "database": "数据库",
-      "databaseDesc": "管理本地数据库"
+      "databaseDesc": "管理本地数据库",
+      "fullBackup": "完整本地备份",
+      "fullBackupDesc": "打包 ~/.pawn（配置、聊天库、记忆）。含 config.json 中的 API 密钥 — 请妥善保管 zip。",
+      "backupOk": "备份已保存：{{path}}",
+      "backupFailed": "备份失败",
+      "backupCancelled": "已取消备份",
+      "desktopOnly": "仅桌面应用可用",
+      "importOk": "已导入 {{count}} 项",
+      "importEmpty": "文件中没有提供商或模型",
+      "importFailed": "导入失败：{{error}}"
     },
     "system": "系统",
     "connectionsSection": {
@@ -695,7 +717,15 @@
       "taskNotifications": "任务完成通知",
       "taskNotificationsDesc": "当 Pawn 处于后台时，每轮任务（聊天回复或编码工作）完成后显示一次系统通知。",
       "confirmQuit": "退出前确认",
-      "confirmQuitDesc": "使用 ⌘Q / Ctrl+Q 或托盘“退出”关闭应用时询问确认。也可在退出对话框中勾选“不再询问”。"
+      "confirmQuitDesc": "使用 ⌘Q / Ctrl+Q 或托盘“退出”关闭应用时询问确认。也可在退出对话框中勾选“不再询问”。",
+      "checkUpdatesOnLaunch": "启动时检查更新",
+      "checkUpdatesOnLaunchDesc": "启动时静默与 GitHub Releases 比较",
+      "checkUpdates": "检查更新",
+      "checkUpdatesDesc": "将当前构建与最新发布比较",
+      "checking": "检查中…",
+      "updateAvailable": "有更新：{{latest}}（当前 {{current}}）",
+      "upToDate": "已是最新（{{current}}）",
+      "desktopOnly": "仅桌面应用可用"
     },
     "shortcuts": "快捷键",
     "shortcutSection": {
@@ -745,7 +775,11 @@
       "colProvider": "提供商",
       "colCalls": "调用",
       "colTokens": "Tokens",
-      "colCost": "费用"
+      "colCost": "费用",
+      "sessionBudget": "会话花费上限 ($)",
+      "sessionBudgetDesc": "当本会话 USD 费用达到上限时软停止代理。0 = 不限。",
+      "dailyBudget": "每日花费上限 ($)",
+      "dailyBudgetDesc": "当今日本机用量达到上限时停止。0 = 不限。"
     }
   },
   "projectEdit": {
@@ -791,7 +825,25 @@
       "commitPlaceholder": "提交信息...",
       "history": "历史记录 ({{count}})",
       "checkoutFailed": "无法切换分支",
-      "noBranches": "未找到分支"
+      "noBranches": "未找到分支",
+      "commit": "提交",
+      "push": "推送",
+      "staged": "已暂存",
+      "unstaged": "更改",
+      "stage": "暂存",
+      "unstage": "取消暂存",
+      "stageAll": "全部暂存",
+      "openPr": "打开 PR",
+      "openingPr": "打开中…",
+      "openPrHint": "为 {{repo}} 创建 GitHub PR",
+      "prNeedGithub": "请在 Settings → Connections 连接 GitHub",
+      "prOpened": "已创建 Pull request",
+      "errCheckout": "检出失败 ({{code}})",
+      "errStage": "暂存失败",
+      "errUnstage": "取消暂存失败",
+      "errCommit": "提交失败 ({{code}})",
+      "errPush": "推送失败 ({{code}})",
+      "errPr": "无法打开 PR"
     },
     "openTool": "打开工具",
     "toolDescs": {
@@ -1065,6 +1117,13 @@
     "rerun": "再跑一次",
     "rerunStarted": "已再次启动 ({{id}})",
     "rerunNoPrompt": "没有可再次运行的内容",
-    "rerunNoSession": "没有活动对话"
+    "rerunNoSession": "没有活动对话",
+    "chipPendingApply": "待审",
+    "applyChanges": "应用更改",
+    "discardChanges": "丢弃",
+    "applyOk": "已应用到项目",
+    "applyFail": "应用失败",
+    "discardOk": "已丢弃 worktree",
+    "discardFail": "丢弃失败"
   }
 }

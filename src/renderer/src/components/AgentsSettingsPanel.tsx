@@ -585,6 +585,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
               >
                 <option value="none">{t('settings.agentsSection.applyNone')}</option>
                 <option value="auto">{t('settings.agentsSection.applyAuto')}</option>
+                <option value="review">{t('settings.agentsSection.applyReview')}</option>
               </select>
             </label>
             <label className="agents-field">

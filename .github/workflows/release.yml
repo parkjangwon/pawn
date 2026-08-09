@@ -53,7 +53,14 @@ jobs:
       - name: Package macOS (universal dmg)
         run: npm run dist:mac -- --publish never
         env:
-          CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          # When CSC_LINK + CSC_KEY_PASSWORD secrets exist, electron-builder signs.
+          # Otherwise fall back to unsigned packaging (still shippable).
+          CSC_LINK: ${{ secrets.CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.CSC_KEY_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.CSC_LINK && 'true' || 'false' }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -106,8 +113,53 @@ jobs:
             release/*.yml
           if-no-files-found: error
 
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Require OAuth client IDs
+        run: |
+          if [ -z "$PAWN_GOOGLE_CLIENT_ID" ] || [ -z "$PAWN_GITHUB_CLIENT_ID" ]; then
+            echo "::error::Set repo Actions secrets PAWN_GOOGLE_CLIENT_ID and PAWN_GITHUB_CLIENT_ID (and secrets) before releasing."
+            exit 1
+          fi
+          echo "OAuth client IDs present (values not printed)."
+
+      - name: Install system deps for electron-builder
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y rpm fakeroot
+
+      - name: Install deps
+        run: npm ci || npm install
+
+      - name: Build app (injects OAuth via define)
+        run: npm run build
+
+      - name: Package Linux (AppImage + deb)
+        run: npm run dist:linux -- --publish never
+
+      - name: Upload Linux artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-artifacts
+          path: |
+            release/*.AppImage
+            release/*.deb
+            release/*.yml
+          if-no-files-found: error
+
   release:
-    needs: [build-mac, build-win]
+    needs: [build-mac, build-win, build-linux]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -119,7 +171,7 @@ jobs:
       - name: Flatten artifacts
         run: |
           mkdir -p release-assets
-          find artifacts -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.yml' \) -exec cp {} release-assets/ \;
+          find artifacts -type f \( -name '*.dmg' -o -name '*.exe' -o -name '*.AppImage' -o -name '*.deb' -o -name '*.yml' \) -exec cp {} release-assets/ \;
           ls -la release-assets
 
       - name: Create GitHub Release

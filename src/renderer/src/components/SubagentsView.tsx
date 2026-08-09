@@ -6,7 +6,11 @@ import {
   sessionTotals,
   type SubagentRun
 } from '../stores/subagentRuns'
-import { spawnBackgroundSubagent } from '../agent/subagent'
+import {
+  spawnBackgroundSubagent,
+  applyPendingWorktree,
+  discardPendingWorktree
+} from '../agent/subagent'
 import './SubagentsView.css'
 
 function elapsed(run: SubagentRun, now: number): string {
@@ -310,6 +314,9 @@ export default function SubagentsView(): React.JSX.Element {
                     {run.applied && (
                       <span className="subagents-chip ok">{t('subagents.chipApplied')}</span>
                     )}
+                    {run.applyPending && (
+                      <span className="subagents-chip warn">{t('subagents.chipPendingApply')}</span>
+                    )}
                     {run.applyConflicts && run.applyConflicts.length > 0 && (
                       <span className="subagents-chip warn">{t('subagents.chipConflicts')}</span>
                     )}
@@ -351,6 +358,32 @@ export default function SubagentsView(): React.JSX.Element {
                         >
                           {t('subagents.rerun')}
                         </button>
+                      )}
+                      {run.applyPending && run.worktreePath && (
+                        <>
+                          <button
+                            type="button"
+                            className="subagents-mini-btn primary"
+                            onClick={() => {
+                              void applyPendingWorktree(run.id).then((r) =>
+                                showToast(r.ok ? t('subagents.applyOk') : r.error || t('subagents.applyFail'))
+                              )
+                            }}
+                          >
+                            {t('subagents.applyChanges')}
+                          </button>
+                          <button
+                            type="button"
+                            className="subagents-mini-btn"
+                            onClick={() => {
+                              void discardPendingWorktree(run.id).then((r) =>
+                                showToast(r.ok ? t('subagents.discardOk') : r.error || t('subagents.discardFail'))
+                              )
+                            }}
+                          >
+                            {t('subagents.discardChanges')}
+                          </button>
+                        </>
                       )}
                     </div>
                     <div className="subagents-id">id: {run.id}</div>

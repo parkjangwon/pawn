@@ -72,7 +72,18 @@ export default function App(): React.JSX.Element {
     useThemeStore.getState().init()
     useAppStore.getState().init()
     useProviderStore.getState().init()
-    void usePrefsStore.getState().init()
+    void usePrefsStore.getState().init().then(() => {
+      // Quiet update check once per launch (desktop only).
+      if (!usePrefsStore.getState().checkUpdatesOnLaunch) return
+      if (!window.api?.checkForUpdates) return
+      void window.api.checkForUpdates().then((r) => {
+        if (!r.updateAvailable || !r.latest) return
+        setAppToast(
+          `Pawn ${r.latest} available (you have ${r.current}). Settings → System to open the release.`
+        )
+        window.setTimeout(() => setAppToast(null), 8000)
+      })
+    })
     void useRoutineStore.getState().init()
     void useMcpStore.getState().init()
     void useKeybindingsStore.getState().init()

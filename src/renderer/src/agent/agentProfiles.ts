@@ -17,7 +17,7 @@
 
 export type AgentThoroughness = 'quick' | 'medium' | 'very_thorough'
 export type AgentIsolation = 'none' | 'worktree'
-export type AgentApplyMode = 'auto' | 'none'
+export type AgentApplyMode = 'auto' | 'none' | 'review'
 /** inherit = parent routing; simple|mid|complex = tier hint for auto route. */
 export type AgentModelPref = 'inherit' | 'simple' | 'mid' | 'complex' | string
 
@@ -309,7 +309,7 @@ function parseIsolation(v: string | undefined): AgentIsolation {
 }
 
 function parseApply(v: string | undefined, isolation: AgentIsolation): AgentApplyMode {
-  if (v === 'auto' || v === 'none') return v
+  if (v === 'auto' || v === 'none' || v === 'review') return v
   return isolation === 'worktree' ? 'auto' : 'none'
 }
 

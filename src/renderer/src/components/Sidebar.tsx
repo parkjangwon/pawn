@@ -47,6 +47,8 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
+  const [sessionSearch, setSessionSearch] = useState('')
+  const [renamingSession, setRenamingSession] = useState<{ projectId: string; sessionId: string; title: string } | null>(null)
   useEffect(() => { try { const s = localStorage.getItem('pawn-pinned-sessions'); if (s) setPinnedSessions(new Set(JSON.parse(s))) } catch {} }, [])
 
   // Shared with the Settings nav: same width, same localStorage key, and the
@@ -150,9 +152,26 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     })
   }
 
+  const q = sessionSearch.trim().toLowerCase()
+  const matchesSearch = (session: {
+    title: string
+    messages: Array<{ role: string; content: string }>
+  }): boolean => {
+    if (!q) return true
+    if (session.title.toLowerCase().includes(q)) return true
+    // Search recent message text (loaded sessions only).
+    for (let i = session.messages.length - 1; i >= Math.max(0, session.messages.length - 12); i--) {
+      const c = session.messages[i]?.content || ''
+      if (c.toLowerCase().includes(q)) return true
+    }
+    return false
+  }
+
   // Pinned sessions across all projects
   const pinnedItems = projects.flatMap((p) =>
-    p.sessions.filter((s) => pinnedSessions.has(s.id)).map((s) => ({ ...s, projectId: p.id }))
+    p.sessions
+      .filter((s) => pinnedSessions.has(s.id) && matchesSearch(s))
+      .map((s) => ({ ...s, projectId: p.id }))
   )
 
   // User-created projects (exclude general)
@@ -180,10 +199,24 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     </>
   )
 
+  const commitRename = (): void => {
+    if (!renamingSession) return
+    const title = renamingSession.title.trim()
+    if (title) {
+      updateSessionTitle(renamingSession.projectId, renamingSession.sessionId, title)
+    }
+    setRenamingSession(null)
+  }
+
   // Recent sessions (not pinned, sorted by last activity)
-  const recentSessions = projects.flatMap((p) =>
-    p.sessions.filter((s) => !pinnedSessions.has(s.id)).map((s) => ({ ...s, projectId: p.id }))
-  ).sort((a, b) => sessionMeta(b).lastActivity - sessionMeta(a).lastActivity).slice(0, 8)
+  const recentSessions = projects
+    .flatMap((p) =>
+      p.sessions
+        .filter((s) => !pinnedSessions.has(s.id) && matchesSearch(s))
+        .map((s) => ({ ...s, projectId: p.id }))
+    )
+    .sort((a, b) => sessionMeta(b).lastActivity - sessionMeta(a).lastActivity)
+    .slice(0, q ? 24 : 8)
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label={t('sidebar.project')}>
@@ -225,6 +258,16 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
           </svg>
           <span>{t('sidebar.automations')}</span>
         </button>
+      </div>
+
+      <div className="sidebar-search">
+        <input
+          type="search"
+          value={sessionSearch}
+          onChange={(e) => setSessionSearch(e.target.value)}
+          placeholder={t('sidebar.search')}
+          aria-label={t('sidebar.search')}
+        />
       </div>
 
       <div className="sidebar-scroll">
@@ -308,7 +351,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
                 </div>
                 {isExpanded && (
                   <div className="tree-sessions" role="group" aria-label={project.name}>
-                    {project.sessions.map((session) => {
+                    {project.sessions.filter(matchesSearch).map((session) => {
                       const select = (): void => {
                         onMainViewChange('chat')
                         setActiveSession(session.id)
@@ -323,9 +366,38 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
                           aria-current={mainView === 'chat' && session.id === activeSessionId ? 'true' : undefined}
                           onClick={select}
                           onKeyDown={(e) => activateOnKey(e, select)}
+                          onDoubleClick={(e) => {
+                            e.stopPropagation()
+                            setRenamingSession({
+                              projectId: project.id,
+                              sessionId: session.id,
+                              title: session.title
+                            })
+                          }}
                         >
                           <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                          <span className="tree-session-title">{session.title}</span>
+                          {renamingSession?.sessionId === session.id ? (
+                            <input
+                              className="tree-session-rename"
+                              autoFocus
+                              value={renamingSession.title}
+                              onClick={(e) => e.stopPropagation()}
+                              onChange={(e) =>
+                                setRenamingSession((r) => (r ? { ...r, title: e.target.value } : r))
+                              }
+                              onBlur={commitRename}
+                              onKeyDown={(e) => {
+                                e.stopPropagation()
+                                if (e.key === 'Enter') commitRename()
+                                if (e.key === 'Escape') setRenamingSession(null)
+                              }}
+                              aria-label={t('sidebar.rename')}
+                            />
+                          ) : (
+                            <span className="tree-session-title" title={t('sidebar.renameHint')}>
+                              {session.title}
+                            </span>
+                          )}
                           {renderSessionMeta(sessionMeta(session), false)}
                           <div className="tree-session-actions">
                             <button type="button" className="tree-action-btn pin" onClick={(e) => togglePin(e, session.id)} title={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')} aria-label={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')}>
@@ -338,7 +410,11 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
                         </div>
                       )
                     })}
-                    {project.sessions.length === 0 && <div className="tree-empty">{t('sidebar.noSessions')}</div>}
+                    {project.sessions.filter(matchesSearch).length === 0 && (
+                      <div className="tree-empty">
+                        {q ? t('sidebar.noSearchResults') : t('sidebar.noSessions')}
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

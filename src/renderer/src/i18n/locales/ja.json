@@ -41,7 +41,9 @@
     "rename": "名前を変更",
     "newChat": "新規チャット",
     "automations": "自動化",
-    "running": "実行中"
+    "running": "実行中",
+    "renameHint": "ダブルクリックで名前変更",
+    "noSearchResults": "一致するセッションがありません"
   },
   "chat": {
     "placeholder": "メッセージを入力...",
@@ -73,7 +75,10 @@
       "visionFallback": "{{model}} は画像を処理できません — ビジョンモデルに切り替えます。",
       "visionDemoted": "ビジョンモデルがないためスクリーンショットをテキストに置き換えます。computer use をフルに使うには設定 → エージェントで Vision フォールバック（例: Gemini）を指定してください。",
       "resumedTurn": "中断されたエージェント作業を最後のチェックポイントから再開します…",
-      "partialPreserved": "_({{model}} のストリームが中断 — 部分応答を保持しました。再試行中…)_"
+      "partialPreserved": "_({{model}} のストリームが中断 — 部分応答を保持しました。再試行中…)_",
+      "sessionBudget": "セッション予算到達 (${{cost}} / ${{cap}})",
+      "dailyBudget": "日次予算到達 (${{cost}} / ${{cap}})",
+      "compactedManual": "コンテキストを手動で圧縮しました"
     },
     "errors": {
       "noProvider": "プロバイダーまたはモデルが設定されていません。設定 → プロバイダー、設定 → モデルで追加してください。",
@@ -86,7 +91,9 @@
       "maxRounds": "最終回答なしで{{rounds}}ラウンド後に停止しました。",
       "agentError": "エージェントループエラー: {{error}}",
       "emptyResponse": "モデルが空の応答を返しました。再試行するか、より強いモデルに切り替えてください。（メール送信は非対応 — Google 連携は読み取り専用です。）",
-      "hookBlocked": "フックによりブロックされました (UserPromptSubmit)"
+      "hookBlocked": "フックによりブロックされました (UserPromptSubmit)",
+      "sessionBudgetHit": "停止: セッション費用 ${{cost}}（上限 ${{cap}}）。Settings → Usage で上限を上げるか、新しいセッションを開始してください。",
+      "dailyBudgetHit": "停止: 本日の費用 ${{cost}}（上限 ${{cap}}）。Settings → Usage で上限を上げてください。"
     },
     "showEarlier": "以前のメッセージを表示 ({{count}}件)",
     "suggestions": {
@@ -226,7 +233,12 @@
     "doneGateTypecheck": "Typecheck",
     "doneGateTypecheckDesc": "Auto typecheck after edits (auto/yolo)",
     "doneGateTest": "Test",
-    "doneGateTestDesc": "Auto test after edits (auto/yolo)"
+    "doneGateTestDesc": "Auto test after edits (auto/yolo)",
+    "contextFill": "コンテキスト {{pct}}% ({{used}} / {{total}})",
+    "contextWindow": "コンテキスト窓",
+    "contextCompacted": "空き容量のため履歴を圧縮しました",
+    "compactNow": "今すぐコンテキストを圧縮",
+    "compacting": "圧縮中…"
   },
   "modelPicker": {
     "noModels": "利用可能なモデルがありません",
@@ -483,7 +495,8 @@
       "template_research": "調査",
       "template_implementer": "実装",
       "template_reviewer": "レビュー",
-      "parallelHint": "仕事を分けられるときは、ヘルパーを同時に最大 6 体まで動かせます。独立した作業がより早く終わります。進捗は Agents パネルで確認してください。"
+      "parallelHint": "仕事を分けられるときは、ヘルパーを同時に最大 6 体まで動かせます。独立した作業がより早く終わります。進捗は Agents パネルで確認してください。",
+      "applyReview": "適用前に確認"
     },
     "hooksSection": {
       "title": "フック",
@@ -604,7 +617,16 @@
       "configFile": "設定ファイル",
       "configFileDesc": "生の設定ファイルを表示・編集",
       "database": "データベース",
-      "databaseDesc": "ローカルデータベースを管理"
+      "databaseDesc": "ローカルデータベースを管理",
+      "fullBackup": "フルローカルバックアップ",
+      "fullBackupDesc": "~/.pawn を zip（設定・チャット DB・メモリ）。config.json の API キーを含む — 安全に保管してください。",
+      "backupOk": "バックアップ保存: {{path}}",
+      "backupFailed": "バックアップ失敗",
+      "backupCancelled": "バックアップ取消",
+      "desktopOnly": "デスクトップアプリで利用可能",
+      "importOk": "{{count}} 件をインポート",
+      "importEmpty": "ファイルにプロバイダ/モデルがありません",
+      "importFailed": "インポート失敗: {{error}}"
     },
     "system": "システム",
     "connectionsSection": {
@@ -695,7 +717,15 @@
       "taskNotifications": "タスク完了通知",
       "taskNotificationsDesc": "Pawn がバックグラウンドにあるとき、ターン（チャット返信・コーディング作業）完了時に OS 通知を 1 回表示します。",
       "confirmQuit": "終了前に確認する",
-      "confirmQuitDesc": "⌘Q / Ctrl+Q またはトレイの終了でアプリを閉じるときに確認します。終了ダイアログの「今後表示しない」でもオフにできます。"
+      "confirmQuitDesc": "⌘Q / Ctrl+Q またはトレイの終了でアプリを閉じるときに確認します。終了ダイアログの「今後表示しない」でもオフにできます。",
+      "checkUpdatesOnLaunch": "起動時に更新を確認",
+      "checkUpdatesOnLaunchDesc": "起動時に GitHub Releases と静かに比較",
+      "checkUpdates": "更新を確認",
+      "checkUpdatesDesc": "このビルドと最新リリースを比較",
+      "checking": "確認中…",
+      "updateAvailable": "更新あり: {{latest}}（現在 {{current}}）",
+      "upToDate": "最新です（{{current}}）",
+      "desktopOnly": "デスクトップアプリで利用可能"
     },
     "shortcuts": "ショートカット",
     "shortcutSection": {
@@ -745,7 +775,11 @@
       "colProvider": "プロバイダー",
       "colCalls": "呼び出し",
       "colTokens": "トークン",
-      "colCost": "コスト"
+      "colCost": "コスト",
+      "sessionBudget": "セッション費用上限 ($)",
+      "sessionBudgetDesc": "このセッションの USD 費用が上限に達するとエージェントをソフト停止します。0 = 無制限。",
+      "dailyBudget": "日次費用上限 ($)",
+      "dailyBudgetDesc": "本日の端末利用が上限に達すると停止します。0 = 無制限。"
     }
   },
   "projectEdit": {
@@ -791,7 +825,25 @@
       "commitPlaceholder": "コミットメッセージ...",
       "history": "履歴 ({{count}})",
       "checkoutFailed": "ブランチを切り替えられませんでした",
-      "noBranches": "ブランチが見つかりません"
+      "noBranches": "ブランチが見つかりません",
+      "commit": "コミット",
+      "push": "プッシュ",
+      "staged": "ステージ済み",
+      "unstaged": "変更",
+      "stage": "ステージ",
+      "unstage": "アンステージ",
+      "stageAll": "すべてステージ",
+      "openPr": "PR を開く",
+      "openingPr": "作成中…",
+      "openPrHint": "{{repo}} の GitHub PR を作成",
+      "prNeedGithub": "Settings → Connections で GitHub を接続",
+      "prOpened": "Pull request を作成しました",
+      "errCheckout": "チェックアウト失敗 ({{code}})",
+      "errStage": "ステージ失敗",
+      "errUnstage": "アンステージ失敗",
+      "errCommit": "コミット失敗 ({{code}})",
+      "errPush": "プッシュ失敗 ({{code}})",
+      "errPr": "PR を開けません"
     },
     "openTool": "ツールを開く",
     "toolDescs": {
@@ -1065,6 +1117,13 @@
     "rerun": "もう一度実行",
     "rerunStarted": "再実行を開始 ({{id}})",
     "rerunNoPrompt": "再実行できる内容がありません",
-    "rerunNoSession": "アクティブなチャットがありません"
+    "rerunNoSession": "アクティブなチャットがありません",
+    "chipPendingApply": "確認",
+    "applyChanges": "変更を適用",
+    "discardChanges": "破棄",
+    "applyOk": "プロジェクトに適用しました",
+    "applyFail": "適用失敗",
+    "discardOk": "worktree を破棄しました",
+    "discardFail": "破棄失敗"
   }
 }

@@ -4,6 +4,8 @@
  * staged-diff review, and push safety.
  */
 
+import { formatSecretScanBlock, scanForSecrets } from './secretScan'
+
 export type ShellExecFile = (
   file: string,
   args: string[],
@@ -33,6 +35,27 @@ export function validateCommitMessage(message: string): string | null {
     .join('\n')
     .trim()
   if (!body) return 'Commit message body empty after trailers'
+  const secrets = scanForSecrets(msg)
+  if (secrets.length) return formatSecretScanBlock(secrets)
+  return null
+}
+
+/** Soft preflight: scan commit message + optional staged patch for secrets. */
+export async function secretPreflight(
+  execFile: ShellExecFile,
+  cwd: string,
+  message: string
+): Promise<string | null> {
+  const msgHits = scanForSecrets(message)
+  if (msgHits.length) return formatSecretScanBlock(msgHits)
+  try {
+    const diff = await execFile('git', ['diff', '--cached', '--no-color'], cwd, 20_000)
+    const sample = (diff.stdout || '').slice(0, 80_000)
+    const hits = scanForSecrets(sample)
+    if (hits.length) return formatSecretScanBlock(hits)
+  } catch {
+    /* ignore */
+  }
   return null
 }
 
@@ -66,6 +89,8 @@ export async function gitCommit(
 ): Promise<GitWriteResult> {
   const msgErr = validateCommitMessage(opts.message)
   if (msgErr) return { ok: false, text: msgErr }
+  const secretErr = await secretPreflight(execFile, cwd, opts.message)
+  if (secretErr) return { ok: false, text: secretErr }
 
   // Require staged changes unless allowEmpty
   const staged = await execFile('git', ['diff', '--cached', '--stat'], cwd, 15_000)

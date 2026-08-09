@@ -38,7 +38,7 @@ function parseIsolation(raw: unknown): SubagentIsolation | undefined {
 
 function parseApply(raw: unknown): AgentApplyMode | undefined {
   const s = String(raw || '')
-  if (s === 'auto' || s === 'none') return s
+  if (s === 'auto' || s === 'none' || s === 'review') return s
   return undefined
 }
 

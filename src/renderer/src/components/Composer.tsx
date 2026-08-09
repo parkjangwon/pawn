@@ -1,9 +1,10 @@
-import { useRef } from 'react'
+import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
 import GitSummaryChip from './GitSummaryChip'
 import { useProviderStore } from '../stores/provider'
 import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
+import { compactSessionNow } from '../stores/chat'
 import type { Project } from '../stores/app'
 import {
   LARGE_PASTE_CHARS, MAX_ATTACHMENTS, MAX_IMAGE_BYTES, MAX_TEXT_BYTES,
@@ -61,6 +62,10 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const usageTotals = useUsageStore((s) => (props.activeSessionId ? s.bySession[props.activeSessionId] : undefined))
   const lastRoute = useUsageStore((s) => (props.activeSessionId ? s.lastRoute[props.activeSessionId] : undefined))
   const sessionDiags = useUsageStore((s) => (props.activeSessionId ? s.diagnostics[props.activeSessionId] : undefined))
+  const contextMeter = useUsageStore((s) =>
+    props.activeSessionId ? s.contextBySession[props.activeSessionId] : undefined
+  )
+  const [compacting, setCompacting] = useState(false)
   const currentModel = models.find((m) => m.id === activeModelId) || models.find((m) => m.enabled)
   const currentModelLabel = currentModel?.label || currentModel?.modelId || t('modelPicker.noModel')
   const permLabels: Record<string, string> = { ask: t('permission.ask'), auto: t('permission.auto'), yolo: t('permission.yolo') }
@@ -308,7 +313,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
 
               {/* Right: model + send */}
               <div className="input-actions-right">
-                {usageTotals && usageTotals.calls > 0 && (
+                {((usageTotals && usageTotals.calls > 0) || contextMeter) && (
                   <div className="context-chip-wrapper" ref={usageRef}>
                     <button
                       className="context-chip usage-chip"
@@ -316,24 +321,76 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : undefined}
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
-                      <span>{formatCost(usageTotals.cost)}</span>
-                      {usageTotals.cacheHitRate > 0.01 && (
+                      {usageTotals && usageTotals.calls > 0 && (
+                        <span>{formatCost(usageTotals.cost)}</span>
+                      )}
+                      {contextMeter && (
+                        <span
+                          className={`usage-chip-ctx ${contextMeter.ratio >= 0.6 ? 'warn' : ''} ${contextMeter.ratio >= 0.85 ? 'hot' : ''}`}
+                          title={t('contextBar.contextFill', {
+                            pct: Math.round(contextMeter.ratio * 100),
+                            used: formatTokens(contextMeter.tokens),
+                            total: formatTokens(contextMeter.window)
+                          })}
+                        >
+                          {usageTotals && usageTotals.calls > 0 ? '· ' : ''}
+                          {Math.round(contextMeter.ratio * 100)}%
+                        </span>
+                      )}
+                      {usageTotals && usageTotals.cacheHitRate > 0.01 && (
                         <span className="usage-chip-cache">· {Math.round(usageTotals.cacheHitRate * 100)}% {t('contextBar.cached')}</span>
                       )}
                     </button>
                     {showUsagePopover && (
                       <div className="project-picker usage-popover">
                         <div className="picker-item-label">{t('contextBar.usageTitle')}</div>
-                        <div className="usage-popover-row"><span>{t('contextBar.usageInput')}</span><span>{formatTokens(usageTotals.inputTokens)}</span></div>
-                        <div className="usage-popover-row"><span>{t('contextBar.usageOutput')}</span><span>{formatTokens(usageTotals.outputTokens)}</span></div>
-                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheRead')}</span><span>{formatTokens(usageTotals.cacheReadTokens)}</span></div>
-                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheWrite')}</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
-                        <div className="usage-popover-row"><span>{t('contextBar.usageCacheHitRate')}</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
-                        <div className="usage-popover-row total"><span>{t('contextBar.usageTotalCost')}</span><span>{formatCost(usageTotals.cost)}</span></div>
-                        {usageTotals.savedCost > 0 && (
-                          <div className="usage-popover-row saved"><span>{t('contextBar.usageSaved')}</span><span>{formatCost(usageTotals.savedCost)}</span></div>
+                        {contextMeter && (
+                          <>
+                            <div className="usage-popover-row">
+                              <span>{t('contextBar.contextWindow')}</span>
+                              <span>
+                                {formatTokens(contextMeter.tokens)} / {formatTokens(contextMeter.window)}
+                              </span>
+                            </div>
+                            <div className="usage-context-bar" aria-hidden="true">
+                              <div
+                                className={`usage-context-fill ${contextMeter.ratio >= 0.6 ? 'warn' : ''} ${contextMeter.ratio >= 0.85 ? 'hot' : ''}`}
+                                style={{ width: `${Math.min(100, Math.round(contextMeter.ratio * 100))}%` }}
+                              />
+                            </div>
+                            {contextMeter.compacted && (
+                              <div className="usage-popover-route">{t('contextBar.contextCompacted')}</div>
+                            )}
+                          </>
                         )}
-                       {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
+                        {usageTotals && usageTotals.calls > 0 && (
+                          <>
+                            <div className="usage-popover-row"><span>{t('contextBar.usageInput')}</span><span>{formatTokens(usageTotals.inputTokens)}</span></div>
+                            <div className="usage-popover-row"><span>{t('contextBar.usageOutput')}</span><span>{formatTokens(usageTotals.outputTokens)}</span></div>
+                            <div className="usage-popover-row"><span>{t('contextBar.usageCacheRead')}</span><span>{formatTokens(usageTotals.cacheReadTokens)}</span></div>
+                            <div className="usage-popover-row"><span>{t('contextBar.usageCacheWrite')}</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
+                            <div className="usage-popover-row"><span>{t('contextBar.usageCacheHitRate')}</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
+                            <div className="usage-popover-row total"><span>{t('contextBar.usageTotalCost')}</span><span>{formatCost(usageTotals.cost)}</span></div>
+                            {usageTotals.savedCost > 0 && (
+                              <div className="usage-popover-row saved"><span>{t('contextBar.usageSaved')}</span><span>{formatCost(usageTotals.savedCost)}</span></div>
+                            )}
+                          </>
+                        )}
+                        {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
+                        {props.activeSessionId && (
+                          <button
+                            type="button"
+                            className="usage-compact-btn"
+                            disabled={compacting || isStreaming}
+                            onClick={() => {
+                              if (!props.activeSessionId) return
+                              setCompacting(true)
+                              void compactSessionNow(props.activeSessionId).finally(() => setCompacting(false))
+                            }}
+                          >
+                            {compacting ? t('contextBar.compacting') : t('contextBar.compactNow')}
+                          </button>
+                        )}
                         {sessionDiags && sessionDiags.length > 0 && (
                           <div className="usage-diagnostics">
                             {sessionDiags.slice(-4).map((d: CacheDiagnostic, i: number) => (

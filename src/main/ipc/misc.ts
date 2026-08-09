@@ -1,5 +1,6 @@
 import { Notification, app, ipcMain, shell, systemPreferences } from 'electron'
-import { spawn } from 'child_process'
+import { spawn, execFile as execFileCb } from 'child_process'
+import { promisify } from 'util'
 import { resolve, sep, join } from 'path'
 import { readFile, readdir } from 'fs/promises'
 import { handleTrusted, isTrustedSender } from './trust'
@@ -8,6 +9,27 @@ import { setAppStreaming, setSessionStreaming, clearAllStreaming } from '../stre
 import { getPawnDir } from '../config'
 import { getMainWindow } from '../window'
 import { isConfirmQuitEnabled, setConfirmQuitEnabled } from '../quit'
+
+const execFileAsync = promisify(execFileCb)
+
+/** Simple semver compare: 1 if a>b, -1 if a<b, 0 if equal/unknown. */
+function compareSemver(a: string, b: string): number {
+  const pa = a.replace(/[^0-9.]/g, '').split('.').map((n) => parseInt(n, 10) || 0)
+  const pb = b.replace(/[^0-9.]/g, '').split('.').map((n) => parseInt(n, 10) || 0)
+  for (let i = 0; i < 3; i++) {
+    const d = (pa[i] || 0) - (pb[i] || 0)
+    if (d !== 0) return d > 0 ? 1 : -1
+  }
+  return 0
+}
+
+async function zipDirectory(srcDir: string, outZip: string): Promise<void> {
+  // Prefer system zip for portability (no extra dep).
+  await execFileAsync('zip', ['-r', '-q', outZip, '.'], {
+    cwd: srcDir,
+    maxBuffer: 64 * 1024 * 1024
+  })
+}
 
 /** Modern (10.7+) ICNS chunk types that embed a PNG directly, smallest-first
  *  — a menu-row icon never needs more than ~64-128px, and skipping the large
@@ -99,6 +121,79 @@ export function registerMiscIpc(): void {
   })
 
   handleTrusted('app:getVersion', async () => app.getVersion())
+
+  /**
+   * Compare local app version with GitHub Releases latest tag.
+   * Network best-effort; never throws to the renderer.
+   */
+  handleTrusted('app:checkForUpdates', async () => {
+    const current = app.getVersion()
+    try {
+      const res = await fetch(
+        'https://api.github.com/repos/parkjangwon/pawn/releases/latest',
+        {
+          headers: {
+            Accept: 'application/vnd.github+json',
+            'User-Agent': `Pawn/${current}`
+          }
+        }
+      )
+      if (!res.ok) {
+        return {
+          current,
+          updateAvailable: false,
+          error: `GitHub API ${res.status}`
+        }
+      }
+      const data = (await res.json()) as {
+        tag_name?: string
+        html_url?: string
+        name?: string
+      }
+      const latest = String(data.tag_name || '')
+        .replace(/^v/i, '')
+        .trim()
+      if (!latest) {
+        return { current, updateAvailable: false, error: 'No release tag' }
+      }
+      const updateAvailable = compareSemver(latest, current) > 0
+      return {
+        current,
+        latest,
+        updateAvailable,
+        releaseUrl: data.html_url || 'https://github.com/parkjangwon/pawn/releases/latest',
+        releaseName: data.name || latest
+      }
+    } catch (e) {
+      return { current, updateAvailable: false, error: String(e) }
+    }
+  })
+
+  /** Zip a portable backup of ~/.pawn (config, db, memory — no attempt to encrypt). */
+  handleTrusted('app:exportBackup', async () => {
+    try {
+      const pawnDir = getPawnDir()
+      const { dialog } = await import('electron')
+      const stamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19)
+      const defaultName = `pawn-backup-${stamp}.zip`
+      const win = getMainWindow()
+      const save = win
+        ? await dialog.showSaveDialog(win, {
+            defaultPath: defaultName,
+            filters: [{ name: 'Zip', extensions: ['zip'] }]
+          })
+        : await dialog.showSaveDialog({
+            defaultPath: defaultName,
+            filters: [{ name: 'Zip', extensions: ['zip'] }]
+          })
+      if (save.canceled || !save.filePath) return { ok: false, cancelled: true }
+      const outPath = save.filePath.endsWith('.zip') ? save.filePath : `${save.filePath}.zip`
+      await zipDirectory(pawnDir, outPath)
+      return { ok: true, path: outPath }
+    } catch (e) {
+      return { ok: false, error: String(e) }
+    }
+  })
 
   /** Close the main window only (macOS dock app stays alive). Used by progressive Cmd+W. */
   handleTrusted('window:close', async () => {
