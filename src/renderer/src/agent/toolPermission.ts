@@ -63,6 +63,7 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   shell_kill: 'risky',
   computer_screenshot: 'risky',
   computer_displays: 'safe',
+  computer_status: 'safe',
   computer_click: 'risky',
   computer_move: 'risky',
   computer_drag: 'risky',
@@ -140,6 +141,7 @@ function permissionTypeFor(callName: string): PermissionType {
   const map: Record<string, PermissionType> = {
     computer_screenshot: 'computer_use',
     computer_displays: 'computer_use',
+    computer_status: 'computer_use',
     computer_click: 'computer_use',
     computer_move: 'computer_use',
     computer_drag: 'computer_use',
@@ -337,6 +339,7 @@ export async function checkPermission(
     update_plan: 'Update Plan',
     computer_screenshot: 'Take Screenshot',
     computer_displays: 'List Displays',
+    computer_status: 'Computer Status',
     computer_click: 'Mouse Click',
     computer_move: 'Move Mouse',
     computer_drag: 'Mouse Drag',

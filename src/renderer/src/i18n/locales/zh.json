@@ -125,6 +125,17 @@
       "noResults": "没有匹配的文件",
       "gitDesc": "注入 git 状态与分支",
       "diffDesc": "注入 git diff HEAD"
+    },
+    "checklist": {
+      "title": "开始使用",
+      "desc": "简短清单，让第一次对话真正可用。",
+      "provider": "添加 AI 提供商 API 密钥",
+      "project": "打开或创建项目文件夹",
+      "github": "连接 GitHub（可选，用于 issue 与 PR）",
+      "dismiss": "关闭",
+      "openProject": "如何",
+      "connectGithub": "连接",
+      "projectHint": "从侧边栏打开或添加项目，以便我能读写你的代码。"
     }
   },
   "automation": {
@@ -175,7 +186,10 @@
       "webMonitorDesc": "打开目标 URL，与报告文件夹中的上一快照对比，只报告变化部分（价格、库存、公告）。",
       "rssDigest": "RSS 摘要",
       "rssDigestDesc": "获取 RSS 订阅 URL，将新文章汇总为简短摘要。"
-    }
+    },
+    "edit": "编辑",
+    "editTitle": "编辑自动化",
+    "editFooterHint": "保存后，下一次计划运行将使用更新后的提示词与计划。"
   },
   "contextBar": {
     "switchProject": "切换项目",
@@ -253,7 +267,20 @@
     },
     "allowPathAlways": "始终允许此文件夹",
     "allowShellAlways": "始终允许此命令",
-    "queue": "第 {{current}} / {{total}} 个待处理"
+    "queue": "第 {{current}} / {{total}} 个待处理",
+    "alwaysRules": {
+      "title": "始终允许规则",
+      "desc": "在此设备上永久批准的操作。移除规则后，下次请求会再次询问。",
+      "empty": "尚无始终允许规则。在权限提示中选择“始终允许…”即可添加。",
+      "remove": "移除",
+      "kindType": "整个权限类型",
+      "pathTitle": "文件夹路径",
+      "shellTitle": "Shell 命令前缀",
+      "scopeAlways": "始终",
+      "scopeSession": "本次会话",
+      "sessionTitle": "会话批准",
+      "sessionDesc": "退出应用后清除。"
+    }
   },
   "statusBar": {
     "working": "工作中...",
@@ -698,7 +725,28 @@
     "automations": "自动化",
     "memory": "记忆",
     "hooks": "钩子",
-    "subagents": "子代理"
+    "subagents": "子代理",
+    "usage": "用量",
+    "usageSection": {
+      "title": "用量历史",
+      "desc": "本机保存的跨会话 token 与费用汇总。",
+      "range1d": "1天",
+      "range7d": "7天",
+      "range30d": "30天",
+      "rangeAll": "全部",
+      "refresh": "刷新",
+      "totalCost": "总费用",
+      "totalCalls": "API 调用",
+      "totalTokens": "Tokens",
+      "cacheHit": "缓存命中",
+      "empty": "该时间范围内无用量记录。",
+      "desktopOnly": "用量历史仅在桌面应用中可用。",
+      "colModel": "模型",
+      "colProvider": "提供商",
+      "colCalls": "调用",
+      "colTokens": "Tokens",
+      "colCost": "费用"
+    }
   },
   "projectEdit": {
     "edit": "编辑项目",

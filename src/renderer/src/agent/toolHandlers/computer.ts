@@ -39,22 +39,56 @@ const computer_displays: ToolHandler = async (call, projectPath, _signal, ctx, a
         return { toolCallId: call.id, content: `# Displays\n${lines.join('\n')}` }
       }
 
+const computer_status: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+  if (!api.computer?.preflight) {
+    return {
+      toolCallId: call.id,
+      content: 'Computer use is only available in the desktop app.',
+      isError: true
+    }
+  }
+  const res = await api.computer.preflight()
+  const lines = [
+    `# Computer status — ${res.ok ? 'ready' : 'needs setup'}`,
+    `platform: ${res.platform}`,
+    ...(res.notes || []).map((n: string) => `- ${n}`),
+    ...(res.errors || []).map((e: string) => `! ${e}`)
+  ]
+  return {
+    toolCallId: call.id,
+    content: lines.join('\n'),
+    isError: !res.ok
+  }
+}
 
 const computer_click: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
         if (!api.computer?.click) {
           return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
         }
-        const result = await api.computer.click(Number(call.arguments.x), Number(call.arguments.y), {
+        const x = Number(call.arguments.x)
+        const y = Number(call.arguments.y)
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          return { toolCallId: call.id, content: 'x and y must be numbers', isError: true }
+        }
+        const opts = {
           button: call.arguments.button != null ? String(call.arguments.button) : undefined,
           clicks: call.arguments.clicks != null ? Number(call.arguments.clicks) : undefined,
           coordSpace: call.arguments.coord_space != null ? String(call.arguments.coord_space) : undefined,
           returnScreenshot: call.arguments.return_screenshot === true
-        })
+        }
+        let result = await api.computer.click(x, y, opts)
+        // One soft retry on transient hiccups (e.g. cliclick race).
+        if (result.error && /timeout|EAGAIN|busy|temporarily/i.test(result.error)) {
+          await new Promise((r) => setTimeout(r, 120))
+          result = await api.computer.click(x, y, opts)
+        }
         if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
         if (result.screenshot) return { toolCallId: call.id, content: result.screenshot }
+        const clampedNote =
+          (result as { clamped?: boolean }).clamped ? ' (coords clamped to display)' : ''
         return {
           toolCallId: call.id,
-          content: `Clicked (${result.x}, ${result.y}) button=${call.arguments.button || 'left'} clicks=${call.arguments.clicks || 1}`
+          content: `Clicked (${result.x}, ${result.y})${clampedNote} button=${call.arguments.button || 'left'} clicks=${call.arguments.clicks || 1}`
         }
       }
 
@@ -175,6 +209,7 @@ const computer_wait: ToolHandler = async (call, projectPath, _signal, ctx, api) 
 export const computerHandlers: Record<string, ToolHandler> = {
   'computer_screenshot': computer_screenshot,
   'computer_displays': computer_displays,
+  'computer_status': computer_status,
   'computer_click': computer_click,
   'computer_move': computer_move,
   'computer_drag': computer_drag,

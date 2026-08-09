@@ -229,6 +229,12 @@ declare global {
           }>
           error?: string
         }>
+        preflight: () => Promise<{
+          ok: boolean
+          platform: string
+          notes: string[]
+          errors: string[]
+        }>
         click: (
           x: number,
           y: number,
@@ -244,6 +250,7 @@ declare global {
           error?: string
           x?: number
           y?: number
+          clamped?: boolean
           screenshot?: string
           screenshotMeta?: Record<string, number | undefined>
           screenshotError?: string

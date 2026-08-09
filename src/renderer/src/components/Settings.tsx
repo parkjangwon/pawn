@@ -26,6 +26,8 @@ import NavControls from './NavControls'
 import MemorySettingsPanel from './MemorySettingsPanel'
 import HooksSettingsPanel from './HooksSettingsPanel'
 import AgentsSettingsPanel from './AgentsSettingsPanel'
+import PermissionsAlwaysPanel from './PermissionsAlwaysPanel'
+import UsageSettingsPanel from './UsageSettingsPanel'
 import logoGitlab from '../assets/logos/gitlab.svg'
 import logoCodeCommit from '../assets/logos/codecommit.svg'
 import { MCP_TEMPLATES } from '../agent/mcpTemplates'
@@ -45,6 +47,7 @@ type SettingsSection =
   | 'system'
   | 'shortcuts'
   | 'data'
+  | 'usage'
 type SettingsSkillScope = 'all' | 'project' | 'device' | 'builtin'
 type SourceSignalId =
   | 'project-claude'
@@ -88,6 +91,12 @@ const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string; icon:
   { id: 'system', labelKey: 'settings.system', groupKey: 'settings.groups.system', icon: 'M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z' },
   { id: 'shortcuts', labelKey: 'settings.shortcuts', groupKey: 'settings.groups.system', icon: 'M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM7 8h10M7 12h4' },
   { id: 'data', labelKey: 'settings.data', groupKey: 'settings.groups.general', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },
+  {
+    id: 'usage',
+    labelKey: 'settings.usage',
+    groupKey: 'settings.groups.general',
+    icon: 'M3 3v18h18M7 14l3-3 3 2 5-6'
+  },
 ]
 
 export default function Settings({
@@ -1060,6 +1069,7 @@ export default function Settings({
                   <button className={permissionMode === 'yolo' ? 'active' : ''} onClick={() => setPermissionMode('yolo')}>{t('permission.yolo')}</button>
                 </div>
               </div>
+              <PermissionsAlwaysPanel />
               <div className="settings-row">
                 <div className="settings-row-info">
                   <span className="settings-row-label">{t('settings.agentSection.shellSandbox')}</span>
@@ -1124,6 +1134,13 @@ export default function Settings({
           <div className="settings-section">
             <h2>{t('settings.agentsSection.title')}</h2>
             <AgentsSettingsPanel />
+          </div>
+        )}
+
+        {activeSection === 'usage' && (
+          <div className="settings-section">
+            <h2>{t('settings.usageSection.title')}</h2>
+            <UsageSettingsPanel />
           </div>
         )}
 

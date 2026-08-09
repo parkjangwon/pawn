@@ -57,6 +57,67 @@ export function imageToLogical(
   }
 }
 
+/** Clamp logical coords into a display's bounds (prevents off-screen clicks). */
+export function clampLogicalPoint(
+  x: number,
+  y: number,
+  d?: Display
+): { x: number; y: number; clamped: boolean } {
+  const display = d || primaryDisplay()
+  const { width, height } = logicalSize(display)
+  const bounds = display.bounds
+  const minX = bounds?.x ?? 0
+  const minY = bounds?.y ?? 0
+  const maxX = minX + width - 1
+  const maxY = minY + height - 1
+  const cx = Math.min(maxX, Math.max(minX, Math.round(x)))
+  const cy = Math.min(maxY, Math.max(minY, Math.round(y)))
+  return { x: cx, y: cy, clamped: cx !== Math.round(x) || cy !== Math.round(y) }
+}
+
+/** One-shot dependency / platform readiness for computer use. */
+export async function computerPreflight(): Promise<{
+  ok: boolean
+  platform: string
+  notes: string[]
+  errors: string[]
+}> {
+  const platform = process.platform
+  const notes: string[] = []
+  const errors: string[] = []
+  try {
+    const displays = allDisplays()
+    notes.push(`displays=${displays.length} primary=${primaryDisplay().id}`)
+  } catch (e) {
+    errors.push(`display enumeration failed: ${String(e)}`)
+  }
+  if (platform === 'darwin') {
+    try {
+      await run('cliclick', ['-h'])
+      notes.push('cliclick: available')
+    } catch (err) {
+      if (isEnoent(err)) {
+        errors.push(
+          'cliclick missing — brew install cliclick; enable Accessibility for Pawn'
+        )
+      } else {
+        notes.push(`cliclick: present (help exit ${String(err).slice(0, 40)})`)
+      }
+    }
+  } else if (platform === 'linux') {
+    try {
+      await run('xdotool', ['version'])
+      notes.push('xdotool: available')
+    } catch (err) {
+      if (isEnoent(err)) errors.push('xdotool missing — install xdotool for mouse/keyboard')
+      else notes.push('xdotool: check failed')
+    }
+  } else if (platform === 'win32') {
+    notes.push('windows: PowerShell mouse/keyboard path')
+  }
+  return { ok: errors.length === 0, platform, notes, errors }
+}
+
 /** Fit screenshot dimensions for model vision (preserve aspect). */
 export function fitThumbnail(
   screenW: number,

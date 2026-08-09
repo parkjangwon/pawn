@@ -12,7 +12,17 @@ interface RoutineState {
   init: () => Promise<void>
   refresh: () => Promise<void>
   add: (input: { name: string; prompt: string; schedule: RoutineSchedule; projectId?: string; sessionId?: string }) => Promise<{ ok?: boolean; error?: string }>
-  update: (id: string, patch: Partial<Pick<Routine, 'name' | 'schedule' | 'prompt' | 'projectId' | 'sessionId'>>) => Promise<void>
+  update: (
+    id: string,
+    patch: Partial<{
+      name: string
+      /** Object schedule (stringified) or already-serialized JSON string. */
+      schedule: RoutineSchedule | string
+      prompt: string
+      projectId: string
+      sessionId: string
+    }>
+  ) => Promise<void>
   toggle: (id: string, enabled: boolean) => Promise<void>
   remove: (id: string) => Promise<void>
   runNow: (id: string) => Promise<void>
@@ -250,8 +260,21 @@ export const useRoutineStore = create<RoutineState>((set, get) => ({
   },
 
   update: async (id, patch) => {
-    const nextPatch: typeof patch = { ...patch }
-    if (patch.schedule) nextPatch.schedule = JSON.stringify(patch.schedule)
+    const nextPatch: {
+      name?: string
+      schedule?: string
+      prompt?: string
+      projectId?: string
+      sessionId?: string
+    } = {}
+    if (patch.name !== undefined) nextPatch.name = patch.name
+    if (patch.prompt !== undefined) nextPatch.prompt = patch.prompt
+    if (patch.projectId !== undefined) nextPatch.projectId = patch.projectId
+    if (patch.sessionId !== undefined) nextPatch.sessionId = patch.sessionId
+    if (patch.schedule !== undefined) {
+      nextPatch.schedule =
+        typeof patch.schedule === 'string' ? patch.schedule : JSON.stringify(patch.schedule)
+    }
     await window.api.routine?.update(id, nextPatch)
     await get().refresh()
   },

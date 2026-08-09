@@ -285,6 +285,127 @@
   color: #fff;
 }
 
+/* First-run setup checklist */
+.welcome-checklist {
+  width: 100%;
+  max-width: 100%;
+  margin-top: var(--space-md);
+  padding: 14px 16px;
+  border: 1px solid var(--border-color);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg-elevated, var(--bg-primary)) 92%, var(--accent) 8%);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.welcome-checklist-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.welcome-checklist-title {
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}
+
+.welcome-checklist-dismiss {
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+}
+
+.welcome-checklist-dismiss:hover {
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-secondary) 80%, transparent);
+}
+
+.welcome-checklist-desc {
+  font-size: 12px !important;
+  color: var(--text-secondary) !important;
+  text-align: left !important;
+  max-width: none !important;
+  margin: 0 0 10px !important;
+}
+
+.welcome-checklist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.welcome-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.welcome-checklist-item.done {
+  color: var(--text-muted);
+}
+
+.welcome-checklist-item.done .welcome-checklist-label {
+  text-decoration: line-through;
+  text-decoration-color: color-mix(in srgb, var(--text-muted) 55%, transparent);
+}
+
+.welcome-checklist-mark {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent);
+}
+
+.welcome-checklist-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1.5px solid color-mix(in srgb, var(--text-muted) 70%, transparent);
+}
+
+.welcome-checklist-label {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.35;
+}
+
+.welcome-checklist-action {
+  flex-shrink: 0;
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 550;
+  padding: 4px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    background var(--dur-fast) var(--ease-out-soft);
+}
+
+.welcome-checklist-action:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-color));
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-primary));
+}
+
 /* Session pane: hosts welcome or message list above the composer */
 .session-pane {
   flex: 1 1 auto;

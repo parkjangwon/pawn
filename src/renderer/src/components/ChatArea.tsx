@@ -24,7 +24,7 @@ import {
   navigatePromptHistory,
   pushPromptHistory
 } from '../utils/promptHistory'
-import { buildIssuePrPlaybook, parseIssuePrArg } from '../agent/issueWorkflow'
+import { buildIssuePrPlaybook, parseIssuePrArg, prefetchIssueContext } from '../agent/issueWorkflow'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -565,12 +565,24 @@ export default function ChatArea({
       const sk = skillByName.get(name)
       if (sk) blocks.push(`<skill name="${name}">\n${sk.content}\n</skill>`)
     }
-    // /issue-pr #42 — inject Issue→PR playbook (SWE-agent style)
+    // /issue-pr #42 — inject Issue→PR playbook (SWE-agent style), prefetch when connected
     const issuePrMatch = typedPrompt.match(/(?:^|\s)\/issue-pr(?:\s+(\S+))?/i)
     if (issuePrMatch) {
       const arg = (issuePrMatch[1] || '').trim()
       const parsed = parseIssuePrArg(arg || typedPrompt.replace(/\/issue-pr/i, '').trim())
-      if (parsed) blocks.push(buildIssuePrPlaybook(parsed))
+      if (parsed) {
+        let prefetched: string | undefined
+        try {
+          prefetched = await prefetchIssueContext({
+            issueRef: parsed.issueRef,
+            repoHint: parsed.repoHint,
+            projectPath: cwd || undefined
+          })
+        } catch {
+          prefetched = undefined
+        }
+        blocks.push(buildIssuePrPlaybook({ ...parsed, prefetched }))
+      }
       setAgentMode('build')
     }
     const finalContent = blocks.length ? blocks.join('\n\n') + '\n\n' + typedPrompt : typedPrompt

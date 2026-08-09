@@ -38,11 +38,14 @@ export default function AutomationView({
   onToggleSidebar, canGoBack, canGoForward, onGoBack, onGoForward
 }: AutomationViewProps): React.JSX.Element {
   const { t, i18n } = useTranslation()
-  const { routines, add, toggle, remove, runNow, runningIds, refresh } = useRoutineStore()
+  const { routines, add, update, toggle, remove, runNow, runningIds, refresh } = useRoutineStore()
   const { projects, activeProjectId } = useAppStore()
-  const [showCreate, setShowCreate] = useState(false)
+  const [showEditor, setShowEditor] = useState(false)
+  /** null = create mode; string id = edit mode */
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDeleteRoutine, setConfirmDeleteRoutine] = useState<{ id: string; name: string } | null>(null)
   const [importMsg, setImportMsg] = useState('')
+  const [saveError, setSaveError] = useState<string | null>(null)
   const emptyDraft = (): DraftState => ({
     name: '',
     trigger: 'daily',
@@ -63,25 +66,70 @@ export default function AutomationView({
   const [draft, setDraft] = useState<DraftState>(emptyDraft)
 
   const userProjects = projects.filter((p) => p.id !== '__general__')
-  const canCreate =
+  const canSave =
     draft.name.trim().length > 0 &&
     (draft.prompt.trim().length > 0 || draft.stepsText.trim().length > 0) &&
     (draft.trigger !== 'cron' || draft.cronExpr.trim().split(/\s+/).length === 5) &&
     (draft.trigger !== 'file_watch' || draft.watchPath.trim().length > 0)
 
+  const closeEditor = (): void => {
+    setShowEditor(false)
+    setEditingId(null)
+    setSaveError(null)
+  }
+
   const openCreate = (preset?: Partial<DraftState>): void => {
+    setEditingId(null)
+    setSaveError(null)
     setDraft({ ...emptyDraft(), projectId: activeProjectId || '', ...preset })
-    setShowCreate(true)
+    setShowEditor(true)
+  }
+
+  const openEdit = (routine: Routine): void => {
+    setEditingId(routine.id)
+    setSaveError(null)
+    const d = emptyDraft()
+    d.name = routine.name
+    d.prompt = routine.prompt
+    d.projectId = routine.projectId || ''
+    try {
+      const parsed = JSON.parse(routine.schedule) as RoutineSchedule & {
+        maxRetries?: number
+        retryDelaySec?: number
+        steps?: string[]
+      }
+      d.trigger = parsed.type
+      if (parsed.type === 'interval') d.intervalMin = String(parsed.minutes ?? 30)
+      if (parsed.type === 'daily' || parsed.type === 'weekly') {
+        d.hour = String(parsed.hour ?? 9).padStart(2, '0')
+        d.minute = String(parsed.minute ?? 0).padStart(2, '0')
+      }
+      if (parsed.type === 'weekly') d.weekday = String(parsed.weekday ?? 1)
+      if (parsed.type === 'cron') d.cronExpr = parsed.expr || d.cronExpr
+      if (parsed.type === 'file_watch') {
+        d.watchPath = parsed.path || ''
+        d.debounceMin = String(parsed.debounceMinutes ?? 1)
+      }
+      if (parsed.maxRetries != null) d.maxRetries = String(parsed.maxRetries)
+      if (parsed.retryDelaySec != null) d.retryDelaySec = String(parsed.retryDelaySec)
+      if (Array.isArray(parsed.steps) && parsed.steps.length) {
+        d.stepsText = parsed.steps.join('\n')
+      }
+    } catch {
+      /* keep defaults for schedule fields */
+    }
+    setDraft(d)
+    setShowEditor(true)
   }
 
   useEffect(() => {
-    if (!showCreate) return
+    if (!showEditor) return
     const onKeyDown = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setShowCreate(false)
+      if (e.key === 'Escape') closeEditor()
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [showCreate])
+  }, [showEditor])
 
   const triggerLabel = (scheduleJson: string, enabled: boolean): string => {
     if (!enabled) return t('automation.manual')
@@ -125,8 +173,11 @@ export default function AutomationView({
     return new Date(ms).toLocaleString(i18n.language)
   }
 
-  const createAutomation = async (): Promise<void> => {
-    if (!canCreate) return
+  const buildSchedulePayload = (): RoutineSchedule & {
+    maxRetries: number
+    retryDelaySec: number
+    steps?: string[]
+  } => {
     let base: RoutineSchedule
     if (draft.trigger === 'interval') {
       base = { type: 'interval', minutes: Math.max(1, Number(draft.intervalMin) || 30) }
@@ -153,22 +204,42 @@ export default function AutomationView({
       .map((s) => s.trim())
       .filter(Boolean)
       .slice(0, 20)
-    const schedulePayload = {
+    return {
       ...base,
       maxRetries: Math.min(5, Math.max(0, Math.floor(Number(draft.maxRetries) || 0))),
       retryDelaySec: Math.min(3600, Math.max(10, Math.floor(Number(draft.retryDelaySec) || 60))),
       ...(steps.length ? { steps } : {})
     }
+  }
+
+  const saveAutomation = async (): Promise<void> => {
+    if (!canSave) return
+    setSaveError(null)
+    const schedulePayload = buildSchedulePayload()
+    const steps = schedulePayload.steps || []
     const prompt =
       draft.prompt.trim() ||
       (steps[0] ? steps[0] : 'Run automation steps.')
-    await add({
-      name: draft.name.trim(),
-      prompt,
-      schedule: schedulePayload as RoutineSchedule,
-      projectId: draft.projectId || undefined
-    })
-    setShowCreate(false)
+    try {
+      if (editingId) {
+        await update(editingId, {
+          name: draft.name.trim(),
+          prompt,
+          schedule: schedulePayload as RoutineSchedule,
+          projectId: draft.projectId || ''
+        })
+      } else {
+        await add({
+          name: draft.name.trim(),
+          prompt,
+          schedule: schedulePayload as RoutineSchedule,
+          projectId: draft.projectId || undefined
+        })
+      }
+      closeEditor()
+    } catch (e) {
+      setSaveError(String(e))
+    }
   }
 
   useEffect(() => {
@@ -238,7 +309,9 @@ export default function AutomationView({
         <span className="automation-import-msg">{importMsg}</span>
         <button className="automation-tool-btn" onClick={() => void importAutomations()} title={t('automation.import')}>{t('automation.import')}</button>
         <button className="automation-tool-btn" onClick={() => void exportAutomations()} title={t('automation.export')}>{t('automation.export')}</button>
-        <button className="btn-primary automation-header-btn" onClick={() => openCreate()}>{t('automation.new')}</button>
+        <button className="btn-primary automation-header-btn" onClick={() => openCreate()}>
+          {t('automation.new')}
+        </button>
       </div>
 
       <section className="automation-content">
@@ -316,14 +389,36 @@ export default function AutomationView({
                   </p>
                 ) : null}
                 <div className="automation-card-actions">
-                  <button className="test-btn" disabled={runningIds.has(routine.id)} onClick={() => void runNow(routine.id)}>{t('automation.runNow')}</button>
+                  <button
+                    className="test-btn"
+                    disabled={runningIds.has(routine.id)}
+                    onClick={() => void runNow(routine.id)}
+                  >
+                    {t('automation.runNow')}
+                  </button>
+                  <button
+                    type="button"
+                    className="test-btn"
+                    onClick={() => openEdit(routine)}
+                    title={t('automation.edit')}
+                  >
+                    {t('automation.edit')}
+                  </button>
                   <label className="toggle-switch">
-                    <input type="checkbox" checked={routine.enabled} onChange={(e) => void toggle(routine.id, e.target.checked)} />
+                    <input
+                      type="checkbox"
+                      checked={routine.enabled}
+                      onChange={(e) => void toggle(routine.id, e.target.checked)}
+                    />
                     <span className="toggle-slider" />
                   </label>
-                  <button className="delete-btn" onClick={() => setConfirmDeleteRoutine({ id: routine.id, name: routine.name })}>
+                  <button
+                    className="delete-btn"
+                    onClick={() => setConfirmDeleteRoutine({ id: routine.id, name: routine.name })}
+                  >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                      <polyline points="3 6 5 6 21 6" />
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                     </svg>
                   </button>
                 </div>
@@ -334,12 +429,14 @@ export default function AutomationView({
         </div>
       </section>
 
-      {showCreate && (
-        <div className="automation-modal-backdrop" onClick={() => setShowCreate(false)}>
+      {showEditor && (
+        <div className="automation-modal-backdrop" onClick={closeEditor}>
           <div className="automation-modal" onClick={(e) => e.stopPropagation()}>
             <div className="automation-modal-head">
-              <h3>{t('automation.new')}</h3>
-              <button className="automation-close" onClick={() => setShowCreate(false)}>×</button>
+              <h3>{editingId ? t('automation.editTitle') : t('automation.new')}</h3>
+              <button type="button" className="automation-close" onClick={closeEditor}>
+                ×
+              </button>
             </div>
 
             <div className="automation-form">
@@ -469,11 +566,28 @@ export default function AutomationView({
               </div>
             </div>
 
+            {saveError && (
+              <div className="settings-row-desc mcp-form-error" style={{ padding: '0 16px 8px' }}>
+                {saveError}
+              </div>
+            )}
+
             <div className="automation-modal-actions">
-              <span className="automation-modal-hint">{t('automation.footerHint')}</span>
+              <span className="automation-modal-hint">
+                {editingId ? t('automation.editFooterHint') : t('automation.footerHint')}
+              </span>
               <div className="automation-modal-actions-buttons">
-                <button className="btn-cancel" onClick={() => setShowCreate(false)}>{t('common.cancel')}</button>
-                <button className="btn-primary" onClick={() => void createAutomation()} disabled={!canCreate}>{t('common.save')}</button>
+                <button type="button" className="btn-cancel" onClick={closeEditor}>
+                  {t('common.cancel')}
+                </button>
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => void saveAutomation()}
+                  disabled={!canSave}
+                >
+                  {t('common.save')}
+                </button>
               </div>
             </div>
           </div>

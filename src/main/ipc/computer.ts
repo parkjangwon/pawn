@@ -11,6 +11,8 @@ import {
   clipboardRead,
   clipboardWrite,
   imageToLogical,
+  clampLogicalPoint,
+  computerPreflight,
   sleep
 } from '../computer'
 
@@ -26,12 +28,14 @@ function resolvePoint(
   x: number,
   y: number,
   coordSpace?: string
-): { x: number; y: number } {
+): { x: number; y: number; clamped?: boolean } {
   const space = (coordSpace || 'image').toLowerCase()
-  if (space === 'screen' || space === 'logical' || !lastShotMeta) {
-    return { x: Math.round(x), y: Math.round(y) }
-  }
-  return imageToLogical(x, y, lastShotMeta)
+  let pt =
+    space === 'screen' || space === 'logical' || !lastShotMeta
+      ? { x: Math.round(x), y: Math.round(y) }
+      : imageToLogical(x, y, lastShotMeta)
+  const clamped = clampLogicalPoint(pt.x, pt.y)
+  return { x: clamped.x, y: clamped.y, clamped: clamped.clamped }
 }
 
 async function maybeShot(returnScreenshot?: boolean, displayId?: number | null) {
@@ -78,6 +82,10 @@ export function registerComputerIpc(): void {
     return { displays: listDisplays() }
   })
 
+  handleTrusted('computer:preflight', async () => {
+    return computerPreflight()
+  })
+
   handleTrusted(
     'computer:click',
     async (
@@ -101,7 +109,7 @@ export function registerComputerIpc(): void {
       const res = await mouseClick(p.x, p.y, { button: opts?.button, clicks: opts?.clicks })
       if (res.error) return res
       const extra = await maybeShot(opts?.returnScreenshot, opts?.displayId)
-      return { ok: true, x: p.x, y: p.y, ...extra }
+      return { ok: true, x: p.x, y: p.y, clamped: Boolean(p.clamped), ...extra }
     }
   )
 

@@ -125,6 +125,17 @@
       "noResults": "일치하는 파일이 없습니다",
       "gitDesc": "git 상태·브랜치 삽입",
       "diffDesc": "git diff HEAD 삽입"
+    },
+    "checklist": {
+      "title": "시작하기",
+      "desc": "첫 채팅이 바로 되도록 짧게 준비하세요.",
+      "provider": "AI 프로바이더 API 키 추가",
+      "project": "프로젝트 폴더 열기 또는 만들기",
+      "github": "GitHub 연결 (이슈·PR용, 선택)",
+      "dismiss": "닫기",
+      "openProject": "방법",
+      "connectGithub": "연결",
+      "projectHint": "사이드바에서 프로젝트를 열거나 추가해 주세요. 그러면 코드를 읽고 수정할 수 있습니다."
     }
   },
   "automation": {
@@ -175,7 +186,10 @@
       "webMonitorDesc": "대상 URL을 열고 리포트 폴더의 이전 스냅샷과 비교해 바뀐 것만 보고합니다 (가격, 재고, 공지).",
       "rssDigest": "RSS 다이제스트",
       "rssDigestDesc": "RSS 피드 URL을 가져와 새 글을 짧은 다이제스트로 요약합니다."
-    }
+    },
+    "edit": "편집",
+    "editTitle": "자동화 편집",
+    "editFooterHint": "저장하면 다음 예약 실행부터 변경된 프롬프트와 일정이 적용됩니다."
   },
   "contextBar": {
     "switchProject": "프로젝트 전환",
@@ -253,7 +267,20 @@
     },
     "allowPathAlways": "이 폴더 항상 허용",
     "allowShellAlways": "이 명령 항상 허용",
-    "queue": "{{current}} / {{total}} 대기 중"
+    "queue": "{{current}} / {{total}} 대기 중",
+    "alwaysRules": {
+      "title": "항상 허용 규칙",
+      "desc": "이 기기에서 영구 승인된 동작입니다. 규칙을 지우면 다음 요청부터 다시 묻습니다.",
+      "empty": "항상 허용 규칙이 없습니다. 권한 대화상자에서 “항상 허용…”을 선택하면 추가됩니다.",
+      "remove": "제거",
+      "kindType": "권한 유형 전체",
+      "pathTitle": "폴더 경로",
+      "shellTitle": "셸 명령 접두사",
+      "scopeAlways": "항상",
+      "scopeSession": "이번 세션",
+      "sessionTitle": "세션 승인",
+      "sessionDesc": "앱을 종료하면 초기화됩니다."
+    }
   },
   "statusBar": {
     "working": "작업 중...",
@@ -698,7 +725,28 @@
     "automations": "자동화",
     "memory": "메모리",
     "hooks": "훅",
-    "subagents": "서브에이전트"
+    "subagents": "서브에이전트",
+    "usage": "사용량",
+    "usageSection": {
+      "title": "사용량 히스토리",
+      "desc": "이 기기에 저장된 세션별 토큰·비용 합계입니다.",
+      "range1d": "1일",
+      "range7d": "7일",
+      "range30d": "30일",
+      "rangeAll": "전체",
+      "refresh": "새로고침",
+      "totalCost": "총 비용",
+      "totalCalls": "API 호출",
+      "totalTokens": "토큰",
+      "cacheHit": "캐시 적중",
+      "empty": "이 기간에 기록된 사용량이 없습니다.",
+      "desktopOnly": "사용량 히스토리는 데스크톱 앱에서 확인할 수 있습니다.",
+      "colModel": "모델",
+      "colProvider": "프로바이더",
+      "colCalls": "호출",
+      "colTokens": "토큰",
+      "colCost": "비용"
+    }
   },
   "projectEdit": {
     "edit": "프로젝트 편집",

@@ -125,6 +125,17 @@
       "noResults": "No matching files",
       "gitDesc": "Inject git status & branch",
       "diffDesc": "Inject git diff HEAD"
+    },
+    "checklist": {
+      "title": "Get started",
+      "desc": "A short setup list so the first chat actually works.",
+      "provider": "Add an AI provider API key",
+      "project": "Open or create a project folder",
+      "github": "Connect GitHub (optional, for issues & PRs)",
+      "dismiss": "Dismiss",
+      "openProject": "How?",
+      "connectGithub": "Connect",
+      "projectHint": "Open a project from the sidebar (folder icon) or use Add Project so I can read and edit your code."
     }
   },
   "automation": {
@@ -175,7 +186,10 @@
       "webMonitorDesc": "Open the target URL and check for changes against the previous snapshot in the reports folder; report only what changed (price, stock, notices).",
       "rssDigest": "RSS digest",
       "rssDigestDesc": "Fetch the RSS feed URL and summarize new posts into a short digest."
-    }
+    },
+    "edit": "Edit",
+    "editTitle": "Edit automation",
+    "editFooterHint": "Save changes — the next scheduled run uses the updated prompt and schedule."
   },
   "contextBar": {
     "switchProject": "Switch Project",
@@ -253,7 +267,20 @@
     },
     "allowPathAlways": "Always allow this folder",
     "allowShellAlways": "Always allow this command",
-    "queue": "{{current}} of {{total}} waiting"
+    "queue": "{{current}} of {{total}} waiting",
+    "alwaysRules": {
+      "title": "Always-allow rules",
+      "desc": "Actions approved forever for this device. Remove a rule anytime — the next request will ask again.",
+      "empty": "No always-allow rules yet. Approve with “Always allow…” on a permission prompt.",
+      "remove": "Remove",
+      "kindType": "Entire permission type",
+      "pathTitle": "Folder path",
+      "shellTitle": "Shell command prefix",
+      "scopeAlways": "Always",
+      "scopeSession": "This session",
+      "sessionTitle": "Session approvals",
+      "sessionDesc": "Cleared when you quit the app."
+    }
   },
   "statusBar": {
     "working": "Working...",
@@ -698,7 +725,28 @@
     "automations": "Automations",
     "memory": "Memory",
     "hooks": "Hooks",
-    "subagents": "Subagents"
+    "subagents": "Subagents",
+    "usage": "Usage",
+    "usageSection": {
+      "title": "Usage history",
+      "desc": "Token and cost totals across sessions (stored on this device).",
+      "range1d": "1d",
+      "range7d": "7d",
+      "range30d": "30d",
+      "rangeAll": "All",
+      "refresh": "Refresh",
+      "totalCost": "Total cost",
+      "totalCalls": "API calls",
+      "totalTokens": "Tokens",
+      "cacheHit": "Cache hit",
+      "empty": "No usage recorded for this range.",
+      "desktopOnly": "Usage history is available in the desktop app.",
+      "colModel": "Model",
+      "colProvider": "Provider",
+      "colCalls": "Calls",
+      "colTokens": "Tokens",
+      "colCost": "Cost"
+    }
   },
   "projectEdit": {
     "edit": "Edit Project",

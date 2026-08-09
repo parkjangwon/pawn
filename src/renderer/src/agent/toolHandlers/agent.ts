@@ -6,7 +6,11 @@ import { runProjectChecks } from '../runChecks'
 import { searchCodebase } from '../codebaseSearch'
 import { listArtifacts, writeArtifact } from '../artifacts'
 import { buildRepoMap } from '../repoMap'
-import { buildIssuePrPlaybook, parseIssuePrArg } from '../issueWorkflow'
+import {
+  buildIssuePrPlaybook,
+  parseIssuePrArg,
+  prefetchIssueContext
+} from '../issueWorkflow'
 import {
   formatSubagentResults,
   listAgentCatalog,
@@ -210,13 +214,26 @@ const issue_to_pr: ToolHandler = async (call, projectPath, _signal, _ctx, _api) 
     }
   }
   if (call.arguments.repo) parsed.repoHint = String(call.arguments.repo)
-  const playbook = buildIssuePrPlaybook(parsed)
+  // Prefetch when GitHub is connected — saves a full tool round.
+  let prefetched: string | undefined
+  try {
+    prefetched = await prefetchIssueContext({
+      issueRef: parsed.issueRef,
+      repoHint: parsed.repoHint,
+      projectPath
+    })
+  } catch {
+    prefetched = undefined
+  }
+  const playbook = buildIssuePrPlaybook({ ...parsed, prefetched })
   return {
     toolCallId: call.id,
     content:
       playbook +
       `\n\nProject cwd: ${projectPath || '(none)'}\n` +
-      `Begin step 1 now with the appropriate tools.`
+      (prefetched
+        ? `Issue details were prefetched. Continue from local prep / implementation.`
+        : `Begin step 1 now with the appropriate tools.`)
   }
 }
 

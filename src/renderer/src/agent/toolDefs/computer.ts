@@ -22,6 +22,12 @@ export const COMPUTER_TOOLS: ToolDefinition[] = [
     parameters: { type: 'object', properties: {} }
   },
   {
+    name: 'computer_status',
+    description:
+      'Check whether desktop computer use is ready (display access, cliclick/xdotool, platform notes). Call once before the first click if setup is uncertain.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
     name: 'computer_click',
     description:
       'Click at coordinates. Default coord_space=image (from the last computer_screenshot). button: left|right|middle. clicks: 1 or 2 for double-click. Set return_screenshot=true after UI changes.',

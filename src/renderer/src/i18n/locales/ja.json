@@ -125,6 +125,17 @@
       "noResults": "一致するファイルがありません",
       "gitDesc": "git ステータスを挿入",
       "diffDesc": "git diff HEAD を挿入"
+    },
+    "checklist": {
+      "title": "はじめの設定",
+      "desc": "最初のチャットがすぐ動くための短いチェックリストです。",
+      "provider": "AI プロバイダーの API キーを追加",
+      "project": "プロジェクトフォルダを開く／作成",
+      "github": "GitHub を接続（Issue / PR 用・任意）",
+      "dismiss": "閉じる",
+      "openProject": "方法",
+      "connectGithub": "接続",
+      "projectHint": "サイドバーからプロジェクトを開くか追加してください。コードの読み書きができるようになります。"
     }
   },
   "automation": {
@@ -175,7 +186,10 @@
       "webMonitorDesc": "対象URLを開き、レポートフォルダの前回スナップショットと比較して変更点のみ報告します（価格・在庫・お知らせ）。",
       "rssDigest": "RSSダイジェスト",
       "rssDigestDesc": "RSSフィードURLを取得し、新しい投稿を短いダイジェストにまとめます。"
-    }
+    },
+    "edit": "編集",
+    "editTitle": "自動化を編集",
+    "editFooterHint": "保存すると、次回の予定実行から更新されたプロンプトとスケジュールが使われます。"
   },
   "contextBar": {
     "switchProject": "プロジェクトを切り替え",
@@ -253,7 +267,20 @@
     },
     "allowPathAlways": "このフォルダを常に許可",
     "allowShellAlways": "このコマンドを常に許可",
-    "queue": "{{current}} / {{total}} 件待ち"
+    "queue": "{{current}} / {{total}} 件待ち",
+    "alwaysRules": {
+      "title": "常に許可するルール",
+      "desc": "このデバイスで永続承認した操作です。削除すると次回から再度確認します。",
+      "empty": "常時許可ルールはまだありません。権限ダイアログで「常に許可…」を選ぶと追加されます。",
+      "remove": "削除",
+      "kindType": "権限タイプ全体",
+      "pathTitle": "フォルダパス",
+      "shellTitle": "シェルコマンド接頭辞",
+      "scopeAlways": "常に",
+      "scopeSession": "このセッション",
+      "sessionTitle": "セッション承認",
+      "sessionDesc": "アプリ終了時にクリアされます。"
+    }
   },
   "statusBar": {
     "working": "処理中...",
@@ -698,7 +725,28 @@
     "automations": "オートメーション",
     "memory": "メモリ",
     "hooks": "フック",
-    "subagents": "サブエージェント"
+    "subagents": "サブエージェント",
+    "usage": "使用量",
+    "usageSection": {
+      "title": "使用履歴",
+      "desc": "このデバイスに保存されたセッション横断のトークンとコスト集計です。",
+      "range1d": "1日",
+      "range7d": "7日",
+      "range30d": "30日",
+      "rangeAll": "すべて",
+      "refresh": "更新",
+      "totalCost": "合計コスト",
+      "totalCalls": "API 呼び出し",
+      "totalTokens": "トークン",
+      "cacheHit": "キャッシュヒット",
+      "empty": "この期間の使用記録はありません。",
+      "desktopOnly": "使用履歴はデスクトップアプリで利用できます。",
+      "colModel": "モデル",
+      "colProvider": "プロバイダー",
+      "colCalls": "呼び出し",
+      "colTokens": "トークン",
+      "colCost": "コスト"
+    }
   },
   "projectEdit": {
     "edit": "プロジェクトを編集",

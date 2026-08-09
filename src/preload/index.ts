@@ -100,6 +100,7 @@ const api = {
     screenshot: (opts?: { displayId?: number; maxWidth?: number }) =>
       ipcRenderer.invoke('computer:screenshot', opts || {}),
     displays: () => ipcRenderer.invoke('computer:displays'),
+    preflight: () => ipcRenderer.invoke('computer:preflight'),
     click: (
       x: number,
       y: number,
