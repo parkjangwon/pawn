@@ -15,18 +15,27 @@ Pawn はまた別のクラウド囲い込み IDE ではありません。OpenAI 
 ## できること
 
 - **コード** — ファイル・シェル・Git・シンボル検索・チェック、権限付きエージェントループ
-- **ブラウザ** — 埋め込み Chromium（`browser_*`）で実 Web UI・ログインセッション
+- **ブラウザ** — 埋め込み Chromium（`browser_*`）で実 Web UI・ログインセッション（セッション claim 隔離）
 - **リサーチ** — 追加キー不要の公開 Web 検索/取得（`web_search` / `web_fetch` / `web_research`）
 - **コンピュータ操作** — デスクトップのマウス・キーボード・スクショ・クリップボード（`computer_*`）
 - **記憶** — ローカル長期 Memory（`~/.pawn/memory.db`）で使うほどパーソナライズ
 - **Hooks** — Claude/Codex 互換ライフサイクルフック（Claude + Pawn 設定をマージ・重複排除）
 - **連携** — 設定 → 接続で Google / GitHub（OAuth）と GitLab / AWS CodeCommit（PAT）ツール（トークンはローカルのみ）
 - **拡張** — MCP、Claude Code スキル/プラグイン、`CLAUDE.md` / `AGENTS.md`、自動化、トレイ
+- **サブエージェント** — セッション内サブエージェント、ツール方針・オーケストレーション、任意で worktree レビュー後に適用
+- **マルチルート** — 追加プロジェクトルートと有効 cwd；パネルとエージェントツールがルートを認識
+- **セッション** — 永続 plan/thinking、添付を保った編集・再生成、復元、シークレット除外バックアップ
+- **利用量・予算** — コンテキストメーター、支出 soft-cap、利用量パネル
+- **アップデート** — 設定/起動時に GitHub Releases を確認し、対応インストーラをダウンロードして開く
 - **ルーティング** — マルチモデル自動ルーティング、キャッシュ安定、DeepSeek/MiMo thinking + ビジョンフォールバック
-- **プロバイダー（BYOK）** — OpenAI、Anthropic、OpenRouter、DeepSeek、**OpenCode Go**、**Command Code**、**Xiaomi MiMo**、Gemini、xAI、Groq などにキーを貼るか、任意の OpenAI/Claude 互換 base URL
+- **プロバイダー（BYOK）** — OpenAI、Anthropic、OpenRouter、DeepSeek、**OpenCode Go**、**Command Code**、**Xiaomi MiMo**、Gemini、xAI、Groq などにキーを貼るか、任意の OpenAI/Claude 互換 base URL。可能なら OS `safeStorage` で鍵を暗号化保存
 - **モデル一覧同期** — 設定 → プロバイダー → **モデル同期** で `GET {baseUrl}/models` を取得（プリセットはブートストラップ用）
 
 UI: ChatGPT 風レイアウト、ターミナル / ファイル / Git / Diff / ブラウザパネル、ライト・ダーク。言語: 英・韓・日・中。
+
+### 最新 — v0.9.0
+
+BYOK 鍵の暗号化、マルチルート仕上げ、アプリ内アップデート DL、シークレット除外バックアップ、ブラウザ claim 隔離、transcript 安全な編集/再生成、plan・thinking UI、コンテキストメーターと支出上限、worktree レビュー適用、サブエージェント連携、issue→PR ヘルパー、自動化編集、ウェルカムチェックリスト、en/ko/ja/zh パリティ拡大。
 
 ---
 
@@ -65,9 +74,9 @@ pawn
 
 | プラットフォーム | パッケージ |
 |------------------|------------|
-| macOS | `Pawn-<version>-universal.dmg`（Apple Silicon + Intel）。初回は右クリック → **開く**（未署名）。 |
-| Windows | `Pawn-<version>-x64-setup.exe` または `…-arm64-setup.exe` |
-| Linux | `.AppImage` / `.deb`（または `npm run dist:linux`） |
+| macOS | `pawn-<version>-universal.dmg`（Apple Silicon + Intel）。初回は右クリック → **開く**（未署名）。 |
+| Windows | `pawn-<version>-x64-setup.exe` または `pawn-<version>-arm64-setup.exe` |
+| Linux | `pawn-<version>-x64.AppImage` / `.deb`（または `npm run dist:linux`） |
 
 **要件:** macOS 10.12+ / Windows 10+ / Linux · OpenAI または Claude 互換 API キー（BYOK）
 

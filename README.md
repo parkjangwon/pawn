@@ -15,18 +15,27 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 ## What it can do
 
 - **Code** — File tools, shell, git, symbol search, checks, and a full agent loop with permissions
-- **Browse** — Embedded Chromium (`browser_*`) for real web UIs and logged-in sessions
+- **Browse** — Embedded Chromium (`browser_*`) for real web UIs and logged-in sessions (session claim isolation)
 - **Research** — Public web search/fetch without extra API keys (`web_search`, `web_fetch`, `web_research`)
 - **Computer use** — Desktop mouse, keyboard, screenshot, and clipboard (`computer_*`)
 - **Remember** — Local long-term Memory (`~/.pawn/memory.db`) that personalizes the agent over time
 - **Hooks** — Claude/Codex-compatible lifecycle hooks (Claude + Pawn configs merge with dedupe)
 - **Connect** — Optional Google & GitHub OAuth + GitLab & AWS CodeCommit (PAT) tools via Settings → Connections (tokens stay local)
 - **Extend** — MCP servers, Claude Code skills/plugins, `CLAUDE.md` / `AGENTS.md`, automations, tray
+- **Subagents** — Session-internal subagents with tool policy, orchestration, and optional worktree review → apply
+- **Multi-root** — Extra project roots with effective tool cwd; panels and agent tools stay root-aware
+- **Sessions** — Durable plan/thinking, edit & regenerate (attachments preserved), restore, secret-safe backup export
+- **Usage & budget** — Context meter, spend soft-caps, usage panel
+- **Updates** — Settings / launch check against GitHub Releases; download the matching installer and open it
 - **Route** — Multi-model auto routing, cache-aware stickiness, DeepSeek/MiMo thinking + vision fallback
-- **Providers (BYOK)** — Paste a key for OpenAI, Anthropic, OpenRouter, DeepSeek, **OpenCode Go**, **Command Code**, **Xiaomi MiMo**, Gemini, xAI, Groq, and more — or any custom OpenAI-/Claude-compatible base URL
+- **Providers (BYOK)** — Paste a key for OpenAI, Anthropic, OpenRouter, DeepSeek, **OpenCode Go**, **Command Code**, **Xiaomi MiMo**, Gemini, xAI, Groq, and more — or any custom OpenAI-/Claude-compatible base URL. Keys encrypted at rest via OS `safeStorage` when available
 - **Live model lists** — Settings → Providers → **Sync models** pulls `GET {baseUrl}/models` so catalogs stay fresh (seed presets are only a bootstrap)
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
+
+### Latest — v0.9.0
+
+Encrypted BYOK keys, multi-root finish, in-app update download, secret-safe backup, browser claim isolation, transcript-safe edit/regenerate, durable plan & thinking UI, context meter & spend caps, worktree review apply, subagent orchestration, issue→PR helpers, automation edit, welcome checklist, and broader en/ko/ja/zh parity.
 
 ---
 
@@ -65,9 +74,9 @@ pawn
 
 | Platform | Package |
 |----------|---------|
-| macOS | `Pawn-<version>-universal.dmg` (Apple Silicon + Intel). First open: right-click → **Open** (unsigned). |
-| Windows | `Pawn-<version>-x64-setup.exe` or `…-arm64-setup.exe` |
-| Linux | `.AppImage` / `.deb` (or build with `npm run dist:linux`) |
+| macOS | `pawn-<version>-universal.dmg` (Apple Silicon + Intel). First open: right-click → **Open** (unsigned). |
+| Windows | `pawn-<version>-x64-setup.exe` or `pawn-<version>-arm64-setup.exe` |
+| Linux | `pawn-<version>-x64.AppImage` / `.deb` (or `npm run dist:linux`) |
 
 
 ### Signing / notarization (maintainers)

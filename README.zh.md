@@ -15,18 +15,27 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 ## 能做什么
 
 - **编程** — 文件、Shell、Git、符号搜索、检查，以及带权限的代理循环
-- **浏览器** — 内嵌 Chromium（`browser_*`）操作真实网页与登录会话
+- **浏览器** — 内嵌 Chromium（`browser_*`）操作真实网页与登录会话（会话 claim 隔离）
 - **检索** — 无需额外 API 的公开网页搜索/阅读（`web_search` / `web_fetch` / `web_research`）
 - **计算机操控** — 桌面鼠标、键盘、截图、剪贴板（`computer_*`）
 - **记忆** — 本地长期 Memory（`~/.pawn/memory.db`），随使用个性化
 - **Hooks** — 兼容 Claude/Codex 的生命周期钩子（Claude + Pawn 配置合并去重）
 - **连接** — 设置 → 连接 中可选 Google / GitHub（OAuth）与 GitLab / AWS CodeCommit（PAT）工具（令牌仅本地）
 - **扩展** — MCP、Claude Code 技能/插件、`CLAUDE.md` / `AGENTS.md`、自动化、托盘
+- **子代理** — 会话内子代理、工具策略与编排，可选 worktree 审阅后应用
+- **多根目录** — 额外项目根与有效 cwd；面板与代理工具感知根路径
+- **会话** — 持久 plan/thinking、保留附件的编辑与再生成、恢复、排除密钥的备份导出
+- **用量与预算** — 上下文计量、支出 soft-cap、用量面板
+- **更新** — 设置/启动时对照 GitHub Releases；下载对应安装包并打开
 - **路由** — 多模型自动路由、缓存稳定、DeepSeek/MiMo thinking + 视觉回退
-- **提供商（BYOK）** — OpenAI、Anthropic、OpenRouter、DeepSeek、**OpenCode Go**、**Command Code**、**Xiaomi MiMo**、Gemini、xAI、Groq 等粘贴密钥，或任意 OpenAI/Claude 兼容 base URL
+- **提供商（BYOK）** — OpenAI、Anthropic、OpenRouter、DeepSeek、**OpenCode Go**、**Command Code**、**Xiaomi MiMo**、Gemini、xAI、Groq 等粘贴密钥，或任意 OpenAI/Claude 兼容 base URL。可用时通过 OS `safeStorage` 加密存钥
 - **模型列表同步** — 设置 → 提供商 → **同步模型** 通过 `GET {baseUrl}/models` 拉取最新目录（预设仅为引导）
 
 界面：ChatGPT 风格布局，终端 / 文件 / Git / Diff / 浏览器面板，明暗主题。语言：英 / 韩 / 日 / 中。
+
+### 最新 — v0.9.0
+
+BYOK 密钥加密、多根完善、应用内更新下载、排除密钥备份、浏览器 claim 隔离、transcript 安全编辑/再生成、plan 与 thinking UI、上下文计量与支出上限、worktree 审阅应用、子代理编排、issue→PR 辅助、自动化编辑、欢迎清单，以及更广的 en/ko/ja/zh 对齐。
 
 ---
 
@@ -65,9 +74,9 @@ pawn
 
 | 平台 | 包 |
 |------|-----|
-| macOS | `Pawn-<version>-universal.dmg`（Apple Silicon + Intel）。首次：右键 → **打开**（未签名）。 |
-| Windows | `Pawn-<version>-x64-setup.exe` 或 `…-arm64-setup.exe` |
-| Linux | `.AppImage` / `.deb`（或 `npm run dist:linux`） |
+| macOS | `pawn-<version>-universal.dmg`（Apple Silicon + Intel）。首次：右键 → **打开**（未签名）。 |
+| Windows | `pawn-<version>-x64-setup.exe` 或 `pawn-<version>-arm64-setup.exe` |
+| Linux | `pawn-<version>-x64.AppImage` / `.deb`（或 `npm run dist:linux`） |
 
 **要求：** macOS 10.12+ / Windows 10+ / Linux · OpenAI 或 Claude 兼容 API 密钥（BYOK）
 
