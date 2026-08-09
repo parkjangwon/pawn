@@ -252,7 +252,8 @@
       "mcp": "MCPツール"
     },
     "allowPathAlways": "このフォルダを常に許可",
-    "allowShellAlways": "このコマンドを常に許可"
+    "allowShellAlways": "このコマンドを常に許可",
+    "queue": "{{current}} / {{total}} 件待ち"
   },
   "statusBar": {
     "working": "処理中...",
@@ -492,7 +493,11 @@
       "empty": "まだありません。普通に話すか、「覚えて…」と伝えてください。",
       "forget": "忘れる",
       "desktopOnly": "メモリはデスクトップアプリで利用できます。",
-      "pin": "固定"
+      "pin": "固定",
+      "autoCapture": "自動で学習",
+      "autoCaptureDesc": "各会話の後、長く使う好みやプロジェクトの事実を保存します",
+      "injectOnTurn": "毎回思い出す",
+      "injectOnTurnDesc": "合う記憶をプロンプトに入れてエージェントが参照します"
     },
     "pluginSection": {
       "title": "プラグイン",
@@ -557,7 +562,8 @@
       "argsPlaceholder": "引数（スペース区切り、例: -y @some/mcp-server）",
       "envPlaceholder": "環境変数、1行に1つ: KEY=value",
       "addFailed": "サーバーを追加できませんでした。",
-      "templates": "テンプレート"
+      "templates": "テンプレート",
+      "retry": "再試行"
     },
     "dataSection": {
       "title": "データ",

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { useAppStore } from '../app'
+import { __flushDbWriteQueueForTests, __resetDbWriteQueueForTests } from '../../utils/dbWriteQueue'
 
 const dbMock = {
   loadAll: vi.fn(),
@@ -15,10 +16,12 @@ const dbMock = {
   updateMessageContent: vi.fn(),
   deleteMessage: vi.fn(),
   clearMessages: vi.fn(),
-  updateSessionTitle: vi.fn()
+  updateSessionTitle: vi.fn(),
+  getUsageBySession: vi.fn()
 }
 
 beforeEach(() => {
+  __resetDbWriteQueueForTests()
   ;(window as any).api = { db: dbMock }
   useAppStore.setState({
     projects: [],
@@ -30,6 +33,7 @@ beforeEach(() => {
   for (const fn of Object.values(dbMock)) fn.mockClear()
   dbMock.loadAll.mockResolvedValue({ projects: [] })
   dbMock.getMessages.mockResolvedValue([])
+  dbMock.getUsageBySession.mockResolvedValue([])
   for (const fn of [
     dbMock.addProject, dbMock.removeProject, dbMock.updateProjectName, dbMock.updateProjectPaths,
     dbMock.addSession, dbMock.removeSession, dbMock.addMessage, dbMock.updateMessageContent,
@@ -115,13 +119,14 @@ describe('session actions', () => {
 })
 
 describe('message actions', () => {
-  it('adds messages to the session and persists them', () => {
+  it('adds messages to the session and persists them', async () => {
     useAppStore.getState().addProject('P', ['/p'], 'p1')
     useAppStore.getState().addSession('p1', 'S')
     const sessionId = useAppStore.getState().activeSessionId!
 
     useAppStore.getState().addMessage('p1', sessionId, { id: 'm1', role: 'user', content: 'hi', createdAt: 1 })
     expect(useAppStore.getState().projects[0].sessions[0].messages).toHaveLength(1)
+    await __flushDbWriteQueueForTests()
     expect(dbMock.addMessage).toHaveBeenCalledWith('m1', sessionId, 'user', 'hi')
   })
 
@@ -210,21 +215,25 @@ describe('message actions', () => {
     expect(dbMock.getMessages).toHaveBeenCalledTimes(1)
   })
 
-  it('updates, deletes and clears messages', () => {
+  it('updates, deletes and clears messages', async () => {
     useAppStore.getState().addProject('P', ['/p'], 'p1')
     useAppStore.getState().addSession('p1', 'S')
     const sessionId = useAppStore.getState().activeSessionId!
     useAppStore.getState().addMessage('p1', sessionId, { id: 'm1', role: 'user', content: 'a', createdAt: 1 })
     useAppStore.getState().addMessage('p1', sessionId, { id: 'm2', role: 'assistant', content: 'b', createdAt: 2 })
+    await __flushDbWriteQueueForTests()
 
     useAppStore.getState().updateMessageContent('p1', sessionId, 'm1', 'a2')
+    await __flushDbWriteQueueForTests()
     expect(dbMock.updateMessageContent).toHaveBeenCalledWith('m1', 'a2')
 
     useAppStore.getState().removeMessage('p1', sessionId, 'm2')
+    await __flushDbWriteQueueForTests()
     expect(dbMock.deleteMessage).toHaveBeenCalledWith('m2')
     expect(useAppStore.getState().projects[0].sessions[0].messages.map((m) => m.id)).toEqual(['m1'])
 
     useAppStore.getState().clearMessages('p1', sessionId)
+    await __flushDbWriteQueueForTests()
     expect(useAppStore.getState().projects[0].sessions[0].messages).toHaveLength(0)
     expect(dbMock.clearMessages).toHaveBeenCalledWith(sessionId)
   })

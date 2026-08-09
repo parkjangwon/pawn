@@ -43,9 +43,13 @@ interface UsageState {
   lastRoute: Record<string, { label: string; reason: string }>
   /** Per-session cache diagnostics — helps the user understand why costs vary. */
   diagnostics: Record<string, CacheDiagnostic[]>
+  /** Sessions already loaded from SQLite (avoid re-hydrate wiping live totals). */
+  hydrated: Set<string>
   record: (sessionId: string, model: ModelEntry, usage: CallUsage) => void
   noteRoute: (sessionId: string, label: string, reason: string) => void
   noteDiagnostic: (sessionId: string, level: CacheDiagnosticLevel, message: string) => void
+  /** Load durable usage rows for a session after reload / switch. */
+  hydrateSession: (sessionId: string) => Promise<void>
   reset: (sessionId: string) => void
   totalsFor: (sessionId: string) => UsageTotals
 }
@@ -83,6 +87,7 @@ export const useUsageStore = create<UsageState>((set, get) => ({
   bySession: {},
   lastRoute: {},
   diagnostics: {},
+  hydrated: new Set(),
 
   record: (sessionId, model, usage) => {
     const cost = computeCost(model, usage)
@@ -151,13 +156,43 @@ export const useUsageStore = create<UsageState>((set, get) => ({
       return { diagnostics: { ...s.diagnostics, [sessionId]: all } }
     }),
 
+  hydrateSession: async (sessionId) => {
+    if (!sessionId || get().hydrated.has(sessionId)) return
+    // Mark first so concurrent hydrate calls don't double-fetch.
+    set((s) => ({ hydrated: new Set(s.hydrated).add(sessionId) }))
+    try {
+      const rows = await window.api?.db?.getUsageBySession?.(sessionId)
+      if (!Array.isArray(rows) || rows.length === 0) return
+      // Don't clobber live totals if the session already recorded this run.
+      if ((get().bySession[sessionId]?.calls || 0) > 0) return
+      const next: UsageTotals = { ...EMPTY }
+      for (const row of rows) {
+        next.calls++
+        next.inputTokens += Number(row.inputTokens) || 0
+        next.outputTokens += Number(row.outputTokens) || 0
+        next.cacheReadTokens += Number(row.cacheReadTokens) || 0
+        next.cacheWriteTokens += Number(row.cacheWriteTokens) || 0
+        next.cost += Number(row.cost) || 0
+      }
+      const prompt = next.inputTokens + next.cacheReadTokens + next.cacheWriteTokens
+      next.cacheHitRate = prompt > 0 ? next.cacheReadTokens / prompt : 0
+      set((s) => ({
+        bySession: { ...s.bySession, [sessionId]: next }
+      }))
+    } catch {
+      /* optional */
+    }
+  },
+
   reset: (sessionId) =>
     set((s) => {
       const next = { ...s.bySession }
       delete next[sessionId]
       const nextDiags = { ...s.diagnostics }
       delete nextDiags[sessionId]
-      return { bySession: next, diagnostics: nextDiags }
+      const hyd = new Set(s.hydrated)
+      hyd.delete(sessionId)
+      return { bySession: next, diagnostics: nextDiags, hydrated: hyd }
     }),
 
   totalsFor: (sessionId) => get().bySession[sessionId] || EMPTY

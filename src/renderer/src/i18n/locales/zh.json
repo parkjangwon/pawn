@@ -252,7 +252,8 @@
       "mcp": "MCP 工具"
     },
     "allowPathAlways": "始终允许此文件夹",
-    "allowShellAlways": "始终允许此命令"
+    "allowShellAlways": "始终允许此命令",
+    "queue": "第 {{current}} / {{total}} 个待处理"
   },
   "statusBar": {
     "working": "工作中...",
@@ -492,7 +493,11 @@
       "empty": "还没有内容。正常聊天，或说“记住…”。",
       "forget": "忘记",
       "desktopOnly": "记忆功能仅在桌面应用中可用。",
-      "pin": "置顶"
+      "pin": "置顶",
+      "autoCapture": "自动学习",
+      "autoCaptureDesc": "每轮对话后保存可复用的偏好与项目事实",
+      "injectOnTurn": "每轮回忆",
+      "injectOnTurnDesc": "将匹配的记忆加入提示，供代理参考"
     },
     "pluginSection": {
       "title": "插件",
@@ -557,7 +562,8 @@
       "argsPlaceholder": "参数，用空格分隔（例如 -y @some/mcp-server）",
       "envPlaceholder": "环境变量，每行一个：KEY=value",
       "addFailed": "无法添加服务器。",
-      "templates": "模板"
+      "templates": "模板",
+      "retry": "重试"
     },
     "dataSection": {
       "title": "数据",

@@ -77,6 +77,24 @@ body {
 
 /* Skip link — off-screen until focused via Tab (keyboard a11y only).
    Never cover macOS traffic lights: sit below the titlebar, inset from left. */
+.app-toast {
+  position: fixed;
+  top: calc(var(--titlebar-height, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10000;
+  max-width: min(480px, 90vw);
+  padding: 10px 16px;
+  border-radius: 999px;
+  font-size: var(--font-sm);
+  line-height: 1.4;
+  color: var(--text-primary);
+  background: color-mix(in srgb, var(--bg-secondary) 92%, var(--accent));
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 14%, transparent);
+  pointer-events: none;
+}
+
 .skip-link {
   position: fixed;
   left: 50%;

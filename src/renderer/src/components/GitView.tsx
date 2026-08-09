@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
-import { useAppStore } from '../stores/app'
+import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { validateCommitMessage } from '../agent/gitWrite'
 
 interface GitFile {
   path: string
@@ -25,16 +25,27 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    if (!projectPath) { setBranch(null); setFiles([]); return }
-
-    window.api.shell.exec('git rev-parse --abbrev-ref HEAD', projectPath)
-      .then((r) => { if (r.exitCode === 0) setBranch(r.stdout.trim()); else setBranch(null) })
+  const refreshStatus = useCallback((): void => {
+    if (!projectPath) {
+      setBranch(null)
+      setFiles([])
+      return
+    }
+    window.api.shell
+      .exec('git rev-parse --abbrev-ref HEAD', projectPath)
+      .then((r) => {
+        if (r.exitCode === 0) setBranch(r.stdout.trim())
+        else setBranch(null)
+      })
       .catch(() => setBranch(null))
 
-    window.api.shell.exec('git status --porcelain', projectPath)
+    window.api.shell
+      .exec('git status --porcelain', projectPath)
       .then((r) => {
-        if (r.exitCode !== 0) { setFiles([]); return }
+        if (r.exitCode !== 0) {
+          setFiles([])
+          return
+        }
         const lines = r.stdout.trim().split('\n').filter(Boolean)
         const parsed: GitFile[] = lines.map((line) => {
           const status = line.substring(0, 2).trim()
@@ -49,18 +60,38 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
         })
       })
       .catch(() => setFiles([]))
+
+    window.api.shell
+      .exec('git branch', projectPath)
+      .then((r) => {
+        if (r.exitCode === 0) {
+          setBranches(r.stdout.trim().split('\n').map((l) => l.replace(/^\*?\s+/, '')))
+        }
+      })
+      .catch(() => {})
+    window.api.shell
+      .exec('git log --oneline -15', projectPath)
+      .then((r) => {
+        if (r.exitCode === 0) setHistory(r.stdout.trim().split('\n').filter(Boolean))
+      })
+      .catch(() => {})
   }, [projectPath])
 
-  // Load branches and history
+  useEffect(() => {
+    refreshStatus()
+  }, [refreshStatus])
+
+  // Live refresh while panel is open (agent git tools / external edits).
   useEffect(() => {
     if (!projectPath) return
-    window.api.shell.exec('git branch', projectPath).then((r) => {
-      if (r.exitCode === 0) setBranches(r.stdout.trim().split('\n').map((l) => l.replace(/^\*?\s+/, '')))
-    }).catch(() => {})
-    window.api.shell.exec('git log --oneline -15', projectPath).then((r) => {
-      if (r.exitCode === 0) setHistory(r.stdout.trim().split('\n').filter(Boolean))
-    }).catch(() => {})
-  }, [projectPath])
+    const onFocus = (): void => refreshStatus()
+    window.addEventListener('focus', onFocus)
+    const id = window.setInterval(refreshStatus, 4000)
+    return () => {
+      window.removeEventListener('focus', onFocus)
+      window.clearInterval(id)
+    }
+  }, [projectPath, refreshStatus])
 
   const checkoutBranch = async (name: string): Promise<void> => {
     setBusy(true)
@@ -76,6 +107,11 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
 
   const doCommit = async (): Promise<void> => {
     if (!commitMessage.trim()) return
+    const msgErr = validateCommitMessage(commitMessage)
+    if (msgErr) {
+      setError(msgErr)
+      return
+    }
     setBusy(true)
     setError(null)
     const add = await window.api.shell.execFile('git', ['add', '-A'], projectPath)
@@ -87,10 +123,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
         setError(commit.stderr || commit.stdout || `git commit failed (${commit.exitCode})`)
       } else {
         setCommitMessage('')
-        // Refresh the status list after a successful commit.
-        window.api.shell.exec('git status --porcelain', projectPath)
-          .then((r) => { if (r.exitCode !== 0) { setFiles([]); return } setFiles(parsePorcelain(r.stdout)) })
-          .catch(() => {})
+        refreshStatus()
       }
     }
     setBusy(false)

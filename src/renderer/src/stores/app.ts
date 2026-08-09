@@ -198,6 +198,10 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (project && !state.loadedSessions.has(id) && !state.loadingSessions.has(id)) {
       state.loadMessages(project.id, id)
     }
+    // Restore durable cost totals after reload / session switch.
+    void import('./usage')
+      .then(({ useUsageStore }) => useUsageStore.getState().hydrateSession(id))
+      .catch(() => {})
   },
 
   loadMessages: async (projectId, sessionId) => {

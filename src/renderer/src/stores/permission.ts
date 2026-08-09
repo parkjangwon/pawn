@@ -92,6 +92,15 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
   request: (req, signal) => {
     return new Promise<boolean>((resolve) => {
       if (get().pending.length >= MAX_PENDING) {
+        try {
+          window.dispatchEvent(
+            new CustomEvent('pawn:toast', {
+              detail: { kind: 'warn', message: 'Permission queue full — request denied' }
+            })
+          )
+        } catch {
+          /* ignore */
+        }
         resolve(false)
         return
       }
@@ -119,6 +128,18 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
         }
         resolvers.delete(id)
         set((s) => ({ pending: s.pending.filter((p) => p.id !== id) }))
+        try {
+          window.dispatchEvent(
+            new CustomEvent('pawn:toast', {
+              detail: {
+                kind: 'warn',
+                message: 'Permission request timed out — denied'
+              }
+            })
+          )
+        } catch {
+          /* ignore */
+        }
         finish(false)
       }, PERMISSION_TIMEOUT_MS)
       const cleanup = (): void => {

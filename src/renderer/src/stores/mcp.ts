@@ -16,6 +16,8 @@ interface McpState {
   loaded: boolean
   init: () => Promise<void>
   refresh: (projectPath?: string) => Promise<void>
+  /** Force spawn/connect (user Retry). */
+  reconnect: (projectPath?: string) => Promise<void>
   toggleServer: (id: string) => Promise<void>
   addServer: (
     scope: 'user' | 'project',
@@ -47,6 +49,40 @@ export const useMcpStore = create<McpState>((set, get) => ({
 
   refresh: async (projectPath) => {
     try {
+      // Snapshot first — never cold-start every server just because Settings opened.
+      const statusApi = window.api.mcp?.status
+      const listApi = window.api.mcp?.listTools
+      let rows = statusApi ? await statusApi(projectPath) : null
+      // If nothing is connected yet, fall back to full listTools (spawn).
+      const anyLive =
+        Array.isArray(rows) &&
+        rows.some((r) => r.status === 'connected' || r.status === 'connecting')
+      if ((!rows || !anyLive) && listApi) {
+        rows = await listApi(projectPath)
+      }
+      if (!Array.isArray(rows)) return
+      const disabled = get().disabledIds
+      set({
+        servers: rows.map((r) => ({
+          id: r.id,
+          source: r.source,
+          status: r.status,
+          toolCount:
+            r.status === 'connected' && 'tools' in r && Array.isArray(r.tools)
+              ? r.tools.length
+              : r.status === 'connected' && 'toolCount' in r
+                ? Number((r as { toolCount?: number }).toolCount) || 0
+                : 0,
+          error: r.status === 'error' ? r.error : undefined,
+          disabled: disabled.has(r.id)
+        }))
+      })
+    } catch { /* desktop-only feature */ }
+  },
+
+  /** Force reconnect: always listTools (may spawn). */
+  reconnect: async (projectPath) => {
+    try {
       const rows = await window.api.mcp?.listTools?.(projectPath)
       if (!Array.isArray(rows)) return
       const disabled = get().disabledIds
@@ -55,12 +91,12 @@ export const useMcpStore = create<McpState>((set, get) => ({
           id: r.id,
           source: r.source,
           status: r.status,
-          toolCount: r.status === 'connected' ? r.tools.length : 0,
+          toolCount: r.status === 'connected' && 'tools' in r ? r.tools.length : 0,
           error: r.status === 'error' ? r.error : undefined,
           disabled: disabled.has(r.id)
         }))
       })
-    } catch { /* desktop-only feature */ }
+    } catch { /* optional */ }
   },
 
   toggleServer: async (id) => {

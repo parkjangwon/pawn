@@ -36,9 +36,23 @@ export default function App(): React.JSX.Element {
   const [showCommandPalette, setShowCommandPalette] = useState(false)
   const [mainView, setMainView] = useState<'chat' | 'automations'>('chat')
   const [appVersion, setAppVersion] = useState('')
+  const [appToast, setAppToast] = useState<string | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(() => {
     try { return localStorage.getItem('pawn-sidebar-open') !== 'false' } catch { return true }
   })
+
+  // Lightweight global toast (permission timeout, queue full, etc.)
+  useEffect(() => {
+    const onToast = (e: Event): void => {
+      const detail = (e as CustomEvent<{ message?: string }>).detail
+      const msg = detail?.message?.trim()
+      if (!msg) return
+      setAppToast(msg)
+      window.setTimeout(() => setAppToast(null), 3200)
+    }
+    window.addEventListener('pawn:toast', onToast)
+    return () => window.removeEventListener('pawn:toast', onToast)
+  }, [])
 
   // Sidebar width is a single app-wide preference shared by the main sidebar
   // and the Settings nav. Apply the stored value before first paint; drag
@@ -250,6 +264,11 @@ export default function App(): React.JSX.Element {
 
   return (
     <div className={`app ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'} ${window.api?.platform === 'darwin' ? 'platform-mac' : ''}`}>
+      {appToast && (
+        <div className="app-toast" role="status">
+          {appToast}
+        </div>
+      )}
       <a href="#main-content" className="skip-link">
         본문으로 건너뛰기
       </a>

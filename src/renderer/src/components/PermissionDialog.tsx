@@ -55,8 +55,9 @@ export default function PermissionDialog(): React.JSX.Element | null {
   const pathPrefix = current.path
     ? current.path.replace(/\\/g, '/').split('/').slice(0, -1).join('/') || current.path
     : undefined
+  // First argv only — "git status" must not auto-allow all "git …" forever.
   const shellPrefix = current.command
-    ? current.command.trim().split(/\s+/).slice(0, 2).join(' ')
+    ? current.command.trim().split(/\s+/)[0]
     : undefined
 
   const hasSticky =
@@ -73,6 +74,11 @@ export default function PermissionDialog(): React.JSX.Element | null {
         aria-labelledby="permission-dialog-title"
       >
         <h3 id="permission-dialog-title">{t('permission.title')}</h3>
+        {pending.length > 1 && (
+          <div className="permission-queue">
+            {t('permission.queue', { current: 1, total: pending.length })}
+          </div>
+        )}
         <div className="permission-type">{typeLabels[current.type] || current.type}</div>
         <p className="permission-desc">{current.description}</p>
         {current.details && <pre className="permission-details">{current.details}</pre>}

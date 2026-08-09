@@ -1267,6 +1267,15 @@ export default function Settings({
                     </span>
                   </div>
                   <div className="settings-row-actions">
+                    {!server.disabled && server.status === 'error' && (
+                      <button
+                        type="button"
+                        className="btn-cancel"
+                        onClick={() => void useMcpStore.getState().reconnect(projectPath || undefined)}
+                      >
+                        {t('settings.mcpSection.retry')}
+                      </button>
+                    )}
                     <label className="toggle-switch">
                       <input type="checkbox" checked={!server.disabled} onChange={() => void toggleMcpServer(server.id)} />
                       <span className="toggle-slider" />

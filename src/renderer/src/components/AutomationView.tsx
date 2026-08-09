@@ -301,8 +301,20 @@ export default function AutomationView({
                 <p className="automation-card-meta">
                   {scheduleDetail(routine.schedule)}
                   {' · '}{t('settings.automationSection.nextRun')} {formatRunTime(routine.nextRunAt)}
+                  {routine.lastRunAt > 0 && (
+                    <>
+                      {' · '}
+                      {t('settings.automationSection.lastRun')} {formatRunTime(routine.lastRunAt)}
+                    </>
+                  )}
                   {runningIds.has(routine.id) && <span className="settings-badge automation-running-badge"> {t('settings.automationSection.running')}</span>}
                 </p>
+                {routine.lastResult?.trim() ? (
+                  <p className="automation-card-result" title={routine.lastResult}>
+                    {routine.lastResult.slice(0, 160)}
+                    {routine.lastResult.length > 160 ? '…' : ''}
+                  </p>
+                ) : null}
                 <div className="automation-card-actions">
                   <button className="test-btn" disabled={runningIds.has(routine.id)} onClick={() => void runNow(routine.id)}>{t('automation.runNow')}</button>
                   <label className="toggle-switch">

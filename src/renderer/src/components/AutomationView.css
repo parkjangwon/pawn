@@ -178,6 +178,18 @@
   -webkit-box-orient: vertical;
 }
 
+.automation-card-result {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--text-secondary);
+  opacity: 0.9;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .automation-card-meta {
   font-size: var(--font-xs);
   color: var(--text-muted);

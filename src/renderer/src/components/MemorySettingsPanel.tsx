@@ -15,6 +15,8 @@ interface MemoryItem {
 export default function MemorySettingsPanel(): React.JSX.Element {
   const { t } = useTranslation()
   const [enabled, setEnabled] = useState(true)
+  const [autoCapture, setAutoCapture] = useState(true)
+  const [injectOnTurn, setInjectOnTurn] = useState(true)
   const [total, setTotal] = useState(0)
   const [items, setItems] = useState<MemoryItem[]>([])
   const [filter, setFilter] = useState('')
@@ -33,6 +35,8 @@ export default function MemorySettingsPanel(): React.JSX.Element {
         })
       ])
       setEnabled(s?.enabled !== false)
+      setAutoCapture(s?.autoCapture !== false)
+      setInjectOnTurn(s?.injectOnTurn !== false)
       setTotal(st?.total ?? 0)
       setItems((list?.items as MemoryItem[]) || [])
     } catch (e) {
@@ -48,13 +52,32 @@ export default function MemorySettingsPanel(): React.JSX.Element {
     if (!window.api.memory?.setSettings) return
     setBusy(true)
     try {
-      // When on: force smart defaults so capture + inject Just Work.
+      // When enabling: keep current capture/inject prefs (default on).
       const next = await window.api.memory.setSettings(
         on
-          ? { enabled: true, autoCapture: true, injectOnTurn: true }
+          ? { enabled: true, autoCapture, injectOnTurn }
           : { enabled: false }
       )
       setEnabled(next?.enabled !== false)
+      setMsg(t('settings.memorySection.saved'))
+    } catch (e) {
+      setMsg(String(e))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const patchMemorySetting = async (patch: {
+    autoCapture?: boolean
+    injectOnTurn?: boolean
+  }): Promise<void> => {
+    if (!window.api.memory?.setSettings) return
+    setBusy(true)
+    try {
+      const next = await window.api.memory.setSettings({ enabled, ...patch })
+      setEnabled(next?.enabled !== false)
+      setAutoCapture(next?.autoCapture !== false)
+      setInjectOnTurn(next?.injectOnTurn !== false)
       setMsg(t('settings.memorySection.saved'))
     } catch (e) {
       setMsg(String(e))
@@ -144,6 +167,46 @@ export default function MemorySettingsPanel(): React.JSX.Element {
             <span className="toggle-slider" />
           </label>
         </div>
+        {enabled && (
+          <>
+            <div className="settings-row">
+              <div className="settings-row-info">
+                <span className="settings-row-label">{t('settings.memorySection.autoCapture')}</span>
+                <span className="settings-row-desc">{t('settings.memorySection.autoCaptureDesc')}</span>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={autoCapture}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setAutoCapture(e.target.checked)
+                    void patchMemorySetting({ autoCapture: e.target.checked })
+                  }}
+                />
+                <span className="toggle-slider" />
+              </label>
+            </div>
+            <div className="settings-row">
+              <div className="settings-row-info">
+                <span className="settings-row-label">{t('settings.memorySection.injectOnTurn')}</span>
+                <span className="settings-row-desc">{t('settings.memorySection.injectOnTurnDesc')}</span>
+              </div>
+              <label className="toggle-switch">
+                <input
+                  type="checkbox"
+                  checked={injectOnTurn}
+                  disabled={busy}
+                  onChange={(e) => {
+                    setInjectOnTurn(e.target.checked)
+                    void patchMemorySetting({ injectOnTurn: e.target.checked })
+                  }}
+                />
+                <span className="toggle-slider" />
+              </label>
+            </div>
+          </>
+        )}
         <div className="memory-stats">{t('settings.memorySection.stats', { total })}</div>
         <div className="memory-actions">
           <button type="button" className="test-btn" onClick={() => void exportJson()}>

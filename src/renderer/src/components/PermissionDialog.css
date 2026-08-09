@@ -24,6 +24,13 @@
   animation: riseIn var(--dur-med) var(--ease-spring);
 }
 
+.permission-queue {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin: -4px 0 8px;
+  font-variant-numeric: tabular-nums;
+}
+
 .permission-dialog h3 {
   font-size: var(--font-xl);
   font-weight: 600;

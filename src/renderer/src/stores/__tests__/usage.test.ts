@@ -8,9 +8,12 @@ const model = (pricing?: ModelEntry['pricing']): ModelEntry => ({
 })
 
 beforeEach(() => {
-  useUsageStore.setState({ bySession: {}, lastRoute: {}, diagnostics: {} })
+  useUsageStore.setState({ bySession: {}, lastRoute: {}, diagnostics: {}, hydrated: new Set() })
   ;(window as any).api = {
-    db: { addUsage: vi.fn().mockResolvedValue({}) }
+    db: {
+      addUsage: vi.fn().mockResolvedValue({}),
+      getUsageBySession: vi.fn().mockResolvedValue([])
+    }
   }
 })
 
@@ -72,6 +75,34 @@ describe('record', () => {
     const totals = useUsageStore.getState().totalsFor('s1')
     expect(totals.savedCost).toBeCloseTo(computeUncachedCost(m, usage) - computeCost(m, usage))
     expect(totals.savedCost).toBeGreaterThan(0)
+  })
+
+  it('hydrates totals from durable session rows', async () => {
+    const getUsageBySession = vi.fn().mockResolvedValue([
+      {
+        inputTokens: 100,
+        outputTokens: 20,
+        cacheReadTokens: 50,
+        cacheWriteTokens: 0,
+        cost: 0.01
+      },
+      {
+        inputTokens: 10,
+        outputTokens: 5,
+        cacheReadTokens: 0,
+        cacheWriteTokens: 0,
+        cost: 0.002
+      }
+    ])
+    ;(window as any).api.db.getUsageBySession = getUsageBySession
+    await useUsageStore.getState().hydrateSession('sess-1')
+    const t = useUsageStore.getState().totalsFor('sess-1')
+    expect(t.calls).toBe(2)
+    expect(t.inputTokens).toBe(110)
+    expect(t.cost).toBeCloseTo(0.012)
+    // Second hydrate is a no-op
+    await useUsageStore.getState().hydrateSession('sess-1')
+    expect(getUsageBySession).toHaveBeenCalledTimes(1)
   })
 
   it('persists each call through window.api.db.addUsage', () => {

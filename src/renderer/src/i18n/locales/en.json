@@ -252,7 +252,8 @@
       "mcp": "MCP Tool"
     },
     "allowPathAlways": "Always allow this folder",
-    "allowShellAlways": "Always allow this command"
+    "allowShellAlways": "Always allow this command",
+    "queue": "{{current}} of {{total}} waiting"
   },
   "statusBar": {
     "working": "Working...",
@@ -478,6 +479,10 @@
       "desc": "Long-term knowledge on this device only. When on, the agent learns preferences and project facts, recalls them automatically, and never stores API keys or passwords.",
       "enabled": "Use Memory",
       "enabledDesc": "Learn from chats, recall on later turns — no extra setup",
+      "autoCapture": "Learn automatically",
+      "autoCaptureDesc": "After each chat turn, save durable preferences and project facts",
+      "injectOnTurn": "Recall on each turn",
+      "injectOnTurnDesc": "Add matching memories into the prompt so the agent can use them",
       "stats": "{{total}} memories · ~/.pawn/memory.db",
       "export": "Export",
       "import": "Import",
@@ -541,6 +546,7 @@
       "statusConnected": "Connected · {{count}} tools",
       "statusConnecting": "Connecting…",
       "statusError": "Error",
+      "retry": "Retry",
       "statusDisabled": "Disabled",
       "source": {
         "user-claude": "From ~/.claude.json (read-only here)",

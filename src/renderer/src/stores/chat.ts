@@ -464,6 +464,8 @@ async function agentLoop(
   let round = resumeFrom?.round ?? 0
   const complexity: Complexity = resumeFrom?.complexity ?? estimateComplexity(userContent)
   let userMessageAppended = resumeFrom?.userMessageAppended ?? false
+  /** completed | aborted | failed — failed leaves checkpoint for cold resume. */
+  let turnEnd: 'completed' | 'aborted' | 'failed' = 'completed'
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -523,6 +525,19 @@ async function agentLoop(
     if (resumeFrom?.entries?.length) {
       entries = resumeFrom.entries
       userMessageAppended = true
+      // Restore sticky route so resume does not re-prime a cold model mid-turn.
+      if (resumeFrom.warmFor) {
+        try {
+          setSessionRoute(
+            sessionId,
+            resumeFrom.warmFor,
+            resumeFrom.warmTier || 'mid',
+            estimateTokens(entries)
+          )
+        } catch {
+          /* optional */
+        }
+      }
     } else {
       entries = await loadTranscript(projectId, sessionId)
     }
@@ -839,6 +854,27 @@ async function agentLoop(
           : {})
       })
 
+      // Durable after model reply (before tools) so a mid-tool crash can resume.
+      if (!signal.aborted && hasTools && decision) {
+        checkpointSnapshot({
+          projectId,
+          sessionId,
+          userContent,
+          attachments,
+          entries,
+          round,
+          consecutiveToolErrors,
+          emptyResponses,
+          complexity,
+          turnHadCodeEdits,
+          turnRanChecks,
+          autoVerifyDone,
+          warmFor: decision.key,
+          warmTier: decision.tier,
+          userMessageAppended
+        })
+      }
+
       // Effective tool cwd: session override path, else project root.
       const toolCwd = cwd || projectPath
 
@@ -963,23 +999,26 @@ async function agentLoop(
 
       consecutiveToolErrors = roundErrors > 0 ? consecutiveToolErrors + 1 : 0
       persistTranscript(sessionId, entries, decision.key, decision.tier)
-      checkpointSnapshot({
-        projectId,
-        sessionId,
-        userContent,
-        attachments,
-        entries,
-        round,
-        consecutiveToolErrors,
-        emptyResponses,
-        complexity,
-        turnHadCodeEdits,
-        turnRanChecks,
-        autoVerifyDone,
-        warmFor: decision.key,
-        warmTier: decision.tier,
-        userMessageAppended
-      })
+      // Never re-mark a Stop'd turn as running (false cold-start resume).
+      if (!signal.aborted) {
+        checkpointSnapshot({
+          projectId,
+          sessionId,
+          userContent,
+          attachments,
+          entries,
+          round,
+          consecutiveToolErrors,
+          emptyResponses,
+          complexity,
+          turnHadCodeEdits,
+          turnRanChecks,
+          autoVerifyDone,
+          warmFor: decision.key,
+          warmTier: decision.tier,
+          userMessageAppended
+        })
+      }
 
       if (signal.aborted) break
     }
@@ -991,6 +1030,7 @@ async function agentLoop(
     if (!signal.aborted) {
       systemError(projectId, sessionId, i18n.t('chat.errors.agentError', { error: String(err) }))
       // Keep checkpoint on unexpected error so cold start can resume.
+      turnEnd = 'failed'
       if (entries.length > 0) {
         checkpointSnapshot({
           projectId,
@@ -1016,6 +1056,8 @@ async function agentLoop(
       sessionControllers.delete(sessionId)
     }
     const aborted = signal.aborted
+    if (aborted) turnEnd = 'aborted'
+    else if (turnEnd !== 'failed') turnEnd = 'completed'
     useChangeLedger.getState().endTurn()
     releaseSleepHold()
     // Turn finished (normally or aborted) — drop the AI cursor so it doesn't
@@ -1027,9 +1069,10 @@ async function agentLoop(
     // turn. Clearing flags or draining the queue here would race and leave the
     // UI stuck (isStreaming false while tokens still flow, or double loops).
     if (isCurrent) {
-      if (aborted) {
+      // Unexpected errors leave status=running so cold start can resume.
+      if (turnEnd === 'aborted') {
         clearTurnCheckpoint(sessionId, 'aborted')
-      } else {
+      } else if (turnEnd === 'completed') {
         clearTurnCheckpoint(sessionId, 'completed')
       }
       setSessionStreamingFlags(set, get, sessionId, false)

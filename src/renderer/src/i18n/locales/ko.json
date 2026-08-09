@@ -252,7 +252,8 @@
       "mcp": "MCP 도구"
     },
     "allowPathAlways": "이 폴더 항상 허용",
-    "allowShellAlways": "이 명령 항상 허용"
+    "allowShellAlways": "이 명령 항상 허용",
+    "queue": "{{current}} / {{total}} 대기 중"
   },
   "statusBar": {
     "working": "작업 중...",
@@ -492,7 +493,11 @@
       "empty": "아직 없어요. 평소처럼 대화하거나 “기억해…”라고 말해 보세요.",
       "forget": "잊기",
       "desktopOnly": "메모리는 데스크톱 앱에서 사용할 수 있습니다.",
-      "pin": "고정"
+      "pin": "고정",
+      "autoCapture": "자동으로 배우기",
+      "autoCaptureDesc": "각 대화 턴 후 오래 쓸 선호·프로젝트 사실을 저장합니다",
+      "injectOnTurn": "매 턴 회상",
+      "injectOnTurnDesc": "맞는 기억을 프롬프트에 넣어 에이전트가 참고하게 합니다"
     },
     "pluginSection": {
       "title": "플러그인",
@@ -557,7 +562,8 @@
       "argsPlaceholder": "인자, 공백으로 구분 (예: -y @some/mcp-server)",
       "envPlaceholder": "환경 변수, 한 줄에 하나씩: KEY=value",
       "addFailed": "서버를 추가하지 못했습니다.",
-      "templates": "템플릿"
+      "templates": "템플릿",
+      "retry": "다시 시도"
     },
     "dataSection": {
       "title": "데이터",
