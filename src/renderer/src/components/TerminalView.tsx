@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Terminal } from 'xterm'
+import { Terminal } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
-import 'xterm/css/xterm.css'
+import '@xterm/xterm/css/xterm.css'
 
 interface TerminalViewProps {
   projectPath?: string

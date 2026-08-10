@@ -87,5 +87,6 @@ docs/
 .cody/
 .pieces/
 .codegraph/
+.reasonix/
 .workplans/
 .pi/

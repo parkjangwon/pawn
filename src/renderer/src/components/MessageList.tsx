@@ -1,4 +1,4 @@
-import { memo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import MarkdownRenderer from './MarkdownRenderer'
 import ToolMessage from './ToolMessage'
@@ -22,24 +22,36 @@ interface MessageListProps {
 }
 
 /**
- * While tokens are streaming, skip full markdown/AST re-parse every frame.
- * Plain pre-wrap is much cheaper; final content uses MarkdownRenderer.
+ * Live streaming view: render markdown progressively, line by line.
+ * Complete lines (up to the last newline) go through MarkdownRenderer so the
+ * structure — headings, lists, code blocks — appears as it arrives. The
+ * incomplete tail line stays as cheap raw text, which caps re-parse cost at
+ * the line rate instead of one full AST pass per animation frame.
  */
-const StreamingPlain = memo(function StreamingPlain({
+const StreamingMarkdown = memo(function StreamingMarkdown({
   text
 }: {
   text: string
 }): React.JSX.Element {
+  const nl = text.lastIndexOf('\n')
+  const complete = nl >= 0 ? text.slice(0, nl + 1) : ''
+  const tail = nl >= 0 ? text.slice(nl + 1) : text
   return (
     <div className="message-content streaming message-content-live">
-      <pre className="streaming-plaintext">
-        {text}
+      {complete ? <MarkdownRenderer content={complete} /> : null}
+      <span className="streaming-tail">
+        {tail}
         <span className="cursor-blink">▍</span>
-      </pre>
+      </span>
     </div>
   )
 })
 
+/**
+ * Thinking/reasoning: a single compact line while live — keeps the bubble
+ * small and progress feels instant (Reasonix-style). The full text stays
+ * available on demand via the toggle after the turn completes.
+ */
 function ThinkingBlock({
   text,
   live
@@ -48,10 +60,26 @@ function ThinkingBlock({
   live?: boolean
 }): React.JSX.Element | null {
   const { t } = useTranslation()
-  const [open, setOpen] = useState(live === true)
+  const [open, setOpen] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
+  useEffect(() => {
+    if (!live) return
+    setElapsed(0)
+    const id = window.setInterval(() => setElapsed((s) => s + 1), 1000)
+    return () => window.clearInterval(id)
+  }, [live])
   if (!text?.trim()) return null
+  if (live) {
+    return (
+      <div className="message-thinking live one-line">
+        <span className="message-thinking-spinner" aria-hidden="true" />
+        <span className="message-thinking-label">{t('chat.thinkingLive')}</span>
+        <span className="message-thinking-elapsed">{elapsed}s</span>
+      </div>
+    )
+  }
   return (
-    <div className={`message-thinking ${live ? 'live' : ''}`}>
+    <div className="message-thinking">
       <button
         type="button"
         className="message-thinking-toggle"
@@ -69,7 +97,7 @@ function ThinkingBlock({
         >
           <polyline points="9 18 15 12 9 6" />
         </svg>
-        <span>{live ? t('chat.thinkingLive') : t('chat.thinking')}</span>
+        <span>{t('chat.thinking')}</span>
       </button>
       {open && <pre className="message-thinking-body">{text}</pre>}
     </div>
@@ -161,7 +189,7 @@ const MessageRow = memo(function MessageRow({
             </div>
           </div>
         ) : isLive && msg.role === 'assistant' ? (
-          <StreamingPlain text={content} />
+          <StreamingMarkdown text={content} />
         ) : (
           <div className={`message-content${isStreamingTail ? ' streaming' : ''}`}>
             <MarkdownRenderer content={content} />

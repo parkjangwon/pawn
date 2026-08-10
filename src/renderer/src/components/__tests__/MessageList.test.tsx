@@ -97,7 +97,7 @@ describe('MessageList', () => {
     useStreamingStore.getState().setContent('a1', 'live text')
     __flushStreamingForTests()
     const { rerender } = renderList({ messages: [msg('a1', 'assistant', 'stored text')] })
-    // Live stream uses plain-text path (pre), not full markdown.
+    // Live stream renders complete lines as markdown; partial tail as raw text.
     expect(screen.getByText(/live text/)).toBeInTheDocument()
 
     useStreamingStore.getState().clear('a1')
@@ -112,5 +112,41 @@ describe('MessageList', () => {
       />
     )
     expect(screen.getByText('stored text')).toBeInTheDocument()
+  })
+
+  it('renders completed lines as markdown and keeps the partial line raw while streaming', () => {
+    useStreamingStore.getState().setContent('m1', '## Done\nstill typing')
+    __flushStreamingForTests()
+    renderList({ messages: [msg('m1', 'assistant', 'stored')], isStreaming: true })
+    // The completed line became a real heading…
+    expect(screen.getByRole('heading', { level: 2, name: 'Done' })).toBeInTheDocument()
+    // …while the in-progress tail line stays as raw text with the cursor.
+    expect(screen.getByText(/still typing/)).toBeInTheDocument()
+  })
+
+  it('shows one-line thinking indicator while live, then expands the full text after flush', () => {
+    useStreamingStore.getState().setThinking('m1', 'deep reasoning text')
+    __flushStreamingForTests()
+    const { rerender } = renderList({ messages: [msg('m1', 'assistant', 'stored')], isStreaming: true })
+    // Live: single compact line only — the reasoning body stays hidden.
+    expect(screen.getByText('chat.thinkingLive')).toBeInTheDocument()
+    expect(screen.queryByText(/deep reasoning/)).not.toBeInTheDocument()
+
+    // After flush: one-line toggle, full text on demand.
+    useStreamingStore.getState().clear('m1')
+    rerender(
+      <MessageList
+        messages={[{ ...msg('m1', 'assistant', 'stored'), thinking: 'deep reasoning text' }]}
+        isStreaming={false}
+        endRef={endRef}
+        startIndex={0}
+        nearTop={false}
+        onShowEarlier={() => {}}
+      />
+    )
+    expect(screen.getByText('chat.thinking')).toBeInTheDocument()
+    expect(screen.queryByText(/deep reasoning/)).not.toBeInTheDocument()
+    fireEvent.click(screen.getByText('chat.thinking'))
+    expect(screen.getByText('deep reasoning text')).toBeInTheDocument()
   })
 })
