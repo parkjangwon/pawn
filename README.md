@@ -33,17 +33,15 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
 
-### Latest — v0.9.0
+### Latest — v0.10.0
 
-Encrypted BYOK keys, multi-root finish, in-app update download, secret-safe backup, browser claim isolation, transcript-safe edit/regenerate, durable plan & thinking UI, context meter & spend caps, worktree review apply, subagent orchestration, issue→PR helpers, automation edit, welcome checklist, and broader en/ko/ja/zh parity.
-
-### In development (next)
-
+**Multi-tab browser + subagent parallel browsing + `research_report`**
 - **Multi-tab browser** — tab bar in the browser panel, `browser_tab_new / list / switch / close` tools, popups open new tabs
 - **Subagent parallel browsing** — per-owner tabs (`session:` / `subagent:` / UI), parked background tabs that never disturb the visible page, reclaimed automatically when a run ends
-- **`research_report`** — planner → parallel research workers → deduplicated dossier → citation-checked report (artifact written to `<project>/artifacts/`, or `~/Downloads/pawn-artifacts/` with no project open)
+- **`research_report`** — planner → parallel research workers (each in its own tab, mixing `web_search` / `web_research` / `web_fetch` with `browser_*`) → deduplicated dossier → citation-checked report artifact (`<project>/artifacts/`, or `~/Downloads/pawn-artifacts/` with no project open)
 - **Panel lifecycle** — the agent-opened browser panel auto-hides when all work is done (page stays alive); it closes entirely once every browser tab is gone
-- **Stability hardening** — every fire-and-forget IPC call now catches rejections; the research pipeline fails with a clean tool error instead of an unhandled rejection
+- **Stability hardening** — every fire-and-forget IPC call now catches rejections; optional-chain short-circuit bug fixed; the research pipeline fails with a clean tool error
+- Plus: Agents-panel layout hardening, refreshed README/CONTRIBUTING
 
 ---
 

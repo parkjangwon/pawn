@@ -33,17 +33,15 @@ Pawn은 또 하나의 클라우드 락인 IDE가 아닙니다. OpenAI·Claude �
 
 UI: ChatGPT 스타일 레이아웃, 터미널/파일/git/diff/브라우저 패널, 라이트·다크. 언어: 영어·한국어·일본어·중국어.
 
-### 최신 — v0.9.0
+### 최신 — v0.10.0
 
-BYOK 키 암호화, 멀티 루트 마무리, 인앱 업데이트 다운로드, 시크릿 제외 백업, 브라우저 claim 격리, transcript-safe 편집/재생성, plan·thinking UI, 컨텍스트 미터·지출 한도, worktree 리뷰 적용, 서브에이전트 오케스트레이션, issue→PR 헬퍼, 자동화 편집, 웰컴 체크리스트, en/ko/ja/zh 패리티 확대.
-
-### 개발 중 (다음)
-
+**멀티 탭 브라우저 + 서브에이전트 병렬 브라우징 + `research_report`**
 - **멀티 탭 브라우저** — 브라우저 패널 탭 바, `browser_tab_new / list / switch / close` 도구, 팝업은 새 탭으로
 - **서브에이전트 병렬 브라우징** — owner별 탭(`session:` / `subagent:` / UI), 보이는 페이지를 절대 방해하지 않는 parked 백그라운드 탭, 런 종료 시 자동 회수
-- **`research_report`** — 플래너 → 병렬 리서치 워커 → 중복 제거 도시어 → 출처 검증 레포트 (아티팩트는 `<프로젝트>/artifacts/`, 프로젝트가 없으면 `~/Downloads/pawn-artifacts/`)
+- **`research_report`** — 플래너 → 병렬 리서치 워커(각자 탭, `web_search` / `web_research` / `web_fetch` + `browser_*` 혼용) → 중복 제거 도시어 → 출처 검증 레포트 아티팩트 (`<프로젝트>/artifacts/`, 프로젝트가 없으면 `~/Downloads/pawn-artifacts/`)
 - **패널 라이프사이클** — 에이전트가 연 브라우저 패널은 작업이 모두 끝나면 자동 숨김 (페이지는 유지), 브라우저 탭이 0개가 되면 완전히 닫힘
-- **안정성 하드닝** — 모든 fire-and-forget IPC 호출에 거부 처리 추가, 리서치 파이프라인 실패 시 처리 안 된 거부 대신 깔끔한 도구 오류 반환
+- **안정성 하드닝** — 모든 fire-and-forget IPC 호출에 거부 처리 추가, 선택 체이닝 단락 버그 수정, 리서치 파이프라인 실패 시 깔끔한 도구 오류 반환
+- 그 외: Agents 패널 레이아웃 하드닝, README/CONTRIBUTING 갱신
 
 ---
 
