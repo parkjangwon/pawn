@@ -423,7 +423,7 @@
     },
     "agentsSection": {
       "title": "서브에이전트",
-      "desc": "조사·계획·구현·리뷰처럼 역할을 나눈 전문 도우미를 만들고 편집합니다. 메인 채팅이 필요할 때 일을 맡깁니다. 기본 역할은 Pawn에 포함되어 있고, 직접 만든 역할은 프로젝트 또는 이 기기에 저장됩니다.",
+      "desc": "조사·계획·구현·리뷰처럼 역할을 나눈 전문 에이전트를 만들고 편집합니다. 메인 채팅이 필요할 때 일을 맡깁니다. 기본 역할은 Pawn에 포함되어 있고, 직접 만든 역할은 프로젝트 또는 이 기기에 저장됩니다.",
       "refresh": "새로고침",
       "loading": "불러오는 중…",
       "builtin": "기본 제공",
@@ -438,9 +438,9 @@
       "fieldName": "이름",
       "fieldNameHint": "소문자·숫자·하이픈. 프로젝트의 .pawn/agents 폴더에 작은 파일로 저장됩니다.",
       "fieldDescription": "언제 쓰나요",
-      "fieldDescriptionPh": "메인 채팅이 언제 이 도우미를 고르면 좋을까요?",
+      "fieldDescriptionPh": "메인 채팅이 언제 이 에이전트를 고르면 좋을까요?",
       "fieldPrompt": "지시문",
-      "fieldPromptPh": "당신은 … 를 담당하는 전문 도우미입니다.",
+      "fieldPromptPh": "당신은 … 를 담당하는 전문 에이전트입니다.",
       "fieldModel": "모델 선호",
       "modelInherit": "메인 채팅과 동일",
       "modelSimple": "빠르고 저렴하게",
@@ -471,9 +471,9 @@
       "fieldMaxShell": "최대 셸 실행",
       "fieldMaxToolCalls": "최대 도구 사용",
       "maxParallel": "동시 실행",
-      "maxParallelDesc": "한 번에 나란히 돌릴 도우미 수입니다. 더 많으면 차례를 기다립니다.",
-      "autoOpenPanel": "채팅에서 도우미 진행 상황 표시",
-      "autoOpenPanelDesc": "도우미가 작업하는 동안 채팅에 간단한 활동 바를 표시하고, 펼치면 각 도우미가 하는 일을 볼 수 있습니다.",
+      "maxParallelDesc": "한 번에 나란히 돌릴 에이전트 수입니다. 더 많으면 차례를 기다립니다.",
+      "autoOpenPanel": "채팅에서 에이전트 진행 상황 표시",
+      "autoOpenPanelDesc": "에이전트가 작업하는 동안 채팅에 간단한 활동 바를 표시하고, 펼치면 각 에이전트가 하는 일을 볼 수 있습니다.",
       "fieldScope": "저장 위치",
       "scopeProject": "이 프로젝트",
       "scopeUser": "이 기기 (모든 프로젝트)",
@@ -489,7 +489,7 @@
       "errNoProject": "이 프로젝트에 저장하려면 프로젝트를 열거나, “이 기기”를 선택하세요.",
       "errDeleteClaude": "Claude Code 에이전트는 여기서 편집할 수 있지만, 이 화면에서 삭제할 수 있는 것은 Pawn에 저장한 에이전트뿐입니다.",
       "costMode": "비용 선호",
-      "costModeDesc": "도우미가 돌 때 기본으로 쓸 모델 예산입니다. 개별 에이전트에 더 강한 모델을 지정하면 그쪽이 우선합니다.",
+      "costModeDesc": "에이전트가 돌 때 기본으로 쓸 모델 예산입니다. 개별 에이전트에 더 강한 모델을 지정하면 그쪽이 우선합니다.",
       "costFrugal": "절약",
       "costBalanced": "균형",
       "costQuality": "품질",
@@ -501,7 +501,7 @@
       "template_research": "조사",
       "template_implementer": "구현",
       "template_reviewer": "리뷰",
-      "parallelHint": "일을 나눌 수 있으면 도우미 여러 명을 동시에 돌릴 수 있습니다(최대 6명). 독립된 작업이 더 빨리 끝납니다. 채팅에서 실시간으로 보고, 전체 이력은 Agents 패널에서 확인하세요.",
+      "parallelHint": "일을 나눌 수 있으면 에이전트 여러 명을 동시에 돌릴 수 있습니다(최대 6명). 독립된 작업이 더 빨리 끝납니다. 채팅에서 실시간으로 보고, 전체 이력은 Agents 패널에서 확인하세요.",
       "applyReview": "적용 전 검토"
     },
     "hooksSection": {
@@ -982,7 +982,7 @@
       "toggleSidebar": "사이드바 토글",
       "toggleSidebarDesc": "프로젝트 사이드바 표시/숨기기",
       "openAgents": "Agents 패널 열기",
-      "openAgentsDesc": "도우미 진행 상황·비용·파일 변경을 실시간으로 봅니다"
+      "openAgentsDesc": "에이전트 진행 상황·비용·파일 변경을 실시간으로 봅니다"
     }
   },
   "fileTree": {
@@ -1110,12 +1110,12 @@
     "clearDone": "끝난 항목 지우기",
     "cancel": "중지",
     "emptyTitle": "준비됐어요",
-    "empty": "메인 채팅이 도우미에게 일을 맡기면, 진행 상태·비용·파일 변경이 여기에 실시간으로 표시됩니다.",
+    "empty": "메인 채팅이 에이전트에게 일을 맡기면, 진행 상태·비용·파일 변경이 여기에 실시간으로 표시됩니다.",
     "emptyTip1": "나눌 수 있는 일은 최대 6명까지 나란히 실행",
     "emptyTip2": "긴 작업은 뒤에서 돌리고 채팅은 이어갈 수 있어요",
-    "emptyTip3": "구현 도우미는 격리된 복사본에서 작업한 뒤, 성공한 변경만 프로젝트에 반영",
+    "emptyTip3": "구현 에이전트는 격리된 복사본에서 작업한 뒤, 성공한 변경만 프로젝트에 반영",
     "usageLine": "${{cost}} · 캐시 {{hit}}% · {{model}} · {{calls}}회",
-    "statsLabel": "도우미 통계",
+    "statsLabel": "에이전트 통계",
     "statRunning": "실행",
     "statDone": "완료",
     "statFailed": "실패",
@@ -1145,9 +1145,9 @@
     "applyFail": "적용 실패",
     "discardOk": "워크트리 폐기됨",
     "discardFail": "폐기 실패",
-    "inlineWorking": "도우미 {{count}}명 작업 중…",
-    "inlineWorking_one": "도우미 1명 작업 중…",
-    "inlineDone": "도우미 작업 완료",
+    "inlineWorking": "에이전트 {{count}}명 작업 중…",
+    "inlineWorking_one": "에이전트 1명 작업 중…",
+    "inlineDone": "에이전트 작업 완료",
     "inlineDoneCount": "{{count}}건 완료"
   }
 }

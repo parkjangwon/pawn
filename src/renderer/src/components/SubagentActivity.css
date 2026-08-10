@@ -1,7 +1,10 @@
 /* Inline subagent live status (chat footer) — compact, unobtrusive. */
 
 .subagent-activity {
-  margin: 10px 0 2px;
+  width: 100%;
+  max-width: var(--chat-content-max, 720px);
+  margin: 10px auto 2px;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-secondary);

@@ -4,7 +4,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  margin: 0 16px 8px;
+  width: 100%;
+  max-width: var(--chat-content-max, 720px);
+  margin: 0 auto 8px;
+  box-sizing: border-box;
   padding: 8px 12px;
   border-radius: 10px;
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
