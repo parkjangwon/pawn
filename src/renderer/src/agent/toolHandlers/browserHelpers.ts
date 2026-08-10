@@ -24,7 +24,9 @@ export async function requireBrowser(
   const ready = await agent.ensure()
   if (ready.error) return { error: ready.error }
   try {
-    ;(window as any).__openRightPanelTab?.('browser')
+    ;(window as any).__openRightPanelTab?.('browser', {
+      subagent: browserOwnerKey(ctx)?.startsWith('subagent:') === true
+    })
   } catch {
     // No panel bridge (e.g. dev:web)
   }

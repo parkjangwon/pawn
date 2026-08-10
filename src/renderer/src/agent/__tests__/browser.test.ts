@@ -133,7 +133,17 @@ describe('getBrowserAgent', () => {
 
     const res = await requireBrowser({ sessionId: 's1' })
     expect('error' in res).toBe(false)
-    expect(openSpy).toHaveBeenCalledWith('browser')
+    expect(openSpy).toHaveBeenCalledWith('browser', { subagent: false })
+  })
+
+  it('flags subagent-driven opens so the panel can auto-close on completion', async () => {
+    const openSpy = vi.fn()
+    ;(window as any).__openRightPanelTab = openSpy
+    apiWithBrowser({ ensure: vi.fn().mockResolvedValue({}) })
+
+    const res = await requireBrowser({ subagent: true, subagentRunId: 'r1', sessionId: 's1' })
+    expect('error' in res).toBe(false)
+    expect(openSpy).toHaveBeenCalledWith('browser', { subagent: true })
   })
 
   it('propagates errors and memoizes the agent', async () => {

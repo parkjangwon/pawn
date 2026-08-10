@@ -105,6 +105,10 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Save visibility
   const toggleVisible = useCallback((): void => {
+    // Toggling the panel (Cmd+B / the panel toggle) is a user interaction:
+    // take ownership so the subagent auto-close never yanks a panel the user
+    // just hid and reopened.
+    ;(window as any).__subagentOpenedBrowserPanel = false
     if (closingRef.current) {
       cancelHide()
       return
@@ -122,6 +126,10 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Open a tool as a tab (or switch to it if already open)
   const openTool = (id: TabId): void => {
+    // Any user-initiated open takes ownership away from subagent browsing:
+    // the subagent auto-close (subagentRun) must not yank a panel the user
+    // is using, whatever tab they open.
+    ;(window as any).__subagentOpenedBrowserPanel = false
     // Only run the slide-in (width 0 -> panelWidth) when the panel is actually
     // closed. The layout effect that resets `opening` fires on a visibility
     // change, so setting it while already visible collapses the panel and
@@ -140,6 +148,9 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Switch to a tab
   const switchTab = (id: TabId): void => {
+    // User takes ownership by switching tabs: the subagent auto-close must
+    // not yank the panel away mid-viewing.
+    ;(window as any).__subagentOpenedBrowserPanel = false
     setActiveTab(id)
     setShowPicker(false)
   }
@@ -166,6 +177,9 @@ export default function RightPanel(): React.JSX.Element | null {
     if (id === 'browser') {
       window.api.browser?.destroy?.()?.catch(() => {})
     }
+    // Any close is a user interaction: drop the subagent marker so a stale
+    // marker can never auto-close a panel the user reopened later.
+    ;(window as any).__subagentOpenedBrowserPanel = false
     if (!openTabsRef.current.includes(id)) return
     const next = openTabsRef.current.filter((t) => t !== id)
     openTabsRef.current = next
@@ -244,7 +258,15 @@ export default function RightPanel(): React.JSX.Element | null {
     return () => { delete (window as any).__toggleRightPanel }
   }, [])
 
-  // In Electron the main process owns shortcut dispatch (before-input-event
+  // Close the side panel outright (subagent browsing finished): hide with the
+  // closing animation and drop the subagent marker so it cannot re-fire.
+  useEffect(() => {
+    (window as any).__closeRightPanel = (): void => {
+      ;(window as any).__subagentOpenedBrowserPanel = false
+      if (visibleRef.current && !closingRef.current) requestHide()
+    }
+    return () => { delete (window as any).__closeRightPanel }
+  }, [requestHide])
   // forwarding covers every focused webContents), so the renderer only handles
   // keys in dev:web where there is no main process.
   const isBrowserMode = window.api?.platform === 'browser'
@@ -263,13 +285,28 @@ export default function RightPanel(): React.JSX.Element | null {
   // 'terminal' is handled by BottomTerminal — keep the bridge name so older
   // callers (run-script, agent tools) don't need a separate API.
   useEffect(() => {
-    (window as any).__openRightPanelTab = (id: OpenableId): void => {
+    (window as any).__openRightPanelTab = (id: OpenableId, opts?: { subagent?: boolean }): void => {
       if (id === 'terminal') {
         ;(window as any).__openTerminal?.()
         return
       }
       if (closingRef.current) cancelHide()
-      if (visibleRef.current && activeTabRef.current === id && openTabsRef.current.includes(id)) return
+      if (visibleRef.current && activeTabRef.current === id && openTabsRef.current.includes(id)) {
+        // Already open and active. A non-subagent call (user UI or the main
+        // agent) takes ownership; a subagent call cannot re-claim the tab.
+        if (opts?.subagent !== true) {
+          ;(window as any).__subagentOpenedBrowserPanel = false
+        }
+        return
+      }
+      // We are actually (re)opening the tab now. Only a subagent-driven
+      // browser open marks the panel for auto-close (subagentRun.ts); every
+      // other open (user UI, main agent, any non-browser tab) takes ownership.
+      if (id === 'browser' && opts?.subagent) {
+        ;(window as any).__subagentOpenedBrowserPanel = true
+      } else {
+        ;(window as any).__subagentOpenedBrowserPanel = false
+      }
       // Same guard as openTool: don't collapse an already-visible panel.
       if (!visibleRef.current) {
         setOpening(true)
@@ -400,7 +437,13 @@ export default function RightPanel(): React.JSX.Element | null {
         {/* + button to add tools */}
         <button
           className={`rp-tab rp-tab-add ${showPicker ? 'active' : ''}`}
-          onClick={() => setShowPicker(!showPicker)}
+          onClick={() => {
+            // Opening the tool picker is a user interaction: drop the
+            // subagent marker so the panel is never auto-closed under a user
+            // who is adding tools.
+            ;(window as any).__subagentOpenedBrowserPanel = false
+            setShowPicker(!showPicker)
+          }}
           title={t('rightPanel.addTool')}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

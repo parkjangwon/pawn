@@ -143,4 +143,69 @@ describe('RightPanel', () => {
     // display:none keeps the subtree mounted so panel state survives hide.
     expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
   })
+
+  it('marks the browser tab on subagent open and hands ownership back to the main agent', () => {
+    const destroy = vi.fn()
+    const setVisible = vi.fn()
+    ;(window as any).api.browser = { destroy, setVisible }
+    ;(window as any).__subagentOpenedBrowserPanel = false
+    const { container } = render(<RightPanel />)
+
+    // Subagent-driven open → marker set, tab shown.
+    act(() => { ;(window as any).__openRightPanelTab('browser', { subagent: true }) })
+    expect(screen.getByText('BROWSER_VIEW')).toBeInTheDocument()
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(true)
+
+    // A main-agent (or user) call on the already-open, active tab takes
+    // ownership → marker cleared even on the early-return path.
+    act(() => { ;(window as any).__openRightPanelTab('browser', { subagent: false }) })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(false)
+    expect(container.querySelector('aside')?.className).not.toContain('closing')
+  })
+
+  it('closes the panel via __closeRightPanel without destroying the browser', () => {
+    const destroy = vi.fn()
+    const setVisible = vi.fn()
+    ;(window as any).api.browser = { destroy, setVisible }
+    const { container } = render(<RightPanel />)
+    act(() => { ;(window as any).__openRightPanelTab('browser', { subagent: true }) })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(true)
+
+    // All subagent work done → __closeRightPanel hides the panel + clears the
+    // marker without destroying the browser.
+    act(() => { ;(window as any).__closeRightPanel() })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(false)
+    expect(container.querySelector('aside')?.className).toContain('closing')
+    expect(destroy).not.toHaveBeenCalled()
+  })
+
+  it('clears the subagent marker on any user tab interaction', () => {
+    const destroy = vi.fn()
+    const setVisible = vi.fn()
+    ;(window as any).api.browser = { destroy, setVisible }
+    const { container } = render(<RightPanel />)
+    act(() => { ;(window as any).__openRightPanelTab('browser', { subagent: true }) })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(true)
+
+    // User opens a *non-browser* tool (Files) → ownership → marker cleared, so
+    // the panel (Files and all) is never auto-closed under the user.
+    act(() => { ;(window as any).__openRightPanelTab('files') })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(false)
+
+    // Subagent re-opens → marker back; user switches to the browser tab →
+    // cleared; a subagent re-open of the active tab cannot re-claim it.
+    act(() => { ;(window as any).__openRightPanelTab('browser', { subagent: true }) })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(true)
+    const tabBtn = [...container.querySelectorAll('.rp-tab')].find(
+      (b) => b.querySelector('.rp-tab-label')?.textContent === 'rightPanel.tools.browser'
+    ) as HTMLElement
+    act(() => { fireEvent.click(tabBtn) })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(false)
+    act(() => { ;(window as any).__openRightPanelTab('browser', { subagent: true }) })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(false)
+
+    // Closing the browser tab keeps it cleared.
+    act(() => { ;(window as any).__closeRightPanelTab('browser') })
+    expect((window as any).__subagentOpenedBrowserPanel).toBe(false)
+  })
 })

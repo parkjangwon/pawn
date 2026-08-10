@@ -686,6 +686,20 @@ export async function runSubagent(
     } catch {
       /* optional */
     }
+    // Subagent browsing is done: this run just finished and no other run is
+    // still running. If a subagent opened the side panel, close it so parked
+    // tabs don't linger — a panel the user opened or is viewing is never
+    // touched (the marker is cleared on user interaction in RightPanel).
+    if (!useSubagentRunsStore.getState().runs.some((r) => r.status === 'running')) {
+      const w = window as unknown as {
+        __subagentOpenedBrowserPanel?: boolean
+        __closeRightPanel?: () => void
+      }
+      if (w.__subagentOpenedBrowserPanel) {
+        w.__subagentOpenedBrowserPanel = false
+        try { w.__closeRightPanel?.() } catch { /* optional */ }
+      }
+    }
     // Safety net if we exited without finalizeWorktree clearing the path.
     if (worktreePath && opts.projectPath && window.api?.worktree?.remove) {
       void window.api.worktree.remove(opts.projectPath, worktreePath, worktreeBranch).catch(() => {})

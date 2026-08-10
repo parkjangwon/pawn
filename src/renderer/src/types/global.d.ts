@@ -47,9 +47,15 @@ declare global {
 
 declare global {
   interface Window {
-    __openRightPanelTab?: (id: string) => void
+    __openRightPanelTab?: (id: string, opts?: { subagent?: boolean }) => void
     __closeRightPanelTab?: (id: string) => void
     __toggleRightPanel?: () => void
+    /** Close the side panel outright (subagent browsing finished). */
+    __closeRightPanel?: () => void
+    /** Set when subagent browsing opens the browser tab; cleared on user
+     *  open/switch/close so the panel auto-closes only when a subagent
+     *  actually drove it. */
+    __subagentOpenedBrowserPanel?: boolean
     /** @deprecated use __openRightPanelTab('agents') */
     __openAgentsPanel?: () => void
     __toggleTerminal?: () => void
