@@ -39,7 +39,6 @@ UI: ChatGPT 風レイアウト、ターミナル / ファイル / Git / Diff / �
 - **マルチタブブラウザ** — ブラウザパネルのタブバー、`browser_tab_new / list / switch / close` ツール、ポップアップは新規タブで
 - **サブエージェント並行ブラウズ** — owner 別タブ（`session:` / `subagent:` / UI）、表示中のページを決して邪魔しない parked バックグラウンドタブ、実行終了時に自動回収
 - **`research_report`** — プランナー → 並行リサーチワーカー（各タブ、`web_search` / `web_research` / `web_fetch` ＋ `browser_*` 併用）→ 重複排除ダシエ → 出典検証済みレポート（アーティファクトは `<project>/artifacts/`、プロジェクト未設定なら `~/Downloads/pawn-artifacts/`）
-- **パネルライフサイクル** — エージェントが開いたブラウザパネルは作業完了時に自動で非表示（ページは維持）、ブラウザタブが 0 になれば完全に閉じる
 - **安定性強化** — 全 fire-and-forget IPC 呼び出しに拒否処理を追加、オプショナルチェーン短絡バグを修正、リサーチパイプラインは明確なツールエラーを返す
 - その他: Agents パネルレイアウト強化、README/CONTRIBUTING 更新
 

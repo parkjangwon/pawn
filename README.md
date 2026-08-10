@@ -39,7 +39,6 @@ UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light 
 - **Multi-tab browser** — tab bar in the browser panel, `browser_tab_new / list / switch / close` tools, popups open new tabs
 - **Subagent parallel browsing** — per-owner tabs (`session:` / `subagent:` / UI), parked background tabs that never disturb the visible page, reclaimed automatically when a run ends
 - **`research_report`** — planner → parallel research workers (each in its own tab, mixing `web_search` / `web_research` / `web_fetch` with `browser_*`) → deduplicated dossier → citation-checked report artifact (`<project>/artifacts/`, or `~/Downloads/pawn-artifacts/` with no project open)
-- **Panel lifecycle** — the agent-opened browser panel auto-hides when all work is done (page stays alive); it closes entirely once every browser tab is gone
 - **Stability hardening** — every fire-and-forget IPC call now catches rejections; optional-chain short-circuit bug fixed; the research pipeline fails with a clean tool error
 - Plus: Agents-panel layout hardening, refreshed README/CONTRIBUTING
 

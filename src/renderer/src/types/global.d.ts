@@ -50,11 +50,6 @@ declare global {
     __openRightPanelTab?: (id: string) => void
     __closeRightPanelTab?: (id: string) => void
     __toggleRightPanel?: () => void
-    /** Hide the panel without destroying its contents (agent work done). */
-    __hideRightPanel?: () => void
-    /** Set when the agent opens the browser panel; cleared on user open/close
-     *  so the panel auto-closes only when the agent drove it. */
-    __agentOpenedBrowserPanel?: boolean
     /** @deprecated use __openRightPanelTab('agents') */
     __openAgentsPanel?: () => void
     __toggleTerminal?: () => void

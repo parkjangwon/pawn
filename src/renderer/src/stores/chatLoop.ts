@@ -837,21 +837,6 @@ export async function agentLoop(
         clearTurnCheckpoint(sessionId, 'completed')
       }
       setSessionStreamingFlags(set, get, sessionId, false)
-      // All work done (nothing streaming, nothing queued): hide the browser
-      // panel the agent opened this turn. Hiding keeps the page alive (destroy
-      // happens only on an explicit close); the panel stays open while other
-      // work remains, and a panel the user opened themselves is never touched
-      // (the marker is set only when the agent's open actually took effect).
-      if (get().streamingSessionIds.length === 0 && get().queue.length === 0) {
-        const w = window as unknown as {
-          __agentOpenedBrowserPanel?: boolean
-          __hideRightPanel?: () => void
-        }
-        if (w.__agentOpenedBrowserPanel) {
-          w.__agentOpenedBrowserPanel = false
-          try { w.__hideRightPanel?.() } catch { /* optional */ }
-        }
-      }
       // Turn finished — Stop hook (advisory; used for notify integrations)
       if (!aborted) {
         const project = useAppStore.getState().projects.find((p) => p.id === projectId)

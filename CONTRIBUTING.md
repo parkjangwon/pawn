@@ -54,7 +54,6 @@ The tool is then automatically available to the LLM — no registration elsewher
 - **Main-owned `WebContentsView`** — one view per browser tab, owned by `src/main/ipc/browser.ts`. The renderer only drives it through IPC; the UI panel and agent tools share the same state.
 - **Owner-key tabs (parallel browsing)** — each tab is bound to an owner: `session:<id>` (drives the visible tab), `subagent:<runId>` (a parked background tab), or `null` (UI-created). `resolveTab(owner)` reuses an owner's tab instead of spawning new ones; subagent tabs are reclaimed via `browser:releaseOwner` when a run ends. `BrowserTabManager` (pure) holds create/switch/close/neighbor rules.
 - **Hard limits** — `MAX_TABS` cap, http/https-only `normalizeBrowserUrl`, per-tab `sandbox + contextIsolation`, session partition separate from the app.
-- **Panel lifecycle** — `window.__agentOpenedBrowserPanel` marks tabs the agent opened; `chatLoop` auto-hides the panel when all work finishes (page stays alive); the panel tab closes once every browser tab is gone.
 
 ## Subagents & research_report
 

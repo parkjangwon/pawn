@@ -143,33 +143,4 @@ describe('RightPanel', () => {
     // display:none keeps the subtree mounted so panel state survives hide.
     expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
   })
-
-  it('tracks agent-opened browser panel and hides (not destroys) when work ends', () => {
-    const destroy = vi.fn()
-    const setVisible = vi.fn()
-    ;(window as any).api.browser = { destroy, setVisible }
-    ;(window as any).__agentOpenedBrowserPanel = false
-    const { container } = render(<RightPanel />)
-
-    // Agent opens the browser tab → marker set, tab shown.
-    act(() => { ;(window as any).__openRightPanelTab('browser') })
-    expect(screen.getByText('BROWSER_VIEW')).toBeInTheDocument()
-    expect((window as any).__agentOpenedBrowserPanel).toBe(true)
-
-    // A user-initiated interaction (switch to the open tab) takes ownership →
-    // marker cleared, so the agent-loop will not auto-hide the panel.
-    const tabBtn = [...container.querySelectorAll('.rp-tab')].find(
-      (b) => b.querySelector('.rp-tab-label')?.textContent === 'rightPanel.tools.browser'
-    ) as HTMLElement
-    act(() => { fireEvent.click(tabBtn) })
-    expect((window as any).__agentOpenedBrowserPanel).toBe(false)
-
-    // Agent opens again, then work finishes → __hideRightPanel hides the panel
-    // while keeping the browser page alive (no destroy).
-    act(() => { ;(window as any).__openRightPanelTab('browser') })
-    act(() => { ;(window as any).__hideRightPanel() })
-    expect(container.querySelector('aside')?.className).toContain('closing')
-    expect(destroy).not.toHaveBeenCalled()
-    expect(setVisible).toHaveBeenCalledWith(false)
-  })
 })

@@ -88,11 +88,6 @@ function NativeBrowserView(): React.JSX.Element {
       if (data.type !== 'title') setUrl((data.url as string) || '')
       if (Array.isArray(data.tabs)) setTabs(data.tabs as BrowserTabInfo[])
       if (data.activeTabId !== undefined) setActiveTabId(data.activeTabId as string | null)
-      // Every browser sub-tab is gone — nothing left to display. Close the
-      // panel's browser tab too (closeTabById resets the agent-opened marker).
-      if (data.type === 'tab:closed' && Array.isArray(data.tabs) && data.tabs.length === 0) {
-        window.__closeRightPanelTab?.('browser')
-      }
     })
 
     return () => {

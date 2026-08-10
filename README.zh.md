@@ -39,7 +39,6 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 - **多标签浏览器** — 浏览器面板标签栏，`browser_tab_new / list / switch / close` 工具，弹窗在新标签页中打开
 - **子代理并行浏览** — 按所有者分标签（`session:` / `subagent:` / UI），后台 parked 标签绝不打扰当前页面，运行结束时自动回收
 - **`research_report`** — 规划者 → 并行检索工人（各占标签，混用 `web_search` / `web_research` / `web_fetch` 与 `browser_*`）→ 去重资料卷 → 附引用验证的报告（产物写入 `<project>/artifacts/`，未打开项目时写入 `~/Downloads/pawn-artifacts/`）
-- **面板生命周期** — 代理打开的浏览器面板在全部工作完成后自动隐藏（页面保留），浏览器标签归零时完全关闭
 - **稳定性加固** — 所有 fire-and-forget IPC 调用均处理拒绝，修复可选链短路 bug，检索管道失败时返回清晰的工具错误
 - 另：Agents 面板布局加固、README/CONTRIBUTING 更新
 
