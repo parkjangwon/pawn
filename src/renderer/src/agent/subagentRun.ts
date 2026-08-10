@@ -68,6 +68,7 @@ import {
   toolCallSignature
 } from './subagentCore'
 import { finalizeWorktree, maybeCreateWorktree } from './subagentWorktree'
+import { releaseBrowserAgent } from './browser'
 import type { SubagentIsolation, SubagentResult, SubagentTask } from './subagentTypes'
 
 // --- Run loop + orchestration ----------------------------------------------
@@ -118,10 +119,17 @@ export async function runSubagent(
     /** Batch-wide brief + sibling findings (orchestration). */
     sharedContext?: string
     siblingFindings?: string
+    /**
+     * Resolve the profile from the builtin registry only, ignoring project/user
+     * agent files. Used for the research synthesizer, whose input is untrusted
+     * web content — a project agent file must never be able to widen its tool
+     * surface (e.g. re-enabling shell).
+     */
+    forceBuiltinProfile?: boolean
   }
 ): Promise<SubagentResult> {
   const label = (task.name || 'subagent').slice(0, 80)
-  const profiles = await loadAgentProfiles(opts.projectPath)
+  const profiles = opts.forceBuiltinProfile ? [] : await loadAgentProfiles(opts.projectPath)
   const profileName = resolveProfileName(task.agent, task.mode)
   const profile =
     profiles.find((p) => p.name === profileName) ||
@@ -536,7 +544,8 @@ export async function runSubagent(
             executeTool(tc, toolCwd, signal, {
               sessionId: opts.sessionId,
               projectId: opts.projectId,
-              subagent: true
+              subagent: true,
+              subagentRunId: runId
             })
           )
         )
@@ -549,7 +558,8 @@ export async function runSubagent(
           await executeTool(tc, toolCwd, signal, {
             sessionId: opts.sessionId,
             projectId: opts.projectId,
-            subagent: true
+            subagent: true,
+            subagentRunId: runId
           })
         )
       }
@@ -665,9 +675,20 @@ export async function runSubagent(
     })
   } finally {
     leaveSubagent()
+    // Return this run's browser tabs to the pool (parallel browsing): closing
+    // them frees the MAX_TABS budget and renderer processes when the run ends.
+    if (window.api?.browser?.releaseOwner) {
+      void window.api.browser.releaseOwner(`subagent:${runId}`).catch(() => {})
+    }
+    // Drop the run's bound agent so per-run closures do not accumulate.
+    try {
+      releaseBrowserAgent(`subagent:${runId}`)
+    } catch {
+      /* optional */
+    }
     // Safety net if we exited without finalizeWorktree clearing the path.
     if (worktreePath && opts.projectPath && window.api?.worktree?.remove) {
-      void window.api.worktree.remove(opts.projectPath, worktreePath, worktreeBranch)
+      void window.api.worktree.remove(opts.projectPath, worktreePath, worktreeBranch).catch(() => {})
     }
   }
 }

@@ -225,7 +225,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       setSessionStreamingFlags(set, get, sessionId, false)
       usePermissionStore.getState().denyForSession?.(sessionId)
       if (get().streamingSessionIds.length === 0) {
-        void window.api.browser?.hideCursor?.().catch(() => {})
+        void window.api.browser?.hideCursor?.()?.catch?.(() => {})
         usePermissionStore.getState().denyAll()
       }
       processQueue(set, get, sessionId)
@@ -242,8 +242,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (!c.signal.aborted) c.abort()
     }
     sessionControllers.clear()
-    void window.api.shell?.killAll?.().catch(() => {})
-    void window.api.browser?.hideCursor?.().catch(() => {})
+    void window.api.shell?.killAll?.()?.catch?.(() => {})
+    void window.api.browser?.hideCursor?.()?.catch?.(() => {})
     usePermissionStore.getState().denyAll()
     set({ isStreaming: false, streamingSessionId: null, streamingSessionIds: [] })
     window.api.setStreaming?.(false)

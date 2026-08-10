@@ -66,6 +66,7 @@ const api = {
     delete: (path: string) => ipcRenderer.invoke('fs:delete', path),
     exists: (path: string) => ipcRenderer.invoke('fs:exists', path),
     homeDir: () => ipcRenderer.invoke('fs:homeDir'),
+    downloadsPath: () => ipcRenderer.invoke('fs:downloadsPath'),
     walk: (path: string) => ipcRenderer.invoke('fs:walk', path),
     copyDir: (src: string, dest: string) => ipcRenderer.invoke('fs:copyDir', src, dest),
     removeDir: (path: string) => ipcRenderer.invoke('fs:removeDir', path),
@@ -195,9 +196,10 @@ const api = {
   // Browser (embedded WebContentsView, driven by both the UI panel and the agent)
   browser: {
     open: (url: string) => ipcRenderer.invoke('browser:open', url),
-    ensure: () => ipcRenderer.invoke('browser:ensure'),
+    ensure: (owner?: string) => ipcRenderer.invoke('browser:ensure', owner),
     claim: (sessionId: string) => ipcRenderer.invoke('browser:claim', sessionId),
     release: (sessionId?: string) => ipcRenderer.invoke('browser:release', sessionId),
+    releaseOwner: (owner: string) => ipcRenderer.invoke('browser:releaseOwner', owner),
     create: () => ipcRenderer.invoke('browser:create'),
     destroy: () => ipcRenderer.invoke('browser:destroy'),
     setVisible: (visible: boolean) => ipcRenderer.invoke('browser:setVisible', visible),
@@ -208,23 +210,28 @@ const api = {
     pickState: () => ipcRenderer.invoke('browser:pickState'),
     pickClear: () => ipcRenderer.invoke('browser:pickClear'),
     state: () => ipcRenderer.invoke('browser:state'),
+    tabs: (owner?: string) => ipcRenderer.invoke('browser:tabs', owner),
+    tabCreate: (url?: string, owner?: string) => ipcRenderer.invoke('browser:tabCreate', url || '', owner),
+    tabSwitch: (id: string, owner?: string) => ipcRenderer.invoke('browser:tabSwitch', id, owner),
+    tabClose: (id: string, owner?: string) => ipcRenderer.invoke('browser:tabClose', id, owner),
     logs: () => ipcRenderer.invoke('browser:logs'),
-    navigate: (url: string) => ipcRenderer.invoke('browser:navigate', url),
-    back: () => ipcRenderer.invoke('browser:back'),
-    reload: () => ipcRenderer.invoke('browser:reload'),
-    eval: (code: string) => ipcRenderer.invoke('browser:eval', code),
-    snapshot: (filter?: string) => ipcRenderer.invoke('browser:snapshot', filter || ''),
-    click: (ref?: string, selector?: string) => ipcRenderer.invoke('browser:click', ref || '', selector || ''),
-    fill: (ref: string | undefined, selector: string | undefined, value: string, submit?: boolean) =>
-      ipcRenderer.invoke('browser:fill', ref || '', selector || '', value, submit === true),
-    readText: (selector?: string) => ipcRenderer.invoke('browser:readText', selector || ''),
-    screenshot: () => ipcRenderer.invoke('browser:screenshot'),
-    wait: (opts?: { ms?: number; selector?: string; text?: string; timeoutMs?: number }) =>
-      ipcRenderer.invoke('browser:wait', opts || {}),
-    scroll: (opts?: { dy?: number; dx?: number; selector?: string }) =>
-      ipcRenderer.invoke('browser:scroll', opts || {}),
-    select: (opts?: { ref?: string; selector?: string; value?: string }) =>
-      ipcRenderer.invoke('browser:select', opts || {}),
+    navigate: (url: string, owner?: string) => ipcRenderer.invoke('browser:navigate', url, owner),
+    back: (owner?: string) => ipcRenderer.invoke('browser:back', owner),
+    reload: (owner?: string) => ipcRenderer.invoke('browser:reload', owner),
+    eval: (code: string, owner?: string) => ipcRenderer.invoke('browser:eval', code, owner),
+    snapshot: (filter?: string, owner?: string) => ipcRenderer.invoke('browser:snapshot', filter || '', owner),
+    click: (ref?: string, selector?: string, owner?: string) =>
+      ipcRenderer.invoke('browser:click', ref || '', selector || '', owner),
+    fill: (ref: string | undefined, selector: string | undefined, value: string, submit?: boolean, owner?: string) =>
+      ipcRenderer.invoke('browser:fill', ref || '', selector || '', value, submit === true, owner),
+    readText: (selector?: string, owner?: string) => ipcRenderer.invoke('browser:readText', selector || '', owner),
+    screenshot: (owner?: string) => ipcRenderer.invoke('browser:screenshot', owner),
+    wait: (opts?: { ms?: number; selector?: string; text?: string; timeoutMs?: number }, owner?: string) =>
+      ipcRenderer.invoke('browser:wait', opts || {}, owner),
+    scroll: (opts?: { dy?: number; dx?: number; selector?: string }, owner?: string) =>
+      ipcRenderer.invoke('browser:scroll', opts || {}, owner),
+    select: (opts?: { ref?: string; selector?: string; value?: string }, owner?: string) =>
+      ipcRenderer.invoke('browser:select', opts || {}, owner),
     devtools: () => ipcRenderer.invoke('browser:devtools'),
     setBounds: (x: number, y: number, w: number, h: number) => ipcRenderer.invoke('browser:bounds', x, y, w, h),
     getURL: () => ipcRenderer.invoke('browser:getURL'),

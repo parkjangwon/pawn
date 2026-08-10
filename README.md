@@ -15,14 +15,14 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 ## What it can do
 
 - **Code** — File tools, shell, git, symbol search, checks, and a full agent loop with permissions
-- **Browse** — Embedded Chromium (`browser_*`) for real web UIs and logged-in sessions (session claim isolation)
-- **Research** — Public web search/fetch without extra API keys (`web_search`, `web_fetch`, `web_research`)
+- **Browse** — Embedded Chromium (`browser_*`) for real web UIs and logged-in sessions. **Multi-tab**: the agent, the UI panel, and every subagent get their own tab (per-owner isolation) and browse in parallel without ever yanking your view
+- **Research** — Public web search/fetch without extra API keys (`web_search`, `web_fetch`, `web_research`), plus **`research_report`**: parallel research subagents (each in its own tab) whose findings are deduplicated and synthesized into a citation-checked report artifact
 - **Computer use** — Desktop mouse, keyboard, screenshot, and clipboard (`computer_*`)
 - **Remember** — Local long-term Memory (`~/.pawn/memory.db`) that personalizes the agent over time
 - **Hooks** — Claude/Codex-compatible lifecycle hooks (Claude + Pawn configs merge with dedupe)
 - **Connect** — Optional Google & GitHub OAuth + GitLab & AWS CodeCommit (PAT) tools via Settings → Connections (tokens stay local)
 - **Extend** — MCP servers, Claude Code skills/plugins, `CLAUDE.md` / `AGENTS.md`, automations, tray
-- **Subagents** — Session-internal subagents with tool policy, orchestration, and optional worktree review → apply
+- **Subagents** — Session-internal subagents with tool policy, orchestration, optional worktree review → apply, and a dedicated browser tab per run for parallel browsing
 - **Multi-root** — Extra project roots with effective tool cwd; panels and agent tools stay root-aware
 - **Sessions** — Durable plan/thinking, edit & regenerate (attachments preserved), restore, secret-safe backup export
 - **Usage & budget** — Context meter, spend soft-caps, usage panel
@@ -36,6 +36,14 @@ UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light 
 ### Latest — v0.9.0
 
 Encrypted BYOK keys, multi-root finish, in-app update download, secret-safe backup, browser claim isolation, transcript-safe edit/regenerate, durable plan & thinking UI, context meter & spend caps, worktree review apply, subagent orchestration, issue→PR helpers, automation edit, welcome checklist, and broader en/ko/ja/zh parity.
+
+### In development (next)
+
+- **Multi-tab browser** — tab bar in the browser panel, `browser_tab_new / list / switch / close` tools, popups open new tabs
+- **Subagent parallel browsing** — per-owner tabs (`session:` / `subagent:` / UI), parked background tabs that never disturb the visible page, reclaimed automatically when a run ends
+- **`research_report`** — planner → parallel research workers → deduplicated dossier → citation-checked report (artifact written to `<project>/artifacts/`, or `~/Downloads/pawn-artifacts/` with no project open)
+- **Panel lifecycle** — the agent-opened browser panel auto-hides when all work is done (page stays alive); it closes entirely once every browser tab is gone
+- **Stability hardening** — every fire-and-forget IPC call now catches rejections; the research pipeline fails with a clean tool error instead of an unhandled rejection
 
 ---
 

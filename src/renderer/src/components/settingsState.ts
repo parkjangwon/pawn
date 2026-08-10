@@ -387,7 +387,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   useEffect(() => {
     if (!recording) return
     // Stop main-process forwarding so the pressed keys reach the recorder.
-    void window.api.keybindings?.setPaused?.(true)
+    void window.api.keybindings?.setPaused?.(true)?.catch(() => {})
     const onKey = (e: KeyboardEvent): void => {
       e.preventDefault()
       e.stopPropagation()
@@ -399,7 +399,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     window.addEventListener('keydown', onKey, true)
     return () => {
       window.removeEventListener('keydown', onKey, true)
-      void window.api.keybindings?.setPaused?.(false)
+      void window.api.keybindings?.setPaused?.(false)?.catch(() => {})
     }
   }, [recording, setKeybinding])
 
@@ -417,7 +417,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     }).catch(() => {})
     window.api.config.getPaths().then((paths) => setPawnPaths(paths)).catch(() => {})
     setDisabledSkills(loadDisabledSkillNames())
-    void window.api.tray?.getEnabled().then((v) => setTrayVisible(v === true)).catch(() => {})
+    void window.api.tray?.getEnabled?.().then((v) => setTrayVisible(v === true)).catch(() => {})
   }, [])
 
   const fileExists = async (path: string): Promise<boolean> => {

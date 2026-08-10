@@ -76,14 +76,16 @@ export default function App(): React.JSX.Element {
       // Quiet update check once per launch (desktop only).
       if (!usePrefsStore.getState().checkUpdatesOnLaunch) return
       if (!window.api?.checkForUpdates) return
-      void window.api.checkForUpdates().then((r) => {
-        if (!r.updateAvailable || !r.latest) return
-        // i18n may not be ready on first paint — use a simple bilingual-safe toast.
-        setAppToast(
-          `Pawn ${r.latest} → Settings → System (${r.current})`
-        )
-        window.setTimeout(() => setAppToast(null), 8000)
-      })
+      void window.api.checkForUpdates()
+        .then((r) => {
+          if (!r.updateAvailable || !r.latest) return
+          // i18n may not be ready on first paint — use a simple bilingual-safe toast.
+          setAppToast(
+            `Pawn ${r.latest} → Settings → System (${r.current})`
+          )
+          window.setTimeout(() => setAppToast(null), 8000)
+        })
+        .catch(() => {})
     })
     void useRoutineStore.getState().init()
     void useMcpStore.getState().init()
@@ -224,7 +226,7 @@ export default function App(): React.JSX.Element {
   const handleCloseLayer = useCallback(() => {
     if (closeLayer()) return
     // Nothing left to dismiss — close the window (not full app quit).
-    void window.api?.window?.close?.()
+    void window.api?.window?.close?.()?.catch(() => {})
   }, [closeLayer])
 
   // Electron: main-process forwarding dispatches every bound action here.

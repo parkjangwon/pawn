@@ -894,7 +894,9 @@
       "pick": "エージェントに指示するUI要素やテキストを指定",
       "pickHint": "要素をクリック、またはテキストをドラッグ選択してから、変更内容をエージェントに伝えてください",
       "feedbackPlaceholder": "何を変更・確認しますか？（任意）",
-      "bubbleHint": "↵ Enter 送信 · ⇧↵ 改行 · Esc キャンセル"
+      "bubbleHint": "↵ Enter 送信 · ⇧↵ 改行 · Esc キャンセル",
+      "newTab": "新しいタブ",
+      "closeTab": "タブを閉じる"
     },
     "diff": {
       "title": "最近の変更",

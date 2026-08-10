@@ -282,11 +282,11 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
           setError(res2?.error || res?.error || res?.text || t('rightPanel.git.errPr'))
         } else {
           setError(null)
-          void window.api.notification?.send?.('Pawn', t('rightPanel.git.prOpened'))
+          void window.api.notification?.send?.('Pawn', t('rightPanel.git.prOpened'))?.catch(() => {})
           if (res2.text) setError(res2.text.slice(0, 200))
         }
       } else {
-        void window.api.notification?.send?.('Pawn', t('rightPanel.git.prOpened'))
+        void window.api.notification?.send?.('Pawn', t('rightPanel.git.prOpened'))?.catch(() => {})
         if (res.text) setError(res.text.slice(0, 200))
       }
     } catch (e) {

@@ -137,7 +137,7 @@ export const useKeybindingsStore = create<KeybindingsState>((set, get) => ({
     const bindings = { ...get().bindings, [id]: combo }
     set({ bindings })
     window.api.config.save({ settings: { keybindings: bindings } }).catch(() => {})
-    void window.api.keybindings?.set(id, combo)
+    void window.api.keybindings?.set(id, combo)?.catch(() => {})
   },
 
   reset: (id) => {

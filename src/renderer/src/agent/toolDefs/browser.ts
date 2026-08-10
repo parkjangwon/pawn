@@ -119,5 +119,36 @@ export const BROWSER_TOOLS: ToolDefinition[] = [
       },
       required: ['value']
     }
+  },
+  {
+    name: 'browser_tab_new',
+    description: 'Open a new browser tab. The new tab becomes active and gets a fresh browser_snapshot. All other browser_* tools operate on the active tab.',
+    parameters: {
+      type: 'object',
+      properties: { url: { type: 'string', description: 'Optional URL to load in the new tab (a bare domain is upgraded to https://).' } }
+    }
+  },
+  {
+    name: 'browser_tab_list',
+    description: 'List the open browser tabs (id, title, url) and which one is active. Use the id with browser_tab_switch / browser_tab_close.',
+    parameters: { type: 'object', properties: {} }
+  },
+  {
+    name: 'browser_tab_switch',
+    description: 'Make the given tab the active one. All other browser_* tools then operate on it.',
+    parameters: {
+      type: 'object',
+      properties: { tab_id: { type: 'string', description: 'Tab id from browser_tab_list.' } },
+      required: ['tab_id']
+    }
+  },
+  {
+    name: 'browser_tab_close',
+    description: 'Close a browser tab. Closing the active tab activates its neighbor.',
+    parameters: {
+      type: 'object',
+      properties: { tab_id: { type: 'string', description: 'Tab id from browser_tab_list.' } },
+      required: ['tab_id']
+    }
   }
 ]

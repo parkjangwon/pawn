@@ -820,8 +820,11 @@ export async function agentLoop(
     releaseSleepHold()
     // Turn finished (normally or aborted) — drop the AI cursor so it doesn't
     // linger on the browser page after browser control ends.
+    // Release the browser claim when this turn ends. The claim is a no-op
+    // today (per-owner tabs supersede it), kept for renderer call-site compat.
+    void window.api.browser?.release?.(sessionId)?.catch?.(() => {})
     if (get().streamingSessionIds.length <= 1) {
-      void window.api.browser?.hideCursor?.().catch(() => {})
+      void window.api.browser?.hideCursor?.()?.catch?.(() => {})
     }
     // Epoch guard: a steer that aborted us may already have started a newer
     // turn. Clearing flags or draining the queue here would race and leave the
@@ -834,6 +837,21 @@ export async function agentLoop(
         clearTurnCheckpoint(sessionId, 'completed')
       }
       setSessionStreamingFlags(set, get, sessionId, false)
+      // All work done (nothing streaming, nothing queued): hide the browser
+      // panel the agent opened this turn. Hiding keeps the page alive (destroy
+      // happens only on an explicit close); the panel stays open while other
+      // work remains, and a panel the user opened themselves is never touched
+      // (the marker is set only when the agent's open actually took effect).
+      if (get().streamingSessionIds.length === 0 && get().queue.length === 0) {
+        const w = window as unknown as {
+          __agentOpenedBrowserPanel?: boolean
+          __hideRightPanel?: () => void
+        }
+        if (w.__agentOpenedBrowserPanel) {
+          w.__agentOpenedBrowserPanel = false
+          try { w.__hideRightPanel?.() } catch { /* optional */ }
+        }
+      }
       // Turn finished — Stop hook (advisory; used for notify integrations)
       if (!aborted) {
         const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -867,7 +885,7 @@ export async function agentLoop(
             projectId: projectId && projectId !== '__general__' ? projectId : null,
             sessionId,
             messages: recent
-          })
+          }).catch(() => {})
           // Quiet merge of near-duplicate cards (threshold 0.92) so memory deepens over time.
           if (
             useProviderStore.getState().autoMemoryConsolidate &&
@@ -877,7 +895,7 @@ export async function agentLoop(
               projectId: projectId && projectId !== '__general__' ? projectId : null,
               threshold: 0.92,
               dryRun: false
-            })
+            }).catch(() => {})
           }
         } catch {
           /* non-fatal */
@@ -891,7 +909,7 @@ export async function agentLoop(
           (r) => r.sessionId === sessionId && useRoutineStore.getState().runningIds.has(r.id)
         )
         if (!runningRoutine && !document.hasFocus()) {
-          window.api.notification.send('Pawn', i18n.t('notifications.taskComplete')).catch(() => {})
+          window.api?.notification?.send?.('Pawn', i18n.t('notifications.taskComplete'))?.catch(() => {})
         }
       }
       // Drain the queue even after a manual stop: queued messages were

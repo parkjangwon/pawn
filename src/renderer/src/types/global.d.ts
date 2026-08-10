@@ -50,6 +50,11 @@ declare global {
     __openRightPanelTab?: (id: string) => void
     __closeRightPanelTab?: (id: string) => void
     __toggleRightPanel?: () => void
+    /** Hide the panel without destroying its contents (agent work done). */
+    __hideRightPanel?: () => void
+    /** Set when the agent opens the browser panel; cleared on user open/close
+     *  so the panel auto-closes only when the agent drove it. */
+    __agentOpenedBrowserPanel?: boolean
     /** @deprecated use __openRightPanelTab('agents') */
     __openAgentsPanel?: () => void
     __toggleTerminal?: () => void
@@ -115,6 +120,7 @@ declare global {
         delete: (path: string) => Promise<{ ok?: boolean; error?: string }>
         exists: (path: string) => Promise<boolean>
         homeDir: () => Promise<string | null>
+        downloadsPath: () => Promise<string | null>
         walk: (path: string) => Promise<Array<{ name: string; path: string; isDirectory: boolean }> | { error: string }>
         copyDir: (src: string, dest: string) => Promise<{ ok?: boolean; error?: string }>
         removeDir: (path: string) => Promise<{ ok?: boolean; error?: string }>
@@ -354,7 +360,7 @@ declare global {
       }
       browser: {
         open: (url: string) => Promise<{ ok?: boolean }>
-        ensure: () => Promise<{ ok?: boolean; error?: string }>
+        ensure: (owner?: string) => Promise<{ ok?: boolean; error?: string }>
         claim: (sessionId: string) => Promise<{ ok?: boolean; error?: string; ownerSessionId?: string }>
         release: (sessionId?: string) => Promise<{ ok?: boolean; error?: string }>
         create: () => Promise<{ ok?: boolean; error?: string }>
@@ -384,39 +390,65 @@ declare global {
           ready: boolean
         }>
         state: () => Promise<{
-          created: boolean; url?: string; title?: string; loading?: boolean
+          created: boolean; activeTabId?: string | null
+          tabs?: Array<{
+            id: string; url: string; title: string
+            loading: boolean; canGoBack: boolean; canGoForward: boolean
+          }>
+          url?: string; title?: string; loading?: boolean
           canGoBack?: boolean; canGoForward?: boolean; visible?: boolean
         }>
+        tabs: (owner?: string) => Promise<{
+          tabs: Array<{
+            id: string; url: string; title: string
+            loading: boolean; canGoBack: boolean; canGoForward: boolean
+          }>
+          activeTabId: string | null
+          error?: string
+        }>
+        tabCreate: (url?: string, owner?: string) => Promise<{
+          ok?: boolean
+          activeTabId?: string | null
+          tabId?: string
+          tabs?: Array<{
+            id: string; url: string; title: string
+            loading: boolean; canGoBack: boolean; canGoForward: boolean
+          }>
+          error?: string
+        }>
+        tabSwitch: (id: string, owner?: string) => Promise<{ ok?: boolean; error?: string }>
+        tabClose: (id: string, owner?: string) => Promise<{ ok?: boolean; error?: string }>
+        releaseOwner: (owner: string) => Promise<{ ok?: boolean; error?: string }>
         logs: () => Promise<string[]>
-        navigate: (url: string) => Promise<{ url?: string; title?: string; error?: string }>
-        back: () => Promise<{ url?: string; error?: string }>
-        reload: () => Promise<{ ok?: boolean; error?: string }>
-        eval: (code: string) => Promise<{ result?: string; error?: string }>
-        snapshot: (filter?: string) => Promise<{
+        navigate: (url: string, owner?: string) => Promise<{ url?: string; title?: string; error?: string }>
+        back: (owner?: string) => Promise<{ url?: string; error?: string }>
+        reload: (owner?: string) => Promise<{ ok?: boolean; error?: string }>
+        eval: (code: string, owner?: string) => Promise<{ result?: string; error?: string }>
+        snapshot: (filter?: string, owner?: string) => Promise<{
           url?: string; title?: string
           elements?: Array<{ ref: string; role: string; text: string; name: string; placeholder: string; value: string; href: string }>
           truncated?: boolean; error?: string
         }>
-        click: (ref?: string, selector?: string) => Promise<{ message?: string; error?: string }>
-        fill: (ref: string | undefined, selector: string | undefined, value: string, submit?: boolean) => Promise<{ message?: string; error?: string }>
-        readText: (selector?: string) => Promise<{ text?: string; truncated?: boolean; error?: string }>
-        screenshot: () => Promise<{ dataUrl?: string; bytes?: number; error?: string }>
+        click: (ref?: string, selector?: string, owner?: string) => Promise<{ message?: string; error?: string }>
+        fill: (ref: string | undefined, selector: string | undefined, value: string, submit?: boolean, owner?: string) => Promise<{ message?: string; error?: string }>
+        readText: (selector?: string, owner?: string) => Promise<{ text?: string; truncated?: boolean; error?: string }>
+        screenshot: (owner?: string) => Promise<{ dataUrl?: string; bytes?: number; error?: string }>
         wait: (opts?: {
           ms?: number
           selector?: string
           text?: string
           timeoutMs?: number
-        }) => Promise<{ ok?: boolean; waitedMs?: number; error?: string }>
+        }, owner?: string) => Promise<{ ok?: boolean; waitedMs?: number; error?: string }>
         scroll: (opts?: {
           dy?: number
           dx?: number
           selector?: string
-        }) => Promise<{ ok?: boolean; error?: string }>
+        }, owner?: string) => Promise<{ ok?: boolean; error?: string }>
         select: (opts?: {
           ref?: string
           selector?: string
           value?: string
-        }) => Promise<{ ok?: boolean; message?: string; error?: string }>
+        }, owner?: string) => Promise<{ ok?: boolean; message?: string; error?: string }>
         devtools: () => Promise<{ ok?: boolean; error?: string }>
         setBounds: (x: number, y: number, w: number, h: number) => Promise<{ ok?: boolean; error?: string }>
         getURL: () => Promise<{ url?: string; error?: string }>

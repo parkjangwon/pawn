@@ -15,7 +15,7 @@ import { isSubagentToolAllowed } from '../subagent'
 describe('agentProfiles', () => {
   it('has Claude-like built-ins', () => {
     const names = BUILTIN_AGENT_PROFILES.map((p) => p.name).sort()
-    expect(names).toEqual(['code-reviewer', 'explore', 'plan', 'worker'])
+    expect(names).toEqual(['code-reviewer', 'explore', 'plan', 'synthesizer', 'worker'])
   })
 
   it('explore is read-only; worker cannot spawn', () => {

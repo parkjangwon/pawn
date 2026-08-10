@@ -894,7 +894,9 @@
       "pick": "Point at a UI element or text for the agent",
       "pickHint": "Click an element or drag-select text, then tell the agent what to change",
       "feedbackPlaceholder": "What should the agent change or check? (optional)",
-      "bubbleHint": "↵ Enter to send · ⇧↵ newline · Esc cancel"
+      "bubbleHint": "↵ Enter to send · ⇧↵ newline · Esc cancel",
+      "newTab": "New tab",
+      "closeTab": "Close tab"
     },
     "diff": {
       "title": "Recent Changes",

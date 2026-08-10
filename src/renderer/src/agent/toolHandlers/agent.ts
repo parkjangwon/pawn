@@ -4,7 +4,7 @@ import { resolveToolPath } from '../pathUtils'
 import { usePlanStore } from '../../stores/plan'
 import { runProjectChecks } from '../runChecks'
 import { searchCodebase } from '../codebaseSearch'
-import { listArtifacts, writeArtifact } from '../artifacts'
+import { listArtifacts, listArtifactsDir, writeArtifact, writeArtifactTo, defaultArtifactsDir } from '../artifacts'
 import { buildRepoMap } from '../repoMap'
 import {
   buildIssuePrPlaybook,
@@ -21,6 +21,7 @@ import {
   type SubagentIsolation,
   type SubagentTask
 } from '../subagent'
+import { runResearchReport } from '../researchReport'
 import type { AgentApplyMode, AgentThoroughness } from '../agentProfiles'
 import {
   useSubagentRunsStore,
@@ -148,23 +149,39 @@ const codebase_search: ToolHandler = async (call, projectPath, _signal, ctx, api
 
 
 const write_artifact: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!projectPath) {
-          return { toolCallId: call.id, content: 'No project path set', isError: true }
-        }
         const name = String(call.arguments.name || '')
         const content = String(call.arguments.content ?? '')
-        const res = await writeArtifact(projectPath, name, content)
+        let res: { ok: boolean; path?: string; error?: string }
+        if (projectPath) {
+          res = await writeArtifact(projectPath, name, content)
+        } else {
+          // No open project: fall back to <downloads>/pawn-artifacts so reports
+          // and exports still land somewhere the user can find them.
+          const dir = await defaultArtifactsDir()
+          if (!dir) {
+            return {
+              toolCallId: call.id,
+              content: 'No project path set and no default artifacts directory available',
+              isError: true
+            }
+          }
+          res = await writeArtifactTo(dir, name, content)
+        }
         if (!res.ok) return { toolCallId: call.id, content: res.error || 'write failed', isError: true }
         return { toolCallId: call.id, content: `Wrote artifact: ${res.path}` }
       }
 
 
 const list_artifacts: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!projectPath) {
+        const sub = call.arguments.subdir ? String(call.arguments.subdir) : ''
+        if (projectPath) {
+          return { toolCallId: call.id, content: await listArtifacts(projectPath, sub) }
+        }
+        const dir = await defaultArtifactsDir()
+        if (!dir) {
           return { toolCallId: call.id, content: 'No project path set', isError: true }
         }
-        const sub = call.arguments.subdir ? String(call.arguments.subdir) : ''
-        return { toolCallId: call.id, content: await listArtifacts(projectPath, sub) }
+        return { toolCallId: call.id, content: await listArtifactsDir(dir, sub) }
       }
 
 
@@ -482,6 +499,34 @@ const await_agent: ToolHandler = async (call, _projectPath, signal, ctx, _api) =
   }
 }
 
+const research_report: ToolHandler = async (call, projectPath, signal, ctx, _api) => {
+  if (ctx?.subagent) {
+    return { toolCallId: call.id, content: 'research_report is not allowed inside a subagent.', isError: true }
+  }
+  const res = await runResearchReport({
+    topic: String(call.arguments.topic ?? ''),
+    aspects: Array.isArray(call.arguments.aspects)
+      ? call.arguments.aspects.map((a) => String(a))
+      : undefined,
+    maxSources: call.arguments.max_sources != null ? Number(call.arguments.max_sources) : undefined,
+    maxSubagents: call.arguments.max_subagents != null ? Number(call.arguments.max_subagents) : undefined,
+    outputPath: call.arguments.output_path != null ? String(call.arguments.output_path) : undefined,
+    projectPath,
+    projectId: ctx?.projectId,
+    sessionId: ctx?.sessionId,
+    signal
+  })
+  if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+  const aspects = res.aspects?.length ? `\nAspects: ${res.aspects.join(' | ')}` : ''
+  const workers = res.research?.length ?? 0
+  const fails = res.research?.filter((r) => !r.ok).length ?? 0
+  return {
+    toolCallId: call.id,
+    content: `Research report complete (${workers} parallel workers, ${fails} failed).${aspects}\n\n${res.report || '(no report)'}`,
+    isError: !res.ok
+  }
+}
+
 const cancel_agent: ToolHandler = async (call, _projectPath, _signal, ctx, _api) => {
   const id = String(call.arguments.id || '').trim()
   if (!id) {
@@ -531,6 +576,7 @@ export const agentHandlers: Record<string, ToolHandler> = {
   issue_to_pr,
   spawn_agent,
   parallel_agents,
+  research_report,
   list_agents,
   await_agent,
   cancel_agent

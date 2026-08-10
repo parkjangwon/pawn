@@ -3,7 +3,7 @@ import type { ToolHandler } from './types'
 
 
 const browser_navigate: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser(ctx?.sessionId)
+        const b = await requireBrowser(ctx)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.navigate(call.arguments.url as string)
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -15,7 +15,7 @@ const browser_navigate: ToolHandler = async (call, projectPath, _signal, ctx, ap
 
 
 const browser_snapshot: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser(ctx?.sessionId)
+        const b = await requireBrowser(ctx)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.snapshot((call.arguments.filter as string) || '')
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -39,7 +39,7 @@ const browser_snapshot: ToolHandler = async (call, projectPath, _signal, ctx, ap
 
 
 const browser_click: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser(ctx?.sessionId)
+        const b = await requireBrowser(ctx)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.click(call.arguments.ref as string, call.arguments.selector as string)
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -48,7 +48,7 @@ const browser_click: ToolHandler = async (call, projectPath, _signal, ctx, api) 
 
 
 const browser_fill: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser(ctx?.sessionId)
+        const b = await requireBrowser(ctx)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.fill(
           call.arguments.ref as string,
@@ -62,7 +62,7 @@ const browser_fill: ToolHandler = async (call, projectPath, _signal, ctx, api) =
 
 
 const browser_read_text: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser(ctx?.sessionId)
+        const b = await requireBrowser(ctx)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.readText((call.arguments.selector as string) || '')
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -71,7 +71,7 @@ const browser_read_text: ToolHandler = async (call, projectPath, _signal, ctx, a
 
 
 const browser_eval: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser(ctx?.sessionId)
+        const b = await requireBrowser(ctx)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.evaluate(call.arguments.code as string)
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -80,7 +80,7 @@ const browser_eval: ToolHandler = async (call, projectPath, _signal, ctx, api) =
 
 
 const browser_back: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser(ctx?.sessionId)
+        const b = await requireBrowser(ctx)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.back()
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -89,7 +89,7 @@ const browser_back: ToolHandler = async (call, projectPath, _signal, ctx, api) =
 
 
 const browser_screenshot: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        const b = await requireBrowser(ctx?.sessionId)
+        const b = await requireBrowser(ctx)
         if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
         const res = await b.agent.screenshot()
         if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
@@ -110,7 +110,7 @@ const browser_open_external: ToolHandler = async (call, projectPath, _signal, ct
       }
 
 const browser_wait: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-  const b = await requireBrowser(ctx?.sessionId)
+  const b = await requireBrowser(ctx)
   if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
   const res = await b.agent.wait({
     ms: call.arguments.ms != null ? Number(call.arguments.ms) : undefined,
@@ -124,7 +124,7 @@ const browser_wait: ToolHandler = async (call, projectPath, _signal, ctx, api) =
 }
 
 const browser_scroll: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-  const b = await requireBrowser(ctx?.sessionId)
+  const b = await requireBrowser(ctx)
   if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
   const res = await b.agent.scroll({
     dy: call.arguments.dy != null ? Number(call.arguments.dy) : undefined,
@@ -139,7 +139,7 @@ const browser_scroll: ToolHandler = async (call, projectPath, _signal, ctx, api)
 }
 
 const browser_select: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-  const b = await requireBrowser(ctx?.sessionId)
+  const b = await requireBrowser(ctx)
   if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
   const res = await b.agent.select({
     ref: call.arguments.ref != null ? String(call.arguments.ref) : undefined,
@@ -148,6 +148,66 @@ const browser_select: ToolHandler = async (call, projectPath, _signal, ctx, api)
   })
   if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
   return { toolCallId: call.id, content: res.message || 'Selected' }
+}
+
+const browser_tab_new: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+  const b = await requireBrowser(ctx)
+  if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+  const url = call.arguments.url != null ? String(call.arguments.url) : undefined
+  const res = await b.agent.tabNew(url)
+  if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+  // For subagent runs the tab is owner-scoped (parked); prefer the explicit
+  // tabId the main process returned (reuse path included).
+  const created = res.tabs.find((t) => t.id === res.tabId) || res.tabs[res.tabs.length - 1]
+  const label = created?.title || created?.url || 'new tab'
+  const id = res.tabId || created?.id || res.activeTabId || ''
+  const activeNote = ctx?.subagent
+    ? 'It is bound to this run (it stays in the background tab bar).'
+    : 'It is now the active tab.'
+  return {
+    toolCallId: call.id,
+    content: `Opened a new tab (${id}) — ${label}. ${activeNote} Call browser_snapshot to see its elements.`
+  }
+}
+
+const browser_tab_list: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+  const b = await requireBrowser(ctx)
+  if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+  const res = await b.agent.tabs()
+  if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+  if (res.tabs.length === 0) {
+    return { toolCallId: call.id, content: 'No browser tabs open. Use browser_navigate or browser_tab_new first.' }
+  }
+  const lines = res.tabs.map((t) => {
+    const marker = t.id === res.activeTabId ? '* ' : '  '
+    const title = t.title ? ` "${t.title}"` : ''
+    const url = t.url ? ` ${t.url}` : ' (blank)'
+    return `${marker}[${t.id}]${title}${url}`
+  })
+  return { toolCallId: call.id, content: `Tabs (active marked *):\n${lines.join('\n')}` }
+}
+
+const browser_tab_switch: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+  const b = await requireBrowser(ctx)
+  if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+  const id = String(call.arguments.tab_id ?? '')
+  if (!id) return { toolCallId: call.id, content: 'Missing tab_id', isError: true }
+  const res = await b.agent.tabSwitch(id)
+  if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+  return {
+    toolCallId: call.id,
+    content: `Switched to tab ${id}. Call browser_snapshot to see the active page.`
+  }
+}
+
+const browser_tab_close: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
+  const b = await requireBrowser(ctx)
+  if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
+  const id = String(call.arguments.tab_id ?? '')
+  if (!id) return { toolCallId: call.id, content: 'Missing tab_id', isError: true }
+  const res = await b.agent.tabClose(id)
+  if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
+  return { toolCallId: call.id, content: `Closed tab ${id}.` }
 }
 
 export const browserHandlers: Record<string, ToolHandler> = {
@@ -163,4 +223,8 @@ export const browserHandlers: Record<string, ToolHandler> = {
   'browser_wait': browser_wait,
   'browser_scroll': browser_scroll,
   'browser_select': browser_select,
+  'browser_tab_new': browser_tab_new,
+  'browser_tab_list': browser_tab_list,
+  'browser_tab_switch': browser_tab_switch,
+  'browser_tab_close': browser_tab_close,
 }

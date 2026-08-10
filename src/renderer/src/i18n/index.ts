@@ -14,7 +14,7 @@ function applyDocumentLang(lng: string): void {
 // Keep the native tray menu in sync with the renderer's language.
 function notifyTrayLanguage(lng: string): void {
   try {
-    window.api.tray?.setLanguage(lng)
+    void window.api.tray?.setLanguage?.(lng)?.catch?.(() => {})
   } catch {
     // Browser mode or preload unavailable — tray is desktop-only.
   }

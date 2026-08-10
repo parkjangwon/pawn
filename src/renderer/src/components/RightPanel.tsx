@@ -122,6 +122,11 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Open a tool as a tab (or switch to it if already open)
   const openTool = (id: TabId): void => {
+    // A user-initiated open takes ownership of the browser tab: the agent's
+    // auto-close-on-turn-end (chatLoop) must not yank it away.
+    if (id === 'browser') {
+      ;(window as any).__agentOpenedBrowserPanel = false
+    }
     // Only run the slide-in (width 0 -> panelWidth) when the panel is actually
     // closed. The layout effect that resets `opening` fires on a visibility
     // change, so setting it while already visible collapses the panel and
@@ -140,6 +145,11 @@ export default function RightPanel(): React.JSX.Element | null {
 
   // Switch to a tab
   const switchTab = (id: TabId): void => {
+    // User takes ownership of the browser tab by switching to it: the agent's
+    // auto-hide-on-turn-end must not yank the panel away mid-viewing.
+    if (id === 'browser') {
+      ;(window as any).__agentOpenedBrowserPanel = false
+    }
     setActiveTab(id)
     setShowPicker(false)
   }
@@ -164,7 +174,10 @@ export default function RightPanel(): React.JSX.Element | null {
     // Closing the browser tab throws the page away; a fresh view (and a blank
     // page) is created the next time the tab is opened.
     if (id === 'browser') {
-      window.api.browser?.destroy?.()
+      window.api.browser?.destroy?.()?.catch(() => {})
+      // Any close of the browser tab clears the agent-opened marker so a stale
+      // marker can never auto-close a panel the user reopened later.
+      ;(window as any).__agentOpenedBrowserPanel = false
     }
     if (!openTabsRef.current.includes(id)) return
     const next = openTabsRef.current.filter((t) => t !== id)
@@ -244,6 +257,16 @@ export default function RightPanel(): React.JSX.Element | null {
     return () => { delete (window as any).__toggleRightPanel }
   }, [])
 
+  // Hide the panel without destroying what's inside (the agent-loop calls this
+  // when all agent work finishes; the browser page stays alive so the user can
+  // reopen it). No-op when already hidden.
+  useEffect(() => {
+    (window as any).__hideRightPanel = (): void => {
+      if (visibleRef.current && !closingRef.current) requestHide()
+    }
+    return () => { delete (window as any).__hideRightPanel }
+  }, [requestHide])
+
   // In Electron the main process owns shortcut dispatch (before-input-event
   // forwarding covers every focused webContents), so the renderer only handles
   // keys in dev:web where there is no main process.
@@ -270,6 +293,13 @@ export default function RightPanel(): React.JSX.Element | null {
       }
       if (closingRef.current) cancelHide()
       if (visibleRef.current && activeTabRef.current === id && openTabsRef.current.includes(id)) return
+      // We are actually (re)opening the tab now. When it is the browser tab,
+      // mark it agent-driven so the agent-loop can auto-hide the panel once the
+      // turn finishes (chatLoop.ts). The early return above keeps a marker off
+      // a panel the user already has open and active.
+      if (id === 'browser') {
+        ;(window as any).__agentOpenedBrowserPanel = true
+      }
       // Same guard as openTool: don't collapse an already-visible panel.
       if (!visibleRef.current) {
         setOpening(true)

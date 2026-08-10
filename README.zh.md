@@ -15,14 +15,14 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 ## 能做什么
 
 - **编程** — 文件、Shell、Git、符号搜索、检查，以及带权限的代理循环
-- **浏览器** — 内嵌 Chromium（`browser_*`）操作真实网页与登录会话（会话 claim 隔离）
-- **检索** — 无需额外 API 的公开网页搜索/阅读（`web_search` / `web_fetch` / `web_research`）
+- **浏览器** — 内嵌 Chromium（`browser_*`）操作真实网页与登录会话。**多标签**：代理、UI 面板与每个子代理各占一个标签（按所有者隔离），并行浏览而不打扰你的画面
+- **检索** — 无需额外 API 的公开网页搜索/阅读（`web_search` / `web_fetch` / `web_research`），另有 **`research_report`**：并行检索子代理（各占标签）收集并去重，综合为附引用的报告产物
 - **计算机操控** — 桌面鼠标、键盘、截图、剪贴板（`computer_*`）
 - **记忆** — 本地长期 Memory（`~/.pawn/memory.db`），随使用个性化
 - **Hooks** — 兼容 Claude/Codex 的生命周期钩子（Claude + Pawn 配置合并去重）
 - **连接** — 设置 → 连接 中可选 Google / GitHub（OAuth）与 GitLab / AWS CodeCommit（PAT）工具（令牌仅本地）
 - **扩展** — MCP、Claude Code 技能/插件、`CLAUDE.md` / `AGENTS.md`、自动化、托盘
-- **子代理** — 会话内子代理、工具策略与编排，可选 worktree 审阅后应用
+- **子代理** — 会话内子代理、工具策略与编排，可选 worktree 审阅后应用，以及用于并行浏览的独立标签
 - **多根目录** — 额外项目根与有效 cwd；面板与代理工具感知根路径
 - **会话** — 持久 plan/thinking、保留附件的编辑与再生成、恢复、排除密钥的备份导出
 - **用量与预算** — 上下文计量、支出 soft-cap、用量面板
@@ -36,6 +36,14 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 ### 最新 — v0.9.0
 
 BYOK 密钥加密、多根完善、应用内更新下载、排除密钥备份、浏览器 claim 隔离、transcript 安全编辑/再生成、plan 与 thinking UI、上下文计量与支出上限、worktree 审阅应用、子代理编排、issue→PR 辅助、自动化编辑、欢迎清单，以及更广的 en/ko/ja/zh 对齐。
+
+### 开发中（下一版）
+
+- **多标签浏览器** — 浏览器面板标签栏，`browser_tab_new / list / switch / close` 工具，弹窗在新标签页中打开
+- **子代理并行浏览** — 按所有者分标签（`session:` / `subagent:` / UI），后台 parked 标签绝不打扰当前页面，运行结束时自动回收
+- **`research_report`** — 规划者 → 并行检索工人 → 去重资料卷 → 附引用验证的报告（产物写入 `<project>/artifacts/`，未打开项目时写入 `~/Downloads/pawn-artifacts/`）
+- **面板生命周期** — 代理打开的浏览器面板在全部工作完成后自动隐藏（页面保留），浏览器标签归零时完全关闭
+- **稳定性加固** — 所有 fire-and-forget IPC 调用均处理拒绝，检索管道失败时返回清晰的工具错误而非未处理拒绝
 
 ---
 

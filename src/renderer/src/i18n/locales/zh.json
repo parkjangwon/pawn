@@ -894,7 +894,9 @@
       "pick": "为代理指定UI元素或文本",
       "pickHint": "点击元素或拖选文本，然后告诉代理需要修改什么",
       "feedbackPlaceholder": "希望代理修改或检查什么？（可选）",
-      "bubbleHint": "↵ Enter 发送 · ⇧↵ 换行 · Esc 取消"
+      "bubbleHint": "↵ Enter 发送 · ⇧↵ 换行 · Esc 取消",
+      "newTab": "新建标签页",
+      "closeTab": "关闭标签页"
     },
     "diff": {
       "title": "最近更改",

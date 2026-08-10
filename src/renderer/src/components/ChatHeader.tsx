@@ -200,9 +200,9 @@ export default function ChatHeader({
     setRunningScript(name)
     const res = await window.api.workspace.runScript(projectPath, name, packageManager)
     if (res.error) {
-      window.api.notification?.send(t('notifications.scriptFailed'), res.error)
+      void window.api.notification?.send(t('notifications.scriptFailed'), res.error).catch(() => {})
     } else {
-      window.api.notification?.send(t('notifications.scriptStarted'), `${packageManager} run ${name}`)
+      void window.api.notification?.send(t('notifications.scriptStarted'), `${packageManager} run ${name}`).catch(() => {})
       try { (window as any).__openRightPanelTab?.('terminal') } catch {}
     }
     setRunningScript(null)

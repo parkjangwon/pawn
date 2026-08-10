@@ -489,6 +489,93 @@ body.resizing-right-panel .rp-resizer::after {
   background: var(--bg-secondary);
 }
 
+/* Multi-tab strip: one chip per open tab; only the active tab is positioned
+   over the viewport (the rest are parked off-screen in the main process). */
+.rp-browser-tabbar {
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+  padding: 3px 4px 0;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+.rp-browser-tabbar::-webkit-scrollbar {
+  display: none;
+}
+.rp-browser-tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  max-width: 180px;
+  min-width: 0;
+  padding: 3px 6px 3px 8px;
+  border: 1px solid var(--border-color);
+  border-bottom: none;
+  border-radius: 7px 7px 0 0;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.rp-browser-tab:hover {
+  background: color-mix(in srgb, var(--bg-hover) 55%, transparent);
+}
+.rp-browser-tab.active {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+  font-weight: 600;
+}
+.rp-browser-tab-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rp-browser-tab-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.rp-browser-tab-close:hover {
+  background: color-mix(in srgb, var(--text-secondary) 22%, transparent);
+  color: var(--text-primary);
+}
+.rp-browser-tab-add {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 15px;
+  line-height: 1;
+  cursor: pointer;
+  flex-shrink: 0;
+  align-self: center;
+}
+.rp-browser-tab-add:hover {
+  background: color-mix(in srgb, var(--bg-hover) 55%, transparent);
+  color: var(--text-primary);
+}
+
 .rp-browser-nav {
   display: flex;
   align-items: center;

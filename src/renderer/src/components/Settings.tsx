@@ -945,7 +945,7 @@ export default function Settings({
                     onChange={(e) => {
                       const next = e.target.checked
                       setTrayVisible(next)
-                      void window.api.tray?.setEnabled(next).catch(() => {})
+                      void window.api.tray?.setEnabled?.(next)?.catch?.(() => {})
                     }}
                   />
                   <span className="toggle-slider" />
@@ -1187,7 +1187,7 @@ export default function Settings({
                             t('settings.dataSection.backupOkSafe', { path: r.path })
                           )
                         else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
-                      })
+                      }).catch(() => setBackupMsg(t('settings.dataSection.backupFailed')))
                     }}
                   >
                     {t('settings.dataSection.fullBackupSafe')}
@@ -1205,7 +1205,7 @@ export default function Settings({
                         else if (r.ok && r.path)
                           setBackupMsg(t('settings.dataSection.backupOk', { path: r.path }))
                         else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
-                      })
+                      }).catch(() => setBackupMsg(t('settings.dataSection.backupFailed')))
                     }}
                   >
                     {t('settings.dataSection.fullBackup')}
@@ -1227,7 +1227,7 @@ export default function Settings({
                             })
                           )
                         else setBackupMsg(r.error || t('settings.dataSection.restoreFailed'))
-                      })
+                      }).catch(() => setBackupMsg(t('settings.dataSection.restoreFailed')))
                     }}
                   >
                     {t('settings.dataSection.restoreBackup')}

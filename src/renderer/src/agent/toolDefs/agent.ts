@@ -304,5 +304,37 @@ export const AGENT_TOOLS: ToolDefinition[] = [
       },
       required: ['id']
     }
+  },
+  {
+    name: 'research_report',
+    description:
+      'Deep multi-source research that runs parallel research subagents — each with its own browser tab — then synthesizes the findings into a complete, citation-checked report. Use for literature/tech surveys, competitor analysis, or any "research X" request. Research workers combine web_search / web_research / web_fetch with the embedded browser; sources are deduplicated and the final report is written via write_artifact.',
+    parameters: {
+      type: 'object',
+      properties: {
+        topic: {
+          type: 'string',
+          description: 'The research topic (required).'
+        },
+        aspects: {
+          type: 'array',
+          items: { type: 'string' },
+          description: 'Optional sub-topics to research in parallel (2-6). When omitted, a planner subagent decomposes the topic automatically.'
+        },
+        max_sources: {
+          type: 'number',
+          description: 'Max distinct sources per aspect (default 5, max 12).'
+        },
+        max_subagents: {
+          type: 'number',
+          description: 'Cap on parallel research subagents (default 4, max 6).'
+        },
+        output_path: {
+          type: 'string',
+          description: 'Optional artifact path to write the report to (default derived from the topic slug).'
+        }
+      },
+      required: ['topic']
+    }
   }
 ]

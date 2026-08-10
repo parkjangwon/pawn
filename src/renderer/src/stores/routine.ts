@@ -150,7 +150,7 @@ export async function runRoutine(routine: Routine): Promise<void> {
     void window.api.routine?.update(routine.id, {
       projectId: bound.projectId,
       sessionId: bound.sessionId
-    })
+    })?.catch?.(() => {})
     useRoutineStore.setState((s) => ({
       routines: s.routines.map((r) =>
         r.id === routine.id ? { ...r, projectId: bound.projectId, sessionId: bound.sessionId } : r

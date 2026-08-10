@@ -80,7 +80,7 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
         dailyBudgetUsd: clampBudget(settings?.dailyBudgetUsd),
         checkUpdatesOnLaunch: settings?.checkUpdatesOnLaunch !== false
       })
-      void window.api.power?.setSleepPrevention?.(sleepMode)
+      void window.api.power?.setSleepPrevention?.(sleepMode)?.catch(() => {})
     } catch {
       // Desktop-only feature; keep the OS policy untouched.
     }
@@ -89,7 +89,7 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
   setSleepPrevention: (mode) => {
     set({ sleepPrevention: mode })
     window.api.config.save({ settings: { sleepPrevention: mode } }).catch(() => {})
-    void window.api.power?.setSleepPrevention?.(mode)
+    void window.api.power?.setSleepPrevention?.(mode)?.catch(() => {})
   },
 
   setTaskNotificationsEnabled: (enabled) => {
@@ -101,7 +101,7 @@ export const usePrefsStore = create<PrefsState>((set, get) => ({
 
   setConfirmQuit: (enabled) => {
     set({ confirmQuit: enabled })
-    void window.api.prefs?.setConfirmQuit?.(enabled)
+    void window.api.prefs?.setConfirmQuit?.(enabled)?.catch(() => {})
     window.api.config.save({ settings: { confirmQuit: enabled } }).catch(() => {})
   },
 

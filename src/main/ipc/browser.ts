@@ -3,6 +3,7 @@ import { handleTrusted } from './trust'
 import { getMainWindow } from '../window'
 import { injectAICursor, cursorShow, cursorHide } from '../browserCursor'
 import { injectPicker, stopPicker, getPickerState } from '../browserPicker'
+import { BrowserTabManager, type BrowserTabInfo } from '../browserTabs'
 
 // The embedded browser runs in its own session partition. The app's own CSP is
 // installed on `session.defaultSession`; sharing it would apply `default-src
@@ -14,6 +15,12 @@ const BROWSER_USER_AGENT =
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36'
 
 const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
+
+/** Hard cap on simultaneous tabs: each one owns a renderer process. */
+const MAX_TABS = 8
+
+/** Where inactive tabs are parked: off-screen, hidden, still alive. */
+const PARK_BOUNDS = { x: -10000, y: -10000, width: 1280, height: 800 }
 
 /**
  * Normalize a navigation target and enforce an http/https allowlist. Allowing
@@ -33,12 +40,45 @@ function normalizeBrowserUrl(rawUrl: string): string | null {
   }
 }
 
-let browserView: WebContentsView | null = null
+// --- Multi-view state -------------------------------------------------------
+// `tabManager` is pure bookkeeping (ids, order, active tab). `views` maps each
+// tab id to its WebContentsView; only the active tab's view is visible and
+// positioned, the rest are parked off-screen and stay alive (background
+// throttling keeps hidden pages cheap).
+
+const tabManager = new BrowserTabManager()
+const views = new Map<string, WebContentsView>()
+const logsByTab = new Map<string, string[]>()
 let browserVisible = false
 let pickerActive = false
-/** Session currently driving the shared browser (multi-session isolation). */
-let browserOwnerSessionId: string | null = null
-const browserLogs: string[] = []
+/** Last bounds from the UI panel — applied to whichever tab becomes active. */
+let lastBounds: { x: number; y: number; width: number; height: number } | null = null
+
+// Parallel browsing: every tab is bound to an owner key (see BrowserTabInfo).
+// Owner-less calls (UI panel / legacy) drive the visible tab; `session:` owners
+// drive their own tab and make it visible; `subagent:` owners drive a parked
+// tab so concurrent subagents never fight over (or yank) the visible one.
+
+function getView(id: string | null | undefined): WebContentsView | null {
+  if (!id) return null
+  const view = views.get(id)
+  if (!view || view.webContents.isDestroyed()) return null
+  return view
+}
+
+function activeView(): WebContentsView | null {
+  return getView(tabManager.activeId)
+}
+
+function tabLogs(id: string | null | undefined): string[] {
+  if (!id) return []
+  let logs = logsByTab.get(id)
+  if (!logs) {
+    logs = []
+    logsByTab.set(id, logs)
+  }
+  return logs
+}
 
 function emitBrowserEvent(payload: Record<string, unknown>): void {
   const win = getMainWindow()
@@ -48,36 +88,73 @@ function emitBrowserEvent(payload: Record<string, unknown>): void {
 }
 
 function browserState(): Record<string, unknown> {
-  if (!browserView || browserView.webContents.isDestroyed()) return { created: false }
-  const wc = browserView.webContents
+  const active = tabManager.active
+  const wc = getView(tabManager.activeId)?.webContents ?? null
+  if (!active || !wc) {
+    return {
+      created: tabManager.count > 0,
+      activeTabId: tabManager.activeId,
+      tabs: tabManager.list,
+      url: '',
+      title: '',
+      loading: false,
+      canGoBack: false,
+      canGoForward: false,
+      visible: browserVisible
+    }
+  }
   const nav = (wc as unknown as { navigationHistory?: { canGoBack(): boolean; canGoForward(): boolean } }).navigationHistory
   return {
     created: true,
-    url: wc.getURL(),
-    title: wc.getTitle(),
+    activeTabId: active.id,
+    tabs: tabManager.list,
+    url: active.url || wc.getURL(),
+    title: active.title || wc.getTitle(),
     loading: wc.isLoading(),
     canGoBack: nav ? nav.canGoBack() : false,
     canGoForward: nav ? nav.canGoForward() : false,
-    visible: browserVisible,
-    ownerSessionId: browserOwnerSessionId
+    visible: browserVisible
   }
 }
 
-function claimBrowserOwner(sessionId?: string | null): { error?: string } {
-  if (!sessionId) return {}
-  if (browserOwnerSessionId && browserOwnerSessionId !== sessionId) {
-    return {
-      error: `Browser is in use by another session (${browserOwnerSessionId.slice(0, 8)}…). Stop that turn or wait.`
-    }
-  }
-  browserOwnerSessionId = sessionId
-  return {}
+function parkView(view: WebContentsView): void {
+  if (view.webContents.isDestroyed()) return
+  view.setBounds({ ...PARK_BOUNDS })
+  view.setVisible(false)
 }
 
-function ensureBrowserView(): WebContentsView {
-  if (browserView && !browserView.webContents.isDestroyed()) return browserView
+function showActiveView(): void {
+  const view = activeView()
+  if (!view || view.webContents.isDestroyed()) return
+  if (lastBounds) view.setBounds(lastBounds)
+  view.setVisible(browserVisible)
+  const wc = view.webContents
+  // Overlays live inside the page DOM and die on navigation; re-arm them for
+  // the tab that just became visible.
+  injectAICursor(wc)
+  if (pickerActive) injectPicker(wc)
+}
 
-  browserView = new WebContentsView({
+/** Make `id` the active tab: park the others, show it, re-arm overlays. */
+function activateTab(id: string): boolean {
+  if (!tabManager.has(id)) return false
+  tabManager.switch(id)
+  views.forEach((view, tid) => {
+    if (tid === id) showActiveView()
+    else parkView(view)
+  })
+  emitBrowserEvent({ type: 'tab:activated', tabId: id, ...browserState() })
+  return true
+}
+
+function createTabView(initialUrl?: string, owner?: string | null): { tab?: BrowserTabInfo; error?: string } {
+  const win = getMainWindow()
+  if (!win || win.isDestroyed()) return { error: 'No main window' }
+  if (tabManager.count >= MAX_TABS) {
+    return { error: `Too many browser tabs open (max ${MAX_TABS}). Close one with browser_tab_close first.` }
+  }
+
+  const view = new WebContentsView({
     webPreferences: {
       partition: BROWSER_PARTITION,
       nodeIntegration: false,
@@ -86,64 +163,181 @@ function ensureBrowserView(): WebContentsView {
       webSecurity: true
     }
   })
-
-  const wc = browserView.webContents
+  const wc = view.webContents
   wc.setUserAgent(BROWSER_USER_AGENT)
-  // Popups navigate the same view instead of spawning windows the agent cannot see.
+
+  const prevActive = tabManager.activeId
+  const tab = tabManager.create({ owner })
+  views.set(tab.id, view)
+  logsByTab.set(tab.id, [])
+  win.contentView.addChildView(view)
+  parkView(view)
+
+  // Popups (target=_blank) become a new tab instead of overwriting the page the
+  // agent is working on — the new tab becomes active like a real browser and
+  // inherits the opener's owner so a subagent's popups stay in its sandbox.
   wc.setWindowOpenHandler(({ url }) => {
     const safe = normalizeBrowserUrl(url)
-    if (safe) wc.loadURL(safe).catch(() => {})
+    if (safe && tabManager.count < MAX_TABS) createTabView(safe, tab.owner)
     return { action: 'deny' }
+  })
+  // External teardown (main window closed/recreated) must not leave ghost tabs
+  // behind — drop the tab and activate its neighbor when the contents die.
+  wc.on('destroyed', () => {
+    if (!views.has(tab.id)) return
+    views.delete(tab.id)
+    logsByTab.delete(tab.id)
+    const result = tabManager.close(tab.id)
+    if (result?.nextActiveId) showActiveView()
+    if (tabManager.count === 0) pickerActive = false
+    emitBrowserEvent({ type: 'tab:closed', tabId: tab.id, ...browserState() })
   })
   wc.on('console-message', (_e, level, message, line, sourceId) => {
     const tag = level === 2 ? 'warn' : level === 3 ? 'error' : 'info'
-    browserLogs.push(`[${tag}] ${message}${sourceId ? ` (${sourceId}:${line})` : ''}`)
-    if (browserLogs.length > 300) browserLogs.splice(0, browserLogs.length - 300)
+    const logs = tabLogs(tab.id)
+    logs.push(`[${tag}] ${message}${sourceId ? ` (${sourceId}:${line})` : ''}`)
+    if (logs.length > 300) logs.splice(0, logs.length - 300)
   })
-  wc.on('did-start-loading', () => emitBrowserEvent({ type: 'loading', ...browserState() }))
-  wc.on('did-stop-loading', () => emitBrowserEvent({ type: 'loaded', ...browserState() }))
-  wc.on('did-navigate', () => { browserLogs.length = 0; emitBrowserEvent({ type: 'navigated', ...browserState() }) })
-  wc.on('did-navigate-in-page', () => emitBrowserEvent({ type: 'navigated', ...browserState() }))
+  wc.on('did-start-loading', () => {
+    tabManager.patch(tab.id, { loading: true })
+    emitBrowserEvent({ type: 'loading', tabId: tab.id, ...browserState() })
+  })
+  wc.on('did-stop-loading', () => {
+    tabManager.patch(tab.id, { loading: false })
+    emitBrowserEvent({ type: 'loaded', tabId: tab.id, ...browserState() })
+  })
+  wc.on('did-navigate', () => {
+    tabLogs(tab.id).length = 0
+    tabManager.patch(tab.id, { url: wc.getURL(), title: wc.getTitle() })
+    emitBrowserEvent({ type: 'navigated', tabId: tab.id, ...browserState() })
+  })
+  wc.on('did-navigate-in-page', () => emitBrowserEvent({ type: 'navigated', tabId: tab.id, ...browserState() }))
   wc.on('did-finish-load', () => {
     injectAICursor(wc)
-    // Re-arm the pick overlay after navigation so a mid-session pick stays usable.
-    if (pickerActive) injectPicker(wc)
+    if (pickerActive && tabManager.activeId === tab.id) injectPicker(wc)
   })
-  wc.on('page-title-updated', () => emitBrowserEvent({ type: 'title', ...browserState() }))
+  wc.on('page-title-updated', () => {
+    tabManager.patch(tab.id, { title: wc.getTitle() })
+    emitBrowserEvent({ type: 'title', tabId: tab.id, ...browserState() })
+  })
   wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
     if (!isMainFrame || code === -3) return // -3 is a user/script-initiated abort
-    emitBrowserEvent({ type: 'error', code, description: desc, url, ...browserState() })
+    emitBrowserEvent({ type: 'error', tabId: tab.id, code, description: desc, url, ...browserState() })
   })
 
-  const win = getMainWindow()
-  if (win) {
-    win.contentView.addChildView(browserView)
-    // Parked off-screen until the panel positions it, so an agent-created page is
-    // live and scriptable without flashing over the UI.
-    browserView.setBounds({ x: 0, y: 0, width: 1280, height: 800 })
-    browserView.setVisible(false)
-    browserVisible = false
-    pickerActive = false
+  if (initialUrl) {
+    const safe = normalizeBrowserUrl(initialUrl)
+    if (safe) void wc.loadURL(safe).catch(() => {})
   }
-  return browserView
+  // Visibility: `session:`-owner and owner-less (UI) tabs drive the visible
+  // view (the panel keeps showing what the parent agent / user does).
+  // `subagent:` tabs always stay parked so concurrent runs never yank the UI —
+  // even when they happen to be the very first tab ever created.
+  if (!owner || owner.startsWith('session:')) {
+    activateTab(tab.id)
+  } else {
+    // A parked subagent tab must never hijack the manager's active-tab
+    // bookkeeping: activeView()/browserState() keep pointing at the visible
+    // tab (and the screenshot parked-guard keys off this too). With no prior
+    // visible tab, unset the active so ownerless calls report "no browser"
+    // instead of resolving to the parked view.
+    tabManager.switch(prevActive)
+    emitBrowserEvent({ type: 'tab:created', tabId: tab.id, ...browserState() })
+  }
+  return { tab: { ...tab } }
 }
 
-function requireView(): { view: WebContentsView } | { error: string } {
-  if (!browserView || browserView.webContents.isDestroyed()) {
-    return { error: 'Browser not created' }
+function closeTab(id: string): { error?: string } {
+  const result = tabManager.close(id)
+  if (!result) return { error: 'No such tab' }
+  const view = views.get(id)
+  if (view) {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed() && !view.webContents.isDestroyed()) {
+      win.contentView.removeChildView(view)
+      view.webContents.close()
+    }
+    views.delete(id)
   }
-  if (!browserView.webContents.getURL()) {
+  logsByTab.delete(id)
+  if (result.nextActiveId) {
+    showActiveView()
+  } else {
+    // Last tab closed — nothing left to drive.
+    pickerActive = false
+  }
+  emitBrowserEvent({ type: 'tab:closed', tabId: id, ...browserState() })
+  return {}
+}
+
+function destroyAll(): void {
+  const win = getMainWindow()
+  views.forEach((view, id) => {
+    if (win && !win.isDestroyed() && !view.webContents.isDestroyed()) {
+      win.contentView.removeChildView(view)
+      view.webContents.close()
+    }
+    logsByTab.delete(id)
+  })
+  views.clear()
+  tabManager.clear()
+  browserVisible = false
+  pickerActive = false
+}
+
+/** Make sure at least one tab exists (the agent/UI may create the browser lazily). */
+function ensureTabs(): { error?: string } {
+  if (tabManager.count === 0) {
+    const res = createTabView()
+    if (res.error) return { error: res.error }
+  }
+  return {}
+}
+
+/**
+ * Resolve the tab a browser tool should act on.
+ * - owner undefined → the visible tab (UI panel / legacy calls)
+ * - owner given     → that owner's tab, creating one on first use so the owner
+ *                     reuses the same tab across calls and turns (efficiency)
+ * `session:` owners make their tab visible (the panel shows what the parent
+ * agent does); `subagent:` owners act on a parked tab so concurrent runs never
+ * fight over (or yank) the visible one.
+ */
+function resolveTab(owner?: string): { view?: WebContentsView; tab?: BrowserTabInfo; error?: string } {
+  if (!owner) {
+    const view = activeView()
+    if (!view) return { error: 'Browser not created. Call browser_navigate first.' }
+    return { view, tab: tabManager.active ?? undefined }
+  }
+  let tab = tabManager.findByOwner(owner)
+  if (!tab) {
+    const created = createTabView(undefined, owner)
+    if (created.error || !created.tab) return { error: created.error || 'Failed to create a tab' }
+    tab = created.tab
+  }
+  const view = getView(tab.id)
+  if (!view) return { error: 'Tab is gone (browser window closed?).' }
+  if (owner.startsWith('session:') && tabManager.activeId !== tab.id) {
+    activateTab(tab.id)
+  }
+  return { view, tab }
+}
+
+function requireView(owner?: string): { view: WebContentsView } | { error: string } {
+  const res = resolveTab(owner)
+  if (!res.view) return { error: res.error || 'Browser not created. Call browser_navigate first.' }
+  if (!res.view.webContents.getURL()) {
     return { error: 'No page loaded. Call browser_navigate first.' }
   }
-  return { view: browserView }
+  return { view: res.view }
 }
 
 const EVAL_TIMEOUT_MS = 30_000
 const EVAL_MAX_CHARS = 100_000
 
-/** Run an expression in the page and normalise the failure into a value. */
-async function runInPage<T>(code: string, timeoutMs = EVAL_TIMEOUT_MS): Promise<T | { error: string }> {
-  const guard = requireView()
+/** Run an expression in the target page (owner-routed) and normalise the failure into a value. */
+async function runInPage<T>(code: string, owner?: string, timeoutMs = EVAL_TIMEOUT_MS): Promise<T | { error: string }> {
+  const guard = requireView(owner)
   if ('error' in guard) return guard
   if (typeof code !== 'string') return { error: 'Invalid script' }
   if (code.length > EVAL_MAX_CHARS) {
@@ -174,36 +368,46 @@ function resolverExpr(ref: string, selector: string): string {
 }
 
 export function registerBrowserIpc(): void {
-  handleTrusted('browser:claim', async (_, sessionId?: string) => {
-    const claim = claimBrowserOwner(typeof sessionId === 'string' ? sessionId : undefined)
-    if (claim.error) return { ok: false, ...claim, ...browserState() }
-    return { ok: true, ...browserState() }
-  })
+  // Legacy claim/release: superseded by per-owner tabs (each caller drives its
+  // own tab, so cross-session conflicts cannot happen). Kept as no-ops so
+  // existing renderer call sites keep working.
+  handleTrusted('browser:claim', async () => ({ ok: true, ...browserState() }))
 
-  handleTrusted('browser:release', async (_, sessionId?: string) => {
-    if (
-      typeof sessionId === 'string' &&
-      browserOwnerSessionId &&
-      browserOwnerSessionId !== sessionId
-    ) {
-      return { ok: false, error: 'Not the browser owner' }
+  handleTrusted('browser:release', async () => ({ ok: true, ...browserState() }))
+
+  /** Free every tab bound to an owner key (subagent finished / was aborted). */
+  handleTrusted('browser:releaseOwner', async (_, owner: string) => {
+    if (!owner) return { ok: false, error: 'Missing owner key' }
+    // Only subagent runs may bulk-release tabs; session/UI tabs are persistent.
+    if (!owner.startsWith('subagent:')) return { ok: false, error: 'Invalid owner key' }
+    for (const tab of [...tabManager.list]) {
+      if (tab.owner === owner) closeTab(tab.id)
     }
-    browserOwnerSessionId = null
     return { ok: true, ...browserState() }
   })
 
-  handleTrusted('browser:ensure', async () => {
+  handleTrusted('browser:ensure', async (_, owner?: string) => {
     try {
-      ensureBrowserView()
+      // Owner-bound callers (agent / subagent) get their own tab created here,
+      // so a run never leaves a stray owner-less tab behind after ensure().
+      if (typeof owner === 'string' && owner) {
+        const res = resolveTab(owner)
+        if (res.error) return { error: res.error }
+        return { ok: true, ...browserState() }
+      }
+      const res = ensureTabs()
+      if (res.error) return res
       return { ok: true }
     } catch (err) {
       return { error: String(err) }
     }
   })
 
+  // Legacy single-view create — keeps old callers working (same as ensure).
   handleTrusted('browser:create', async () => {
     try {
-      ensureBrowserView()
+      const res = ensureTabs()
+      if (res.error) return res
       return { ok: true }
     } catch (err) {
       return { error: String(err) }
@@ -212,16 +416,7 @@ export function registerBrowserIpc(): void {
 
   handleTrusted('browser:destroy', async () => {
     try {
-      const win = getMainWindow()
-      if (browserView && win && !browserView.webContents.isDestroyed()) {
-        win.contentView.removeChildView(browserView)
-        browserView.webContents.close()
-      }
-      browserView = null
-      browserVisible = false
-      pickerActive = false
-      browserOwnerSessionId = null
-      browserLogs.length = 0
+      destroyAll()
       return { ok: true }
     } catch (err) {
       return { error: String(err) }
@@ -229,23 +424,21 @@ export function registerBrowserIpc(): void {
   })
 
   handleTrusted('browser:setVisible', async (_, visible: boolean) => {
-    if (!browserView || browserView.webContents.isDestroyed()) return { ok: true }
-    browserView.setVisible(visible)
+    const view = activeView()
+    if (!view) return { ok: true }
+    view.setVisible(visible)
     browserVisible = visible
     return { ok: true }
   })
 
-  // Remove the injected AI cursor from the page (turn end / stop). No-op when
-  // there is no browser view, so every turn can safely call it.
+  // Remove the injected AI cursor from the active page (turn end / stop).
   handleTrusted('browser:cursorHide', async () => {
-    if (browserView && !browserView.webContents.isDestroyed()) {
-      cursorHide(browserView.webContents)
-    }
+    const view = activeView()
+    if (view) cursorHide(view.webContents)
     return { ok: true }
   })
 
-  // Element/text pick mode: injects the highlight overlay into the page. While
-  // active, clicking an element or dragging text captures it for agent feedback.
+  // Element/text pick mode: injects the highlight overlay into the active page.
   handleTrusted('browser:pickStart', async (_, placeholder: string, hint: string) => {
     const guard = requireView()
     if ('error' in guard) return guard
@@ -256,17 +449,15 @@ export function registerBrowserIpc(): void {
 
   handleTrusted('browser:pickStop', async () => {
     pickerActive = false
-    if (browserView && !browserView.webContents.isDestroyed()) {
-      stopPicker(browserView.webContents)
-    }
+    const view = activeView()
+    if (view) stopPicker(view.webContents)
     return { ok: true }
   })
 
   handleTrusted('browser:pickState', async () => {
-    if (!browserView || browserView.webContents.isDestroyed()) {
-      return { active: false, selection: null, feedback: '', ready: false }
-    }
-    const s = await getPickerState(browserView.webContents)
+    const view = activeView()
+    if (!view) return { active: false, selection: null, feedback: '', ready: false }
+    const s = await getPickerState(view.webContents)
     return {
       active: pickerActive && s.active,
       selection: s.selection,
@@ -276,8 +467,9 @@ export function registerBrowserIpc(): void {
   })
 
   handleTrusted('browser:pickClear', async () => {
-    if (browserView && !browserView.webContents.isDestroyed()) {
-      await browserView.webContents
+    const view = activeView()
+    if (view) {
+      await view.webContents
         .executeJavaScript('window.__pawnPick && window.__pawnPick.clear()', true)
         .catch(() => {})
     }
@@ -285,22 +477,90 @@ export function registerBrowserIpc(): void {
   })
 
   handleTrusted('browser:bounds', async (_, x: number, y: number, width: number, height: number) => {
-    if (!browserView || browserView.webContents.isDestroyed()) return { error: 'Browser not created' }
-    browserView.setBounds({
+    const view = activeView()
+    if (!view) return { error: 'Browser not created' }
+    const bounds = {
       x: Math.round(x), y: Math.round(y),
       width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height))
-    })
+    }
+    lastBounds = bounds
+    view.setBounds(bounds)
     return { ok: true }
   })
 
   handleTrusted('browser:state', async () => browserState())
-  handleTrusted('browser:logs', async () => browserLogs.slice(-50))
 
-  handleTrusted('browser:navigate', async (_, rawUrl: string, sessionId?: string) => {
-    const claim = claimBrowserOwner(typeof sessionId === 'string' ? sessionId : undefined)
-    if (claim.error) return claim
-    const view = ensureBrowserView()
-    const wc = view.webContents
+  /** Owner-scoped tab list: owner-bound callers only see their own + UI tabs. */
+  handleTrusted('browser:tabs', async (_, owner?: string) => {
+    const list =
+      typeof owner === 'string' && owner
+        ? tabManager.list.filter((t) => !t.owner || t.owner === owner)
+        : tabManager.list
+    return { tabs: list, activeTabId: tabManager.activeId }
+  })
+
+  handleTrusted('browser:logs', async () => tabLogs(tabManager.activeId).slice(-50))
+
+  handleTrusted('browser:tabCreate', async (_, rawUrl?: string, owner?: string) => {
+    try {
+      // Efficiency: a subagent run reuses its single tab (parallel browsing is
+      // one parked tab per run); session/UI callers always open a fresh tab.
+      const own = typeof owner === 'string' && owner ? owner : undefined
+      if (own?.startsWith('subagent:')) {
+        const existing = tabManager.findByOwner(own)
+        if (existing) {
+          const view = getView(existing.id)
+          if (view && typeof rawUrl === 'string' && rawUrl) {
+            const safe = normalizeBrowserUrl(rawUrl)
+            if (safe) void view.webContents.loadURL(safe).catch(() => {})
+          }
+          return { ok: true, reused: true, tabId: existing.id, ...browserState() }
+        }
+      }
+      const created = createTabView(
+        typeof rawUrl === 'string' ? rawUrl : undefined,
+        own
+      )
+      if (created.error) return { error: created.error }
+      return { ok: true, tabId: created.tab?.id, ...browserState() }
+    } catch (err) {
+      return { error: String(err) }
+    }
+  })
+
+  /** Owner-bound callers may only switch to their own tab (ownerless UI tabs are off-limits too). */
+  handleTrusted('browser:tabSwitch', async (_, id: string, owner?: string) => {
+    if (!id) return { error: 'Missing tab id' }
+    const tab = tabManager.getById(id)
+    if (!tab) return { error: 'No such tab' }
+    if (typeof owner === 'string' && owner && tab.owner !== owner) {
+      return { error: 'Cannot switch to another run/session tab' }
+    }
+    // Subagent tabs are already the target of the run's tools; switching is a
+    // no-op that keeps the tab parked so it never yanks the visible view.
+    if (owner?.startsWith('subagent:')) {
+      return { ok: true, ...browserState() }
+    }
+    if (!activateTab(id)) return { error: 'No such tab' }
+    return { ok: true, ...browserState() }
+  })
+
+  handleTrusted('browser:tabClose', async (_, id: string, owner?: string) => {
+    if (!id) return { error: 'Missing tab id' }
+    const tab = tabManager.getById(id)
+    if (!tab) return { error: 'No such tab' }
+    if (typeof owner === 'string' && owner && tab.owner !== owner) {
+      return { error: 'Cannot close another run/session tab' }
+    }
+    const err = closeTab(id)
+    if (err.error) return err
+    return { ok: true, ...browserState() }
+  })
+
+  handleTrusted('browser:navigate', async (_, rawUrl: string, owner?: string) => {
+    const res = resolveTab(owner)
+    if (res.error || !res.view) return { error: res.error || 'Browser not created' }
+    const wc = res.view.webContents
     const url = normalizeBrowserUrl(rawUrl)
     if (!url) return { error: 'Only http:// and https:// URLs can be opened in the browser' }
     cursorShow(wc, 140, 24, 'loading')
@@ -331,8 +591,8 @@ export function registerBrowserIpc(): void {
     return { url: wc.getURL(), title: wc.getTitle() }
   })
 
-  handleTrusted('browser:back', async () => {
-    const guard = requireView()
+  handleTrusted('browser:back', async (_, owner?: string) => {
+    const guard = requireView(owner)
     if ('error' in guard) return guard
     const wc = guard.view.webContents
     const nav = (wc as unknown as { navigationHistory?: { canGoBack(): boolean; goBack(): void } }).navigationHistory
@@ -348,18 +608,18 @@ export function registerBrowserIpc(): void {
     return { url: wc.getURL() }
   })
 
-  handleTrusted('browser:reload', async () => {
-    const guard = requireView()
+  handleTrusted('browser:reload', async (_, owner?: string) => {
+    const guard = requireView(owner)
     if ('error' in guard) return guard
     guard.view.webContents.reload()
     return { ok: true }
   })
 
-  handleTrusted('browser:eval', async (_, code: string) => {
+  handleTrusted('browser:eval', async (_, code: string, owner?: string) => {
     // The async wrapper lets the injected expression await promises; the
     // returned promise is resolved by executeJavaScript itself.
     const source = String(code ?? '')
-    let result = await runInPage<unknown>(`(async function(){ try { return { ok: await (${source}) } } catch (e) { return { err: String(e) } } })()`)
+    let result = await runInPage<unknown>(`(async function(){ try { return { ok: await (${source}) } } catch (e) { return { err: String(e) } } })()`, owner)
     if (result && typeof result === 'object' && 'error' in (result as object)) {
       // The whole wrapper failed to parse/run — almost always a syntax error in
       // the agent's expression. Re-parse with new Function (outside the broken
@@ -370,7 +630,7 @@ export function registerBrowserIpc(): void {
         const diag = await runInPage<unknown>(`(async function(){
           try { new Function(${JSON.stringify(source)}); return { syntax: null } }
           catch (e) { return { syntax: String(e) } }
-        })()`)
+        })()`, owner)
         if (diag && typeof diag === 'object' && !('error' in (diag as object))) {
           const d = diag as { syntax: string | null }
           if (d && d.syntax) {
@@ -391,7 +651,7 @@ export function registerBrowserIpc(): void {
     return { result: serialized.slice(0, 8000) }
   })
 
-  handleTrusted('browser:snapshot', async (_, filter: string) => {
+  handleTrusted('browser:snapshot', async (_, filter: string, owner?: string) => {
     const f = JSON.stringify(String(filter || '').toLowerCase())
     return runInPage(`(function(){
       var FILTER = ${f};
@@ -447,10 +707,10 @@ export function registerBrowserIpc(): void {
         out.push(item);
       }
       return { url: location.href, title: document.title, elements: out.slice(0, 150), truncated: out.length > 150 };
-    })()`)
+    })()`, owner)
   })
 
-  handleTrusted('browser:click', async (_, ref: string, selector: string) => {
+  handleTrusted('browser:click', async (_, ref: string, selector: string, owner?: string) => {
     return runInPage(`(function(){
       var el = ${resolverExpr(ref, selector)};
       if (!el) return { error: 'No element matched. Take a fresh browser_snapshot — refs are invalidated by navigation.' };
@@ -472,10 +732,10 @@ export function registerBrowserIpc(): void {
           doClick();
         }
       });
-    })()`)
+    })()`, owner)
   })
 
-  handleTrusted('browser:fill', async (_, ref: string, selector: string, value: string, submit: boolean) => {
+  handleTrusted('browser:fill', async (_, ref: string, selector: string, value: string, submit: boolean, owner?: string) => {
     const v = JSON.stringify(String(value ?? ''))
     const doSubmit = submit === true ? 'true' : 'false'
     return runInPage(`(function(){
@@ -515,10 +775,10 @@ export function registerBrowserIpc(): void {
         });
       }
       return done();
-    })()`)
+    })()`, owner)
   })
 
-  handleTrusted('browser:readText', async (_, selector: string) => {
+  handleTrusted('browser:readText', async (_, selector: string, owner?: string) => {
     const s = JSON.stringify(String(selector || ''))
     return runInPage(`(function(){
       var s = ${s};
@@ -532,15 +792,21 @@ export function registerBrowserIpc(): void {
         window.__pawnCursor.show(cx, cy, 'move');
       }
       return { text: text.slice(0, 12000), truncated: text.length > 12000 };
-    })()`)
+    })()`, owner)
   })
 
-  handleTrusted('browser:screenshot', async () => {
-    const guard = requireView()
-    if ('error' in guard) return guard
+  handleTrusted('browser:screenshot', async (_, owner?: string) => {
+    const res = resolveTab(owner)
+    if (res.error || !res.view) return { error: res.error || 'Browser not created' }
     try {
-      const image = await guard.view.webContents.capturePage()
+      const image = await res.view.webContents.capturePage()
       const dataUrl = image.toDataURL()
+      const parked = owner ? res.tab?.id !== tabManager.activeId : false
+      // A parked (subagent) tab is not painted, so capturePage returns a blank
+      // frame — tell the caller to use the DOM snapshot instead of a black image.
+      if (parked && dataUrl.length < 2_000) {
+        return { error: 'Screenshot of a background tab is unavailable (the page is not visible). Use browser_snapshot for its content.' }
+      }
       return { dataUrl, bytes: dataUrl.length }
     } catch (err) {
       return { error: String(err) }
@@ -555,8 +821,9 @@ export function registerBrowserIpc(): void {
   })
 
   handleTrusted('browser:getURL', async () => {
-    if (!browserView || browserView.webContents.isDestroyed()) return { error: 'Browser not created' }
-    return { url: browserView.webContents.getURL() }
+    const view = activeView()
+    if (!view) return { error: 'Browser not created' }
+    return { url: view.webContents.getURL() }
   })
 
   /** Wait fixed ms and/or until selector/text appears (timeout default 15s). */
@@ -564,9 +831,10 @@ export function registerBrowserIpc(): void {
     'browser:wait',
     async (
       _,
-      opts?: { ms?: number; selector?: string; text?: string; timeoutMs?: number }
+      opts?: { ms?: number; selector?: string; text?: string; timeoutMs?: number },
+      owner?: string
     ) => {
-      const guard = requireView()
+      const guard = requireView(owner)
       if ('error' in guard) return guard
       const timeout = Math.min(60_000, Math.max(100, Math.floor(Number(opts?.timeoutMs) || 15_000)))
       const fixedMs = opts?.ms != null ? Math.min(30_000, Math.max(0, Math.floor(Number(opts.ms)))) : 0
@@ -611,7 +879,7 @@ export function registerBrowserIpc(): void {
 
   handleTrusted(
     'browser:scroll',
-    async (_, opts?: { dy?: number; dx?: number; selector?: string }) => {
+    async (_, opts?: { dy?: number; dx?: number; selector?: string }, owner?: string) => {
       const dy = Math.floor(Number(opts?.dy) || 0)
       const dx = Math.floor(Number(opts?.dx) || 0)
       const selector = opts?.selector ? String(opts.selector) : ''
@@ -624,13 +892,13 @@ export function registerBrowserIpc(): void {
         if (el === window) window.scrollBy(dx, dy);
         else el.scrollBy(dx, dy);
         return { ok: true, dx: dx, dy: dy };
-      })()`)
+      })()`, owner)
     }
   )
 
   handleTrusted(
     'browser:select',
-    async (_, opts?: { ref?: string; selector?: string; value?: string }) => {
+    async (_, opts?: { ref?: string; selector?: string; value?: string }, owner?: string) => {
       const ref = opts?.ref ? String(opts.ref) : ''
       const selector = opts?.selector ? String(opts.selector) : ''
       const value = opts?.value != null ? String(opts.value) : ''
@@ -647,7 +915,7 @@ export function registerBrowserIpc(): void {
         el.dispatchEvent(new Event('input', { bubbles: true }));
         el.dispatchEvent(new Event('change', { bubbles: true }));
         return { ok: true, value: el.value, message: 'Selected ' + JSON.stringify(el.value) };
-      })()`)
+      })()`, owner)
     }
   )
 }

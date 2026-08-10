@@ -67,7 +67,7 @@ export function releaseSleepHold(): void {
   if (sleepHoldCount > 0 || sleepHoldPrev === null) return
   const restore = sleepHoldPrev
   sleepHoldPrev = null
-  void window.api.power?.setSleepPrevention?.(restore).catch(() => {})
+  void window.api.power?.setSleepPrevention?.(restore)?.catch?.(() => {})
 }
 
 export function stopSessionController(sessionId: string): void {

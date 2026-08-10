@@ -4,6 +4,8 @@ export type ToolExecContext = {
   sessionId?: string
   /** When true, handler is running inside a nested subagent loop. */
   subagent?: boolean
+  /** Subagent run id — owner key for parallel browser tabs. */
+  subagentRunId?: string
   projectId?: string
 }
 

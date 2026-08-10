@@ -416,6 +416,14 @@ export function registerFsIpc(): void {
     }
   })
 
+  handleTrusted('fs:downloadsPath', async () => {
+    try {
+      return app.getPath('downloads')
+    } catch {
+      return null
+    }
+  })
+
   // Recursive copy/remove for the skill installer. These replace shell
   // `cp -R` / `rm -rf` invocations, which risked command injection through
   // repo-controlled paths.

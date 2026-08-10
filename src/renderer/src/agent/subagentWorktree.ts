@@ -90,7 +90,7 @@ export async function finalizeWorktree(
   }
 
   if (!keepWorktree && window.api?.worktree?.remove) {
-    void window.api.worktree.remove(projectPath, worktreePath, worktreeBranch)
+    void window.api.worktree.remove(projectPath, worktreePath, worktreeBranch).catch(() => {})
   }
   return { filesChanged, applied, applyNote, applyConflicts, applyPending, keepWorktree }
 }
@@ -111,7 +111,7 @@ export async function applyPendingWorktree(runId: string): Promise<{ ok: boolean
       return { ok: false, error: res?.error || 'Apply failed' }
     }
     if (window.api.worktree?.remove) {
-      void window.api.worktree.remove(run.projectPath, run.worktreePath, run.worktreeBranch)
+      void window.api.worktree.remove(run.projectPath, run.worktreePath, run.worktreeBranch).catch(() => {})
     }
     store.patchRun(runId, {
       applied: true,

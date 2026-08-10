@@ -894,7 +894,9 @@
       "pick": "에이전트에게 지시할 UI 요소나 텍스트 지정",
       "pickHint": "요소를 클릭하거나 텍스트를 드래그 선택한 뒤, 에이전트에게 바꿀 내용을 알려주세요",
       "feedbackPlaceholder": "무엇을 바꾸거나 확인할까요? (선택)",
-      "bubbleHint": "↵ Enter 전송 · ⇧↵ 줄바꿈 · Esc 취소"
+      "bubbleHint": "↵ Enter 전송 · ⇧↵ 줄바꿈 · Esc 취소",
+      "newTab": "새 탭",
+      "closeTab": "탭 닫기"
     },
     "diff": {
       "title": "최근 변경사항",

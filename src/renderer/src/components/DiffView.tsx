@@ -46,7 +46,7 @@ export default function DiffView({
   }
 
   const onReveal = (): void => {
-    if (openPath) void window.api?.workspace?.reveal?.(openPath).catch(() => {})
+    if (openPath) void window.api?.workspace?.reveal?.(openPath)?.catch?.(() => {})
   }
 
   return (

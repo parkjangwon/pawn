@@ -21,6 +21,9 @@
   position: sticky;
   top: 0;
   z-index: 2;
+  /* Keep the header at its natural height even on short panels — the run list
+     below is the only part that scrolls. */
+  flex-shrink: 0;
 }
 
 .subagents-title-row {
@@ -76,7 +79,9 @@
 
 .subagents-stats {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* auto-fit keeps four tidy columns at normal widths and degrades to 2×2 on
+     narrow panels instead of squeezing the cells. */
+  grid-template-columns: repeat(auto-fit, minmax(88px, 1fr));
   gap: 8px;
 }
 
@@ -432,12 +437,16 @@
   font-weight: 650;
   font-size: 13px;
   letter-spacing: -0.01em;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .subagents-agent {
   color: var(--text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   font-size: 11px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .subagents-bg,
@@ -466,6 +475,8 @@
   color: var(--text-secondary);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .subagents-status-label {
@@ -475,6 +486,8 @@
   letter-spacing: 0.04em;
   color: var(--text-secondary);
   font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .subagents-status-label.running {

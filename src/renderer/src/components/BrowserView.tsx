@@ -8,6 +8,7 @@ import {
   type BrowserPickSelection
 } from '../utils/browserFeedback'
 import type { ChatAttachment } from '../utils/attachments'
+import type { BrowserTabInfo } from '../agent/browser'
 
 /**
  * The panel showing the SAME embedded browser the agent tools drive (see
@@ -40,6 +41,9 @@ function NativeBrowserView(): React.JSX.Element {
   const [logs, setLogs] = useState<string[]>([])
   const [pickActive, setPickActive] = useState(false)
   const [sending, setSending] = useState(false)
+  const [tabs, setTabs] = useState<BrowserTabInfo[]>([])
+  const [activeTabId, setActiveTabId] = useState<string | null>(null)
+  const urlInputRef = useRef<HTMLInputElement>(null)
 
   const syncBounds = useCallback(() => {
     const el = containerRef.current
@@ -66,6 +70,8 @@ function NativeBrowserView(): React.JSX.Element {
           canGoBack: s.canGoBack === true, canGoForward: s.canGoForward === true
         })
         setUrl(s.url || '')
+        setTabs((s.tabs as BrowserTabInfo[]) || [])
+        setActiveTabId(s.activeTabId ?? null)
       })
     })
 
@@ -80,6 +86,13 @@ function NativeBrowserView(): React.JSX.Element {
         loading: data.loading === true, canGoBack: data.canGoBack === true, canGoForward: data.canGoForward === true
       })
       if (data.type !== 'title') setUrl((data.url as string) || '')
+      if (Array.isArray(data.tabs)) setTabs(data.tabs as BrowserTabInfo[])
+      if (data.activeTabId !== undefined) setActiveTabId(data.activeTabId as string | null)
+      // Every browser sub-tab is gone — nothing left to display. Close the
+      // panel's browser tab too (closeTabById resets the agent-opened marker).
+      if (data.type === 'tab:closed' && Array.isArray(data.tabs) && data.tabs.length === 0) {
+        window.__closeRightPanelTab?.('browser')
+      }
     })
 
     return () => {
@@ -151,6 +164,38 @@ function NativeBrowserView(): React.JSX.Element {
     if (res.error) setError(res.error)
   }
 
+  const switchTab = async (id: string): Promise<void> => {
+    try {
+      const res = await window.api.browser.tabSwitch(id)
+      if (res.error) setError(res.error)
+    } catch (err) {
+      setError(`Tab switch failed: ${String(err)}`)
+    }
+  }
+
+  const closeTab = async (id: string): Promise<void> => {
+    try {
+      const res = await window.api.browser.tabClose(id)
+      if (res.error) setError(res.error)
+    } catch (err) {
+      setError(`Tab close failed: ${String(err)}`)
+    }
+  }
+
+  const newTab = async (): Promise<void> => {
+    try {
+      const res = await window.api.browser.tabCreate()
+      if (res.error) { setError(res.error); return }
+      if (res.tabs) setTabs(res.tabs as BrowserTabInfo[])
+      if (res.activeTabId !== undefined) setActiveTabId(res.activeTabId as string | null)
+      setUrl('')
+      setError(null)
+      urlInputRef.current?.focus()
+    } catch (err) {
+      setError(`New tab failed: ${String(err)}`)
+    }
+  }
+
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key === 'Enter') navigate(url)
   }
@@ -194,6 +239,34 @@ function NativeBrowserView(): React.JSX.Element {
 
   return (
     <div className="rp-browser">
+      <div className="rp-browser-tabbar">
+        {tabs.map((tab) => (
+          <div
+            key={tab.id}
+            className={`rp-browser-tab${tab.id === activeTabId ? ' active' : ''}`}
+            onClick={() => void switchTab(tab.id)}
+            title={tab.url || tab.title || tab.id}
+          >
+            <span className="rp-browser-tab-title">{tab.title || tab.url || t('rightPanel.browser.newTab')}</span>
+            <button
+              className="rp-browser-tab-close"
+              onClick={(e) => { e.stopPropagation(); void closeTab(tab.id) }}
+              title={t('rightPanel.browser.closeTab')}
+              aria-label={t('rightPanel.browser.closeTab')}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+        <button
+          className="rp-browser-tab-add"
+          onClick={() => void newTab()}
+          title={t('rightPanel.browser.newTab')}
+          aria-label={t('rightPanel.browser.newTab')}
+        >
+          +
+        </button>
+      </div>
       <div className="rp-browser-toolbar">
         <div className="rp-browser-nav">
           <button className="rp-browser-navbtn" onClick={() => window.api.browser.back()} disabled={!state.canGoBack} title={t('rightPanel.browser.back')}>
@@ -212,6 +285,7 @@ function NativeBrowserView(): React.JSX.Element {
             onKeyDown={handleKeyDown}
             placeholder={t('rightPanel.browser.enterUrl')}
             onFocus={(e) => e.target.select()}
+            ref={urlInputRef}
           />
           <button className="rp-browser-go" onClick={() => navigate(url)} title={t('rightPanel.browser.go')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 10 4 15 9 20" /><path d="M20 4v7a4 4 0 0 1-4 4H4" /></svg>
