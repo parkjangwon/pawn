@@ -472,8 +472,8 @@
       "fieldMaxToolCalls": "最大ツール利用",
       "maxParallel": "同時実行数",
       "maxParallelDesc": "一度に並走させるヘルパーの数です。それ以上は順番待ちになります。",
-      "autoOpenPanel": "Agents パネルを自動で開く",
-      "autoOpenPanelDesc": "ヘルパーが動き始めたら右パネルを開き、進捗を表示します。",
+      "autoOpenPanel": "チャットにヘルパーの進捗を表示",
+      "autoOpenPanelDesc": "ヘルパーが作業中、チャットにコンパクトな活動バーを表示します。展開すると各ヘルパーの作業内容を確認できます。",
       "fieldScope": "保存先",
       "scopeProject": "このプロジェクト",
       "scopeUser": "この端末（全プロジェクト）",
@@ -501,7 +501,7 @@
       "template_research": "調査",
       "template_implementer": "実装",
       "template_reviewer": "レビュー",
-      "parallelHint": "仕事を分けられるときは、ヘルパーを同時に最大 6 体まで動かせます。独立した作業がより早く終わります。進捗は Agents パネルで確認してください。",
+      "parallelHint": "仕事を分けられるときは、ヘルパーを同時に最大 6 体まで動かせます。独立した作業がより早く終わります。進捗はチャットでライブ確認でき、履歴は Agents パネルで確認できます。",
       "applyReview": "適用前に確認"
     },
     "hooksSection": {
@@ -1144,6 +1144,10 @@
     "applyOk": "プロジェクトに適用しました",
     "applyFail": "適用失敗",
     "discardOk": "worktree を破棄しました",
-    "discardFail": "破棄失敗"
+    "discardFail": "破棄失敗",
+    "inlineWorking": "ヘルパー {{count}}件 作業中…",
+    "inlineWorking_one": "ヘルパー 1件 作業中…",
+    "inlineDone": "ヘルパー完了",
+    "inlineDoneCount": "{{count}}件完了"
   }
 }

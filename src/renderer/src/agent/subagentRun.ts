@@ -56,7 +56,6 @@ import {
   enterSubagent,
   leaveSubagent,
   mapPool,
-  maybeOpenAgentsPanel,
   HARD_MAX_ROUNDS,
   MAX_REPEATED_TOOL_ROUNDS,
   MAX_ROUTE_ATTEMPTS,
@@ -733,9 +732,6 @@ export async function runParallelSubagents(
     // Stable names for depends_on when omitted
     name: t.name || `task-${i + 1}`
   }))
-  if (capped.length > 1 || capped.some((t) => t.background)) {
-    maybeOpenAgentsPanel()
-  }
   const poolLimit = useProviderStore.getState().maxParallelSubagents || 4
   const shared = (opts.sharedContext || '').trim()
 
@@ -856,7 +852,6 @@ export function spawnBackgroundSubagent(
   const name = (task.name || 'subagent').slice(0, 80)
   const agent = resolveProfileName(task.agent, task.mode)
   const batchId = opts.batchId || task.batchId
-  maybeOpenAgentsPanel()
   const promise = runSubagent(
     { ...task, background: true, batchId },
     {

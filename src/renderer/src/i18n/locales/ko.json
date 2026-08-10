@@ -472,8 +472,8 @@
       "fieldMaxToolCalls": "최대 도구 사용",
       "maxParallel": "동시 실행",
       "maxParallelDesc": "한 번에 나란히 돌릴 도우미 수입니다. 더 많으면 차례를 기다립니다.",
-      "autoOpenPanel": "Agents 패널 자동으로 열기",
-      "autoOpenPanelDesc": "도우미가 시작되면 오른쪽 패널을 열어 진행 상황을 보여 줍니다.",
+      "autoOpenPanel": "채팅에서 도우미 진행 상황 표시",
+      "autoOpenPanelDesc": "도우미가 작업하는 동안 채팅에 간단한 활동 바를 표시하고, 펼치면 각 도우미가 하는 일을 볼 수 있습니다.",
       "fieldScope": "저장 위치",
       "scopeProject": "이 프로젝트",
       "scopeUser": "이 기기 (모든 프로젝트)",
@@ -501,7 +501,7 @@
       "template_research": "조사",
       "template_implementer": "구현",
       "template_reviewer": "리뷰",
-      "parallelHint": "일을 나눌 수 있으면 도우미 여러 명을 동시에 돌릴 수 있습니다(최대 6명). 독립된 작업이 더 빨리 끝납니다. 진행 상황은 Agents 패널에서 확인하세요.",
+      "parallelHint": "일을 나눌 수 있으면 도우미 여러 명을 동시에 돌릴 수 있습니다(최대 6명). 독립된 작업이 더 빨리 끝납니다. 채팅에서 실시간으로 보고, 전체 이력은 Agents 패널에서 확인하세요.",
       "applyReview": "적용 전 검토"
     },
     "hooksSection": {
@@ -1144,6 +1144,10 @@
     "applyOk": "프로젝트에 적용됨",
     "applyFail": "적용 실패",
     "discardOk": "워크트리 폐기됨",
-    "discardFail": "폐기 실패"
+    "discardFail": "폐기 실패",
+    "inlineWorking": "도우미 {{count}}명 작업 중…",
+    "inlineWorking_one": "도우미 1명 작업 중…",
+    "inlineDone": "도우미 작업 완료",
+    "inlineDoneCount": "{{count}}건 완료"
   }
 }

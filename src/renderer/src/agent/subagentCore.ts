@@ -1,4 +1,4 @@
-import { useProviderStore, type SubagentCostMode } from '../stores/provider'
+import { type SubagentCostMode } from '../stores/provider'
 import { useUsageStore, computeCost, type CallUsage } from '../stores/usage'
 import {
   getBuiltinProfile,
@@ -48,15 +48,6 @@ export async function mapPool<T, R>(
   }
   await Promise.all(Array.from({ length: conc }, () => worker()))
   return out
-}
-
-export function maybeOpenAgentsPanel(): void {
-  try {
-    if (useProviderStore.getState().autoOpenAgentsPanel === false) return
-    window.__openRightPanelTab?.('agents')
-  } catch {
-    /* optional */
-  }
 }
 
 export const HARD_MAX_ROUNDS = 25

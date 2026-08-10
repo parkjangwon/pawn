@@ -472,8 +472,8 @@
       "fieldMaxToolCalls": "最大工具调用",
       "maxParallel": "同时运行数",
       "maxParallelDesc": "可同时并行的助手数量。更多任务会排队等待空位。",
-      "autoOpenPanel": "自动打开 Agents 面板",
-      "autoOpenPanelDesc": "助手开始工作时打开右侧面板，方便查看进度。",
+      "autoOpenPanel": "在聊天中显示助手进度",
+      "autoOpenPanelDesc": "助手工作时在聊天中显示一个紧凑的活动栏，展开可查看每个助手在做什么。",
       "fieldScope": "保存位置",
       "scopeProject": "当前项目",
       "scopeUser": "本机（所有项目）",
@@ -501,7 +501,7 @@
       "template_research": "调研",
       "template_implementer": "实现",
       "template_reviewer": "评审",
-      "parallelHint": "任务可以拆分时，Pawn 最多可同时运行 6 个助手，让彼此独立的工作更快完成。可在 Agents 面板查看进度。",
+      "parallelHint": "任务可以拆分时，Pawn 最多可同时运行 6 个助手，让彼此独立的工作更快完成。可在聊天中实时查看进度，完整历史请打开 Agents 面板。",
       "applyReview": "应用前审查"
     },
     "hooksSection": {
@@ -1144,6 +1144,10 @@
     "applyOk": "已应用到项目",
     "applyFail": "应用失败",
     "discardOk": "已丢弃 worktree",
-    "discardFail": "丢弃失败"
+    "discardFail": "丢弃失败",
+    "inlineWorking": "{{count}} 个助手工作中…",
+    "inlineWorking_one": "1 个助手工作中…",
+    "inlineDone": "助手已完成",
+    "inlineDoneCount": "{{count}} 个已完成"
   }
 }

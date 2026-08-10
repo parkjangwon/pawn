@@ -472,8 +472,8 @@
       "fieldMaxToolCalls": "Max tool uses",
       "maxParallel": "Run at once",
       "maxParallelDesc": "How many helpers can work side by side. Extra jobs wait their turn.",
-      "autoOpenPanel": "Show Agents panel automatically",
-      "autoOpenPanelDesc": "Open the side panel when helpers start, so you can watch progress live.",
+      "autoOpenPanel": "Show helper progress in chat",
+      "autoOpenPanelDesc": "Show a compact activity bar in the chat while helpers work, and expand it to see what each one is doing.",
       "fieldScope": "Save to",
       "scopeProject": "This project",
       "scopeUser": "This device (all projects)",
@@ -501,7 +501,7 @@
       "template_research": "Research",
       "template_implementer": "Implementer",
       "template_reviewer": "Reviewer",
-      "parallelHint": "When work can be split up, Pawn can run several helpers at the same time (up to six) so independent tasks finish faster. Watch them in the Agents panel.",
+      "parallelHint": "When work can be split up, Pawn can run several helpers at the same time (up to six) so independent tasks finish faster. Watch them live in the chat, or open the Agents panel for full history.",
       "applyReview": "Review before applying"
     },
     "hooksSection": {
@@ -1144,6 +1144,10 @@
     "applyOk": "Applied to project",
     "applyFail": "Apply failed",
     "discardOk": "Worktree discarded",
-    "discardFail": "Discard failed"
+    "discardFail": "Discard failed",
+    "inlineWorking": "{{count}} helpers working…",
+    "inlineWorking_one": "{{count}} helper working…",
+    "inlineDone": "Helpers finished",
+    "inlineDoneCount": "{{count}} done"
   }
 }

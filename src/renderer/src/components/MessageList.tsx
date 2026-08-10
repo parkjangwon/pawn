@@ -2,6 +2,7 @@ import { memo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import MarkdownRenderer from './MarkdownRenderer'
 import ToolMessage from './ToolMessage'
+import SubagentActivity from './SubagentActivity'
 import { useStreamingStore } from '../stores/streaming'
 import { useChatStore } from '../stores/chat'
 import { stripDisplayImages } from '../utils/attachments'
@@ -312,6 +313,7 @@ export default function MessageList({
           </div>
         </div>
       )}
+      <SubagentActivity sessionId={sessionId} />
       <div ref={endRef} />
     </div>
   )

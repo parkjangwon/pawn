@@ -1,0 +1,191 @@
+/* Inline subagent live status (chat footer) — compact, unobtrusive. */
+
+.subagent-activity {
+  margin: 10px 0 2px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  overflow: hidden;
+  animation: subagent-activity-in 0.18s var(--ease-out-soft);
+}
+
+@keyframes subagent-activity-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.subagent-activity-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 12px;
+  background: none;
+  border: none;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-sm);
+  cursor: pointer;
+  text-align: left;
+}
+
+.subagent-activity-head:hover {
+  background: var(--bg-primary);
+}
+
+.subagent-activity-chevron {
+  color: var(--text-muted);
+  font-size: 10px;
+  transition: transform var(--dur-fast) var(--ease-out-soft);
+}
+
+.subagent-activity-dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.subagent-activity-dots span {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  animation: subagent-activity-pulse 1.2s var(--ease-out-soft) infinite;
+}
+
+.subagent-activity-dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.subagent-activity-dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes subagent-activity-pulse {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    transform: scale(0.85);
+  }
+  30% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.subagent-activity-title {
+  font-weight: 600;
+}
+
+.subagent-activity-sub {
+  color: var(--text-muted);
+}
+
+.subagent-activity-list {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 6px;
+  border-top: 1px solid var(--border-color);
+}
+
+.subagent-activity-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto auto auto 1fr auto auto;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px 0;
+  font-size: var(--font-sm);
+}
+
+.subagent-activity-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.subagent-activity-dot.running {
+  background: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 20%, transparent);
+}
+
+.subagent-activity-dot.ok {
+  background: #3fb950;
+}
+
+.subagent-activity-dot.error,
+.subagent-activity-dot.aborted {
+  background: #f85149;
+}
+
+.subagent-activity-name {
+  font-weight: 600;
+  color: var(--text-primary);
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.subagent-activity-agent {
+  color: var(--text-muted);
+}
+
+.subagent-activity-meta {
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.subagent-activity-status {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.subagent-activity-status.running {
+  color: var(--accent);
+}
+
+.subagent-activity-status.ok {
+  color: #3fb950;
+}
+
+.subagent-activity-status.error,
+.subagent-activity-status.aborted {
+  color: #f85149;
+}
+
+.subagent-activity-stop {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  padding: 0 2px;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.subagent-activity-stop:hover {
+  color: var(--text-primary);
+  background: var(--bg-primary);
+}
+
+.subagent-activity-prompt {
+  grid-column: 2 / -1;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding-bottom: 2px;
+}
