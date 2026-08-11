@@ -52,12 +52,20 @@ export interface HooksSettings {
   readClaude: boolean
   /** Load hooks from ~/.pawn/hooks.json and project .pawn/hooks.json */
   readPawn: boolean
+  /**
+   * Run project-scope hooks (from the opened repo's `.claude/settings.json`
+   * / `.pawn/hooks.json`). Default OFF: those files come with untrusted repos
+   * and can execute arbitrary shell commands — treat them as code. User-scope
+   * hooks (~/.claude, Pawn dir) are user-authored and always allowed.
+   */
+  allowProjectHooks: boolean
 }
 
 export const DEFAULT_HOOKS_SETTINGS: HooksSettings = {
   enabled: true,
   readClaude: true,
-  readPawn: true
+  readPawn: true,
+  allowProjectHooks: false
 }
 
 export const HOOK_EVENTS: HookEventName[] = [

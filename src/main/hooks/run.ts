@@ -194,7 +194,19 @@ export async function runHooks(input: HookRunInput): Promise<HookRunResult> {
     })
   )
 
-  if (!matched.length) {
+  // RCE gate: project-scope hooks come from the opened repo
+  // (.claude/settings.json / .pawn/hooks.json) — untrusted code that could run
+  // arbitrary shell commands on every event. They only run once the user
+  // explicitly enables allowProjectHooks (Settings → Hooks). User-scope hooks
+  // are user-authored and always allowed. Explicit allowlist so an unknown
+  // future source fails closed (never runs) instead of slipping through a
+  // suffix convention.
+  const PROJECT_HOOK_SOURCES = new Set(['claude:project', 'pawn:project'])
+  const runnable = matched.filter(
+    (h) => settings.allowProjectHooks || !PROJECT_HOOK_SOURCES.has(h.source)
+  )
+
+  if (!runnable.length) {
     return { ok: true, decision: 'none', additionalContext: [], ran: 0, errors: [] }
   }
 
@@ -220,7 +232,7 @@ export async function runHooks(input: HookRunInput): Promise<HookRunResult> {
 
   // Run in parallel; collect decisions
   const results = await Promise.all(
-    matched.map(async (h: LoadedHook) => {
+    runnable.map(async (h: LoadedHook) => {
       const timeoutSec =
         h.handler.timeout != null && Number.isFinite(h.handler.timeout)
           ? Number(h.handler.timeout)
@@ -295,7 +307,7 @@ export async function runHooks(input: HookRunInput): Promise<HookRunResult> {
     decision,
     reason,
     additionalContext,
-    ran: matched.length,
+    ran: runnable.length,
     errors
   }
 }

@@ -512,6 +512,8 @@
       "readClaudeDesc": "~/.claude/settings.json 与项目 .claude/settings.json",
       "readPawn": "读取 Pawn 钩子",
       "readPawnDesc": "~/.pawn/hooks.json 与项目 .pawn/hooks.json",
+      "allowProjectHooks": "运行项目钩子",
+      "allowProjectHooksDesc": "运行所打开仓库的 .claude/settings.json / .pawn/hooks.json 钩子。默认关闭 — 这些文件随不可信仓库而来，可能执行任意命令。用户级钩子始终运行。",
       "stats": "已加载 {{total}} 个钩子 · {{sources}}",
       "refresh": "刷新",
       "loaded": "已加载钩子",

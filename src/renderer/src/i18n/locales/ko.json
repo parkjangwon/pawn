@@ -512,6 +512,8 @@
       "readClaudeDesc": "~/.claude/settings.json 및 프로젝트 .claude/settings.json",
       "readPawn": "Pawn 훅 읽기",
       "readPawnDesc": "~/.pawn/hooks.json 및 프로젝트 .pawn/hooks.json",
+      "allowProjectHooks": "프로젝트 훅 실행",
+      "allowProjectHooksDesc": "열린 저장소의 .claude/settings.json / .pawn/hooks.json 훅을 실행합니다. 기본 꺼짐 — 이 파일은 신뢰할 수 없는 저장소와 함께 들어오며 임의 명령을 실행할 수 있습니다. 사용자 스코프 훅은 항상 실행됩니다.",
       "stats": "훅 {{total}}개 로드 · {{sources}}",
       "refresh": "새로고침",
       "loaded": "로드된 훅",

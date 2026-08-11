@@ -16,7 +16,8 @@ export function getHooksSettings(): HooksSettings {
     return {
       enabled: raw.enabled !== false,
       readClaude: raw.readClaude !== false,
-      readPawn: raw.readPawn !== false
+      readPawn: raw.readPawn !== false,
+      allowProjectHooks: raw.allowProjectHooks === true
     }
   } catch {
     return { ...DEFAULT_HOOKS_SETTINGS }

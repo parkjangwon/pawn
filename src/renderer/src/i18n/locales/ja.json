@@ -512,6 +512,8 @@
       "readClaudeDesc": "~/.claude/settings.json とプロジェクト .claude/settings.json",
       "readPawn": "Pawn フックを読む",
       "readPawnDesc": "~/.pawn/hooks.json とプロジェクト .pawn/hooks.json",
+      "allowProjectHooks": "プロジェクトフックを実行",
+      "allowProjectHooksDesc": "開いたリポジトリの .claude/settings.json / .pawn/hooks.json のフックを実行します。既定ではオフ — これらのファイルは信頼できないリポジトリに含まれ、任意のコマンドを実行できるためです。ユーザースコープのフックは常に実行されます。",
       "stats": "フック {{total}} 件 · {{sources}}",
       "refresh": "更新",
       "loaded": "読み込み済みフック",

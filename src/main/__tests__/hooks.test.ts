@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest'
-import { mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'fs'
+import { mkdtempSync, rmSync, writeFileSync, mkdirSync, existsSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
@@ -12,6 +12,7 @@ vi.mock('../config', () => ({
 import { matcherMatches, expandToolNames, hookMatchesEvent } from '../hooks/match'
 import { getHooksSettings, setHooksSettings } from '../hooks/settings'
 import { loadAllHooks, listHooksSummary } from '../hooks/load'
+import { runHooks } from '../hooks/run'
 import type { LoadedHook } from '../hooks/types'
 
 beforeAll(() => {
@@ -66,6 +67,7 @@ describe('hooks/settings', () => {
   it('defaults and patches', () => {
     const s0 = getHooksSettings()
     expect(s0.enabled).toBe(true)
+    expect(s0.allowProjectHooks).toBe(false)
     const s1 = setHooksSettings({ readClaude: false })
     expect(s1.readClaude).toBe(false)
     expect(getHooksSettings().readClaude).toBe(false)
@@ -121,5 +123,55 @@ describe('hooks/load merge+dedupe', () => {
       JSON.stringify({ hooks: { Stop: [{ hooks: [{ type: 'command', command: 'echo x' }] }] } })
     )
     expect(loadAllHooks(null)).toEqual([])
+  })
+})
+
+describe('hooks/project RCE gate', () => {
+  function writeProjectHook(command: string): string {
+    const marker = join(dirHolder.project, `marker-${Math.random().toString(36).slice(2, 8)}`)
+    mkdirSync(join(dirHolder.project, '.pawn'), { recursive: true })
+    writeFileSync(
+      join(dirHolder.project, '.pawn', 'hooks.json'),
+      JSON.stringify({
+        hooks: {
+          Stop: [{ hooks: [{ type: 'command', command: `${command} ${marker}` }] }]
+        }
+      })
+    )
+    return marker
+  }
+
+  it('blocks project-scope hooks by default (no arbitrary command execution)', async () => {
+    setHooksSettings({ enabled: true, readClaude: false, readPawn: true, allowProjectHooks: false })
+    const marker = writeProjectHook('touch')
+    const res = await runHooks({ event: 'Stop', sessionId: 's', projectPath: dirHolder.project, payload: {} })
+    expect(res.ran).toBe(0)
+    expect(existsSync(marker)).toBe(false)
+  })
+
+  it('runs project-scope hooks when allowProjectHooks is enabled', async () => {
+    setHooksSettings({ enabled: true, readClaude: false, readPawn: true, allowProjectHooks: true })
+    const marker = writeProjectHook('touch')
+    const res = await runHooks({ event: 'Stop', sessionId: 's', projectPath: dirHolder.project, payload: {} })
+    expect(res.ran).toBe(1)
+    expect(existsSync(marker)).toBe(true)
+    rmSync(marker, { force: true })
+  })
+
+  it('always runs user-scope hooks regardless of allowProjectHooks', async () => {
+    setHooksSettings({ enabled: true, readClaude: false, readPawn: true, allowProjectHooks: false })
+    const marker = join(dirHolder.dir, `marker-${Math.random().toString(36).slice(2, 8)}`)
+    writeFileSync(
+      join(dirHolder.dir, 'hooks.json'),
+      JSON.stringify({
+        hooks: {
+          Stop: [{ hooks: [{ type: 'command', command: `touch ${marker}` }] }]
+        }
+      })
+    )
+    const res = await runHooks({ event: 'Stop', sessionId: 's', projectPath: null, payload: {} })
+    expect(res.ran).toBe(1)
+    expect(existsSync(marker)).toBe(true)
+    rmSync(marker, { force: true })
   })
 })

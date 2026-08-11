@@ -512,6 +512,8 @@
       "readClaudeDesc": "~/.claude/settings.json and project .claude/settings.json",
       "readPawn": "Read Pawn hooks",
       "readPawnDesc": "~/.pawn/hooks.json and project .pawn/hooks.json",
+      "allowProjectHooks": "Run project hooks",
+      "allowProjectHooksDesc": "Run hooks from the opened repo's .claude/settings.json / .pawn/hooks.json. Off by default — those files ship with untrusted repos and can execute arbitrary commands. User-scope hooks always run.",
       "stats": "{{total}} hooks loaded · {{sources}}",
       "refresh": "Refresh",
       "loaded": "Loaded hooks",

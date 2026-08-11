@@ -7,6 +7,7 @@ interface HooksSettings {
   enabled: boolean
   readClaude: boolean
   readPawn: boolean
+  allowProjectHooks: boolean
 }
 
 interface HookRow {
@@ -21,7 +22,8 @@ interface HookRow {
 const defaultSettings: HooksSettings = {
   enabled: true,
   readClaude: true,
-  readPawn: true
+  readPawn: true,
+  allowProjectHooks: false
 }
 
 export default function HooksSettingsPanel(): React.JSX.Element {
@@ -115,6 +117,21 @@ export default function HooksSettingsPanel(): React.JSX.Element {
               checked={settings.readPawn}
               disabled={busy || !settings.enabled}
               onChange={(e) => void patch({ readPawn: e.target.checked })}
+            />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">{t('settings.hooksSection.allowProjectHooks')}</span>
+            <span className="settings-row-desc">{t('settings.hooksSection.allowProjectHooksDesc')}</span>
+          </div>
+          <label className="toggle-switch">
+            <input
+              type="checkbox"
+              checked={settings.allowProjectHooks}
+              disabled={busy || !settings.enabled}
+              onChange={(e) => void patch({ allowProjectHooks: e.target.checked })}
             />
             <span className="toggle-slider" />
           </label>
