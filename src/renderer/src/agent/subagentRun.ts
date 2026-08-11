@@ -70,6 +70,46 @@ import { finalizeWorktree, maybeCreateWorktree } from './subagentWorktree'
 import { releaseBrowserAgent } from './browser'
 import type { SubagentIsolation, SubagentResult, SubagentTask } from './subagentTypes'
 
+// --- Side-panel close debounce --------------------------------------------
+//
+// The browser panel auto-closes once all subagent browsing is done, but only
+// if a subagent actually opened it (window.__subagentOpenedBrowserPanel). The
+// close is debounced so a sequential pipeline (research planner → workers →
+// synthesizer) doesn't close the panel between phases and flicker it back
+// open: any new run cancels the pending close (see runSubagent's start).
+const PANEL_CLOSE_DEBOUNCE_MS = 3000
+let pendingPanelClose: ReturnType<typeof setTimeout> | null = null
+
+function closePanelIfSubagentOpened(): void {
+  const w = window as unknown as {
+    __subagentOpenedBrowserPanel?: boolean
+    __closeRightPanel?: () => void
+  }
+  if (w.__subagentOpenedBrowserPanel) {
+    w.__subagentOpenedBrowserPanel = false
+    try {
+      w.__closeRightPanel?.()
+    } catch {
+      /* optional */
+    }
+  }
+}
+
+function armPanelClose(): void {
+  if (pendingPanelClose) return
+  pendingPanelClose = setTimeout(() => {
+    pendingPanelClose = null
+    closePanelIfSubagentOpened()
+  }, PANEL_CLOSE_DEBOUNCE_MS)
+}
+
+function cancelPanelClose(): void {
+  if (pendingPanelClose) {
+    clearTimeout(pendingPanelClose)
+    pendingPanelClose = null
+  }
+}
+
 // --- Run loop + orchestration ----------------------------------------------
 
 function injectBackgroundResult(
@@ -216,7 +256,11 @@ export async function runSubagent(
     promptPreview: task.prompt.trim().slice(0, 200),
     promptFull: task.prompt.trim()
   })
+  // A new run supersedes any pending panel-close: a sequential pipeline moves
+  // to its next phase (planner → workers → synthesizer) without flicker.
+  cancelPanelClose()
 
+  let terminal = false
   const finish = async (result: Omit<SubagentResult, 'agent' | 'profileSource'> & {
     agent?: string
   }): Promise<SubagentResult> => {
@@ -243,6 +287,7 @@ export async function runSubagent(
       worktreeBranch: full.worktreeBranch,
       usage: full.usage
     })
+    terminal = true
     return full
   }
 
@@ -677,7 +722,9 @@ export async function runSubagent(
     // that escapes them so the run always goes terminal. Without it, an
     // unexpected error left a phantom 'running' entry forever — pinning the
     // Agents panel, blocking the subagent-close panel logic, and never
-    // clearing activeForSession.
+    // clearing activeForSession. If a finish already recorded a terminal
+    // state, don't overwrite it — just propagate so the finally still runs.
+    if (terminal) throw err
     const msg = err instanceof Error ? err.message : String(err)
     console.error(`runSubagent ${runId} crashed:`, err)
     return finish({
@@ -706,19 +753,15 @@ export async function runSubagent(
     } catch {
       /* optional */
     }
-    // Subagent browsing is done: this run just finished and no other run is
-    // still running. If a subagent opened the side panel, close it so parked
-    // tabs don't linger — a panel the user opened or is viewing is never
-    // touched (the marker is cleared on user interaction in RightPanel).
+    // Subagent browsing is done (no other run is still active): arm a short
+    // debounce before closing the side panel. Sequential pipelines
+    // (research planner → workers → synthesizer) end one run and start the
+    // next almost immediately; without the debounce the panel would close
+    // between phases and then flicker back open. Any new run cancels it
+    // (cancelPanelClose in runSubagent's start). The close stays
+    // marker-gated: a panel the user opened or is viewing is never touched.
     if (!useSubagentRunsStore.getState().runs.some((r) => r.status === 'running')) {
-      const w = window as unknown as {
-        __subagentOpenedBrowserPanel?: boolean
-        __closeRightPanel?: () => void
-      }
-      if (w.__subagentOpenedBrowserPanel) {
-        w.__subagentOpenedBrowserPanel = false
-        try { w.__closeRightPanel?.() } catch { /* optional */ }
-      }
+      armPanelClose()
     }
     // Safety net if we exited without finalizeWorktree clearing the path.
     if (worktreePath && opts.projectPath && window.api?.worktree?.remove) {

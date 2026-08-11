@@ -281,9 +281,13 @@ export default function RightPanel(): React.JSX.Element | null {
       }
     }
     ;(window as any).__restoreRightPanelBrowser = (): void => {
+      // Don't restore while the tool picker is open: the native view would
+      // float over the picker dropdown (the same bleed-through the overlay
+      // hide exists for).
       if (
         visibleRef.current &&
         !closingRef.current &&
+        !showPickerRef.current &&
         activeTabRef.current === 'browser' &&
         openTabsRef.current.includes('browser')
       ) {
