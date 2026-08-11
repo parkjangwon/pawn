@@ -187,17 +187,40 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
           setSearchLoading(false)
         })
         .catch(() => {
-          if (!cancelled) {
-            setSearchResults([])
-            setSearchLoading(false)
+          if (cancelled) return
+          // DB unavailable (dev:web / transient failure): fall back to the
+          // in-memory session list instead of dropping to an empty state.
+          const hits: SearchHit[] = []
+          for (const p of projects) {
+            for (const s of p.sessions) {
+              if (!matchesSearch(s)) continue
+              let snippet = ''
+              for (const m of s.messages || []) {
+                const c = m.content || ''
+                const idx = c.toLowerCase().indexOf(q)
+                if (idx >= 0) {
+                  snippet = c.slice(Math.max(0, idx - 40), idx + 80)
+                  break
+                }
+              }
+              hits.push({
+                id: s.id,
+                projectId: p.id,
+                title: s.title,
+                createdAt: s.createdAt,
+                snippet
+              })
+            }
           }
+          setSearchResults(hits)
+          setSearchLoading(false)
         })
     }, 150)
     return () => {
       cancelled = true
       window.clearTimeout(timer)
     }
-  }, [q])
+  }, [q, projects])
   const matchesSearch = (session: {
     title: string
     messages: Array<{ role: string; content: string }>
