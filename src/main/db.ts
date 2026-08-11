@@ -223,6 +223,45 @@ export function getMessagesBySession(sessionId: string): Array<{
     .all(sessionId) as never[]
 }
 
+/**
+ * Full-text-ish session search across titles and message contents. Used by the
+ * sidebar so search works even for sessions whose messages were never loaded
+ * into the renderer store (lazy load happens only on activation).
+ */
+export function searchSessions(query: string): Array<{
+  id: string
+  projectId: string
+  title: string
+  createdAt: number
+  snippet: string
+}> {
+  const q = query.trim()
+  if (!q) return []
+  // Escape LIKE wildcards so literal % or _ in the query doesn't over-match.
+  const escaped = q.replace(/[\\%_]/g, (c) => `\\${c}`)
+  const like = `%${escaped}%`
+  const rows = getDb()
+    .prepare(
+      `SELECT DISTINCT s.id, s.project_id as projectId, s.title,
+              s.created_at as createdAt,
+              (SELECT m.content FROM messages m
+               WHERE m.session_id = s.id AND m.content LIKE ? ESCAPE '\\'
+               ORDER BY m.created_at DESC LIMIT 1) as snippet
+       FROM sessions s
+       LEFT JOIN messages m ON m.session_id = s.id
+       WHERE s.title LIKE ? ESCAPE '\\' OR m.content LIKE ? ESCAPE '\\'
+       ORDER BY s.created_at DESC`
+    )
+    .all(like, like, like) as Array<{
+    id: string
+    projectId: string
+    title: string
+    createdAt: number
+    snippet: string | null
+  }>
+  return rows.map((r) => ({ ...r, snippet: r.snippet || '' }))
+}
+
 export function addMessage(
   id: string,
   sessionId: string,

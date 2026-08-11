@@ -43,6 +43,7 @@
     "automations": "自动化",
     "running": "运行中",
     "renameHint": "双击重命名",
+    "searchResults": "搜索结果",
     "noSearchResults": "无匹配会话"
   },
   "chat": {
@@ -223,9 +224,7 @@
     "noSession": "无会话",
     "statusIdle": "空闲",
     "statusRunning": "运行中",
-    "sendQueue": "排队",
     "sendSteer": "转向",
-    "sendQueueHint": "代理运行时将消息加入队列",
     "sendSteerHint": "中断并用新消息重新引导",
     "agentPlan": "计划",
     "agentBuild": "执行",

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import Sidebar from '../Sidebar'
 import { useAppStore } from '../../stores/app'
 import { useChatStore } from '../../stores/chat'
@@ -17,7 +17,8 @@ const dbMock = {
   removeProject: vi.fn().mockResolvedValue({ ok: true }),
   addSession: vi.fn().mockResolvedValue({ ok: true }),
   removeSession: vi.fn().mockResolvedValue({ ok: true }),
-  updateSessionTitle: vi.fn().mockResolvedValue({ ok: true })
+  updateSessionTitle: vi.fn().mockResolvedValue({ ok: true }),
+  searchSessions: vi.fn().mockResolvedValue([])
 }
 
 function noop(): void {}
@@ -122,6 +123,36 @@ describe('Sidebar — session deletion', () => {
 
     expect(stopStreaming).not.toHaveBeenCalled()
     expect(useAppStore.getState().projects[0].sessions.find((s) => s.id === targetId)).toBeUndefined()
+  })
+})
+
+describe('Sidebar — session search', () => {
+  it('searches every session through the DB (titles + message contents)', async () => {
+    const searchSessions = vi.fn().mockResolvedValue([
+      { id: 's1', projectId: 'p1', title: 'Found Session', createdAt: 1, snippet: 'needle in an unloaded message' }
+    ])
+    dbMock.searchSessions.mockImplementation(searchSessions)
+    useAppStore.getState().addProject('P', ['/p'], 'p1')
+    useAppStore.getState().addSession('p1', 'Found Session')
+
+    renderSidebar()
+    fireEvent.change(screen.getByPlaceholderText('sidebar.search'), { target: { value: 'needle' } })
+
+    await waitFor(() => expect(searchSessions).toHaveBeenCalledWith('needle'))
+    expect(await screen.findByText('Found Session')).toBeInTheDocument()
+    expect(screen.getByText('sidebar.searchResults')).toBeInTheDocument()
+    expect(screen.getByText(/needle in an unloaded message/)).toBeInTheDocument()
+  })
+
+  it('shows the no-results state while searching', async () => {
+    dbMock.searchSessions.mockResolvedValue([])
+    useAppStore.getState().addProject('P', ['/p'], 'p1')
+    useAppStore.getState().addSession('p1', 'Anything')
+
+    renderSidebar()
+    fireEvent.change(screen.getByPlaceholderText('sidebar.search'), { target: { value: 'zzz' } })
+
+    expect(await screen.findByText('sidebar.noSearchResults')).toBeInTheDocument()
   })
 })
 

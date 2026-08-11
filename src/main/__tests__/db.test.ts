@@ -14,6 +14,7 @@ import {
   addProject, getAllProjects, updateProjectName, updateProjectPaths, removeProject,
   addSession, getSessionsByProject, updateSessionTitle, updateSessionPath, removeSession,
   addMessage, getMessagesBySession, updateMessageContent, deleteMessage, clearMessages,
+  searchSessions,
   saveTranscript, getTranscript, clearTranscript,
   addUsage, getUsageBySession, getUsageSummary, loadFullState,
   addRoutine, getAllRoutines, updateRoutine, removeRoutine, setRoutineRunState,
@@ -99,6 +100,47 @@ describe('messages', () => {
     clearMessages('s')
     expect(getMessagesBySession('s')).toHaveLength(0)
     expect(getTranscript('s')).toBeNull()
+  })
+})
+
+describe('searchSessions', () => {
+  it('finds sessions by title', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s1', 'proj', 'Fix the queue bug', '/p')
+    addSession('s2', 'proj', 'Write docs', '/p')
+
+    const hits = searchSessions('queue')
+    expect(hits.map((h) => h.id)).toEqual(['s1'])
+    expect(hits[0].title).toBe('Fix the queue bug')
+  })
+
+  it('finds sessions by message content even when messages were never loaded', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s1', 'proj', 'Old session', '/p')
+    addSession('s2', 'proj', 'Unrelated', '/p')
+    addMessage('m1', 's1', 'user', 'steer the agent with a new direction')
+    addMessage('m2', 's2', 'user', 'nothing interesting here')
+
+    const hits = searchSessions('steer')
+    expect(hits.map((h) => h.id)).toEqual(['s1'])
+    expect(hits[0].snippet).toContain('steer')
+  })
+
+  it('escapes LIKE wildcards in the query', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s1', 'proj', '100% done', '/p')
+    addSession('s2', 'proj', 'plain title', '/p')
+
+    // % must be treated literally, not as a wildcard.
+    expect(searchSessions('100%')).toHaveLength(1)
+    expect(searchSessions('100_')).toHaveLength(0)
+  })
+
+  it('returns nothing for an empty query', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s1', 'proj', 'Anything', '/p')
+    expect(searchSessions('')).toHaveLength(0)
+    expect(searchSessions('   ')).toHaveLength(0)
   })
 })
 

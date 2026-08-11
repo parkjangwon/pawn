@@ -179,6 +179,36 @@ describe('RightPanel', () => {
     expect(destroy).not.toHaveBeenCalled()
   })
 
+  it('hides the embedded browser while a full-screen overlay is open and restores it after', () => {
+    const setVisible = vi.fn()
+    ;(window as any).api.browser = { setVisible }
+    render(<RightPanel />)
+    act(() => { ;(window as any).__openRightPanelTab('browser') })
+    expect(screen.getByText('BROWSER_VIEW')).toBeInTheDocument()
+
+    setVisible.mockClear()
+    // Settings overlay opens → native view must hide (it cannot be covered by
+    // renderer z-index), while the panel keeps its tab.
+    act(() => { ;(window as any).__setRightPanelBrowserVisible(false) })
+    expect(setVisible).toHaveBeenCalledWith(false)
+    expect(screen.getByText('BROWSER_VIEW')).toBeInTheDocument()
+
+    // Settings closes → the still-open browser tab is restored.
+    act(() => { ;(window as any).__restoreRightPanelBrowser() })
+    expect(setVisible).toHaveBeenCalledWith(true)
+  })
+
+  it('does not restore the browser view when the panel is hidden or browser is not active', () => {
+    const setVisible = vi.fn()
+    ;(window as any).api.browser = { setVisible }
+    render(<RightPanel />)
+    act(() => { ;(window as any).__openRightPanelTab('files') })
+    setVisible.mockClear()
+
+    act(() => { ;(window as any).__restoreRightPanelBrowser() })
+    expect(setVisible).not.toHaveBeenCalled()
+  })
+
   it('clears the subagent marker on any user tab interaction', () => {
     const destroy = vi.fn()
     const setVisible = vi.fn()

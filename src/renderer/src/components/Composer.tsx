@@ -46,9 +46,8 @@ interface ComposerProps {
   attachments: ChatAttachment[]
   onAddAttachment: (a: ChatAttachment) => void
   onRemoveAttachment: (id: string) => void
-  sendMode?: 'queue' | 'steer'
-  onSendModeChange?: (mode: 'queue' | 'steer') => void
-  queueLength?: number
+  /** While streaming in queue mode: send the draft immediately as a steer. */
+  onSteer?: () => void
 }
 
 export default function Composer(props: ComposerProps): React.JSX.Element {
@@ -90,7 +89,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const { input, onChange, onKeyDown, onSend, textareaRef, activeSession, projects, activeProject, activeProjectId, onSelectProject } = props
   const { showProjectPicker, setShowProjectPicker, showPermPicker, setShowPermPicker, showModelPicker, setShowModelPicker, showUsagePopover, setShowUsagePopover } = props
   const { projectPickerRef, permPickerRef, modelPickerRef, usageRef, isStreaming, onStop } = props
-  const { attachments, onAddAttachment, onRemoveAttachment, sendMode = 'queue', onSendModeChange, queueLength = 0 } = props
+  const { attachments, onAddAttachment, onRemoveAttachment, onSteer } = props
 
   const addFile = (file: File): void => {
     if (file.type.startsWith('image/')) {
@@ -263,18 +262,6 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                 />
                 <div className="context-chip-wrapper" ref={permPickerRef}>
 
-                {onSendModeChange && (
-                  <button
-                    className={`perm-chip perm-send-${sendMode}`}
-                    onClick={() => onSendModeChange(sendMode === 'queue' ? 'steer' : 'queue')}
-                    title={sendMode === 'queue' ? t('contextBar.sendQueueHint') : t('contextBar.sendSteerHint')}
-                  >
-                    <span>{sendMode === 'queue' ? t('contextBar.sendQueue') : t('contextBar.sendSteer')}</span>
-                    {queueLength > 0 && sendMode === 'queue' && (
-                      <span className="usage-chip-cache">· {queueLength}</span>
-                    )}
-                  </button>
-                )}
                   <button
                     type="button"
                     className={`perm-chip perm-agent-${agentMode}`}
@@ -470,11 +457,27 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   )}
                 </div>
                 {isStreaming ? (
-                  <button className="stop-btn" onClick={onStop} title={t('chat.stop')}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
-                  </button>
+                  <>
+                    {onSteer && (
+                      <button
+                        type="button"
+                        className="steer-btn"
+                        onClick={onSteer}
+                        disabled={!input.trim() && attachments.length === 0}
+                        title={t('contextBar.sendSteerHint')}
+                      >
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M12 19V5M5 12l7-7 7 7" />
+                        </svg>
+                        <span>{t('contextBar.sendSteer')}</span>
+                      </button>
+                    )}
+                    <button className="stop-btn" onClick={onStop} title={t('chat.stop')}>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                    </button>
+                  </>
                 ) : (
-                  <button className="send-btn" onClick={onSend} disabled={!input.trim() && attachments.length === 0}>
+                  <button className="send-btn" onClick={() => onSend()} disabled={!input.trim() && attachments.length === 0}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
                     </svg>

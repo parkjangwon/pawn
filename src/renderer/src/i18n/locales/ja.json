@@ -43,6 +43,7 @@
     "automations": "自動化",
     "running": "実行中",
     "renameHint": "ダブルクリックで名前変更",
+    "searchResults": "検索結果",
     "noSearchResults": "一致するセッションがありません"
   },
   "chat": {
@@ -223,9 +224,7 @@
     "noSession": "セッションなし",
     "statusIdle": "待機中",
     "statusRunning": "実行中",
-    "sendQueue": "キュー",
     "sendSteer": "ステア",
-    "sendQueueHint": "実行中はメッセージをキューに入れます",
     "sendSteerHint": "中断して新しいメッセージで指示します",
     "agentPlan": "Plan",
     "agentBuild": "Build",

@@ -106,6 +106,10 @@ export function registerDbIpc(): void {
     if (typeof sessionId !== 'string' || !sessionId) return []
     return db.getMessagesBySession(sessionId) || []
   })
+  handleTrusted('db:searchSessions', async (_, query) => {
+    if (typeof query !== 'string') return []
+    return db.searchSessions(query) || []
+  })
   handleTrusted('db:getTranscript', async (_, sessionId) => {
     if (typeof sessionId !== 'string' || !sessionId) return null
     return db.getTranscript(sessionId)

@@ -47,11 +47,10 @@ export default function ChatArea({
 }: ChatAreaProps): React.JSX.Element {
   const { t } = useTranslation()
   const [input, setInput] = useState('')
-  const [sendMode, setSendMode] = useState<'queue' | 'steer'>(() => useProviderStore.getState().defaultSendMode)
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
   const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, startNewChat, clearMessages, updateProjectName, loadedSessions, loadingSessions } = useAppStore()
-  const { sendMessage, isStreaming, streamingSessionIds, stopStreaming, queue } = useChatStore()
+  const { sendMessage, streamingSessionIds, stopStreaming } = useChatStore()
   /** Live tokens / thinking indicator only for the session currently on screen. */
   const sessionStreaming = !!activeSessionId && streamingSessionIds.includes(activeSessionId)
   const {
@@ -59,6 +58,7 @@ export default function ChatArea({
     providers,
     activeModelId,
     setActiveModel,
+    defaultSendMode,
     permissionMode,
     setPermissionMode,
     reasoningEffort,
@@ -523,7 +523,7 @@ export default function ChatArea({
     return list
   }
 
-  const handleSend = async (): Promise<void> => {
+  const handleSend = async (mode: 'queue' | 'steer' = defaultSendMode): Promise<void> => {
     if (!input.trim() && attachments.length === 0) return
     if (sendingRef.current) return
     sendingRef.current = true
@@ -669,7 +669,7 @@ export default function ChatArea({
     // Remember the raw typed prompt (not expanded @mentions) for ↑/↓ recall.
     pushPromptHistory(ensurePromptHistory(sessionId), typedPrompt)
 
-    sendMessage(projectId, sessionId, finalContent, sendMode, sendAttachments)
+    sendMessage(projectId, sessionId, finalContent, mode, sendAttachments)
     } finally {
       sendingRef.current = false
     }
@@ -889,9 +889,7 @@ export default function ChatArea({
           else stopStreaming()
         }}
         attachments={attachments}
-        sendMode={sendMode}
-        onSendModeChange={setSendMode}
-        queueLength={queue.filter((q) => q.sessionId === activeSessionId).length}
+        onSteer={defaultSendMode === 'queue' ? () => { void handleSend('steer') } : undefined}
         onAddAttachment={addAttachment}
         onRemoveAttachment={removeAttachment}
       />

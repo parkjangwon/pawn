@@ -43,6 +43,7 @@
     "automations": "자동화",
     "running": "실행 중",
     "renameHint": "더블클릭으로 이름 변경",
+    "searchResults": "검색 결과",
     "noSearchResults": "일치하는 세션 없음"
   },
   "chat": {
@@ -223,9 +224,7 @@
     "noSession": "세션 없음",
     "statusIdle": "대기",
     "statusRunning": "실행 중",
-    "sendQueue": "큐",
     "sendSteer": "스티어",
-    "sendQueueHint": "에이전트 실행 중 메시지를 대기열에 넣습니다",
     "sendSteerHint": "실행을 중단하고 새 메시지로 방향을 바꿉니다",
     "agentPlan": "계획",
     "agentBuild": "실행",

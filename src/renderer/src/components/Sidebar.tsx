@@ -21,6 +21,14 @@ interface SidebarProps {
 
 const GENERAL_PROJECT_ID = '__general__'
 
+interface SearchHit {
+  id: string
+  projectId: string
+  title: string
+  createdAt: number
+  snippet: string
+}
+
 export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMainViewChange, onSidebarWidthChange }: SidebarProps): React.JSX.Element {
   const { t } = useTranslation()
   const {
@@ -48,6 +56,8 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
   const [sessionSearch, setSessionSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<SearchHit[]>([])
+  const [searchLoading, setSearchLoading] = useState(false)
   const [renamingSession, setRenamingSession] = useState<{ projectId: string; sessionId: string; title: string } | null>(null)
   useEffect(() => { try { const s = localStorage.getItem('pawn-pinned-sessions'); if (s) setPinnedSessions(new Set(JSON.parse(s))) } catch {} }, [])
 
@@ -153,6 +163,41 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   }
 
   const q = sessionSearch.trim().toLowerCase()
+  // DB-backed search: unlike the in-memory filter below, this also finds
+  // sessions whose messages were never loaded into the renderer store (lazy
+  // load happens only when a session is activated).
+  useEffect(() => {
+    if (!q) {
+      setSearchResults([])
+      setSearchLoading(false)
+      return
+    }
+    if (!window.api?.db?.searchSessions) {
+      setSearchResults([])
+      setSearchLoading(false)
+      return
+    }
+    let cancelled = false
+    setSearchLoading(true)
+    const timer = window.setTimeout(() => {
+      void window.api.db.searchSessions(q)
+        .then((rows) => {
+          if (cancelled) return
+          setSearchResults(Array.isArray(rows) ? rows : [])
+          setSearchLoading(false)
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setSearchResults([])
+            setSearchLoading(false)
+          }
+        })
+    }, 150)
+    return () => {
+      cancelled = true
+      window.clearTimeout(timer)
+    }
+  }, [q])
   const matchesSearch = (session: {
     title: string
     messages: Array<{ role: string; content: string }>
@@ -271,8 +316,48 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
       </div>
 
       <div className="sidebar-scroll">
+        {/* Search results (DB-backed: titles + message contents across every
+            session, loaded or not). Takes over the list while typing. */}
+        {q && (
+          <div className="sidebar-section">
+            <div className="section-label">{t('sidebar.searchResults')}</div>
+            {searchLoading && <div className="tree-empty">{t('common.loading')}</div>}
+            {!searchLoading && searchResults.map((r) => {
+              const running = streamingSessionIds.includes(r.id) || runningRoutineIds.has(r.id)
+              const select = (): void => {
+                onMainViewChange('chat')
+                setActiveProject(r.projectId)
+                setActiveSession(r.id)
+              }
+              return (
+                <div
+                  key={r.id}
+                  className={`sidebar-item ${mainView === 'chat' && r.id === activeSessionId ? 'active' : ''}`}
+                  role="button"
+                  tabIndex={0}
+                  aria-current={mainView === 'chat' && r.id === activeSessionId ? 'true' : undefined}
+                  onClick={select}
+                  onKeyDown={(e) => activateOnKey(e, select)}
+                >
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                  <span className="item-title">{r.title}</span>
+                  {r.snippet && (
+                    <span className="session-preview">
+                      {r.snippet.replace(/\s+/g, ' ').trim().slice(0, 64)}
+                    </span>
+                  )}
+                  {running && <span className="session-running" title={t('sidebar.running')} />}
+                </div>
+              )
+            })}
+            {!searchLoading && searchResults.length === 0 && (
+              <div className="tree-empty">{t('sidebar.noSearchResults')}</div>
+            )}
+          </div>
+        )}
+
         {/* 1. Pinned */}
-        {pinnedItems.length > 0 && (
+        {!q && pinnedItems.length > 0 && (
           <div className="sidebar-section">
             <div className="section-label">{t('sidebar.pinned')}</div>
             {pinnedItems.map((session) => {
@@ -315,6 +400,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
         )}
 
         {/* 2. Projects */}
+        {!q && (
         <div className="sidebar-section">
           <div className="section-header">
             <span className="section-label">{t('sidebar.projects')}</span>
@@ -422,9 +508,10 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
           })}
           {userProjects.length === 0 && <div className="empty-hint">{t('sidebar.noProjects')}</div>}
         </div>
+        )}
 
         {/* 3. Recent */}
-        {recentSessions.length > 0 && (
+        {!q && recentSessions.length > 0 && (
           <div className="sidebar-section">
             <button className="section-header recent-header" onClick={() => setRecentExpanded((v) => !v)}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${recentExpanded ? 'expanded' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>

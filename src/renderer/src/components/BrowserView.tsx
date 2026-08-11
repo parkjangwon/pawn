@@ -61,7 +61,12 @@ function NativeBrowserView(): React.JSX.Element {
     window.api.browser.ensure().then((res) => {
       if (cancelled) return
       if (res.error) { setError(res.error); return }
-      window.api.browser.setVisible(true)
+      // A full-screen overlay (Settings) cannot be covered by the native
+      // WebContentsView, so skip showing the page while one is open. The
+      // overlay's close path restores visibility via RightPanel.
+      if (!(window as any).__fullscreenOverlayOpen) {
+        window.api.browser.setVisible(true)
+      }
       syncBounds()
       window.api.browser.state().then((s) => {
         if (cancelled || !s.created) return

@@ -108,6 +108,18 @@ export default function App(): React.JSX.Element {
     })
   }, [])
 
+  // The embedded browser is a native WebContentsView that layers above every
+  // renderer surface, so it would float over the full-screen Settings overlay.
+  // Hide it while Settings is open; RightPanel restores it on close.
+  useEffect(() => {
+    ;(window as any).__fullscreenOverlayOpen = showSettings
+    if (showSettings) {
+      ;(window as any).__setRightPanelBrowserVisible?.(false)
+    } else {
+      ;(window as any).__restoreRightPanelBrowser?.()
+    }
+  }, [showSettings])
+
   // The main sidebar is hidden behind the full-screen Settings overlay, so
   // toggling it there is invisible. Route the same shortcut to Settings' own
   // nav toggle instead — Settings registers this bridge while it's open.

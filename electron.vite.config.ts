@@ -217,6 +217,7 @@ function apiProxyPlugin(): Plugin {
               case 'addMessage': db.addMessage(data.id, data.sessionId, data.role, data.content); res.end('{"ok":true}'); break
               case 'updateMessageContent': db.updateMessageContent(data.id, data.content); res.end('{"ok":true}'); break
               case 'getMessages': res.end(JSON.stringify(db.getMessagesBySession(data.sessionId) || [])); break
+              case 'searchSessions': res.end(JSON.stringify(db.searchSessions(data.query || '') || [])); break
               case 'deleteMessage': db.deleteMessage(data.id); res.end('{"ok":true}'); break
               case 'clearMessages': db.clearMessages(data.sessionId); res.end('{"ok":true}'); break
               case 'getTranscript': res.end(JSON.stringify(db.getTranscript(data.sessionId))); break

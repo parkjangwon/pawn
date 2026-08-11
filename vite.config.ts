@@ -155,6 +155,9 @@ function apiProxyPlugin(): Plugin {
               case 'getMessages':
                 send(db.getMessagesBySession(data.sessionId as string) || [])
                 break
+              case 'searchSessions':
+                send(db.searchSessions((data.query as string) || '') || [])
+                break
               case 'deleteMessage':
                 db.deleteMessage(data.id as string)
                 send({ ok: true })

@@ -52,6 +52,15 @@ declare global {
     __toggleRightPanel?: () => void
     /** Close the side panel outright (subagent browsing finished). */
     __closeRightPanel?: () => void
+    /** Hide/show the embedded browser view while a full-screen overlay
+     *  (Settings) is open — the native WebContentsView cannot be covered by
+     *  renderer z-index. */
+    __setRightPanelBrowserVisible?: (visible: boolean) => void
+    /** Restore the embedded browser view after a full-screen overlay closes. */
+    __restoreRightPanelBrowser?: () => void
+    /** True while a full-screen overlay (Settings) covers the workspace —
+     *  BrowserView checks this so the native view never shows through. */
+    __fullscreenOverlayOpen?: boolean
     /** Set when subagent browsing opens the browser tab; cleared on user
      *  open/switch/close so the panel auto-closes only when a subagent
      *  actually drove it. */
@@ -502,6 +511,15 @@ declare global {
             createdAt: number
             thinking?: string
             modelLabel?: string
+          }>
+        >
+        searchSessions: (query: string) => Promise<
+          Array<{
+            id: string
+            projectId: string
+            title: string
+            createdAt: number
+            snippet: string
           }>
         >
         getTranscript: (sessionId: string) => Promise<string | null>

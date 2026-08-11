@@ -43,6 +43,7 @@
     "automations": "Automations",
     "running": "Running",
     "renameHint": "Double-click to rename",
+    "searchResults": "Search results",
     "noSearchResults": "No matching sessions"
   },
   "chat": {
@@ -223,9 +224,7 @@
     "noSession": "No session",
     "statusIdle": "Idle",
     "statusRunning": "Running",
-    "sendQueue": "Queue",
     "sendSteer": "Steer",
-    "sendQueueHint": "Queue messages while the agent runs",
     "sendSteerHint": "Interrupt and steer with a new message",
     "agentPlan": "Plan",
     "agentBuild": "Build",

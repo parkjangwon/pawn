@@ -292,6 +292,7 @@ const api = {
     deleteMessage: (id: string) => ipcRenderer.invoke('db:deleteMessage', id),
     clearMessages: (sessionId: string) => ipcRenderer.invoke('db:clearMessages', sessionId),
     getMessages: (sessionId: string) => ipcRenderer.invoke('db:getMessages', sessionId),
+    searchSessions: (query: string) => ipcRenderer.invoke('db:searchSessions', query),
     getTranscript: (sessionId: string) => ipcRenderer.invoke('db:getTranscript', sessionId),
     saveTranscript: (sessionId: string, json: string) => ipcRenderer.invoke('db:saveTranscript', sessionId, json),
     clearTranscript: (sessionId: string) => ipcRenderer.invoke('db:clearTranscript', sessionId),

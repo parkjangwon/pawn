@@ -162,7 +162,8 @@ export default function RightPanel(): React.JSX.Element | null {
   useEffect(() => {
     // Only touch visibility while the browser tab is still active: switching
     // away unmounts BrowserView, whose own cleanup hides the native view.
-    if (window.api?.browser?.setVisible && activeTabRef.current === 'browser') {
+    // Skip while a full-screen overlay is open — App owns visibility there.
+    if (window.api?.browser?.setVisible && activeTabRef.current === 'browser' && !(window as any).__fullscreenOverlayOpen) {
       void window.api.browser.setVisible(!showPicker).catch(() => {})
     }
   }, [showPicker])
@@ -267,6 +268,33 @@ export default function RightPanel(): React.JSX.Element | null {
     }
     return () => { delete (window as any).__closeRightPanel }
   }, [requestHide])
+
+  // The embedded browser is a native WebContentsView that always layers above
+  // the renderer DOM — even the full-screen Settings overlay (z-index 500)
+  // cannot cover it. App calls this when it opens/closes overlays so the
+  // browser never bleeds through; the panel keeps its tabs and restores the
+  // view once the overlay closes.
+  useEffect(() => {
+    ;(window as any).__setRightPanelBrowserVisible = (visible: boolean): void => {
+      if (!visible && openTabsRef.current.includes('browser')) {
+        void window.api.browser?.setVisible?.(false)?.catch?.(() => {})
+      }
+    }
+    ;(window as any).__restoreRightPanelBrowser = (): void => {
+      if (
+        visibleRef.current &&
+        !closingRef.current &&
+        activeTabRef.current === 'browser' &&
+        openTabsRef.current.includes('browser')
+      ) {
+        void window.api.browser?.setVisible?.(true)?.catch?.(() => {})
+      }
+    }
+    return () => {
+      delete (window as any).__setRightPanelBrowserVisible
+      delete (window as any).__restoreRightPanelBrowser
+    }
+  }, [])
   // forwarding covers every focused webContents), so the renderer only handles
   // keys in dev:web where there is no main process.
   const isBrowserMode = window.api?.platform === 'browser'
