@@ -33,9 +33,16 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
 
-### Latest — v0.11.0
+### Latest — v0.11.1
 
-**Queue/steer simplification + session search + overlay hardening**
+**Security hardening + subagent UX + stability**
+- **Project hooks gated (security)** — hooks from the opened repo's `.claude/settings.json` / `.pawn/hooks.json` no longer run by default: those files ship with untrusted repos and can execute arbitrary shell commands. Enable them per user choice in Settings → Hooks; user-scope hooks (~/.claude, Pawn dir) always work. `npm audit` is clean (0 known vulnerabilities)
+- **Subagent live status inline** — helpers show as a collapsible bar in the chat (“N agents working…”) you can expand to watch each run; the right-panel Agents tab stays for history and no longer force-opens when work starts
+- **Subagent browser panel** — the side panel closes once all subagent browsing is done (only when a subagent opened it — a panel you opened or are viewing is never touched), debounced so multi-phase research pipelines don’t flicker
+- **Stability** — subagent runs always reach a terminal state, even on unexpected crashes (no phantom “running” entries); sidebar session search falls back to the in-memory list when the database is unavailable
+- **UI** — plan / agent / review widgets now align to the chat column width; the Korean UI uses “에이전트” instead of “도우미”
+
+### v0.11.0 — queue/steer simplification + session search + overlay hardening
 - **Queue/steer simplified** — the composer toggle is gone; sends follow the send mode set in Settings, and while the agent is running in queue mode a small **Steer** button appears next to Stop to send the draft immediately
 - **Session search** — the sidebar now searches every session's title **and message contents** through the database, so even sessions you've never opened show up in results
 - **Overlay hardening** — opening Settings hides the embedded browser (a native view that renderer z-index can't cover) and restores it on close; the browser page and tabs stay alive
