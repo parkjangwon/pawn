@@ -672,6 +672,27 @@ export async function runSubagent(
       worktreeBranch: heldBr,
       usage: { ...runUsage }
     })
+  } catch (err) {
+    // The loop's own error paths call finish() above; this catches anything
+    // that escapes them so the run always goes terminal. Without it, an
+    // unexpected error left a phantom 'running' entry forever — pinning the
+    // Agents panel, blocking the subagent-close panel logic, and never
+    // clearing activeForSession.
+    const msg = err instanceof Error ? err.message : String(err)
+    console.error(`runSubagent ${runId} crashed:`, err)
+    return finish({
+      name: label,
+      ok: false,
+      summary: `runSubagent crashed: ${msg}`,
+      error: msg,
+      rounds,
+      toolsUsed,
+      isolation,
+      projectPath: opts.projectPath,
+      worktreePath,
+      worktreeBranch,
+      usage: emptyUsage()
+    })
   } finally {
     leaveSubagent()
     // Return this run's browser tabs to the pool (parallel browsing): closing
