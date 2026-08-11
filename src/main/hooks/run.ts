@@ -198,12 +198,12 @@ export async function runHooks(input: HookRunInput): Promise<HookRunResult> {
   // (.claude/settings.json / .pawn/hooks.json) — untrusted code that could run
   // arbitrary shell commands on every event. They only run once the user
   // explicitly enables allowProjectHooks (Settings → Hooks). User-scope hooks
-  // are user-authored and always allowed. Explicit allowlist so an unknown
-  // future source fails closed (never runs) instead of slipping through a
-  // suffix convention.
-  const PROJECT_HOOK_SOURCES = new Set(['claude:project', 'pawn:project'])
+  // are user-authored and always allowed. Allowlist semantics: only known
+  // user-scope sources run by default, so any unknown future source fails
+  // closed (never runs).
+  const USER_HOOK_SOURCES = new Set(['claude:user', 'pawn:user'])
   const runnable = matched.filter(
-    (h) => settings.allowProjectHooks || !PROJECT_HOOK_SOURCES.has(h.source)
+    (h) => settings.allowProjectHooks || USER_HOOK_SOURCES.has(h.source)
   )
 
   if (!runnable.length) {
