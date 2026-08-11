@@ -33,9 +33,17 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
 
-### Latest — v0.10.0
+### Latest — v0.11.0
 
-**Multi-tab browser + subagent parallel browsing + `research_report`**
+**Queue/steer simplification + session search + overlay hardening**
+- **Queue/steer simplified** — the composer toggle is gone; sends follow the send mode set in Settings, and while the agent is running in queue mode a small **Steer** button appears next to Stop to send the draft immediately
+- **Session search** — the sidebar now searches every session's title **and message contents** through the database, so even sessions you've never opened show up in results
+- **Overlay hardening** — opening Settings hides the embedded browser (a native view that renderer z-index can't cover) and restores it on close; the browser page and tabs stay alive
+
+---
+
+### v0.10.0 — multi-tab browser + subagent parallel browsing + `research_report`
+
 - **Multi-tab browser** — tab bar in the browser panel, `browser_tab_new / list / switch / close` tools, popups open new tabs
 - **Subagent parallel browsing** — per-owner tabs (`session:` / `subagent:` / UI), parked background tabs that never disturb the visible page, reclaimed automatically when a run ends
 - **`research_report`** — planner → parallel research workers (each in its own tab, mixing `web_search` / `web_research` / `web_fetch` with `browser_*`) → deduplicated dossier → citation-checked report artifact (`<project>/artifacts/`, or `~/Downloads/pawn-artifacts/` with no project open)
