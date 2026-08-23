@@ -14,7 +14,8 @@ function activeToolList(extra: ToolDefinition[] = [], opts?: ToolListOpts | Agen
       ? { mode: opts as AgentMode | undefined }
       : opts
   const agentMode = normalized.mode ?? useProviderStore.getState().agentMode
-  let list = filterToolsForAgentMode([...TOOLS, ...extra], agentMode)
+  const sortedExtra = [...extra].sort((a, b) => a.name.localeCompare(b.name))
+  let list = filterToolsForAgentMode([...TOOLS, ...sortedExtra], agentMode)
   if (normalized.allowlist?.length) {
     const allow = new Set(normalized.allowlist)
     list = list.filter((t) => allow.has(t.name))

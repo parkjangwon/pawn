@@ -204,6 +204,12 @@ export function deepSeekChatBodyExtras(opts: {
       opts.thinkingEnabled === true && opts.reasoningEffort && opts.reasoningEffort !== 'auto'
         ? mapEffort(opts.reasoningEffort, opts.modelId)
         : policy.reasoningEffort
+    // DeepSeek official docs & harness: In thinking mode, temperature must be 1.0 (or top_p=1.0)
+    // to allow natural chain-of-thought exploration and avoid thinking collapse.
+    extras.temperature = 1.0
+  } else {
+    // Non-thinking coding / agent mode: 0.0 for deterministic tool & code generation
+    extras.temperature = 0.0
   }
   return extras
 }
@@ -324,4 +330,55 @@ export function isDeepSeekRetryableError(status: number, bodyText: string): bool
     t.includes('too many requests')
   )
 }
+
+/**
+ * DeepSeek Beta FIM (Fill-in-the-Middle) completions URL.
+ * Official doc: POST https://api.deepseek.com/beta/completions
+ */
+export function deepSeekFimUrl(baseUrl?: string): string {
+  let b = (baseUrl || DEEPSEEK_OPENAI_BASE).trim().replace(/\/+$/, '')
+  if (!b) b = DEEPSEEK_OPENAI_BASE
+  if (b.endsWith('/beta/completions')) return b
+  if (b.endsWith('/v1') || b.endsWith('/beta')) b = b.replace(/\/(v1|beta)$/, '')
+  return `${b}/beta/completions`
+}
+
+export interface DeepSeekFimOpts {
+  model?: string
+  prompt: string
+  suffix?: string
+  maxTokens?: number
+  temperature?: number
+  stop?: string[]
+}
+
+/**
+ * Build request body for DeepSeek FIM code completion.
+ */
+export function buildDeepSeekFimBody(opts: DeepSeekFimOpts): Record<string, unknown> {
+  return {
+    model: opts.model || 'deepseek-chat',
+    prompt: opts.prompt,
+    suffix: opts.suffix || '',
+    max_tokens: Math.min(Math.max(Number(opts.maxTokens) || 4096, 1), 8192),
+    temperature: opts.temperature ?? 0.0,
+    stop: opts.stop || []
+  }
+}
+
+/**
+ * System prompt guidelines for DeepSeek coding agents per DeepSeek Harness recommendations:
+ * 1. Direct tool invocations with valid JSON parameters.
+ * 2. Unambiguous file edits and code generation without meta-commentary inside tool arguments.
+ * 3. Stable prefix formatting to maximize KV cache hit rate.
+ */
+export function deepSeekAgentGuidelines(): string {
+  return [
+    '# DeepSeek Agent Execution Guidelines',
+    '- Prioritize direct tool calls over explanatory prose when performing code edits.',
+    '- Maintain strict JSON parameter validity when passing file paths and edit chunks.',
+    '- Use step-by-step reasoning in thinking mode before finalizing code modifications.'
+  ].join('\n')
+}
+
 

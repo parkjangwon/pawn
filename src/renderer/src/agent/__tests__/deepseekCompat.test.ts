@@ -14,7 +14,10 @@ import {
   deepSeekUserId,
   shouldEchoReasoningOnWire,
   parseCompatUsage,
-  isDeepSeekRetryableError
+  isDeepSeekRetryableError,
+  deepSeekFimUrl,
+  buildDeepSeekFimBody,
+  deepSeekAgentGuidelines
 } from '../deepseekCompat'
 import { toOpenAIMessages } from '../transcript'
 
@@ -66,6 +69,22 @@ describe('deepseekCompat', () => {
     expect(hard.maxTokens).toBeGreaterThanOrEqual(65_536)
   })
 
+  it('sets temperature=1.0 in thinking mode and temperature=0.0 in non-thinking mode', () => {
+    const thinkExtras = deepSeekChatBodyExtras({
+      modelId: 'deepseek-v4-pro',
+      thinkingEnabled: true
+    })
+    expect(thinkExtras.thinking).toEqual({ type: 'enabled' })
+    expect(thinkExtras.temperature).toBe(1.0)
+
+    const noThinkExtras = deepSeekChatBodyExtras({
+      modelId: 'deepseek-v4-flash',
+      thinkingEnabled: false
+    })
+    expect(noThinkExtras.thinking).toEqual({ type: 'disabled' })
+    expect(noThinkExtras.temperature).toBe(0.0)
+  })
+
   it('builds Anthropic-path extras and chat URL', () => {
     expect(isDeepSeekAnthropicBase('https://api.deepseek.com/anthropic')).toBe(true)
     expect(deepSeekChatCompletionsUrl('https://api.deepseek.com')).toBe(
@@ -78,11 +97,38 @@ describe('deepseekCompat', () => {
       modelId: 'deepseek-v4-pro',
       reasoningEffort: 'high',
       complexity: 'medium',
-      userId: 'pawn_p1'
+      userId: 'pawn_test'
     })
-    expect(anth.thinking).toEqual({ type: 'enabled' })
-    expect(anth.output_config).toEqual({ effort: 'high' })
-    expect(anth.metadata).toEqual({ user_id: 'pawn_p1' })
+    expect(anth).toMatchObject({
+      thinking: { type: 'enabled' },
+      output_config: { effort: 'high' },
+      metadata: { user_id: 'pawn_test' }
+    })
+  })
+
+  it('builds DeepSeek FIM beta URL and request body', () => {
+    expect(deepSeekFimUrl('https://api.deepseek.com')).toBe('https://api.deepseek.com/beta/completions')
+    expect(deepSeekFimUrl('https://api.deepseek.com/v1')).toBe('https://api.deepseek.com/beta/completions')
+
+    const fimBody = buildDeepSeekFimBody({
+      prompt: 'function add(',
+      suffix: ') {\n  return a + b\n}',
+      maxTokens: 1024
+    })
+    expect(fimBody).toEqual({
+      model: 'deepseek-chat',
+      prompt: 'function add(',
+      suffix: ') {\n  return a + b\n}',
+      max_tokens: 1024,
+      temperature: 0.0,
+      stop: []
+    })
+  })
+
+  it('provides DeepSeek agent system prompt guidelines', () => {
+    const guidelines = deepSeekAgentGuidelines()
+    expect(guidelines).toContain('DeepSeek Agent')
+    expect(guidelines).toContain('JSON')
   })
 
   it('detects retryable DeepSeek errors', () => {
@@ -99,7 +145,8 @@ describe('deepseekCompat', () => {
     })
     expect(body).toEqual({
       thinking: { type: 'enabled' },
-      reasoning_effort: 'high'
+      reasoning_effort: 'high',
+      temperature: 1.0
     })
   })
 
@@ -109,7 +156,7 @@ describe('deepseekCompat', () => {
       reasoningEffort: 'auto',
       complexity: 'simple'
     })
-    expect(body).toEqual({ thinking: { type: 'disabled' } })
+    expect(body).toEqual({ thinking: { type: 'disabled' }, temperature: 0.0 })
   })
 
   it('sizes max_tokens by policy', () => {
@@ -133,10 +180,10 @@ describe('deepseekCompat', () => {
     expect(needsReasoningContentEcho('gpt-4o')).toBe(false)
   })
 
-  it('echoes reasoning_content on the wire for tool loops', () => {
-    expect(shouldEchoReasoningOnWire('deepseek-v4-flash', 'chain')).toBe(true)
-    expect(shouldEchoReasoningOnWire('deepseek-v4-flash', '', true)).toBe(true)
-    expect(shouldEchoReasoningOnWire('gpt-4o', 'chain')).toBe(false)
+  it('echoes reasoning_content on multi-turn tool conversations', () => {
+    expect(shouldEchoReasoningOnWire('deepseek-v4-flash', 'thought', true)).toBe(true)
+    expect(shouldEchoReasoningOnWire('deepseek-v4-flash', null, true)).toBe(true)
+    expect(shouldEchoReasoningOnWire('deepseek-v4-flash', null, false)).toBe(false)
 
     const msgs = toOpenAIMessages(
       [
