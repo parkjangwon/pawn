@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
+import { useAppStore } from '../stores/app'
+import { useUsageStore, formatTokens } from '../stores/usage'
 import NavControls from './NavControls'
 
 interface ChatHeaderProps {
@@ -76,6 +78,8 @@ export default function ChatHeader({
   const panelShortcut = formatCombo(bindings['toggle-right-panel'])
   const terminalShortcut = formatCombo(bindings['toggle-terminal'])
   const sidebarShortcut = formatCombo(bindings['toggle-sidebar'])
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const totals = useUsageStore((s) => (activeSessionId ? s.totalsFor(activeSessionId) : null))
 
   const [showScriptMenu, setShowScriptMenu] = useState(false)
   const [showOpenMenu, setShowOpenMenu] = useState(false)
@@ -224,6 +228,21 @@ export default function ChatHeader({
         <div className="chat-header-title-block">
           <span className="chat-header-title">{projectName || t('contextBar.noProject')}</span>
           {gitBranch && <span className="chat-header-branch">• {gitBranch}</span>}
+          {totals && totals.calls > 0 && (
+            <span
+              className="chat-header-cache-badge"
+              title={`Session prompt tokens: ${formatTokens(totals.inputTokens + totals.cacheReadTokens)} (${(totals.cacheHitRate * 100).toFixed(0)}% from cache)\nCache Savings: $${totals.savedCost.toFixed(4)}\nTotal Session Cost: $${totals.cost.toFixed(4)}`}
+            >
+              <span className="cache-badge-bolt" aria-hidden="true">⚡</span>
+              {totals.cacheHitRate > 0 && (
+                <span className="cache-badge-rate">{(totals.cacheHitRate * 100).toFixed(0)}% cache</span>
+              )}
+              {totals.savedCost > 0 && (
+                <span className="cache-badge-saved">+${totals.savedCost.toFixed(2)} saved</span>
+              )}
+              <span className="cache-badge-cost">${totals.cost.toFixed(3)}</span>
+            </span>
+          )}
         </div>
       </div>
 

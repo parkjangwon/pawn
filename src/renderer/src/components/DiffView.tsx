@@ -51,7 +51,19 @@ export default function DiffView({
 
   return (
     <div className={`diff-view ${collapsed ? 'collapsed' : ''}`}>
-      <div className="diff-header" onClick={() => setCollapsed(!collapsed)}>
+      <div
+        className="diff-header"
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        onClick={() => setCollapsed(!collapsed)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setCollapsed(!collapsed)
+          }
+        }}
+      >
         <div className="diff-header-left">
           <svg
             width="12"

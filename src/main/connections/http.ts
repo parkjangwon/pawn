@@ -21,7 +21,8 @@ export async function fetchJson(
   if (!headers.has('Accept')) headers.set('Accept', 'application/json')
 
   const { token: _t, userAgent: _u, ...rest } = init
-  const res = await fetch(url, { ...rest, headers })
+  const signal = rest.signal || AbortSignal.timeout(30_000)
+  const res = await fetch(url, { ...rest, signal, headers })
   const ct = res.headers.get('content-type') || ''
   if (ct.includes('application/json')) {
     const body = await res.json().catch(() => ({}))

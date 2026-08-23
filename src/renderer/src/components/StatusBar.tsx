@@ -1,4 +1,5 @@
 import { useTranslation } from 'react-i18next'
+import { useShallow } from 'zustand/react/shallow'
 import { useProviderStore } from '../stores/provider'
 import { useChatStore } from '../stores/chat'
 import { useAppStore } from '../stores/app'
@@ -8,17 +9,26 @@ import './StatusBar.css'
 
 export default function StatusBar(): React.JSX.Element {
   const { t } = useTranslation()
-  const { providers, models, routingMode, activeModelId } = useProviderStore()
-  const { isStreaming, streamingSessionId, streamingSessionIds } = useChatStore()
+  const providers = useProviderStore((s) => s.providers)
+  const models = useProviderStore((s) => s.models)
+  const routingMode = useProviderStore((s) => s.routingMode)
+  const activeModelId = useProviderStore((s) => s.activeModelId)
+
+  const isStreaming = useChatStore((s) => s.isStreaming)
+  const streamingSessionId = useChatStore((s) => s.streamingSessionId)
+  const concurrentTurns = useChatStore((s) => s.streamingSessionIds.length)
+
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const sessionId = streamingSessionId || activeSessionId || ''
-  const concurrentTurns = streamingSessionIds.length
   const totals = useUsageStore((s) => (sessionId ? s.totalsFor(sessionId) : null))
-  const activeSubs = useSubagentRunsStore((s) =>
-    sessionId ? s.activeForSession(sessionId) : []
+
+  const activeSubs = useSubagentRunsStore(
+    useShallow((s) =>
+      sessionId ? s.runs.filter((r) => r.parentSessionId === sessionId && r.status === 'running') : []
+    )
   )
-  const recentSubs = useSubagentRunsStore((s) =>
-    sessionId ? s.recentForSession(sessionId, 3) : []
+  const hasSubError = useSubagentRunsStore((s) =>
+    sessionId ? s.runs.slice(-5).some((r) => r.parentSessionId === sessionId && r.status === 'error') : false
   )
 
   const enabledProviders = providers.filter((p) => p.enabled)
@@ -29,7 +39,7 @@ export default function StatusBar(): React.JSX.Element {
   const subLabel =
     activeSubs.length > 0
       ? t('statusBar.subagentsRunning', { count: activeSubs.length })
-      : recentSubs.some((r) => r.status === 'error')
+      : hasSubError
         ? t('statusBar.subagentError')
         : null
 

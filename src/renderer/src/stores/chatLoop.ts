@@ -30,7 +30,33 @@ import { SYSTEM_PROMPT } from '../agent/prompts'
 import { fireHook } from '../agent/hooksClient'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildTranscriptText, imageAttachments, type ChatAttachment } from '../utils/attachments'
+import { useStreamingStore } from './streaming'
 import i18n from '../i18n'
+
+export function describeToolAction(tc: ToolCall): string {
+  const name = tc.name
+  const args = tc.arguments || {}
+  const fname = (p?: unknown) => String(p || '').split('/').pop() || 'file'
+  if (name === 'read_file') return `Reading ${fname(args.path)}`
+  if (name === 'edit_file') return `Editing ${fname(args.path)}`
+  if (name === 'write_file') return `Writing ${fname(args.path)}`
+  if (name === 'delete_file') return `Deleting ${fname(args.path)}`
+  if (name === 'list_dir') return `Listing ${fname(args.path || '.')}`
+  if (name === 'grep_search' || name === 'search_files') {
+    const q = String(args.query || args.pattern || '').trim()
+    return q ? `Searching for "${q.slice(0, 24)}"` : 'Searching codebase'
+  }
+  if (name === 'shell_exec') {
+    const cmd = String(args.command || '').trim()
+    return cmd ? `Running: ${cmd.slice(0, 30)}` : 'Running shell command'
+  }
+  if (name === 'run_checks') return 'Running project checks'
+  if (name === 'spawn_agent' || name === 'parallel_agents') return 'Running subagents'
+  if (name === 'web_search' || name === 'web_research') return 'Searching the web'
+  if (name === 'research_report') return 'Compiling research report'
+  if (name.startsWith('browser_')) return 'Navigating browser'
+  return `Running ${name}`
+}
 
 /** Hard ceiling on LLM rounds per user message; runaway agents die here. */
 const MAX_TOOL_ROUNDS = 50
@@ -394,6 +420,7 @@ export async function agentLoop(
       let transientFailures = 0
       let result: LlmResult | null = null
       let decision: RouteDecision | null = null
+      let lastAssistantMsgId: string | null = null
 
       let needsVision = transcriptNeedsVision(entries)
 
@@ -504,6 +531,7 @@ export async function agentLoop(
             }
           }
           lastDecision = decision
+          lastAssistantMsgId = assistantMsgId
           break
         } catch (err) {
           // The message may already hold real, useful text streamed before the
@@ -699,6 +727,11 @@ export async function agentLoop(
 
       // --- Tool execution: safe calls in parallel, risky ones serially so their
       // permission prompts queue up one at a time.
+      if (lastAssistantMsgId && result.toolCalls.length > 0) {
+        const actionSummary = result.toolCalls.map((tc) => describeToolAction(tc)).join(', ')
+        useStreamingStore.getState().setActivity(lastAssistantMsgId, actionSummary)
+      }
+
       const safe: ToolCall[] = []
       const risky: ToolCall[] = []
       for (const tc of result.toolCalls) {
@@ -715,6 +748,10 @@ export async function agentLoop(
       for (const tc of risky) {
         if (signal.aborted) break
         resultsById.set(tc.id, await executeTool(tc, toolCwd, signal, { sessionId, projectId }))
+      }
+
+      if (lastAssistantMsgId) {
+        useStreamingStore.getState().setActivity(lastAssistantMsgId, null)
       }
 
       // Always record tool results for completed work. On abort, still persist

@@ -5,6 +5,7 @@ import { homedir } from 'os'
 import { getPawnDir } from './config'
 
 let db: Database.Database | null = null
+const stmtCache = new Map<string, Database.Statement>()
 
 export function getDb(): Database.Database {
   if (db) return db
@@ -12,15 +13,29 @@ export function getDb(): Database.Database {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   db = new Database(join(dir, 'pawn.db'))
   db.pragma('journal_mode = WAL')
+  db.pragma('synchronous = NORMAL')
   db.pragma('foreign_keys = ON')
+  db.pragma('cache_size = -64000')
+  db.pragma('busy_timeout = 5000')
+  db.pragma('temp_store = MEMORY')
   initSchema(db)
   migrateSchema(db)
   return db
 }
 
 export function closeDb(): void {
+  stmtCache.clear()
   db?.close()
   db = null
+}
+
+export function getStmt(sql: string): Database.Statement {
+  let s = stmtCache.get(sql)
+  if (!s) {
+    s = getDb().prepare(sql)
+    stmtCache.set(sql, s)
+  }
+  return s
 }
 
 
@@ -48,6 +63,7 @@ function migrateSchema(db: Database.Database): void {
       updated_at INTEGER NOT NULL DEFAULT (unixepoch()),
       FOREIGN KEY (session_id) REFERENCES sessions(id) ON DELETE CASCADE
     );
+    CREATE INDEX IF NOT EXISTS idx_messages_session_created ON messages(session_id, created_at);
   `)
 }
 
@@ -114,6 +130,7 @@ function initSchema(db: Database.Database): void {
 
     CREATE INDEX IF NOT EXISTS idx_sessions_project ON sessions(project_id);
     CREATE INDEX IF NOT EXISTS idx_messages_session ON messages(session_id);
+    CREATE INDEX IF NOT EXISTS idx_messages_session_created ON messages(session_id, created_at);
     CREATE INDEX IF NOT EXISTS idx_usage_session ON usage(session_id);
     CREATE INDEX IF NOT EXISTS idx_usage_created ON usage(created_at);
     CREATE INDEX IF NOT EXISTS idx_routines_enabled ON routines(enabled);
@@ -553,9 +570,21 @@ export function loadFullState(): {
   projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number }> }>
 } {
   const projects = getAllProjects()
+  const allSessions = getDb()
+    .prepare('SELECT id, project_id as projectId, title, path, created_at as createdAt FROM sessions ORDER BY created_at DESC')
+    .all() as Array<{ id: string; projectId: string; title: string; path: string; createdAt: number }>
+  const sessionsByProj = new Map<string, Array<{ id: string; title: string; path: string; createdAt: number }>>()
+  for (const s of allSessions) {
+    let arr = sessionsByProj.get(s.projectId)
+    if (!arr) {
+      arr = []
+      sessionsByProj.set(s.projectId, arr)
+    }
+    arr.push({ id: s.id, title: s.title, path: s.path || '', createdAt: s.createdAt })
+  }
   const result = projects.map((p) => ({
     ...p,
-    sessions: getSessionsByProject(p.id)
+    sessions: sessionsByProj.get(p.id) || []
   }))
   return { projects: result }
 }

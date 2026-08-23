@@ -171,7 +171,14 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
           {activeSession && (
             <div className="context-bar">
               <div className="context-chip-wrapper" ref={projectPickerRef}>
-                <button className="context-chip project-chip" onClick={() => { setShowProjectPicker(!showProjectPicker); setShowPermPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }} title={t('contextBar.switchProject')}>
+                <button
+                  type="button"
+                  className="context-chip project-chip"
+                  aria-haspopup="dialog"
+                  aria-expanded={showProjectPicker}
+                  onClick={() => { setShowProjectPicker(!showProjectPicker); setShowPermPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}
+                  title={t('contextBar.switchProject')}
+                >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
                   <span>{activeProject?.name || t('contextBar.noProject')}</span>
                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
@@ -283,7 +290,15 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     </svg>
                     <span>{agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}</span>
                   </button>
-                  <button className={`perm-chip perm-${permissionMode}`} onClick={() => { setShowPermPicker(!showPermPicker); setShowProjectPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}>
+                  <button
+                    type="button"
+                    className={`perm-chip perm-${permissionMode}`}
+                    aria-haspopup="dialog"
+                    aria-expanded={showPermPicker}
+                    onClick={() => { setShowPermPicker(!showPermPicker); setShowProjectPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}
+                    title={permLabels[permissionMode]}
+                    aria-label={permLabels[permissionMode]}
+                  >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                     <span>{permLabels[permissionMode]}</span>
                   </button>
@@ -325,9 +340,13 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                 {((usageTotals && usageTotals.calls > 0) || contextMeter) && (
                   <div className="context-chip-wrapper" ref={usageRef}>
                     <button
+                      type="button"
                       className="context-chip usage-chip"
+                      aria-haspopup="dialog"
+                      aria-expanded={showUsagePopover}
                       onClick={() => { setShowUsagePopover(!showUsagePopover); setShowProjectPicker(false); setShowPermPicker(false); setShowModelPicker(false) }}
-                      title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : undefined}
+                      title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : t('contextBar.usageTitle')}
+                      aria-label={t('contextBar.usageTitle')}
                     >
                       <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
                       {usageTotals && usageTotals.calls > 0 && (
@@ -415,7 +434,15 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   </div>
                 )}
                 <div className="context-chip-wrapper" ref={modelPickerRef}>
-                  <button className="context-chip model-chip-btn" onClick={() => { setShowModelPicker(!showModelPicker); setShowProjectPicker(false); setShowPermPicker(false); setShowUsagePopover(false) }}>
+                  <button
+                    type="button"
+                    className="context-chip model-chip-btn"
+                    aria-haspopup="dialog"
+                    aria-expanded={showModelPicker}
+                    onClick={() => { setShowModelPicker(!showModelPicker); setShowProjectPicker(false); setShowPermPicker(false); setShowUsagePopover(false) }}
+                    title={routingMode === 'auto' ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel')) : currentModelLabel}
+                    aria-label={t('modelPicker.autoLabel')}
+                  >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                     <span>{routingMode === 'auto'
                       ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel'))
@@ -465,6 +492,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         onClick={onSteer}
                         disabled={!input.trim() && attachments.length === 0}
                         title={t('contextBar.sendSteerHint')}
+                        aria-label={t('contextBar.sendSteer')}
                       >
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                           <path d="M12 19V5M5 12l7-7 7 7" />
@@ -472,12 +500,25 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         <span>{t('contextBar.sendSteer')}</span>
                       </button>
                     )}
-                    <button className="stop-btn" onClick={onStop} title={t('chat.stop')}>
+                    <button
+                      type="button"
+                      className="stop-btn"
+                      onClick={onStop}
+                      title={t('chat.stop')}
+                      aria-label={t('chat.stop')}
+                    >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
                     </button>
                   </>
                 ) : (
-                  <button className="send-btn" onClick={() => onSend()} disabled={!input.trim() && attachments.length === 0}>
+                  <button
+                    type="button"
+                    className="send-btn"
+                    onClick={() => onSend()}
+                    disabled={!input.trim() && attachments.length === 0}
+                    title={t('chat.send')}
+                    aria-label={t('chat.send')}
+                  >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                       <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
                     </svg>

@@ -66,7 +66,7 @@ class ErrorBoundary extends Component<Props, State> {
                   borderRadius: 'var(--radius-md)',
                   border: 'none',
                   background: 'var(--accent)',
-                  color: '#fff',
+                  color: 'var(--on-accent)',
                   fontWeight: 500,
                   cursor: 'pointer'
                 }}

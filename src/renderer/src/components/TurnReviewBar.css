@@ -99,6 +99,9 @@
   gap: 4px;
 }
 .turn-review-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -106,14 +109,36 @@
   padding: 2px 8px;
   font-size: 11px;
   cursor: pointer;
-  max-width: 140px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  max-width: 180px;
+  transition: all 0.12s ease;
 }
 .turn-review-chip:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+.turn-review-fname {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.turn-review-stat {
+  font-size: 10px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  padding: 0 3px;
+  border-radius: 4px;
+}
+.turn-review-stat.stat-add {
+  color: #16a34a;
+  background: color-mix(in srgb, #16a34a 12%, transparent);
+}
+.turn-review-stat.stat-del {
+  color: var(--danger, #e55);
+  background: color-mix(in srgb, #e55 12%, transparent);
+}
+.turn-review-stat.stat-mod {
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .turn-review-more {
   color: var(--text-muted);

@@ -269,6 +269,22 @@ export default defineConfig(({ mode }) => {
         host: '127.0.0.1',
         allowedHosts: ['localhost', '127.0.0.1']
       },
+      build: {
+        rollupOptions: {
+          output: {
+            manualChunks(id): string | void {
+              if (id.includes('node_modules')) {
+                if (id.includes('react') || id.includes('zustand')) {
+                  return 'vendor_react'
+                }
+                if (id.includes('markdown') || id.includes('rehype') || id.includes('remark') || id.includes('highlight.js')) {
+                  return 'vendor_markdown'
+                }
+              }
+            }
+          }
+        }
+      },
       plugins: [react(), apiProxyPlugin()]
     }
   }

@@ -15,13 +15,13 @@ describe('contentSearch', () => {
     resetRgCache()
   })
 
-  it('rejects empty query', () => {
-    const r = contentSearch('/tmp', { query: '  ' })
+  it('rejects empty query', async () => {
+    const r = await contentSearch('/tmp', { query: '  ' })
     expect(r.error).toMatch(/query/i)
     expect(r.matches).toEqual([])
   })
 
-  it('finds a symbol via rg or git-grep when available', () => {
+  it('finds a symbol via rg or git-grep when available', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'pawn-csearch-'))
     try {
       mkdirSync(join(dir, 'src'))
@@ -38,7 +38,7 @@ describe('contentSearch', () => {
         // no git — rely on rg only
       }
 
-      const r = contentSearch(dir, { query: 'findMeFast', fixedString: true, maxMatches: 20 })
+      const r = await contentSearch(dir, { query: 'findMeFast', fixedString: true, maxMatches: 20 })
       // If neither engine exists, engine=none is acceptable on bare CI.
       if (r.engine === 'none') {
         expect(resolveRgBin()).toBeNull()

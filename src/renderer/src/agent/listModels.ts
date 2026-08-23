@@ -156,17 +156,20 @@ function num(v: unknown): number | undefined {
 async function doFetch(
   url: string,
   headers: Record<string, string>,
-  isBrowser: boolean
+  isBrowser: boolean,
+  signal?: AbortSignal
 ): Promise<Response> {
+  const effectiveSignal = signal || AbortSignal.timeout(15_000)
   if (isBrowser) {
     // Reuse the same proxy path chat completions use.
     return fetch('/api/proxy', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, method: 'GET', headers })
+      body: JSON.stringify({ url, method: 'GET', headers }),
+      signal: effectiveSignal
     })
   }
-  return fetch(url, { method: 'GET', headers })
+  return fetch(url, { method: 'GET', headers, signal: effectiveSignal })
 }
 
 /**
@@ -183,7 +186,7 @@ export async function fetchProviderModels(
 
   let response: Response
   try {
-    response = await doFetch(url, headers, isBrowser)
+    response = await doFetch(url, headers, isBrowser, opts?.signal)
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err)
     throw new Error(`Could not reach models endpoint: ${msg}`)

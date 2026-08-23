@@ -238,9 +238,14 @@ export function truncateToolResult(
     maxLen = TOOL_RESULT_CAPS[toolName] ?? DEFAULT_TOOL_RESULT_CAP
   }
   if (result.content.length <= maxLen) return result.content
+  const omitted = result.content.length - maxLen
+  // Preserve both head (initial context) and tail (error stack / summary ending)
+  const headLen = Math.floor(maxLen * 0.65)
+  const tailLen = Math.max(0, maxLen - headLen)
+  const head = result.content.slice(0, headLen)
+  const tail = tailLen > 0 ? result.content.slice(result.content.length - tailLen) : ''
   return (
-    result.content.slice(0, maxLen) +
-    `\n...(truncated ${result.content.length - maxLen} chars — re-read with offset/limit or narrow the search)`
+    `${head}\n\n...(truncated ${omitted} chars — re-read with offset/limit or narrow the search)\n\n${tail}`
   )
 }
 

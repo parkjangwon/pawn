@@ -1,4 +1,5 @@
-import { useState, useCallback, useEffect, useLayoutEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useLayoutEffect, useRef, Suspense, lazy } from 'react'
+import { useTranslation } from 'react-i18next'
 import { useEffectiveTheme, useThemeStore } from './stores/theme'
 import { useAppStore } from './stores/app'
 import { useProviderStore } from './stores/provider'
@@ -11,12 +12,13 @@ import { useChangeLedger } from './stores/changeLedger'
 import { readStoredSidebarWidth, persistSidebarWidth, clampSidebarWidth } from './hooks/useSidebarResize'
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
-import AutomationView from './components/AutomationView'
-import Settings from './components/Settings'
 import PermissionDialog from './components/PermissionDialog'
-import CommandPalette from './components/CommandPalette'
 import RightPanel from './components/RightPanel'
 import BottomTerminal from './components/BottomTerminal'
+
+const AutomationView = lazy(() => import('./components/AutomationView'))
+const Settings = lazy(() => import('./components/Settings'))
+const CommandPalette = lazy(() => import('./components/CommandPalette'))
 
 interface NavSnapshot {
   showSettings: boolean
@@ -31,6 +33,7 @@ interface NavState {
 }
 
 export default function App(): React.JSX.Element {
+  const { t } = useTranslation()
   const theme = useEffectiveTheme()
   const [showSettings, setShowSettings] = useState(false)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
@@ -128,7 +131,9 @@ export default function App(): React.JSX.Element {
     else toggleSidebar()
   }, [showSettings, toggleSidebar])
 
-  const { projects, activeProjectId, activeSessionId, startNewChat } = useAppStore()
+  const activeProjectId = useAppStore((s) => s.activeProjectId)
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
+  const startNewChat = useAppStore((s) => s.startNewChat)
 
   // Browser-style back/forward history over the app's top-level "location":
   // which view is showing, which project/session is focused, and whether
@@ -296,7 +301,7 @@ export default function App(): React.JSX.Element {
         </div>
       )}
       <a href="#main-content" className="skip-link">
-        본문으로 건너뛰기
+        {t('common.skipToContent')}
       </a>
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={closeSidebar} role="presentation" />
@@ -322,13 +327,15 @@ export default function App(): React.JSX.Element {
                 onGoForward={goForward}
               />
             ) : (
-              <AutomationView
-                onToggleSidebar={toggleSidebar}
-                canGoBack={canGoBack}
-                canGoForward={canGoForward}
-                onGoBack={goBack}
-                onGoForward={goForward}
-              />
+              <Suspense fallback={null}>
+                <AutomationView
+                  onToggleSidebar={toggleSidebar}
+                  canGoBack={canGoBack}
+                  canGoForward={canGoForward}
+                  onGoBack={goBack}
+                  onGoForward={goForward}
+                />
+              </Suspense>
             )}
           </div>
           <RightPanel />
@@ -336,20 +343,24 @@ export default function App(): React.JSX.Element {
         <BottomTerminal />
       </div>
       {showSettings && (
-        <Settings
-          onSidebarWidthChange={commitSidebarWidth}
-          canGoBack={canGoBack}
-          canGoForward={canGoForward}
-          onGoBack={goBack}
-          onGoForward={goForward}
-        />
+        <Suspense fallback={null}>
+          <Settings
+            onSidebarWidthChange={commitSidebarWidth}
+            canGoBack={canGoBack}
+            canGoForward={canGoForward}
+            onGoBack={goBack}
+            onGoForward={goForward}
+          />
+        </Suspense>
       )}
       {showCommandPalette && (
-        <CommandPalette
-          onClose={() => setShowCommandPalette(false)}
-          onOpenSettings={() => setShowSettings(true)}
-          onMainViewChange={setMainView}
-        />
+        <Suspense fallback={null}>
+          <CommandPalette
+            onClose={() => setShowCommandPalette(false)}
+            onOpenSettings={() => setShowSettings(true)}
+            onMainViewChange={setMainView}
+          />
+        </Suspense>
       )}
       <PermissionDialog />
       {appVersion && <div className="app-version">v{appVersion}</div>}

@@ -11,7 +11,8 @@
     "empty": "아직 아무것도 없습니다",
     "ok": "확인",
     "error": "오류",
-    "noResults": "검색 결과가 없습니다"
+    "noResults": "검색 결과가 없습니다",
+    "skipToContent": "본문으로 건너뛰기"
   },
   "sidebar": {
     "project": "프로젝트",

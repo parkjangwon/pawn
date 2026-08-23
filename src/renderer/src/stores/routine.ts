@@ -181,7 +181,7 @@ export async function runRoutine(routine: Routine): Promise<void> {
         const idle = await waitForIdle(ROUTINE_IDLE_TIMEOUT)
         if (!idle) {
           // Bound hang: stop the stuck turn so later steps / retries can proceed.
-          useChatStore.getState().stopStreaming()
+          useChatStore.getState().stopStreaming(bound.sessionId)
           await waitForIdle(15_000)
           parts.push(`FAIL: automation step timed out after ${ROUTINE_IDLE_TIMEOUT / 60000} minutes`)
           failed = true

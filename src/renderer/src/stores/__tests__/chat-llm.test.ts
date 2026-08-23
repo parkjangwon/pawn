@@ -177,13 +177,13 @@ describe('fetchWithRetry failure classification', () => {
   })
 
   it('retries 5xx and marks the final error as transient', async () => {
-    vi.useFakeTimers()
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     const fetchMock = vi.mocked(fetch)
     fetchMock.mockResolvedValue(new Response('overloaded', { status: 503 }))
 
     const promise = fetchWithRetry('https://api.example.com', {}, {}, false, new AbortController().signal)
     const assertion = expect(promise).rejects.toMatchObject({ transient: true })
-    await vi.advanceTimersByTimeAsync(5000)
+    await vi.advanceTimersByTimeAsync(15000)
     await assertion
     expect(fetchMock).toHaveBeenCalledTimes(3)
     vi.useRealTimers()

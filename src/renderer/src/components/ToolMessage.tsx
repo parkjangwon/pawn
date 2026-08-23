@@ -84,7 +84,19 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
     <div
       className={`tool-message ${isError ? 'tool-error' : ''} ${isRunning ? 'tool-running' : ''} ${structureWarn ? 'tool-structure-warn' : ''} ${isSubagentTool ? 'tool-subagent' : ''}`}
     >
-      <div className="tool-message-header" onClick={() => setCollapsed(!collapsed)}>
+      <div
+        className="tool-message-header"
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        onClick={() => setCollapsed(!collapsed)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setCollapsed(!collapsed)
+          }
+        }}
+      >
         <svg
           width="10"
           height="10"

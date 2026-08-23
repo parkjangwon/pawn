@@ -11,7 +11,8 @@
     "empty": "まだ何もありません",
     "ok": "OK",
     "error": "エラー",
-    "noResults": "検索結果が見つかりません"
+    "noResults": "検索結果が見つかりません",
+    "skipToContent": "本文へスキップ"
   },
   "sidebar": {
     "project": "プロジェクト",

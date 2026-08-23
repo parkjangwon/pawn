@@ -11,7 +11,8 @@
     "empty": "Nothing here yet",
     "ok": "OK",
     "error": "Error",
-    "noResults": "No results found"
+    "noResults": "No results found",
+    "skipToContent": "Skip to content"
   },
   "sidebar": {
     "project": "Project",

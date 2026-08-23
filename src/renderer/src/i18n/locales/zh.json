@@ -11,7 +11,8 @@
     "empty": "暂无内容",
     "ok": "确定",
     "error": "错误",
-    "noResults": "未找到结果"
+    "noResults": "未找到结果",
+    "skipToContent": "跳至主要内容"
   },
   "sidebar": {
     "project": "项目",

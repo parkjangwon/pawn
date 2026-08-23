@@ -248,10 +248,10 @@ export function verifyEditedSource(path: string, content: string): EditVerifyRes
 }
 
 export function formatVerifyNote(path: string, result: EditVerifyResult): string {
-  if (result.ok) return ''
+  if (result.ok || !result.warnings.length) return ''
   return (
-    `\n\n[structure_check: warnings for ${path}]\n` +
+    `\n\n[structure_check: syntax warnings for ${path}]\n` +
     result.warnings.map((w) => `- ${w}`).join('\n') +
-    `\nRe-read the file and fix before finishing.`
+    `\n(Action required: The file was saved, but potential syntax/structure defects were detected above. Please review and fix these issues in your next edit tool call before concluding the turn.)`
   )
 }

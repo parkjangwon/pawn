@@ -105,18 +105,39 @@ export function registerTerminalIpc(): void {
       terminals.set(id, pty)
       terminalBuffers.set(id, '')
       clearDeadTimer(id)
-      pty.onData((data) => {
-        appendBuffer(id, data)
+
+      let pendingData = ''
+      let flushTimer: NodeJS.Timeout | null = null
+
+      const flush = (): void => {
+        if (flushTimer) {
+          clearTimeout(flushTimer)
+          flushTimer = null
+        }
+        if (!pendingData) return
+        const chunk = pendingData
+        pendingData = ''
         for (const win of BrowserWindow.getAllWindows()) {
           if (win.isDestroyed()) continue
           try {
-            win.webContents.send('terminal:data', id, data)
+            win.webContents.send('terminal:data', id, chunk)
           } catch {
             /* ignore */
           }
         }
+      }
+
+      pty.onData((data) => {
+        appendBuffer(id, data)
+        pendingData += data
+        if (pendingData.length >= 4096) {
+          flush()
+        } else if (!flushTimer) {
+          flushTimer = setTimeout(flush, 16)
+        }
       })
       pty.onExit(() => {
+        flush()
         terminals.delete(id)
         // Keep buffer briefly so agent can still read after exit.
         scheduleDeadBufferDrop(id)

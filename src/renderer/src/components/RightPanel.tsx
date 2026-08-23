@@ -64,8 +64,8 @@ export default function RightPanel(): React.JSX.Element | null {
     document.body.classList.remove('resizing-right-panel')
   }, [])
 
-  const { projects, activeProjectId, activeSessionId } = useAppStore()
-  const activeProject = projects.find((p) => p.id === activeProjectId)
+  const activeProject = useAppStore((s) => s.projects.find((p) => p.id === s.activeProjectId))
+  const activeSessionId = useAppStore((s) => s.activeSessionId)
   const projectPath = getEffectiveProjectPath(activeProject, activeSessionId)
 
   // Apply panelWidth from state to DOM. The opening render starts at width 0 so

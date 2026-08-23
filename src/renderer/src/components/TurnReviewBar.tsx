@@ -12,6 +12,26 @@ function relativeTime(ts: number, t: (k: string, o?: Record<string, unknown>) =>
   return t('turnReview.daysAgo', { count: Math.floor(sec / 86400) })
 }
 
+function computeChangeStats(c: { before?: string | null; after?: string; op: string }): { label: string; kind: 'add' | 'del' | 'mod' } | null {
+  if (c.op === 'delete') {
+    const lines = c.before ? c.before.split('\n').length : 0
+    return { label: `-${lines}`, kind: 'del' }
+  }
+  if (c.op === 'write' && c.before == null) {
+    const lines = c.after ? c.after.split('\n').length : 0
+    return { label: `+${lines}`, kind: 'add' }
+  }
+  if (c.before != null && c.after != null) {
+    const oldLines = c.before.split('\n').length
+    const newLines = c.after.split('\n').length
+    const diff = newLines - oldLines
+    if (diff > 0) return { label: `+${diff}`, kind: 'add' }
+    if (diff < 0) return { label: `-${Math.abs(diff)}`, kind: 'del' }
+    return { label: `~`, kind: 'mod' }
+  }
+  return null
+}
+
 export default function TurnReviewBar({ sessionId }: { sessionId: string | null }): React.JSX.Element | null {
   const { t } = useTranslation()
   const turns = useChangeLedger((s) => s.turns)
@@ -52,20 +72,33 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
         </span>
         <span className="turn-review-count">{t('turnReview.files', { count: applied.length })}</span>
         <div className="turn-review-files">
-          {files.map((c) => (
-            <button
-              key={c.path}
-              type="button"
-              className="turn-review-chip"
-              title={c.path}
-              onClick={() => openFileInPanel(c.path)}
-            >
-              <span className="turn-review-op" data-op={c.op}>
-                {c.op === 'delete' ? '−' : c.op === 'write' && c.before == null ? '+' : '~'}
-              </span>
-              {(c.rel || c.path).split('/').pop()}
-            </button>
-          ))}
+          {files.map((c) => {
+            const stats = computeChangeStats(c)
+            return (
+              <button
+                key={c.path}
+                type="button"
+                className="turn-review-chip"
+                title={`${c.path} (Click to inspect diff)`}
+                onClick={() => {
+                  openFileInPanel(c.path)
+                  try {
+                    ;(window as unknown as { __openRightPanelTab?: (id: string) => void }).__openRightPanelTab?.('diff')
+                  } catch { /* ignore */ }
+                }}
+              >
+                <span className="turn-review-op" data-op={c.op}>
+                  {c.op === 'delete' ? '−' : c.op === 'write' && c.before == null ? '+' : '~'}
+                </span>
+                <span className="turn-review-fname">{(c.rel || c.path).split('/').pop()}</span>
+                {stats && (
+                  <span className={`turn-review-stat stat-${stats.kind}`}>
+                    {stats.label}
+                  </span>
+                )}
+              </button>
+            )
+          })}
           {applied.length > 8 && (
             <button
               type="button"

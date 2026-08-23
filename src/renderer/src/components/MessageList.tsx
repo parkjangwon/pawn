@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react'
+import React, { memo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import MarkdownRenderer from './MarkdownRenderer'
 import ToolMessage from './ToolMessage'
@@ -7,6 +7,26 @@ import { useStreamingStore } from '../stores/streaming'
 import { useChatStore } from '../stores/chat'
 import { stripDisplayImages } from '../utils/attachments'
 import type { Message } from '../stores/app'
+
+class MessageErrorBoundary extends React.Component<
+  { children: React.ReactNode },
+  { hasError: boolean; error: Error | null }
+> {
+  state = { hasError: false, error: null as Error | null }
+  static getDerivedStateFromError(error: Error): { hasError: boolean; error: Error } {
+    return { hasError: true, error }
+  }
+  render(): React.ReactNode {
+    if (this.state.hasError) {
+      return (
+        <div className="message message-render-error" style={{ opacity: 0.8, fontSize: '12px', padding: '8px 12px' }}>
+          <span>⚠ Message content failed to render ({this.state.error?.message || 'render error'})</span>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 
 interface MessageListProps {
   messages: Message[]
@@ -126,6 +146,7 @@ const MessageRow = memo(function MessageRow({
   const [draft, setDraft] = useState('')
   const live = useStreamingStore((s) => s.content[msg.id])
   const liveThinking = useStreamingStore((s) => s.thinking[msg.id])
+  const liveActivity = useStreamingStore((s) => s.activity[msg.id])
   const content = live ?? msg.content
   const thinking = liveThinking ?? msg.thinking
   const isLive = live !== undefined
@@ -162,6 +183,12 @@ const MessageRow = memo(function MessageRow({
       <div className="message-body">
         {msg.role === 'assistant' && thinking ? (
           <ThinkingBlock text={thinking} live={Boolean(liveThinking)} />
+        ) : null}
+        {msg.role === 'assistant' && liveActivity ? (
+          <div className="message-activity live one-line">
+            <span className="message-thinking-spinner" aria-hidden="true" />
+            <span className="message-activity-text">{liveActivity}</span>
+          </div>
         ) : null}
         {editing && msg.role === 'user' ? (
           <div className="message-edit">
@@ -295,15 +322,16 @@ export default function MessageList({
         </button>
       )}
       {visible.map((msg) => (
-        <MessageRow
-          key={msg.id}
-          msg={msg}
-          animateIn={isFresh(msg)}
-          isStreamingTail={busy && msg.id === lastId && msg.role === 'assistant'}
-          projectId={projectId}
-          sessionId={sessionId}
-          canAct={!busy && Boolean(projectId && sessionId)}
-        />
+        <MessageErrorBoundary key={msg.id}>
+          <MessageRow
+            msg={msg}
+            animateIn={isFresh(msg)}
+            isStreamingTail={busy && msg.id === lastId && msg.role === 'assistant'}
+            projectId={projectId}
+            sessionId={sessionId}
+            canAct={!busy && Boolean(projectId && sessionId)}
+          />
+        </MessageErrorBoundary>
       ))}
       {busy && lastRole !== 'assistant' && (
         <div className="message assistant message-enter">

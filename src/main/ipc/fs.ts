@@ -1,7 +1,7 @@
 import { app, ipcMain } from 'electron'
 import { handleTrusted } from './trust'
 import { join, relative } from 'path'
-import { readFileSync, writeFileSync, readdirSync, statSync, existsSync, mkdirSync, unlinkSync, rmdirSync } from 'fs'
+import { readFile, writeFile, readdir, stat, mkdir, unlink, rmdir, access } from 'fs/promises'
 import { cp, rm } from 'fs/promises'
 import { readSpreadsheet } from '../spreadsheet'
 import { contentSearch, formatContentMatches, type ContentSearchOpts } from '../contentSearch'
@@ -191,16 +191,15 @@ function isGitIgnored(relPath: string, isDirectory: boolean, rules: IgnoreRule[]
   return ignored
 }
 
-function loadIgnoreRules(rootPath: string): IgnoreRule[] {
+async function loadIgnoreRules(rootPath: string): Promise<IgnoreRule[]> {
   const rules: IgnoreRule[] = []
   for (const name of ['.gitignore', '.pawnignore']) {
     try {
       const p = join(rootPath, name)
-      if (existsSync(p)) {
-        rules.push(...parseGitignore(readFileSync(p, 'utf-8')))
-      }
+      const text = await readFile(p, 'utf-8')
+      rules.push(...parseGitignore(text))
     } catch {
-      /* ignore */
+      /* ignore — file doesn't exist */
     }
   }
   return rules
@@ -217,13 +216,13 @@ function shouldSkipEntry(name: string, isDirectory: boolean): boolean {
   return true
 }
 
-function walkTree(rootPath: string): Array<{ name: string; path: string; isDirectory: boolean }> {
+async function walkTree(rootPath: string): Promise<Array<{ name: string; path: string; isDirectory: boolean }>> {
   const results: Array<{ name: string; path: string; isDirectory: boolean }> = []
-  const ignoreRules = loadIgnoreRules(rootPath)
-  const walk = (dir: string, depth: number): void => {
+  const ignoreRules = await loadIgnoreRules(rootPath)
+  const walk = async (dir: string, depth: number): Promise<void> => {
     if (depth > WALK_MAX_DEPTH || results.length >= WALK_MAX) return
     let entries
-    try { entries = readdirSync(dir, { withFileTypes: true }) } catch { return }
+    try { entries = await readdir(dir, { withFileTypes: true }) } catch { return }
     for (const e of entries) {
       if (results.length >= WALK_MAX) return
       const isDir = e.isDirectory()
@@ -238,17 +237,17 @@ function walkTree(rootPath: string): Array<{ name: string; path: string; isDirec
       if (ignoreRules.length > 0 && isGitIgnored(rel, isDir, ignoreRules)) continue
       if (isDir) {
         results.push({ name: e.name, path: full, isDirectory: true })
-        walk(full, depth + 1)
+        await walk(full, depth + 1)
       } else {
         results.push({ name: e.name, path: full, isDirectory: false })
       }
     }
   }
-  walk(rootPath, 0)
+  await walk(rootPath, 0)
   return results
 }
 
-function walkTreeCached(rootPath: string): Array<{ name: string; path: string; isDirectory: boolean }> {
+async function walkTreeCached(rootPath: string): Promise<Array<{ name: string; path: string; isDirectory: boolean }>> {
   const hit = walkCache.get(rootPath)
   if (hit && Date.now() - hit.at < WALK_CACHE_TTL_MS) {
     walkCache.delete(rootPath)
@@ -256,7 +255,7 @@ function walkTreeCached(rootPath: string): Array<{ name: string; path: string; i
     return hit.result
   }
   if (hit) walkCache.delete(rootPath)
-  const result = walkTree(rootPath)
+  const result = await walkTree(rootPath)
   walkCache.set(rootPath, { at: Date.now(), result })
   if (walkCache.size > WALK_CACHE_MAX) {
     walkCache.forEach((_v, k) => {
@@ -272,11 +271,11 @@ export function registerFsIpc(): void {
     const path = safePath(filePath)
     if (!path) return { error: 'Invalid path' }
     try {
-      const s = statSync(path)
+      const s = await stat(path)
       if (s.size > MAX_READ_BYTES) {
         return { error: `File too large to read safely (${s.size} bytes, max ${MAX_READ_BYTES})` }
       }
-      return readFileSync(path, 'utf-8')
+      return await readFile(path, 'utf-8')
     } catch (err) {
       return { error: String(err) }
     }
@@ -292,7 +291,7 @@ export function registerFsIpc(): void {
       const p = safePath(raw)
       if (!p) continue
       try {
-        const s = statSync(p)
+        const s = await stat(p)
         if (s.size > MAX_READ_BYTES) {
           out.push({ path: p, error: `File too large to read safely (${s.size} bytes)` })
           continue
@@ -302,7 +301,7 @@ export function registerFsIpc(): void {
           continue
         }
         totalBytes += s.size
-        out.push({ path: p, content: readFileSync(p, 'utf-8') })
+        out.push({ path: p, content: await readFile(p, 'utf-8') })
       } catch (err) {
         out.push({ path: p, error: String(err) })
       }
@@ -320,8 +319,8 @@ export function registerFsIpc(): void {
     try {
       // Ensure parent directory exists (agents often write new nested files).
       const parent = join(path, '..')
-      if (!existsSync(parent)) mkdirSync(parent, { recursive: true })
-      writeFileSync(path, content, 'utf-8')
+      try { await access(parent) } catch { await mkdir(parent, { recursive: true }) }
+      await writeFile(path, content, 'utf-8')
       walkCache.clear()
       return { ok: true }
     } catch (err) {
@@ -333,7 +332,7 @@ export function registerFsIpc(): void {
     const path = safePath(dirPath)
     if (!path) return { error: 'Invalid path' }
     try {
-      const entries = readdirSync(path, { withFileTypes: true })
+      const entries = await readdir(path, { withFileTypes: true })
       return entries.map((e) => ({
         name: e.name,
         isDirectory: e.isDirectory(),
@@ -348,7 +347,7 @@ export function registerFsIpc(): void {
     const path = safePath(rootPath)
     if (!path) return { error: 'Invalid path' }
     try {
-      return walkTreeCached(path)
+      return await walkTreeCached(path)
     } catch (err) {
       return { error: String(err) }
     }
@@ -358,7 +357,7 @@ export function registerFsIpc(): void {
     const path = safePath(filePath)
     if (!path) return { error: 'Invalid path' }
     try {
-      const s = statSync(path)
+      const s = await stat(path)
       return { size: s.size, isFile: s.isFile(), isDirectory: s.isDirectory(), mtime: s.mtimeMs }
     } catch (err) {
       return { error: String(err) }
@@ -369,7 +368,7 @@ export function registerFsIpc(): void {
     const path = safePath(dirPath)
     if (!path) return { error: 'Invalid path' }
     try {
-      mkdirSync(path, { recursive: true })
+      await mkdir(path, { recursive: true })
       walkCache.clear()
       return { ok: true }
     } catch (err) {
@@ -383,17 +382,17 @@ export function registerFsIpc(): void {
     const path = safePath(filePath)
     if (!path) return { error: 'Invalid path' }
     try {
-      const s = statSync(path)
+      const s = await stat(path)
       if (s.isDirectory()) {
         try {
-          rmdirSync(path)
+          await rmdir(path)
         } catch {
           return {
             error: `Directory not empty: ${path}. Remove contents first, or use shell_exec carefully for recursive delete.`
           }
         }
       } else {
-        unlinkSync(path)
+        await unlink(path)
       }
       walkCache.clear()
       return { ok: true }
@@ -405,7 +404,12 @@ export function registerFsIpc(): void {
   handleTrusted('fs:exists', async (_, filePath: string) => {
     const path = safePath(filePath)
     if (!path) return false
-    return existsSync(path)
+    try {
+      await access(path)
+      return true
+    } catch {
+      return false
+    }
   })
 
   handleTrusted('fs:homeDir', async () => {
@@ -484,7 +488,7 @@ export function registerFsIpc(): void {
       return { engine: 'none' as const, matches: [], truncated: false, error: 'Invalid root path' }
     }
     try {
-      const result = contentSearch(rootPath.trim(), opts || { query: '' })
+      const result = await contentSearch(rootPath.trim(), opts || { query: '' })
       return {
         ...result,
         text: formatContentMatches(result, rootPath.trim(), String(opts?.query || ''))

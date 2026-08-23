@@ -1,4 +1,5 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron'
+import { isTrustedSender } from './trust'
 import {
   getMemorySettings,
   setMemorySettings,
@@ -27,6 +28,7 @@ function handleMemory(
   onError?: (err: unknown) => unknown
 ): void {
   ipcMain.handle(channel, async (event, ...args) => {
+    if (!isTrustedSender(event)) return { ok: false, error: 'Untrusted sender' }
     try {
       return await fn(event, ...args)
     } catch (err) {

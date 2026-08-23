@@ -2,8 +2,9 @@
  * Fast local content search for agent tools.
  * Prefer ripgrep, then git-grep. No network, no paid deps.
  */
-import { spawnSync } from 'child_process'
+import { spawnSync, execFile } from 'child_process'
 import { existsSync } from 'fs'
+import { access } from 'fs/promises'
 import { join } from 'path'
 
 export type ContentSearchOpts = {
@@ -102,6 +103,31 @@ function run(bin: string, args: string[], cwd: string, timeoutMs: number): { ok:
   }
 }
 
+/** Non-blocking version of run() using child_process.execFile */
+function runAsync(bin: string, args: string[], cwd: string, timeoutMs: number): Promise<{ ok: boolean; stdout: string; stderr: string; status: number | null }> {
+  return new Promise((resolve) => {
+    try {
+      const child = execFile(bin, args, {
+        cwd,
+        encoding: 'utf8',
+        timeout: timeoutMs,
+        maxBuffer: 8 * 1024 * 1024,
+        windowsHide: true,
+        env: { ...process.env, LANG: 'C' }
+      }, (error, stdout, stderr) => {
+        resolve({
+          ok: error == null || (child.exitCode != null && child.exitCode <= 1),
+          stdout: typeof stdout === 'string' ? stdout : '',
+          stderr: typeof stderr === 'string' ? stderr : '',
+          status: child.exitCode
+        })
+      })
+    } catch (err) {
+      resolve({ ok: false, stdout: '', stderr: String(err), status: null })
+    }
+  })
+}
+
 function parseRgJson(stdout: string, maxMatches: number): { matches: ContentMatch[]; truncated: boolean } {
   const matches: ContentMatch[] = []
   let truncated = false
@@ -137,7 +163,7 @@ function parseRgJson(stdout: string, maxMatches: number): { matches: ContentMatc
   return { matches, truncated }
 }
 
-function searchWithRg(root: string, opts: ContentSearchOpts, timeoutMs: number): ContentSearchResult | null {
+async function searchWithRg(root: string, opts: ContentSearchOpts, timeoutMs: number): Promise<ContentSearchResult | null> {
   const bin = resolveRgBin()
   if (!bin) return null
   const maxMatches = clampMax(opts.maxMatches, 80)
@@ -164,7 +190,7 @@ function searchWithRg(root: string, opts: ContentSearchOpts, timeoutMs: number):
   args.push('--max-count', String(Math.min(maxMatches, 50)))
   args.push('--', opts.query, '.')
 
-  const r = run(bin, args, root, timeoutMs)
+  const r = await runAsync(bin, args, root, timeoutMs)
   // rg exits 1 when no matches; 2 on error
   if (r.status === 2 && !r.stdout) {
     return { engine: 'rg', matches: [], truncated: false, error: r.stderr.slice(0, 300) || 'rg failed' }
@@ -177,8 +203,8 @@ function searchWithRg(root: string, opts: ContentSearchOpts, timeoutMs: number):
 }
 
 /** git-grep: works in repos without rg; respects .gitignore. */
-function searchWithGitGrep(root: string, opts: ContentSearchOpts, timeoutMs: number): ContentSearchResult | null {
-  if (!existsSync(join(root, '.git'))) return null
+async function searchWithGitGrep(root: string, opts: ContentSearchOpts, timeoutMs: number): Promise<ContentSearchResult | null> {
+  try { await access(join(root, '.git')) } catch { return null }
   const maxMatches = clampMax(opts.maxMatches, 80)
   const args = ['-C', root, 'grep', '-n', '-I', '--no-color']
   if (opts.caseInsensitive) args.push('-i')
@@ -188,7 +214,7 @@ function searchWithGitGrep(root: string, opts: ContentSearchOpts, timeoutMs: num
     args.push('--', opts.glob)
   }
 
-  const r = run('git', args, root, timeoutMs)
+  const r = await runAsync('git', args, root, timeoutMs)
   // 0 = matches, 1 = no matches, other = error
   if (r.status != null && r.status > 1) {
     return null
@@ -220,7 +246,7 @@ function searchWithGitGrep(root: string, opts: ContentSearchOpts, timeoutMs: num
  * Search file contents under root. Never throws.
  * engine=none means caller should use the JS walk fallback.
  */
-export function contentSearch(root: string, opts: ContentSearchOpts): ContentSearchResult {
+export async function contentSearch(root: string, opts: ContentSearchOpts): Promise<ContentSearchResult> {
   const q = (opts.query || '').trim()
   if (!q) {
     return { engine: 'none', matches: [], truncated: false, error: 'query is required' }
@@ -229,15 +255,18 @@ export function contentSearch(root: string, opts: ContentSearchOpts): ContentSea
     return { engine: 'none', matches: [], truncated: false, error: 'Pattern too long (max 512 chars)' }
   }
   const rootPath = root.replace(/[/\\]+$/, '')
-  if (!rootPath || !existsSync(rootPath)) {
+  if (!rootPath) {
+    return { engine: 'none', matches: [], truncated: false, error: 'Invalid root path' }
+  }
+  try { await access(rootPath) } catch {
     return { engine: 'none', matches: [], truncated: false, error: 'Invalid root path' }
   }
   const timeoutMs = Math.min(Math.max(Number(opts.timeoutMs) || 12_000, 1000), 60_000)
 
-  const rg = searchWithRg(rootPath, opts, timeoutMs)
+  const rg = await searchWithRg(rootPath, opts, timeoutMs)
   if (rg && rg.engine === 'rg') return rg
 
-  const git = searchWithGitGrep(rootPath, opts, timeoutMs)
+  const git = await searchWithGitGrep(rootPath, opts, timeoutMs)
   if (git) return git
 
   return { engine: 'none', matches: [], truncated: false }

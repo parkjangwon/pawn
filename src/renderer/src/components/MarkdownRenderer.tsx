@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState } from 'react'
+import React, { memo, useCallback, useEffect, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
@@ -57,77 +57,79 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
     setLightbox({ src, alt })
   }, [])
 
+  const components = useMemo(() => ({
+    a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+      const safe = safeHref(href)
+      if (!safe) {
+        // Never render javascript:/data: links; the renderer holds
+        // privileged window.api access.
+        return <span>{children}</span>
+      }
+      // Local file links reveal the file in Finder/Explorer instead of
+      // navigating the renderer to a file:// URL.
+      if (safe.startsWith('file://')) {
+        const localPath = decodeFilePath(safe)
+        return (
+          <a
+            className="md-file-link"
+            href={safe}
+            title={localPath}
+            onClick={(e) => {
+              e.preventDefault()
+              e.stopPropagation()
+              void Promise.resolve(window.api?.workspace?.reveal?.(localPath)).catch(() => {})
+            }}
+          >
+            {children}
+          </a>
+        )
+      }
+      return <a href={safe} target="_blank" rel="noopener noreferrer">{children}</a>
+    },
+    img: ({ src, alt }: { src?: string; alt?: string }) => {
+      if (!src) return null
+      const label = alt || t('chat.attachedImage')
+      return (
+        <img
+          className="md-inline-image"
+          src={src}
+          alt={label}
+          loading="lazy"
+          title={t('chat.imageExpandHint')}
+          role="button"
+          tabIndex={0}
+          onDoubleClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            openLightbox(src, label)
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              openLightbox(src, label)
+            }
+          }}
+        />
+      )
+    },
+    pre: ({ children }: { children?: React.ReactNode }) => (
+      <div className="code-block-wrapper">
+        <div className="code-block-header">
+          <span className="code-lang">{extractLang(children)}</span>
+          <button className="copy-btn" onClick={() => copyCode(children)}>Copy</button>
+        </div>
+        <pre>{children}</pre>
+      </div>
+    )
+  }), [t, openLightbox])
+
   return (
     <div className="markdown-body">
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[[rehypeHighlight, { languages: HIGHLIGHT_LANGUAGES }]]}
         urlTransform={safeUrlTransform}
-        components={{
-          a: ({ href, children }) => {
-            const safe = safeHref(href)
-            if (!safe) {
-              // Never render javascript:/data: links; the renderer holds
-              // privileged window.api access.
-              return <span>{children}</span>
-            }
-            // Local file links reveal the file in Finder/Explorer instead of
-            // navigating the renderer to a file:// URL.
-            if (safe.startsWith('file://')) {
-              const localPath = decodeFilePath(safe)
-              return (
-                <a
-                  className="md-file-link"
-                  href={safe}
-                  title={localPath}
-                  onClick={(e) => {
-                    e.preventDefault()
-                    e.stopPropagation()
-                    void Promise.resolve(window.api?.workspace?.reveal?.(localPath)).catch(() => {})
-                  }}
-                >
-                  {children}
-                </a>
-              )
-            }
-            return <a href={safe} target="_blank" rel="noopener noreferrer">{children}</a>
-          },
-          img: ({ src, alt }) => {
-            if (!src) return null
-            const label = alt || t('chat.attachedImage')
-            return (
-              <img
-                className="md-inline-image"
-                src={src}
-                alt={label}
-                loading="lazy"
-                title={t('chat.imageExpandHint')}
-                role="button"
-                tabIndex={0}
-                onDoubleClick={(e) => {
-                  e.preventDefault()
-                  e.stopPropagation()
-                  openLightbox(src, label)
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    openLightbox(src, label)
-                  }
-                }}
-              />
-            )
-          },
-          pre: ({ children }) => (
-            <div className="code-block-wrapper">
-              <div className="code-block-header">
-                <span className="code-lang">{extractLang(children)}</span>
-                <button className="copy-btn" onClick={() => copyCode(children)}>Copy</button>
-              </div>
-              <pre>{children}</pre>
-            </div>
-          )
-        }}
+        components={components}
       >
         {content}
       </ReactMarkdown>
