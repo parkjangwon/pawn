@@ -16,7 +16,7 @@ import PlanStrip from './PlanStrip'
 import TurnReviewBar from './TurnReviewBar'
 import ConfirmDialog from './ConfirmDialog'
 import { filterEnabledSkills } from '../utils/skillVisibility'
-import { MAX_ATTACHMENTS, type ChatAttachment } from '../utils/attachments'
+import { MAX_ATTACHMENTS, MAX_IMAGE_BYTES, MAX_TEXT_BYTES, truncateText, type ChatAttachment } from '../utils/attachments'
 import {
   collectUserPrompts,
   isCaretOnFirstLine,
@@ -139,12 +139,75 @@ export default function ChatArea({
     : Math.min(startIndex, messages.length)
   const streamingTail = useStreamingStore((s) => (lastMessage ? s.content[lastMessage.id] : undefined))
 
+  const [isDraggingOver, setIsDraggingOver] = useState(false)
+  const dragCounter = useRef(0)
+
   const addAttachment = (a: ChatAttachment): void => {
     setAttachments((prev) => (prev.length >= MAX_ATTACHMENTS ? prev : [...prev, a]))
   }
 
   const removeAttachment = (id: string): void => {
     setAttachments((prev) => prev.filter((a) => a.id !== id))
+  }
+
+  const handleDragEnter = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current += 1
+    if (e.dataTransfer.types.includes('Files')) {
+      setIsDraggingOver(true)
+    }
+  }
+
+  const handleDragLeave = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current -= 1
+    if (dragCounter.current <= 0) {
+      dragCounter.current = 0
+      setIsDraggingOver(false)
+    }
+  }
+
+  const handleDragOver = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+  }
+
+  const handleDrop = (e: React.DragEvent): void => {
+    e.preventDefault()
+    e.stopPropagation()
+    dragCounter.current = 0
+    setIsDraggingOver(false)
+    const files = Array.from(e.dataTransfer.files || [])
+    for (const file of files.slice(0, MAX_ATTACHMENTS)) {
+      if (file.type.startsWith('image/')) {
+        if (file.size > MAX_IMAGE_BYTES) continue
+        const reader = new FileReader()
+        reader.onload = () => {
+          if (typeof reader.result === 'string') {
+            addAttachment({
+              id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+              name: file.name || t('chat.attachedImage'),
+              kind: 'image',
+              dataUrl: reader.result,
+              bytes: file.size
+            })
+          }
+        }
+        reader.readAsDataURL(file)
+      } else if (file.size <= MAX_TEXT_BYTES) {
+        void file.text().then((content) => {
+          addAttachment({
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            name: file.name || t('chat.attachedText'),
+            kind: 'text',
+            content: truncateText(content).text,
+            bytes: file.size
+          })
+        }).catch(() => {})
+      }
+    }
   }
 
   // Detect git branch
@@ -768,7 +831,26 @@ export default function ChatArea({
     (loadingSessions.has(activeSessionId) || !loadedSessions.has(activeSessionId))
 
   return (
-    <main className="chat-area">
+    <main
+      className="chat-area"
+      onDragEnter={handleDragEnter}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      {isDraggingOver && (
+        <div className="chat-drop-overlay">
+          <div className="chat-drop-card">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="17 8 12 3 7 8" />
+              <line x1="12" y1="3" x2="12" y2="15" />
+            </svg>
+            <span className="chat-drop-title">{t('chat.dropFilesTitle')}</span>
+            <span className="chat-drop-desc">{t('chat.dropFilesDesc')}</span>
+          </div>
+        </div>
+      )}
       <ChatHeader
         onToggleSidebar={onToggleSidebar}
         projectName={activeProject?.name}

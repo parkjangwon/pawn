@@ -48,7 +48,7 @@
     "noSearchResults": "一致するセッションがありません"
   },
   "chat": {
-    "placeholder": "メッセージを入力...",
+    "placeholder": "メッセージを入力... (/ コマンド、@ ファイル、ドロップで添付)",
     "welcome": "お手伝いできることはありますか？",
     "welcomeSub": "コーディング、ブラウジング、自動化 — すべてここで。",
     "send": "送信",
@@ -149,7 +149,9 @@
     "thinkingLive": "思考中…",
     "edit": "編集",
     "regenerate": "再生成",
-    "saveAndResend": "保存して再送"
+    "saveAndResend": "保存して再送",
+    "dropFilesTitle": "ファイル・画像を添付",
+    "dropFilesDesc": "ここにドロップして会話コンテキストに添付します"
   },
   "automation": {
     "title": "自動化",
@@ -365,7 +367,9 @@
       "syncHint": "GET {baseUrl}/models から最新カタログを取得してマージします",
       "syncOk": "{{total}} モデル同期（+{{added}} 追加、{{updated}} 更新）",
       "syncFail": "同期失敗: {{error}}",
-      "syncSeedOnly": "シードモデルを維持（ライブ同期失敗: {{error}}）"
+      "syncSeedOnly": "シードモデルを維持（ライブ同期失敗: {{error}}）",
+      "manualOnly": "手動登録のみ",
+      "openRouterManualOnly": "OpenRouterは提供モデル数が非常に多いため、不要なモデルの大量追加を防ぐため手動登録のみに対応しています。"
     },
     "modelSection": {
       "title": "モデル",

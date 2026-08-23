@@ -48,7 +48,7 @@
     "noSearchResults": "일치하는 세션 없음"
   },
   "chat": {
-    "placeholder": "메시지를 입력하세요...",
+    "placeholder": "메시지를 입력하세요... (/ 명령어, @ 파일 멘션, 드래그 첨부)",
     "welcome": "무엇을 도와드릴까요?",
     "welcomeSub": "코딩, 브라우징, 자동화 — 한 곳에서.",
     "send": "전송",
@@ -149,7 +149,9 @@
     "thinkingLive": "생각 중…",
     "edit": "편집",
     "regenerate": "다시 생성",
-    "saveAndResend": "저장 후 다시 보내기"
+    "saveAndResend": "저장 후 다시 보내기",
+    "dropFilesTitle": "파일 및 이미지 첨부",
+    "dropFilesDesc": "여기에 놓으면 대화 컨텍스트로 첨부됩니다"
   },
   "automation": {
     "title": "자동화",
@@ -365,7 +367,9 @@
       "syncHint": "GET {baseUrl}/models 로 최신 모델 목록을 가져와 병합합니다",
       "syncOk": "{{total}}개 모델 동기화 (+{{added}} 추가, {{updated}} 갱신)",
       "syncFail": "동기화 실패: {{error}}",
-      "syncSeedOnly": "시드 모델 유지 (라이브 동기화 실패: {{error}})"
+      "syncSeedOnly": "시드 모델 유지 (라이브 동기화 실패: {{error}})",
+      "manualOnly": "수동 등록",
+      "openRouterManualOnly": "OpenRouter는 수백 개의 모델이 제공되므로 칩 과다 생성을 방지하기 위해 수동 등록만 지원됩니다."
     },
     "modelSection": {
       "title": "모델",

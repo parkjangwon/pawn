@@ -48,7 +48,7 @@
     "noSearchResults": "无匹配会话"
   },
   "chat": {
-    "placeholder": "输入消息...",
+    "placeholder": "输入消息... (/ 命令、@ 文件、拖拽附加)",
     "welcome": "有什么可以帮你的？",
     "welcomeSub": "编码、浏览、自动化 — 尽在一处。",
     "send": "发送",
@@ -149,7 +149,9 @@
     "thinkingLive": "思考中…",
     "edit": "编辑",
     "regenerate": "重新生成",
-    "saveAndResend": "保存并重发"
+    "saveAndResend": "保存并重发",
+    "dropFilesTitle": "附加文件与图片",
+    "dropFilesDesc": "拖放到此处即可添加到对话上下文"
   },
   "automation": {
     "title": "自动化",
@@ -365,7 +367,9 @@
       "syncHint": "通过 GET {baseUrl}/models 获取最新目录并合并",
       "syncOk": "已同步 {{total}} 个模型（+{{added}} 新增，{{updated}} 更新）",
       "syncFail": "同步失败：{{error}}",
-      "syncSeedOnly": "保留种子模型（实时同步失败：{{error}}）"
+      "syncSeedOnly": "保留种子模型（实时同步失败：{{error}}）",
+      "manualOnly": "仅限手动添加",
+      "openRouterManualOnly": "OpenRouter 包含数百个模型，为避免生成过多无用模型，仅支持手动注册模型。"
     },
     "modelSection": {
       "title": "模型",

@@ -3,7 +3,7 @@ import { uid } from '../utils/uid'
 import { guessPricing, guessSupportsVision } from '../types/provider'
 import type { Provider, ModelEntry, RoutingMode } from '../types/provider'
 import { parseAgentMode, parseDoneGate, type AgentMode, type DoneGate } from '../agent/agentMode'
-import { fetchProviderModels, mergeRemoteModels } from '../agent/listModels'
+import { fetchProviderModels, mergeRemoteModels, isOpenRouterProvider } from '../agent/listModels'
 
 interface ProviderState {
   providers: Provider[]
@@ -252,6 +252,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   syncModelsFromProvider: async (providerId) => {
     const provider = get().providers.find((p) => p.id === providerId)
     if (!provider) throw new Error('Provider not found')
+    if (isOpenRouterProvider(provider)) {
+      throw new Error('OpenRouter has hundreds of models; please register specific models manually.')
+    }
     const { models: remote } = await fetchProviderModels(provider)
     if (remote.length === 0) {
       throw new Error('Provider returned an empty model list')

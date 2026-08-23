@@ -113,6 +113,15 @@ export function isXiaomiMimoHost(baseUrl: string | undefined | null): boolean {
   }
 }
 
+export function isOpenRouterProvider(provider: { baseUrl?: string | null; name?: string | null; id?: string | null }): boolean {
+  if (!provider) return false
+  const url = (provider.baseUrl || '').toLowerCase()
+  const name = (provider.name || '').toLowerCase()
+  const id = (provider.id || '').toLowerCase()
+  return url.includes('openrouter.ai') || name === 'openrouter' || id === 'openrouter'
+}
+
+
 function parseModelsPayload(json: unknown): RemoteModel[] {
   const out: RemoteModel[] = []
   const data = Array.isArray(json)

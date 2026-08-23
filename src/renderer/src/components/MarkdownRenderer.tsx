@@ -112,15 +112,7 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
         />
       )
     },
-    pre: ({ children }: { children?: React.ReactNode }) => (
-      <div className="code-block-wrapper">
-        <div className="code-block-header">
-          <span className="code-lang">{extractLang(children)}</span>
-          <button className="copy-btn" onClick={() => copyCode(children)}>Copy</button>
-        </div>
-        <pre>{children}</pre>
-      </div>
-    )
+    pre: ({ children }: { children?: React.ReactNode }) => <CodeBlock>{children}</CodeBlock>
   }), [t, openLightbox])
 
   return (
@@ -208,6 +200,54 @@ function decodeFilePath(href: string): string {
 const MarkdownRenderer = memo(MarkdownRendererInner)
 export default MarkdownRenderer
 
+function getNodeText(node: React.ReactNode): string {
+  if (node == null) return ''
+  if (typeof node === 'string' || typeof node === 'number') return String(node)
+  if (Array.isArray(node)) return node.map(getNodeText).join('')
+  if (React.isValidElement<{ children?: React.ReactNode }>(node) && node.props?.children) {
+    return getNodeText(node.props.children)
+  }
+  return ''
+}
+
+function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Element {
+  const [copied, setCopied] = useState(false)
+  const lang = extractLang(children)
+
+  const handleCopy = useCallback((): void => {
+    const text = getNodeText(children).replace(/\n$/, '')
+    if (!text) return
+    navigator.clipboard.writeText(text)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }, [children])
+
+  return (
+    <div className="code-block-wrapper">
+      <div className="code-block-header">
+        <span className="code-lang">{lang}</span>
+        <button
+          className={`copy-btn ${copied ? 'copied' : ''}`}
+          onClick={handleCopy}
+          aria-label={copied ? 'Copied to clipboard' : 'Copy code'}
+        >
+          {copied ? (
+            <>
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              <span>Copied!</span>
+            </>
+          ) : (
+            'Copy'
+          )}
+        </button>
+      </div>
+      <pre>{children}</pre>
+    </div>
+  )
+}
+
 function extractLang(children: React.ReactNode): string {
   if (React.isValidElement<{ className?: string }>(children) && children.props?.className) {
     const match = children.props.className.match(/language-(\w+)/)
@@ -216,9 +256,3 @@ function extractLang(children: React.ReactNode): string {
   return ''
 }
 
-function copyCode(children: React.ReactNode): void {
-  if (React.isValidElement<{ children?: React.ReactNode }>(children) && children.props?.children) {
-    const text = String(children.props.children).replace(/\n$/, '')
-    navigator.clipboard.writeText(text)
-  }
-}

@@ -21,6 +21,7 @@ import {
 } from '../agent/testProvider'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
+import { isOpenRouterProvider } from '../agent/listModels'
 import { useSidebarResize } from '../hooks/useSidebarResize'
 import { MCP_TEMPLATES } from '../agent/mcpTemplates'
 import {
@@ -202,25 +203,28 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         })
       }
       // Best-effort live catalog sync so seeds are not the long-term source of truth.
-      setSyncingId(created.id)
-      try {
-        const r = await syncModelsFromProvider(created.id)
-        setSyncResult((s) => ({
-          ...s,
-          [created.id]: t('settings.providerSection.syncOk', {
-            added: r.added,
-            updated: r.updated,
-            total: r.remoteCount
-          })
-        }))
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : String(err)
-        setSyncResult((s) => ({
-          ...s,
-          [created.id]: t('settings.providerSection.syncSeedOnly', { error: msg.slice(0, 120) })
-        }))
-      } finally {
-        setSyncingId(null)
+      // OpenRouter is excluded to avoid pulling hundreds of models.
+      if (preset.id !== 'openrouter' && !isOpenRouterProvider(preset)) {
+        setSyncingId(created.id)
+        try {
+          const r = await syncModelsFromProvider(created.id)
+          setSyncResult((s) => ({
+            ...s,
+            [created.id]: t('settings.providerSection.syncOk', {
+              added: r.added,
+              updated: r.updated,
+              total: r.remoteCount
+            })
+          }))
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err)
+          setSyncResult((s) => ({
+            ...s,
+            [created.id]: t('settings.providerSection.syncSeedOnly', { error: msg.slice(0, 120) })
+          }))
+        } finally {
+          setSyncingId(null)
+        }
       }
     }
     setPresetPicking(null)

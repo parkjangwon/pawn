@@ -48,7 +48,7 @@
     "noSearchResults": "No matching sessions"
   },
   "chat": {
-    "placeholder": "Send a message...",
+    "placeholder": "Send a message... (/ for commands, @ for files, drop to attach)",
     "welcome": "What can I help you with?",
     "welcomeSub": "Code, browse, automate — all in one place.",
     "send": "Send",
@@ -149,7 +149,9 @@
     "thinkingLive": "Thinking…",
     "edit": "Edit",
     "regenerate": "Regenerate",
-    "saveAndResend": "Save & resend"
+    "saveAndResend": "Save & resend",
+    "dropFilesTitle": "Attach Files & Images",
+    "dropFilesDesc": "Drop here to attach to conversation context"
   },
   "automation": {
     "title": "Automations",
@@ -365,7 +367,9 @@
       "syncHint": "Fetch the live model catalog from GET {baseUrl}/models and merge it into your list",
       "syncOk": "Synced {{total}} models (+{{added}} new, {{updated}} updated)",
       "syncFail": "Sync failed: {{error}}",
-      "syncSeedOnly": "Seed models kept (live sync failed: {{error}})"
+      "syncSeedOnly": "Seed models kept (live sync failed: {{error}})",
+      "manualOnly": "Manual Add Only",
+      "openRouterManualOnly": "OpenRouter offers hundreds of models; please register specific models manually to prevent clutter."
     },
     "modelSection": {
       "title": "Models",

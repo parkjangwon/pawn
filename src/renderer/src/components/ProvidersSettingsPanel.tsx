@@ -1,4 +1,5 @@
 import { PROVIDER_PRESETS } from '../agent/providerPresets'
+import { isOpenRouterProvider } from '../agent/listModels'
 import type { ApiFormat } from '../types/provider'
 import type { SettingsState } from './settingsState'
 
@@ -31,36 +32,49 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
       <h2>{t('settings.providerSection.title')}</h2>
       <p className="settings-desc">{t('settings.providerSection.desc')}</p>
       <div className="settings-card">
-        {providers.map((p) => (
-          <div key={p.id} className="settings-row provider-row">
-            <div className="settings-row-info">
-              <span className="settings-row-label">{p.name}</span>
-              <span className="settings-row-desc">
-                {p.apiFormat} / {p.baseUrl}
-              </span>
-              {syncResult[p.id] && (
-                <span className="settings-row-desc sync-result" title={syncResult[p.id]}>
-                  {syncResult[p.id]}
+        {providers.map((p) => {
+          const isOpenRouter = isOpenRouterProvider(p)
+          return (
+            <div key={p.id} className="settings-row provider-row">
+              <div className="settings-row-info">
+                <span className="settings-row-label">{p.name}</span>
+                <span className="settings-row-desc">
+                  {p.apiFormat} / {p.baseUrl}
                 </span>
-              )}
-            </div>
-            <div className="settings-row-actions">
-              <button
-                className="test-btn"
-                onClick={() => handleSyncModels(p.id)}
-                disabled={syncingId === p.id}
-                title={t('settings.providerSection.syncHint')}
-              >
-                {syncingId === p.id ? '...' : t('settings.providerSection.syncModels')}
-              </button>
-              <button
-                className={`test-btn ${testResult[p.id] === 'OK' ? 'ok' : testResult[p.id]?.startsWith('FAIL') || testResult[p.id]?.startsWith('ERROR') ? 'fail' : ''}`}
-                onClick={() => handleTestProvider(p.id)}
-                disabled={testingId === p.id}
-                title={testResult[p.id] || undefined}
-              >
-                {testingId === p.id ? '...' : testResult[p.id] || 'Test'}
-              </button>
+                {syncResult[p.id] && (
+                  <span className="settings-row-desc sync-result" title={syncResult[p.id]}>
+                    {syncResult[p.id]}
+                  </span>
+                )}
+              </div>
+              <div className="settings-row-actions">
+                {!isOpenRouter ? (
+                  <button
+                    className="test-btn"
+                    onClick={() => handleSyncModels(p.id)}
+                    disabled={syncingId === p.id}
+                    title={t('settings.providerSection.syncHint')}
+                  >
+                    {syncingId === p.id ? '...' : t('settings.providerSection.syncModels')}
+                  </button>
+                ) : (
+                  <button
+                    className="test-btn"
+                    disabled
+                    style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                    title={t('settings.providerSection.openRouterManualOnly')}
+                  >
+                    {t('settings.providerSection.manualOnly')}
+                  </button>
+                )}
+                <button
+                  className={`test-btn ${testResult[p.id] === 'OK' ? 'ok' : testResult[p.id]?.startsWith('FAIL') || testResult[p.id]?.startsWith('ERROR') ? 'fail' : ''}`}
+                  onClick={() => handleTestProvider(p.id)}
+                  disabled={testingId === p.id}
+                  title={testResult[p.id] || undefined}
+                >
+                  {testingId === p.id ? '...' : testResult[p.id] || 'Test'}
+                </button>
               <label className="toggle-switch">
                 <input type="checkbox" checked={p.enabled} onChange={(e) => updateProvider(p.id, { enabled: e.target.checked })} />
                 <span className="toggle-slider" />
@@ -72,7 +86,8 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               </button>
             </div>
           </div>
-        ))}
+        )
+      })}
         {providers.length === 0 && <div className="settings-empty">{t('settings.providerSection.empty')}</div>}
       </div>
 

@@ -3,6 +3,7 @@ import {
   authHeadersForProvider,
   humanizeModelId,
   isLikelyChatModel,
+  isOpenRouterProvider,
   isXiaomiMimoHost,
   mergeRemoteModels,
   modelsListUrl
@@ -110,5 +111,12 @@ describe('listModels helpers', () => {
       { id: 'remote-only', label: 'Remote' }
     ])
     expect(result.models.map((m) => m.modelId).sort()).toEqual(['custom-local', 'remote-only'])
+  })
+
+  it('detects OpenRouter provider correctly', () => {
+    expect(isOpenRouterProvider({ baseUrl: 'https://openrouter.ai/api/v1' })).toBe(true)
+    expect(isOpenRouterProvider({ name: 'OpenRouter' })).toBe(true)
+    expect(isOpenRouterProvider({ id: 'openrouter' })).toBe(true)
+    expect(isOpenRouterProvider({ baseUrl: 'https://api.openai.com/v1', name: 'OpenAI', id: 'openai-1' })).toBe(false)
   })
 })
