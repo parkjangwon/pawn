@@ -760,3 +760,5 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     handleConnectPat, handleCancelConnect, handleDisconnect, connProviderLabel, copyDeviceCode, languages
   }
 }
+
+export type SettingsState = ReturnType<typeof useSettingsState>
