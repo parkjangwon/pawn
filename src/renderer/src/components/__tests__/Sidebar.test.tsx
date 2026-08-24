@@ -42,10 +42,11 @@ beforeEach(() => {
   document.body.style.userSelect = ''
 })
 
-function renderSidebar(props: { onSidebarWidthChange?: (width: number) => void } = {}): ReturnType<typeof render> {
+function renderSidebar(props: { onSidebarWidthChange?: (width: number) => void; onOpenCommandPalette?: () => void } = {}): ReturnType<typeof render> {
   return render(
     <Sidebar
       onOpenSettings={noop}
+      onOpenCommandPalette={props.onOpenCommandPalette}
       onToggle={noop}
       open
       mainView="chat"
@@ -126,33 +127,13 @@ describe('Sidebar — session deletion', () => {
   })
 })
 
-describe('Sidebar — session search', () => {
-  it('searches every session through the DB (titles + message contents)', async () => {
-    const searchSessions = vi.fn().mockResolvedValue([
-      { id: 's1', projectId: 'p1', title: 'Found Session', createdAt: 1, snippet: 'needle in an unloaded message' }
-    ])
-    dbMock.searchSessions.mockImplementation(searchSessions)
-    useAppStore.getState().addProject('P', ['/p'], 'p1')
-    useAppStore.getState().addSession('p1', 'Found Session')
-
-    renderSidebar()
-    fireEvent.change(screen.getByPlaceholderText('sidebar.search'), { target: { value: 'needle' } })
-
-    await waitFor(() => expect(searchSessions).toHaveBeenCalledWith('needle'))
-    expect(await screen.findByText('Found Session')).toBeInTheDocument()
-    expect(screen.getByText('sidebar.searchResults')).toBeInTheDocument()
-    expect(screen.getByText(/needle in an unloaded message/)).toBeInTheDocument()
-  })
-
-  it('shows the no-results state while searching', async () => {
-    dbMock.searchSessions.mockResolvedValue([])
-    useAppStore.getState().addProject('P', ['/p'], 'p1')
-    useAppStore.getState().addSession('p1', 'Anything')
-
-    renderSidebar()
-    fireEvent.change(screen.getByPlaceholderText('sidebar.search'), { target: { value: 'zzz' } })
-
-    expect(await screen.findByText('sidebar.noSearchResults')).toBeInTheDocument()
+describe('Sidebar — top actions', () => {
+  it('triggers onOpenCommandPalette when clicking the top search button', () => {
+    const onOpenCommandPalette = vi.fn()
+    renderSidebar({ onOpenCommandPalette })
+    const searchBtn = screen.getByLabelText('commandPalette.title')
+    fireEvent.click(searchBtn)
+    expect(onOpenCommandPalette).toHaveBeenCalledTimes(1)
   })
 })
 

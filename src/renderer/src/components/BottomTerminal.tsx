@@ -2,8 +2,9 @@ import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
-import { useKeybinding } from '../stores/keybindings'
+import { useKeybinding, useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import TerminalView from './TerminalView'
+import Tooltip from './Tooltip'
 import './BottomTerminal.css'
 
 const NOOP = (): void => {}
@@ -55,6 +56,8 @@ export default function BottomTerminal(): React.JSX.Element {
   const activeProject = useAppStore((s) => s.projects.find((p) => p.id === s.activeProjectId))
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const projectPath = getEffectiveProjectPath(activeProject, activeSessionId)
+  const bindings = useKeybindingsStore((s) => s.bindings)
+  const terminalShortcut = formatCombo(bindings['toggle-terminal'])
 
   useLayoutEffect(() => {
     if (!visible) return
@@ -210,17 +213,18 @@ export default function BottomTerminal(): React.JSX.Element {
             <span className="bt-path" title={projectPath}>{projectPath}</span>
           )}
         </div>
-        <button
-          type="button"
-          className="bt-close"
-          onClick={requestHide}
-          title={t('bottomTerminal.close')}
-          aria-label={t('bottomTerminal.close')}
-        >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        </button>
+        <Tooltip label={t('bottomTerminal.close')} shortcut={terminalShortcut} placement="top">
+          <button
+            type="button"
+            className="bt-close"
+            onClick={requestHide}
+            aria-label={t('bottomTerminal.close')}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </Tooltip>
       </div>
 
       <div className="bt-content">

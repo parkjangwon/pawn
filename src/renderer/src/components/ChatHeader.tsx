@@ -4,6 +4,7 @@ import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { useAppStore } from '../stores/app'
 import { useUsageStore, formatTokens } from '../stores/usage'
 import NavControls from './NavControls'
+import Tooltip from './Tooltip'
 
 interface ChatHeaderProps {
   onToggleSidebar: () => void
@@ -218,12 +219,14 @@ export default function ChatHeader({
   return (
     <div className="chat-header chat-header-shell">
       <div className="chat-header-left">
-        <button className="sidebar-toggle-btn close-sidebar-btn" onClick={onToggleSidebar} aria-label={t('contextBar.openSidebar')} title={`${t('contextBar.openSidebar')} (${sidebarShortcut})`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <line x1="9" y1="3" x2="9" y2="21" />
-          </svg>
-        </button>
+        <Tooltip label={t('contextBar.toggleSidebar')} shortcut={sidebarShortcut} placement="bottom">
+          <button className="sidebar-toggle-btn close-sidebar-btn" onClick={onToggleSidebar} aria-label={t('contextBar.toggleSidebar')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="9" y1="3" x2="9" y2="21" />
+            </svg>
+          </button>
+        </Tooltip>
         <NavControls canGoBack={canGoBack} canGoForward={canGoForward} onBack={onGoBack} onForward={onGoForward} />
         <div className="chat-header-title-block">
           <span className="chat-header-title">{projectName || t('contextBar.noProject')}</span>
@@ -265,7 +268,7 @@ export default function ChatHeader({
         </div>
 
         <div className="chat-header-action-group">
-          <button className="chat-header-btn" disabled={!projectPath} onClick={() => { setShowOpenMenu((v) => !v); setShowScriptMenu(false) }} title={openButtonLabel} aria-label={openButtonLabel}>
+          <button className="chat-header-btn" disabled={!projectPath} onClick={() => { setShowOpenMenu((v) => !v); setShowScriptMenu(false) }} aria-label={openButtonLabel}>
             <span>{openButtonLabel}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
@@ -288,17 +291,21 @@ export default function ChatHeader({
           )}
         </div>
 
-        <button className="sidebar-toggle-btn terminal-toggle" onClick={() => (window as any).__toggleTerminal?.()} aria-label={t('contextBar.toggleTerminal')} title={`${t('contextBar.toggleTerminal')} (${terminalShortcut})`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M4 17l6-6-6-6m8 14h8" />
-          </svg>
-        </button>
-        <button className="sidebar-toggle-btn right-panel-toggle" onClick={() => (window as any).__toggleRightPanel?.()} aria-label={t('contextBar.toggleRightPanel')} title={`${t('contextBar.toggleRightPanel')} (${panelShortcut})`}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <line x1="15" y1="3" x2="15" y2="21" />
-          </svg>
-        </button>
+        <Tooltip label={t('contextBar.toggleTerminal')} shortcut={terminalShortcut} placement="bottom">
+          <button className="sidebar-toggle-btn terminal-toggle" onClick={() => (window as any).__toggleTerminal?.()} aria-label={t('contextBar.toggleTerminal')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 17l6-6-6-6m8 14h8" />
+            </svg>
+          </button>
+        </Tooltip>
+        <Tooltip label={t('contextBar.toggleRightPanel')} shortcut={panelShortcut} placement="bottom">
+          <button className="sidebar-toggle-btn right-panel-toggle" onClick={() => (window as any).__toggleRightPanel?.()} aria-label={t('contextBar.toggleRightPanel')}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="15" y1="3" x2="15" y2="21" />
+            </svg>
+          </button>
+        </Tooltip>
       </div>
     </div>
   )

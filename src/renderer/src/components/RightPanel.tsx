@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
-import { useKeybinding } from '../stores/keybindings'
+import { useKeybinding, useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import FilesView from './FilesView'
 import GitView from './GitView'
 import BrowserView from './BrowserView'
@@ -10,6 +10,7 @@ import DiffListView from './DiffListView'
 import ArtifactsView from './ArtifactsView'
 import SubagentsView from './SubagentsView'
 import { openFileInPanel } from '../stores/filesPanel'
+import Tooltip from './Tooltip'
 import './RightPanel.css'
 
 // Terminal lives in BottomTerminal (Codex-style). Callers that still pass
@@ -67,6 +68,8 @@ export default function RightPanel(): React.JSX.Element | null {
   const activeProject = useAppStore((s) => s.projects.find((p) => p.id === s.activeProjectId))
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const projectPath = getEffectiveProjectPath(activeProject, activeSessionId)
+  const bindings = useKeybindingsStore((s) => s.bindings)
+  const panelShortcut = formatCombo(bindings['toggle-right-panel'])
 
   // Apply panelWidth from state to DOM. The opening render starts at width 0 so
   // the transition slides the panel in; closing animates it back out.
@@ -484,6 +487,18 @@ export default function RightPanel(): React.JSX.Element | null {
         </button>
 
         <div className="rp-tabs-spacer" />
+        <Tooltip label={t('contextBar.toggleRightPanel')} shortcut={panelShortcut} placement="bottom">
+          <button
+            type="button"
+            className="rp-tab-close-panel"
+            onClick={() => requestHide()}
+            aria-label={t('contextBar.toggleRightPanel')}
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+        </Tooltip>
       </div>
 
       {/* Tool picker dropdown */}

@@ -8,10 +8,12 @@ import { useSidebarResize } from '../hooks/useSidebarResize'
 import { activateOnKey } from '../utils/focusTrap'
 import ProjectEditDialog from './ProjectEditDialog'
 import ConfirmDialog from './ConfirmDialog'
+import Tooltip from './Tooltip'
 import './Sidebar.css'
 
 interface SidebarProps {
   onOpenSettings: () => void
+  onOpenCommandPalette?: () => void
   onToggle: () => void
   open?: boolean
   mainView: 'chat' | 'automations'
@@ -21,15 +23,7 @@ interface SidebarProps {
 
 const GENERAL_PROJECT_ID = '__general__'
 
-interface SearchHit {
-  id: string
-  projectId: string
-  title: string
-  createdAt: number
-  snippet: string
-}
-
-export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMainViewChange, onSidebarWidthChange }: SidebarProps): React.JSX.Element {
+export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle, open, mainView, onMainViewChange, onSidebarWidthChange }: SidebarProps): React.JSX.Element {
   const { t } = useTranslation()
   const {
     projects,
@@ -55,9 +49,6 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
-  const [sessionSearch, setSessionSearch] = useState('')
-  const [searchResults, setSearchResults] = useState<SearchHit[]>([])
-  const [searchLoading, setSearchLoading] = useState(false)
   const [renamingSession, setRenamingSession] = useState<{ projectId: string; sessionId: string; title: string } | null>(null)
   useEffect(() => { try { const s = localStorage.getItem('pawn-pinned-sessions'); if (s) setPinnedSessions(new Set(JSON.parse(s))) } catch {} }, [])
 
@@ -162,83 +153,10 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
     })
   }
 
-  const q = sessionSearch.trim().toLowerCase()
-  // DB-backed search: unlike the in-memory filter below, this also finds
-  // sessions whose messages were never loaded into the renderer store (lazy
-  // load happens only when a session is activated).
-  useEffect(() => {
-    if (!q) {
-      setSearchResults([])
-      setSearchLoading(false)
-      return
-    }
-    if (!window.api?.db?.searchSessions) {
-      setSearchResults([])
-      setSearchLoading(false)
-      return
-    }
-    let cancelled = false
-    setSearchLoading(true)
-    const timer = window.setTimeout(() => {
-      void window.api.db.searchSessions(q)
-        .then((rows) => {
-          if (cancelled) return
-          setSearchResults(Array.isArray(rows) ? rows : [])
-          setSearchLoading(false)
-        })
-        .catch(() => {
-          if (cancelled) return
-          // DB unavailable (dev:web / transient failure): fall back to the
-          // in-memory session list instead of dropping to an empty state.
-          const hits: SearchHit[] = []
-          for (const p of projects) {
-            for (const s of p.sessions) {
-              if (!matchesSearch(s)) continue
-              let snippet = ''
-              for (const m of s.messages || []) {
-                const c = m.content || ''
-                const idx = c.toLowerCase().indexOf(q)
-                if (idx >= 0) {
-                  snippet = c.slice(Math.max(0, idx - 40), idx + 80)
-                  break
-                }
-              }
-              hits.push({
-                id: s.id,
-                projectId: p.id,
-                title: s.title,
-                createdAt: s.createdAt,
-                snippet
-              })
-            }
-          }
-          setSearchResults(hits)
-          setSearchLoading(false)
-        })
-    }, 150)
-    return () => {
-      cancelled = true
-      window.clearTimeout(timer)
-    }
-  }, [q, projects])
-  const matchesSearch = (session: {
-    title: string
-    messages: Array<{ role: string; content: string }>
-  }): boolean => {
-    if (!q) return true
-    if (session.title.toLowerCase().includes(q)) return true
-    // Search recent message text (loaded sessions only).
-    for (let i = session.messages.length - 1; i >= Math.max(0, session.messages.length - 12); i--) {
-      const c = session.messages[i]?.content || ''
-      if (c.toLowerCase().includes(q)) return true
-    }
-    return false
-  }
-
   // Pinned sessions across all projects
   const pinnedItems = projects.flatMap((p) =>
     p.sessions
-      .filter((s) => pinnedSessions.has(s.id) && matchesSearch(s))
+      .filter((s) => pinnedSessions.has(s.id))
       .map((s) => ({ ...s, projectId: p.id }))
   )
 
@@ -280,11 +198,11 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
   const recentSessions = projects
     .flatMap((p) =>
       p.sessions
-        .filter((s) => !pinnedSessions.has(s.id) && matchesSearch(s))
+        .filter((s) => !pinnedSessions.has(s.id))
         .map((s) => ({ ...s, projectId: p.id }))
     )
     .sort((a, b) => sessionMeta(b).lastActivity - sessionMeta(a).lastActivity)
-    .slice(0, q ? 24 : 8)
+    .slice(0, 8)
 
   return (
     <aside className={`sidebar ${open ? 'open' : ''}`} aria-label={t('sidebar.project')}>
@@ -301,6 +219,36 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
       <div className="traffic-light-spacer" aria-hidden />
       <div className="sidebar-top-row">
         <span className="sidebar-logo">Pawn</span>
+        <div className="sidebar-top-actions">
+          {onOpenCommandPalette && (
+            <Tooltip label={t('commandPalette.title', { defaultValue: '채팅 검색' })} shortcut={formatCombo(keybindings['open-command-palette'])} placement="bottom">
+              <button
+                type="button"
+                className="sidebar-icon-btn"
+                onClick={onOpenCommandPalette}
+                aria-label={t('commandPalette.title', { defaultValue: '채팅 검색' })}
+              >
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <circle cx="11" cy="11" r="8" />
+                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                </svg>
+              </button>
+            </Tooltip>
+          )}
+          <Tooltip label={t('sidebar.newChat')} shortcut={formatCombo(keybindings['new-session'])} placement="bottom">
+            <button
+              type="button"
+              className="sidebar-icon-btn"
+              onClick={handleNewSession}
+              aria-label={t('sidebar.newChat')}
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+                <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+              </svg>
+            </button>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Primary action: New Session */}
@@ -328,59 +276,9 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
         </button>
       </div>
 
-      <div className="sidebar-search">
-        <input
-          type="search"
-          value={sessionSearch}
-          onChange={(e) => setSessionSearch(e.target.value)}
-          placeholder={t('sidebar.search')}
-          aria-label={t('sidebar.search')}
-        />
-      </div>
-
       <div className="sidebar-scroll">
-        {/* Search results (DB-backed: titles + message contents across every
-            session, loaded or not). Takes over the list while typing. */}
-        {q && (
-          <div className="sidebar-section">
-            <div className="section-label">{t('sidebar.searchResults')}</div>
-            {searchLoading && <div className="tree-empty">{t('common.loading')}</div>}
-            {!searchLoading && searchResults.map((r) => {
-              const running = streamingSessionIds.includes(r.id) || runningRoutineIds.has(r.id)
-              const select = (): void => {
-                onMainViewChange('chat')
-                setActiveProject(r.projectId)
-                setActiveSession(r.id)
-              }
-              return (
-                <div
-                  key={r.id}
-                  className={`sidebar-item ${mainView === 'chat' && r.id === activeSessionId ? 'active' : ''}`}
-                  role="button"
-                  tabIndex={0}
-                  aria-current={mainView === 'chat' && r.id === activeSessionId ? 'true' : undefined}
-                  onClick={select}
-                  onKeyDown={(e) => activateOnKey(e, select)}
-                >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
-                  <span className="item-title">{r.title}</span>
-                  {r.snippet && (
-                    <span className="session-preview">
-                      {r.snippet.replace(/\s+/g, ' ').trim().slice(0, 64)}
-                    </span>
-                  )}
-                  {running && <span className="session-running" title={t('sidebar.running')} />}
-                </div>
-              )
-            })}
-            {!searchLoading && searchResults.length === 0 && (
-              <div className="tree-empty">{t('sidebar.noSearchResults')}</div>
-            )}
-          </div>
-        )}
-
         {/* 1. Pinned */}
-        {!q && pinnedItems.length > 0 && (
+        {pinnedItems.length > 0 && (
           <div className="sidebar-section">
             <div className="section-label">{t('sidebar.pinned')}</div>
             {pinnedItems.map((session) => {
@@ -423,7 +321,6 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
         )}
 
         {/* 2. Projects */}
-        {!q && (
         <div className="sidebar-section">
           <div className="section-header">
             <span className="section-label">{t('sidebar.projects')}</span>
@@ -460,7 +357,7 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
                 </div>
                 {isExpanded && (
                   <div className="tree-sessions" role="group" aria-label={project.name}>
-                    {project.sessions.filter(matchesSearch).map((session) => {
+                    {project.sessions.map((session) => {
                       const select = (): void => {
                         onMainViewChange('chat')
                         setActiveSession(session.id)
@@ -519,9 +416,9 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
                         </div>
                       )
                     })}
-                    {project.sessions.filter(matchesSearch).length === 0 && (
+                    {project.sessions.length === 0 && (
                       <div className="tree-empty">
-                        {q ? t('sidebar.noSearchResults') : t('sidebar.noSessions')}
+                        {t('sidebar.noSessions')}
                       </div>
                     )}
                   </div>
@@ -531,10 +428,9 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
           })}
           {userProjects.length === 0 && <div className="empty-hint">{t('sidebar.noProjects')}</div>}
         </div>
-        )}
 
         {/* 3. Recent */}
-        {!q && recentSessions.length > 0 && (
+        {recentSessions.length > 0 && (
           <div className="sidebar-section">
             <button className="section-header recent-header" onClick={() => setRecentExpanded((v) => !v)}>
               <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${recentExpanded ? 'expanded' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>
@@ -573,12 +469,14 @@ export default function Sidebar({ onOpenSettings, onToggle, open, mainView, onMa
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <button type="button" className="footer-btn" onClick={onOpenSettings} title={`${t('sidebar.settings')} (${formatCombo(keybindings['open-settings'])})`}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-          </svg>
-          <span>{t('sidebar.settings')}</span>
-        </button>
+        <Tooltip label={t('sidebar.settings')} shortcut={formatCombo(keybindings['open-settings'])} placement="top">
+          <button type="button" className="footer-btn" onClick={onOpenSettings} aria-label={t('sidebar.settings')}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+            </svg>
+            <span>{t('sidebar.settings')}</span>
+          </button>
+        </Tooltip>
       </div>
 
       {showProjectDialog && (

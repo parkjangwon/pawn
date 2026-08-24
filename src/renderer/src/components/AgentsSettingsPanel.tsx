@@ -329,7 +329,11 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
               <span className="agents-settings-tag soft">skills×{p.skills.length}</span>
             ) : null}
           </div>
-          <div className="agents-settings-desc">{p.description}</div>
+          <div className="agents-settings-desc">
+            {isCustom
+              ? p.description
+              : t(`settings.agentsSection.builtinDesc_${p.name}`, { defaultValue: p.description })}
+          </div>
         </div>
       </div>
       <div className="agents-settings-meta">

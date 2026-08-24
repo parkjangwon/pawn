@@ -28,7 +28,7 @@ interface CommandPaletteProps {
 }
 
 const GENERAL_ID = '__general__'
-const GROUP_ORDER: GroupId[] = ['actions', 'navigation', 'sessions', 'projects']
+const GROUP_ORDER: GroupId[] = ['sessions', 'actions', 'projects', 'navigation']
 const MAX_SESSIONS = 14
 const MAX_PROJECTS = 20
 
@@ -241,13 +241,17 @@ export default function CommandPalette({
       }
     ]
 
-    const sessions: Command[] = recentSessions.map(({ session, projectId, projectName }) => ({
+    const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+    const modSymbol = isMac ? '⌘' : 'Alt+'
+
+    const sessions: Command[] = recentSessions.map(({ session, projectId, projectName }, idx) => ({
       id: `session-${session.id}`,
       label: session.title || t('sidebar.session'),
       description:
         projectId === GENERAL_ID
-          ? t('commandPalette.sessionNoProject')
-          : t('commandPalette.sessionInProject', { project: projectName }),
+          ? ''
+          : projectName,
+      shortcut: idx < 8 ? `${modSymbol}${idx + 1}` : undefined,
       group: 'sessions' as GroupId,
       keywords: `${session.title} ${projectName}`,
       icon: <Icon d={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />} />,
@@ -275,7 +279,7 @@ export default function CommandPalette({
       })
     }))
 
-    return [...actions, ...navigation, ...sessions, ...projectCmds]
+    return [...sessions, ...actions, ...projectCmds, ...navigation]
   }, [
     projects, keybindings, t, run, onMainViewChange, onOpenSettings, startNewChat,
     stopStreaming, isStreaming, theme, toggleTheme, setTheme, setActiveProject, setActiveSession
@@ -290,7 +294,17 @@ export default function CommandPalette({
     })
   }, [commands, query])
 
-  const safeIndex = filtered.length === 0 ? 0 : Math.min(selectedIndex, filtered.length - 1)
+  const groups = useMemo(() => {
+    return GROUP_ORDER
+      .map((g) => ({ id: g, items: filtered.filter((c) => c.group === g) }))
+      .filter((g) => g.items.length > 0)
+  }, [filtered])
+
+  const flatItems = useMemo(() => {
+    return groups.flatMap((g) => g.items)
+  }, [groups])
+
+  const safeIndex = flatItems.length === 0 ? 0 : Math.min(Math.max(0, selectedIndex), flatItems.length - 1)
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -301,31 +315,69 @@ export default function CommandPalette({
   }, [query])
 
   useEffect(() => {
-    itemRefs.current.get(safeIndex)?.scrollIntoView({ block: 'nearest' })
-  }, [safeIndex, filtered])
-
-  const handleKeyDown = (e: React.KeyboardEvent): void => {
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      if (filtered.length === 0) return
-      setSelectedIndex((i) => (i + 1) % filtered.length)
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      if (filtered.length === 0) return
-      setSelectedIndex((i) => (i - 1 + filtered.length) % filtered.length)
-    } else if (e.key === 'Enter' && filtered[safeIndex]) {
-      e.preventDefault()
-      filtered[safeIndex].action()
-    } else if (e.key === 'Escape') {
-      e.preventDefault()
-      onClose()
+    const el = itemRefs.current.get(safeIndex)
+    if (typeof el?.scrollIntoView === 'function') {
+      el.scrollIntoView({ block: 'nearest' })
     }
-  }
+  }, [safeIndex])
 
-  // Flatten for keyboard nav, render with group headers
-  const groups = GROUP_ORDER
-    .map((g) => ({ id: g, items: filtered.filter((c) => c.group === g) }))
-    .filter((g) => g.items.length > 0)
+  // Global capturing key listener to guarantee keyboard events always work
+  useEffect(() => {
+    const handleGlobalKeyDown = (e: KeyboardEvent): void => {
+      // Direct session jump with Cmd/Alt/Ctrl + Number (1-8)
+      if ((e.metaKey || e.altKey || e.ctrlKey) && Number(e.key) >= 1 && Number(e.key) <= 8) {
+        const targetIdx = Number(e.key) - 1
+        const sessionCmds = groups.find((g) => g.id === 'sessions')?.items || []
+        if (sessionCmds[targetIdx]) {
+          e.preventDefault()
+          e.stopPropagation()
+          sessionCmds[targetIdx].action()
+          return
+        }
+      }
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        e.stopPropagation()
+        if (flatItems.length === 0) return
+        setSelectedIndex((i) => (i + 1) % flatItems.length)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        e.stopPropagation()
+        if (flatItems.length === 0) return
+        setSelectedIndex((i) => (i - 1 + flatItems.length) % flatItems.length)
+      } else if (e.key === 'Enter') {
+        e.preventDefault()
+        e.stopPropagation()
+        if (flatItems[safeIndex]) {
+          flatItems[safeIndex].action()
+        }
+      } else if (e.key === 'Escape') {
+        e.preventDefault()
+        e.stopPropagation()
+        onClose()
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        e.stopPropagation()
+        setSelectedIndex(0)
+      } else if (e.key === 'End') {
+        e.preventDefault()
+        e.stopPropagation()
+        setSelectedIndex(flatItems.length - 1)
+      } else if (e.key === 'PageDown') {
+        e.preventDefault()
+        e.stopPropagation()
+        setSelectedIndex((i) => Math.min(flatItems.length - 1, i + 5))
+      } else if (e.key === 'PageUp') {
+        e.preventDefault()
+        e.stopPropagation()
+        setSelectedIndex((i) => Math.max(0, i - 5))
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown, true)
+    return () => window.removeEventListener('keydown', handleGlobalKeyDown, true)
+  }, [flatItems, safeIndex, groups, onClose])
 
   let flatCursor = -1
 
@@ -341,7 +393,10 @@ export default function CommandPalette({
         role="dialog"
         aria-modal="true"
         aria-label={t('commandPalette.title')}
-        onClick={(e) => e.stopPropagation()}
+        onClick={(e) => {
+          e.stopPropagation()
+          inputRef.current?.focus()
+        }}
       >
         <div className="cp-header">
           <div className="cp-search-field">
@@ -354,7 +409,6 @@ export default function CommandPalette({
               data-cp-search
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
               placeholder={t('commandPalette.placeholder')}
               aria-autocomplete="list"
               aria-controls="cp-listbox"
@@ -365,7 +419,10 @@ export default function CommandPalette({
               <button
                 type="button"
                 className="cp-clear"
-                onClick={() => setQuery('')}
+                onClick={() => {
+                  setQuery('')
+                  inputRef.current?.focus()
+                }}
                 aria-label={t('commandPalette.clear')}
               >
                 <Icon d={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />
@@ -379,7 +436,7 @@ export default function CommandPalette({
         </div>
 
         <div className="cp-list" ref={listRef} id="cp-listbox" role="listbox">
-          {filtered.length === 0 && (
+          {flatItems.length === 0 && (
             <div className="cp-empty">
               <div className="cp-empty-title">{t('commandPalette.noResults')}</div>
               <div className="cp-empty-hint">{t('commandPalette.noResultsHint')}</div>
@@ -406,7 +463,9 @@ export default function CommandPalette({
                     aria-selected={selected}
                     className={`cp-item ${selected ? 'selected' : ''} ${isActiveSession || isActiveProject ? 'current' : ''}`}
                     onClick={() => cmd.action()}
-                    onMouseEnter={() => setSelectedIndex(idx)}
+                    onMouseMove={() => {
+                      if (selectedIndex !== idx) setSelectedIndex(idx)
+                    }}
                   >
                     <span className="cp-item-icon">{cmd.icon}</span>
                     <span className="cp-item-info">
@@ -416,10 +475,10 @@ export default function CommandPalette({
                           <span className="cp-badge">{t('commandPalette.current')}</span>
                         )}
                       </span>
-                      {cmd.description ? (
-                        <span className="cp-item-desc">{cmd.description}</span>
-                      ) : null}
                     </span>
+                    {cmd.description ? (
+                      <span className="cp-item-project-tag">{cmd.description}</span>
+                    ) : null}
                     {cmd.shortcut ? <ShortcutKeys combo={cmd.shortcut} /> : null}
                   </button>
                 )

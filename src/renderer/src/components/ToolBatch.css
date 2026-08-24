@@ -1,0 +1,155 @@
+.tool-batch-container {
+  margin: var(--space-xs, 4px) 0;
+  width: 100%;
+}
+
+.tool-batch-card {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-md, 10px);
+  overflow: hidden;
+  transition: border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft);
+}
+
+.tool-batch-card:hover {
+  border-color: var(--border-strong);
+}
+
+.tool-batch-card.batch-running {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border-color));
+}
+
+.tool-batch-card.batch-error {
+  border-color: color-mix(in srgb, var(--danger) 50%, var(--border-color));
+}
+
+.tool-batch-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-sm, 8px);
+  padding: 8px 12px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  color: var(--text-primary);
+  font-size: var(--font-sm, 12px);
+  text-align: left;
+  user-select: none;
+}
+
+.tool-batch-header:hover {
+  background: var(--bg-hover);
+}
+
+.tool-batch-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+}
+
+.tool-batch-status-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  color: var(--success);
+  flex-shrink: 0;
+}
+
+.batch-running .tool-batch-status-icon {
+  color: var(--accent);
+}
+
+.batch-error .tool-batch-status-icon {
+  color: var(--danger);
+}
+
+.tool-batch-spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: toolBatchSpin 0.8s linear infinite;
+}
+
+@keyframes toolBatchSpin {
+  to { transform: rotate(360deg); }
+}
+
+.tool-batch-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.tool-batch-chips {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  overflow: hidden;
+  flex-wrap: wrap;
+}
+
+.tool-batch-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  font-size: 10px;
+  font-family: var(--font-mono, monospace);
+  color: var(--text-secondary);
+}
+
+.tool-batch-chip.more {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+}
+
+.tool-batch-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.tool-batch-diff-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+  border: 1px solid color-mix(in srgb, var(--success) 30%, transparent);
+}
+
+.tool-batch-chevron {
+  color: var(--text-muted);
+  transition: transform var(--dur-fast) var(--ease-spring);
+}
+
+.tool-batch-chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.tool-batch-body {
+  border-top: 1px solid var(--border-color);
+  padding: 6px 8px;
+  background: color-mix(in srgb, var(--bg-secondary) 80%, var(--bg-primary));
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tool-batch-item .tool-message {
+  margin: 0;
+  background: var(--bg-primary);
+}

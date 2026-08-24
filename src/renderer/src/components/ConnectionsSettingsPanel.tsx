@@ -87,16 +87,20 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                             : t('settings.connectionsSection.statusDisconnected')}
                       {provider === 'google' && connected && st?.writeScopesReady === false && (
                         <span className="conn-write-scope-warn">
-                          {' '}
-                          · Write scopes missing
-                          {st.writeScopesMissing?.length
-                            ? ` (${st.writeScopesMissing.join(', ')})`
-                            : ''}
-                          . Disconnect → Connect to enable Gmail send / Sheets write / Calendar create.
+                          {' · '}
+                          {t('settings.connectionsSection.writeScopesMissing', {
+                            scopes: st.writeScopesMissing?.join(', ') || '',
+                            defaultValue: `Write scopes missing${st.writeScopesMissing?.length ? ` (${st.writeScopesMissing.join(', ')})` : ''}. Disconnect → Connect to enable full access.`
+                          })}
                         </span>
                       )}
                       {provider === 'google' && connected && st?.writeScopesReady === true && (
-                        <span className="conn-write-scope-ok"> · Write scopes ready</span>
+                        <span className="conn-write-scope-ok">
+                          {' · '}
+                          {t('settings.connectionsSection.writeScopesReady', {
+                            defaultValue: 'Write scopes ready'
+                          })}
+                        </span>
                       )}
                     </span>
                   </div>
@@ -104,7 +108,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                 <div className="settings-row-actions">
                   {connected ? (
                     <button
-                      className="test-btn"
+                      className="conn-action-btn conn-btn-disconnect"
                       disabled={busy}
                       onClick={() => void handleDisconnect(provider)}
                     >
@@ -112,14 +116,14 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                     </button>
                   ) : busy && !isPat ? (
                     <button
-                      className="test-btn conn-cancel-btn"
+                      className="conn-action-btn conn-btn-cancel"
                       onClick={() => void handleCancelConnect(provider)}
                     >
                       {t('settings.connectionsSection.cancel')}
                     </button>
                   ) : isPat ? (
                     <button
-                      className={`btn-primary conn-connect-btn conn-connect-${provider}`}
+                      className={`conn-action-btn conn-btn-connect conn-connect-${provider}`}
                       disabled={busy}
                       onClick={() => {
                         if (patOpen) setPatFormOpen(null)
@@ -132,7 +136,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                     </button>
                   ) : (
                     <button
-                      className={`btn-primary conn-connect-btn conn-connect-${provider}`}
+                      className={`conn-action-btn conn-btn-connect conn-connect-${provider}`}
                       disabled={!ready}
                       onClick={() => void handleConnect(provider)}
                     >

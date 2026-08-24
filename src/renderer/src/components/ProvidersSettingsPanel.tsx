@@ -98,15 +98,17 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             const isAlreadyAdded = providers.some(
               (p) => p.name.toLowerCase() === preset.name.toLowerCase()
             )
+            const isRecommended = ['anthropic', 'openai', 'deepseek'].includes(preset.id.toLowerCase())
             return (
               <button
                 key={preset.id}
-                className={`preset-chip ${isAlreadyAdded ? 'disabled' : ''}`}
+                className={`preset-chip ${isAlreadyAdded ? 'disabled' : ''} ${isRecommended ? 'recommended' : ''}`}
                 onClick={() => { setPresetPicking(preset); setPresetKey('') }}
                 disabled={isAlreadyAdded}
                 style={isAlreadyAdded ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
               >
-                {preset.name}
+                <span>{preset.name}</span>
+                {isRecommended && !isAlreadyAdded && <span className="preset-recommended-tag">★</span>}
               </button>
             )
           })}

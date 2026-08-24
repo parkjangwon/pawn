@@ -308,6 +308,7 @@ export default function App(): React.JSX.Element {
       )}
       <Sidebar
         onOpenSettings={() => setShowSettings(true)}
+        onOpenCommandPalette={() => setShowCommandPalette(true)}
         onToggle={toggleSidebar}
         open={sidebarOpen}
         mainView={mainView}

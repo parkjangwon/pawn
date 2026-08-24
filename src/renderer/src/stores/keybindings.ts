@@ -88,18 +88,31 @@ export function comboToString(c: KeyCombo): string {
   return parts.join('+')
 }
 
+function getPlatform(): string {
+  if (window.api?.platform && window.api.platform !== 'browser') return window.api.platform
+  if (typeof navigator !== 'undefined') {
+    const ua = navigator.userAgent || ''
+    const plat = (navigator as any).userAgentData?.platform || navigator.platform || ''
+    if (/Mac|iPhone|iPad/i.test(plat) || /Mac/i.test(ua)) return 'darwin'
+    if (/Win/i.test(plat) || /Win/i.test(ua)) return 'win32'
+    if (/Linux/i.test(plat) || /Linux/i.test(ua)) return 'linux'
+  }
+  return 'darwin'
+}
+
 /** Display form: ⌘⌥⇧+ key on macOS, Ctrl+Alt+... elsewhere. */
-export function formatCombo(combo: string, platform = window.api?.platform): string {
+export function formatCombo(combo: string, platform?: string): string {
+  const plat = platform || getPlatform()
   const c = parseCombo(combo)
   if (!c) return combo
   const mods: string[] = []
   // Standard order: Control, Option, Shift, Command. Meta and Ctrl are
   // interchangeable on every platform, so a Meta binding reads as Ctrl
   // elsewhere and vice versa.
-  if (c.ctrl) mods.push(platform === 'darwin' ? '⌃' : 'Ctrl+')
-  if (c.alt) mods.push(platform === 'darwin' ? '⌥' : 'Alt+')
-  if (c.shift) mods.push(platform === 'darwin' ? '⇧' : 'Shift+')
-  if (c.meta) mods.push(platform === 'darwin' ? '⌘' : 'Ctrl+')
+  if (c.ctrl) mods.push(plat === 'darwin' ? '⌃' : 'Ctrl+')
+  if (c.alt) mods.push(plat === 'darwin' ? '⌥' : 'Alt+')
+  if (c.shift) mods.push(plat === 'darwin' ? '⇧' : 'Shift+')
+  if (c.meta) mods.push(plat === 'darwin' ? '⌘' : 'Ctrl+')
   const key = c.key.length === 1 ? c.key.toUpperCase() : c.key
   return mods.join('') + key
 }

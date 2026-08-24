@@ -490,27 +490,91 @@ body.resizing-sidebar .settings-sidebar {
 .sidebar-top-row {
   display: flex;
   align-items: center;
-  gap: 14px;
+  justify-content: space-between;
   padding: 12px var(--space-md);
   flex-shrink: 0;
 }
 
-.sidebar-search {
-  padding: 0 12px 8px;
+.sidebar-top-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
 }
-.sidebar-search input {
-  width: 100%;
-  box-sizing: border-box;
-  padding: 7px 10px;
+
+.sidebar-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--dur-fast) var(--ease-out-soft);
+  -webkit-app-region: no-drag;
+}
+
+.sidebar-icon-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-search {
+  padding: 0 12px 10px;
+}
+
+.sidebar-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px;
+  height: 32px;
   border-radius: 8px;
   border: 1px solid var(--border-color);
-  background: var(--bg-elevated, var(--bg-primary));
-  color: var(--text-primary);
-  font-size: 12px;
+  background: var(--bg-secondary);
+  transition: border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft);
+  box-sizing: border-box;
 }
-.sidebar-search input:focus {
+
+.sidebar-search-box:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px var(--accent);
+}
+
+.sidebar-search-box svg {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+.sidebar-search-box input {
+  width: 100%;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: var(--font-md, 13px);
+  padding: 0;
   outline: none;
-  border-color: color-mix(in srgb, var(--accent) 50%, var(--border-color));
+  font-family: inherit;
+}
+
+.sidebar-search-box input::placeholder {
+  color: var(--text-muted);
+}
+
+.sidebar-search-clear {
+  border: none;
+  background: none;
+  color: var(--text-muted);
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 2px;
+}
+
+.sidebar-search-clear:hover {
+  color: var(--text-primary);
 }
 .tree-session-rename {
   flex: 1;

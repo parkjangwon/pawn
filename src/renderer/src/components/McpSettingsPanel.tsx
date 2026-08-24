@@ -31,7 +31,9 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
         <div className="settings-row-info" style={{ marginBottom: 8 }}>
           <span className="settings-row-label">{t('settings.mcpSection.templates')}</span>
           <span className="settings-row-desc">
-            One-click install common MCP servers (stdio or HTTP). Add secrets in env after install.
+            {t('settings.mcpSection.templatesDesc', {
+              defaultValue: 'One-click install common MCP servers (stdio or HTTP). Add secrets in env after install.'
+            })}
           </span>
         </div>
         <div className="mcp-templates" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>

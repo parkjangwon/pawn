@@ -211,10 +211,11 @@
     "noProject": "プロジェクトが選択されていません",
     "workWithoutProject": "プロジェクトなしで作業",
     "usageTotalCost": "合計コスト",
+    "toggleSidebar": "サイドバー切り替え",
     "toggleRightPanel": "右パネルを切り替え",
     "toggleTerminal": "ターミナルを切り替え",
     "usageCacheHitRate": "キャッシュヒット率",
-    "openSidebar": "サイドバーを開く",
+    "openSidebar": "サイドバー切り替え",
     "navBack": "戻る",
     "navForward": "進む",
     "usageCacheWrite": "キャッシュ書き込み",
@@ -313,8 +314,10 @@
   },
   "settings": {
     "title": "設定",
-    "toggleNav": "設定サイドバーの表示切替",
+    "toggleNav": "設定サイドバーを切り替え",
     "searchPlaceholder": "設定を検索...",
+    "searchResults": "検索結果",
+    "noResults": "設定が見つかりません",
     "appearance": "外観",
     "providers": "プロバイダー",
     "models": "モデル",
@@ -431,6 +434,11 @@
       "refresh": "更新",
       "loading": "読み込み中…",
       "builtin": "標準",
+      "builtinDesc_worker": "汎用実装エージェント。隔離環境でコード探索・編集・検証を実行します。",
+      "builtinDesc_code-reviewer": "コードの品質、セキュリティ、保守性をレビューし、優先度付きの改善案を提供します。（読み取り専用）",
+      "builtinDesc_explore": "高速なコードベース探索と分析。ファイル変更なしで構造を調査します。（読み取り専用）",
+      "builtinDesc_plan": "実装計画を立てる前にコードベースの事前コンテキストを収集する調査エージェント。（読み取り専用）",
+      "builtinDesc_synthesizer": "収集した調査資料を統合し、構造化されたレポートアーティファクトを作成します。",
       "custom": "マイエージェント",
       "customEmpty": "まだカスタムエージェントがありません。「新規エージェント」で追加するか、標準ロールをコピーして調整してください。",
       "new": "新規エージェント",
@@ -615,6 +623,7 @@
       "envPlaceholder": "環境変数、1行に1つ: KEY=value",
       "addFailed": "サーバーを追加できませんでした。",
       "templates": "テンプレート",
+      "templatesDesc": "よく使われるMCPサーバー（stdio/HTTP）をワンクリックでインストールします。必要なシークレットはインストール後に環境変数に追加してください。",
       "retry": "再試行"
     },
     "dataSection": {
@@ -689,7 +698,9 @@
       "awsSecretAccessKey": "Secret Access Key",
       "awsSessionToken": "Session Token",
       "optional": "任意",
-      "privacyNote": "サインイン トークンとシークレットはこの端末の ~/.pawn にのみ保存され、他のサービスへアップロードされません。"
+      "privacyNote": "サインイン トークンとシークレットはこの端末の ~/.pawn にのみ保存され、他のサービスへアップロードされません。",
+      "writeScopesMissing": "書き込み権限が不足しています（{{scopes}}）。再接続して有効化してください。",
+      "writeScopesReady": "書き込み権限が有効です"
     },
     "automationSection": {
       "title": "オートメーション",
@@ -1045,7 +1056,9 @@
     "gitCommit": "git commit",
     "gitPush": "git push",
     "gitBranch": "git branch",
-    "gitStash": "git stash"
+    "gitStash": "git stash",
+    "batchRunning": "ツール{{count}}件を実行中…",
+    "batchDone": "{{count}}件の操作を実行完了"
   },
   "diffView": {
     "showAllLines": "すべての行を表示",

@@ -267,11 +267,10 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   style={{ display: 'none' }}
                   onChange={handleFilesPicked}
                 />
-                <div className="context-chip-wrapper" ref={permPickerRef}>
-
+                <div className="mode-segment-pill" ref={permPickerRef}>
                   <button
                     type="button"
-                    className={`perm-chip perm-agent-${agentMode}`}
+                    className={`mode-segment-btn agent-btn agent-${agentMode}`}
                     onClick={() =>
                       setAgentMode(
                         agentMode === 'plan' ? 'build' : 'plan',
@@ -281,7 +280,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     title={agentMode === 'plan' ? t('contextBar.agentPlanHint') : t('contextBar.agentBuildHint')}
                     aria-label={agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
                       {agentMode === 'plan' ? (
                         <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9l2 2 4-4" />
                       ) : (
@@ -290,16 +289,17 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     </svg>
                     <span>{agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}</span>
                   </button>
+                  <span className="mode-segment-sep" aria-hidden="true" />
                   <button
                     type="button"
-                    className={`perm-chip perm-${permissionMode}`}
+                    className={`mode-segment-btn perm-btn perm-${permissionMode}`}
                     aria-haspopup="dialog"
                     aria-expanded={showPermPicker}
                     onClick={() => { setShowPermPicker(!showPermPicker); setShowProjectPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}
                     title={permLabels[permissionMode]}
                     aria-label={permLabels[permissionMode]}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
                     <span>{permLabels[permissionMode]}</span>
                   </button>
                   {showPermPicker && (

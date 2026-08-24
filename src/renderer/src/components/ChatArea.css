@@ -301,13 +301,14 @@
 }
 
 .app.dark .welcome-btn {
-  background: var(--bg-elevated);
-  border-color: var(--border-strong, var(--border-color));
+  background: var(--bg-secondary);
+  border-color: var(--border-color);
 }
 
 .app.dark .welcome-btn:hover {
-  border-color: #6e6e73;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28);
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .welcome-btn svg {
@@ -1279,7 +1280,90 @@
   max-width: 100%;
 }
 
-/* Permission chip */
+/* Mode Segment Pill (Plan/Build + Permissions) */
+.mode-segment-pill {
+  display: inline-flex;
+  align-items: center;
+  height: 28px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  overflow: visible;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color var(--dur-fast) var(--ease-out-soft);
+}
+
+.app.dark .mode-segment-pill {
+  background: #2a2a2c;
+  border-color: #444446;
+}
+
+.mode-segment-pill:hover {
+  border-color: var(--border-strong);
+}
+
+.mode-segment-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 100%;
+  padding: 0 8px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all var(--dur-fast) var(--ease-out-soft);
+}
+
+.mode-segment-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.mode-segment-btn.agent-plan {
+  color: #0d9488;
+}
+
+.app.dark .mode-segment-btn.agent-plan {
+  color: #5eead4;
+}
+
+.mode-segment-btn.agent-build {
+  color: var(--accent);
+}
+
+.app.dark .mode-segment-btn.agent-build {
+  color: #93c5fd;
+}
+
+.mode-segment-btn.perm-yolo {
+  color: var(--danger);
+}
+
+.mode-segment-btn.perm-ask {
+  color: var(--warning);
+}
+
+.mode-segment-btn.perm-auto {
+  color: var(--text-primary);
+}
+
+.mode-segment-sep {
+  width: 1px;
+  height: 14px;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+.app.dark .mode-segment-sep {
+  background: #444446;
+}
+
+/* Permission chip (legacy/fallback) */
 .perm-chip {
   display: inline-flex;
   align-items: center;

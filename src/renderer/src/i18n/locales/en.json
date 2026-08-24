@@ -211,10 +211,11 @@
     "noProject": "No project selected",
     "workWithoutProject": "Work without a project",
     "usageTotalCost": "Total cost",
-    "toggleRightPanel": "Toggle right panel",
-    "toggleTerminal": "Toggle terminal",
+    "toggleSidebar": "Toggle Sidebar",
+    "toggleRightPanel": "Toggle Side Panel",
+    "toggleTerminal": "Toggle Terminal",
     "usageCacheHitRate": "Cache hit rate",
-    "openSidebar": "Open sidebar",
+    "openSidebar": "Toggle Sidebar",
     "navBack": "Back",
     "navForward": "Forward",
     "usageCacheWrite": "Cache write",
@@ -315,6 +316,8 @@
     "title": "Settings",
     "toggleNav": "Toggle Settings Sidebar",
     "searchPlaceholder": "Search settings...",
+    "searchResults": "Search results",
+    "noResults": "No settings found",
     "appearance": "Appearance",
     "providers": "Providers",
     "models": "Models",
@@ -431,6 +434,11 @@
       "refresh": "Refresh",
       "loading": "Loading…",
       "builtin": "Built-in",
+      "builtinDesc_worker": "General-purpose implementer: explore + edit + verify in an isolated environment.",
+      "builtinDesc_code-reviewer": "Reviews code for quality, security, and maintainability. (Read-only)",
+      "builtinDesc_explore": "Fast read-only codebase search and analysis.",
+      "builtinDesc_plan": "Read-only research agent used before writing a plan.",
+      "builtinDesc_synthesizer": "Writes structured reports from collected research material.",
       "custom": "Custom",
       "customEmpty": "No custom agents yet. Tap “New agent”, or copy a built-in role and tweak it.",
       "new": "New agent",
@@ -615,7 +623,8 @@
       "argsPlaceholder": "Arguments, space-separated (e.g. -y @some/mcp-server)",
       "envPlaceholder": "Environment variables, one per line: KEY=value",
       "addFailed": "Couldn't add the server.",
-      "templates": "Templates"
+      "templates": "Templates",
+      "templatesDesc": "One-click install common MCP servers (stdio or HTTP). Add secrets in env after install."
     },
     "dataSection": {
       "title": "Data",
@@ -689,7 +698,9 @@
       "awsSecretAccessKey": "Secret access key",
       "awsSessionToken": "Session token",
       "optional": "Optional",
-      "privacyNote": "Sign-in tokens and secrets are stored only under ~/.pawn on this machine. They are not uploaded or shared with other services."
+      "privacyNote": "Sign-in tokens and secrets are stored only under ~/.pawn on this machine. They are not uploaded or shared with other services.",
+      "writeScopesMissing": "Write scopes missing ({{scopes}}). Disconnect → Connect to enable Gmail send / Sheets write / Calendar create.",
+      "writeScopesReady": "Write scopes ready"
     },
     "automationSection": {
       "title": "Automations",
@@ -943,12 +954,12 @@
     "close": "Close terminal"
   },
   "commandPalette": {
-    "title": "Command palette",
-    "placeholder": "Search commands, sessions, projects…",
-    "noResults": "No matching commands",
+    "title": "Search chats",
+    "placeholder": "Search chats...",
+    "noResults": "No matching chats",
     "noResultsHint": "Try another keyword, or clear the search.",
-    "navigate": "Move",
-    "select": "Run",
+    "navigate": "Navigate",
+    "select": "Select",
     "close": "Close",
     "clear": "Clear search",
     "current": "Current",
@@ -960,10 +971,10 @@
     "projectPath": "{{path}}",
     "projectNoPath": "No folder linked",
     "groups": {
-      "actions": "Actions",
-      "navigation": "View & appearance",
-      "sessions": "Recent sessions",
-      "projects": "Projects"
+      "sessions": "Chats",
+      "actions": "Quick actions",
+      "projects": "Projects",
+      "navigation": "View & appearance"
     },
     "commands": {
       "newSession": "New chat",
@@ -1045,7 +1056,9 @@
     "gitCommit": "git commit",
     "gitPush": "git push",
     "gitBranch": "git branch",
-    "gitStash": "git stash"
+    "gitStash": "git stash",
+    "batchRunning": "Running {{count}} tools…",
+    "batchDone": "Executed {{count}} operations"
   },
   "diffView": {
     "showAllLines": "Show all lines",

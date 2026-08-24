@@ -2,6 +2,7 @@ import React, { memo, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import MarkdownRenderer from './MarkdownRenderer'
 import ToolMessage from './ToolMessage'
+import ToolBatch from './ToolBatch'
 import SubagentActivity from './SubagentActivity'
 import { useStreamingStore } from '../stores/streaming'
 import { useChatStore } from '../stores/chat'
@@ -314,6 +315,24 @@ export default function MessageList({
   const lastId = messages[messages.length - 1]?.id
   const lastRole = messages[messages.length - 1]?.role
 
+  type RenderItem =
+    | { kind: 'message'; msg: Message }
+    | { kind: 'tool-batch'; id: string; messages: Message[] }
+
+  const renderItems: RenderItem[] = []
+  for (const msg of visible) {
+    if (msg.role === 'system') {
+      const last = renderItems[renderItems.length - 1]
+      if (last && last.kind === 'tool-batch') {
+        last.messages.push(msg)
+      } else {
+        renderItems.push({ kind: 'tool-batch', id: `batch-${msg.id}`, messages: [msg] })
+      }
+    } else {
+      renderItems.push({ kind: 'message', msg })
+    }
+  }
+
   return (
     <div className="chat-messages" onScroll={onScroll} data-session={sessionKey || ''}>
       {startIndex > 0 && nearTop && (
@@ -321,16 +340,23 @@ export default function MessageList({
           {t('chat.showEarlier', { count: startIndex })}
         </button>
       )}
-      {visible.map((msg) => (
-        <MessageErrorBoundary key={msg.id}>
-          <MessageRow
-            msg={msg}
-            animateIn={isFresh(msg)}
-            isStreamingTail={busy && msg.id === lastId && msg.role === 'assistant'}
-            projectId={projectId}
-            sessionId={sessionId}
-            canAct={!busy && Boolean(projectId && sessionId)}
-          />
+      {renderItems.map((item) => (
+        <MessageErrorBoundary key={item.kind === 'message' ? item.msg.id : item.id}>
+          {item.kind === 'message' ? (
+            <MessageRow
+              msg={item.msg}
+              animateIn={isFresh(item.msg)}
+              isStreamingTail={busy && item.msg.id === lastId && item.msg.role === 'assistant'}
+              projectId={projectId}
+              sessionId={sessionId}
+              canAct={!busy && Boolean(projectId && sessionId)}
+            />
+          ) : (
+            <ToolBatch
+              messages={item.messages}
+              animateIn={item.messages.some((m) => isFresh(m))}
+            />
+          )}
         </MessageErrorBoundary>
       ))}
       {busy && lastRole !== 'assistant' && (

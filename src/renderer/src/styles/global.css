@@ -313,40 +313,49 @@ select:focus-visible {
 }
 
 /*
- * Dark theme — hierarchy + contrast tuned against ChatGPT / GitHub Copilot dark UIs.
- * Goals: clearer surface layers, readable secondary/muted text, visible borders,
- * user bubbles that don't melt into the canvas.
+ * Dark theme — layered depth & contrast tuned for deep, comfortable focus (Linear / macOS Dark).
+ * Surface stack:
+ *   - Canvas: #161619 (rich neutral dark canvas)
+ *   - Sidebar / Nav: #111114 (recessed darker frame)
+ *   - Secondary / Cards: #1e1e23 (elevated card layer)
+ *   - Elevated / Modals / Input: #242429 (top active elevation)
+ *   - Hover / Active: #26262c / #2f2f37
+ * Text:
+ *   - Primary: #f4f4f6 (soft off-white)
+ *   - Secondary: #a1a1aa (clear slate-400)
+ *   - Muted: #71717a (soft zinc-500)
+ * Borders:
+ *   - Hairline alpha borders (rgba(255, 255, 255, 0.08) and 0.15)
  */
 .app.dark {
-  /* Surfaces (darkest → lightest): secondary chrome → sidebar → chat → input/elevated */
-  --bg-primary: #1c1c1e;
-  --bg-secondary: #0e0e10;
-  --bg-sidebar: #141416;
-  --bg-hover: #2c2c2e;
-  --bg-active: #3a3a3c;
-  --bg-input: #2c2c2e;
-  --bg-elevated: #262628;
-  /* Text: keep body near-white; secondary/muted must stay legible on #1c1c1e */
-  --text-primary: #f5f5f7;
-  --text-secondary: #c7c7cc;
-  --text-muted: #98989f;
-  /* Hairlines need enough ΔL against primary/sidebar (old #2e2e2e was invisible) */
-  --border-color: #3a3a3c;
-  --border-strong: #48484a;
-  /* Light fill for emphasis on dark chrome — never put white text on this */
-  --accent: #f5f5f7;
+  --bg-primary: #161619;
+  --bg-secondary: #1e1e23;
+  --bg-sidebar: #111114;
+  --bg-hover: #26262c;
+  --bg-active: #2f2f37;
+  --bg-input: #1a1a1e;
+  --bg-elevated: #222227;
+
+  --text-primary: #f4f4f6;
+  --text-secondary: #a1a1aa;
+  --text-muted: #71717a;
+
+  --border-color: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
+
+  --accent: #f4f4f6;
   --accent-hover: #ffffff;
-  --accent-subtle: rgba(245, 245, 247, 0.1);
-  --on-accent: #1c1c1e;
-  --focus-ring: rgba(255, 255, 255, 0.42);
-  --user-bubble: #2c2c2e;
-  --danger: #ff6b6b;
-  --warning: #ffd60a;
-  --success: #30d158;
+  --accent-subtle: rgba(244, 244, 246, 0.08);
+  --on-accent: #161619;
+  --focus-ring: rgba(244, 244, 246, 0.35);
+  --user-bubble: #222227;
+  --danger: #f87171;
+  --warning: #fbbf24;
+  --success: #34d399;
   --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.45);
-  /* Form controls (select / input / segmented) — sit above canvas */
-  --control-bg: #2c2c2e;
-  --control-border: #525256;
+
+  --control-bg: #1e1e23;
+  --control-border: rgba(255, 255, 255, 0.12);
 }
 
 /* Scrollbar — thin, fade-in on hover for a calmer chrome */
