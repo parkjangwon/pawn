@@ -9,6 +9,9 @@ import { toolsToClaude, toolsToOpenAI, getMcpToolDefinitions, type ToolCall } fr
 import type { CallUsage } from '../stores/usage'
 import type { RouteDecision } from './router'
 import {
+  claudeThinkingBudget, deepSeekEffort, effectiveReasoningEffort, type HarnessMode
+} from './harnessMode'
+import {
   sanitizeForSend, stripStaleVisionPayloads, toClaudeMessages, toOpenAIMessages,
   type TranscriptEntry, type TranscriptThinking
 } from './transcript'
@@ -124,6 +127,8 @@ export interface LlmRequest {
   toolAllowlist?: string[]
   /** When set, these tools are removed from the exposed list (subagent worker). */
   toolDenylist?: string[]
+  /** Harness mode override (subagents pass the parent session's mode). */
+  harnessMode?: HarnessMode
 }
 
 /** No data for this long means the provider connection is dead; bail out. */
@@ -140,7 +145,13 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     denylist: toolDenylist
   }
   const { provider, model } = decision
-  const { reasoningEffort } = useProviderStore.getState()
+  const providerState = useProviderStore.getState()
+  const userEffort = providerState.reasoningEffort || 'auto'
+  const harnessMode = req.harnessMode ?? providerState.harnessModeFor?.(sessionId) ?? 'default'
+  // Harness mode shifts the default only; an explicit user effort always wins.
+  // OpenAI-style reasoning_effort, DeepSeek, and Claude thinking map differently.
+  const reasoningEffort = effectiveReasoningEffort(userEffort, harnessMode)
+  const dsEffort = deepSeekEffort(userEffort, harnessMode)
   const isBrowser = window.api?.platform === 'browser'
   // Drop pre-turn screenshots so old computer-use frames do not force vision
   // tokens or bloated prompts on later text turns.
@@ -171,9 +182,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const dsUser = deepSeekHost ? deepSeekUserId(projectId, sessionId) : undefined
 
   if (provider.apiFormat === 'claude' || deepSeekAnthropic) {
-    const budget = reasoningEffort && reasoningEffort !== 'auto'
-      ? ({ low: 2048, medium: 4096, high: 8192 } as Record<string, number>)[reasoningEffort]
-      : undefined
+    const budget = claudeThinkingBudget(userEffort, harnessMode)
 
     // DeepSeek Anthropic base: https://api.deepseek.com/anthropic (+ /messages)
     url = deepSeekAnthropic
@@ -186,7 +195,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     const dsAnth = deepSeekAnthropic
       ? deepSeekAnthropicBodyExtras({
         modelId: model.modelId,
-        reasoningEffort,
+        reasoningEffort: dsEffort,
         complexity,
         userId: dsUser
       })
@@ -195,7 +204,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       model: model.modelId,
       // Coding turns need headroom; DeepSeek ignores budget_tokens on Anthropic path.
       max_tokens: deepSeekModel
-        ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort, complexity })
+        ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort: dsEffort, complexity })
         : budget
           ? budget + 16_384
           : 16_384,
@@ -225,7 +234,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     }
     const deepSeekExtras = deepSeekChatBodyExtras({
       modelId: model.modelId,
-      reasoningEffort,
+      reasoningEffort: dsEffort,
       complexity
     })
     body = {
@@ -235,7 +244,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       stream_options: { include_usage: true },
       // DeepSeek: CoT counts toward max_tokens (thinking mode). API max output 384K.
       max_tokens: deepSeekModel
-        ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort, complexity })
+        ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort: dsEffort, complexity })
         : 16_384,
       tools: toolsToOpenAI(mcpTools, toolListOpts),
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)

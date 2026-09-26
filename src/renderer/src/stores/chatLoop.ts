@@ -4,7 +4,7 @@ import {
 } from './chatState'
 import {
   checkpointSnapshot, currentMessageContent, demoteVisionPayloadsToText, loadTranscript,
-  persistTranscript, systemError, ToolLoopCounter, truncateToolResult
+  persistTranscript, systemError, ToolLoopCounter, toolResultCap, truncateToolResult
 } from './chatTranscript'
 import { useAppStore } from './app'
 import { useChangeLedger } from './changeLedger'
@@ -27,6 +27,9 @@ import {
 import { formatToolMessageContent } from '../agent/toolMessage'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
+import {
+  effectiveAutoMemoryConsolidate, effectiveDoneGate, harnessPreamble, harnessProfile
+} from '../agent/harnessMode'
 import { fireHook } from '../agent/hooksClient'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildTranscriptText, imageAttachments, type ChatAttachment } from '../utils/attachments'
@@ -58,14 +61,12 @@ export function describeToolAction(tc: ToolCall): string {
   return `Running ${name}`
 }
 
-/** Hard ceiling on LLM rounds per user message; runaway agents die here. */
-const MAX_TOOL_ROUNDS = 50
+// Round ceiling and compaction ratio come from the harness profile
+// (default 50 rounds / 0.6; eco 25 / 0.45; maxing 80 / 0.7).
 /** Consecutive identical tool-call sets before we call it a loop and stop. */
 const MAX_REPEATED_TOOL_ROUNDS = 3
 /** Model attempts per round before the turn gives up (each on a different model). */
 const MAX_ROUTE_ATTEMPTS = 3
-/** Compact once the replayed transcript passes this share of the model's context. */
-const COMPACT_AT_RATIO = 0.6
 const DEFAULT_CONTEXT_WINDOW = 128_000
 
 // --- Agent loop -------------------------------------------------------------
@@ -275,6 +276,14 @@ export async function agentLoop(
         'Do not edit files, run shell that changes state, or use computer/browser actions that mutate. ' +
         'When ready to implement, ask the user to switch to Build.'
     }
+    // Harness mode (eco / maxing) rides in the preamble like Plan mode so the
+    // system prefix cache stays shared; default adds nothing.
+    const harnessMode = useProviderStore.getState().harnessModeFor(sessionId)
+    const harness = harnessProfile(harnessMode)
+    const harnessBlock = harnessPreamble(harnessMode)
+    if (harnessBlock) {
+      projectPreamble += (projectPreamble ? '\n\n' : '') + harnessBlock
+    }
     // Long-term Memory injection (local, optional)
     try {
       if (window.api.memory?.injectBlock) {
@@ -388,7 +397,7 @@ export async function agentLoop(
       userMessageAppended
     })
 
-    while (round < MAX_TOOL_ROUNDS) {
+    while (round < harness.maxToolRounds) {
       if (signal.aborted) break
       round++
 
@@ -406,7 +415,7 @@ export async function agentLoop(
       const contextWindow = lastDecision?.model.contextWindow || DEFAULT_CONTEXT_WINDOW
       const tokenEst = estimateTokens(entries)
       useUsageStore.getState().noteContext(sessionId, tokenEst, contextWindow, false)
-      if (tokenEst > contextWindow * COMPACT_AT_RATIO) {
+      if (tokenEst > contextWindow * harness.compactAtRatio) {
         entries = compactTranscript(entries)
         persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
         useUsageStore.getState().noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.compacted'))
@@ -436,7 +445,8 @@ export async function agentLoop(
           escalate: escalate + (transientFailures >= 2 ? 1 : 0),
           exclude: excluded,
           newTurn: round === 1,
-          needsVision
+          needsVision,
+          harnessMode
         })
         // No vision model: demote screenshots to text stubs and continue on
         // DeepSeek/text models instead of killing the whole computer-use turn.
@@ -668,7 +678,8 @@ export async function agentLoop(
         // asking. Green → surface OK and stop (no extra LLM round). Fail → feed
         // results back and continue so the agent can fix. Only auto/yolo (ask would
         // spam permission prompts). No paid services.
-        const { permissionMode: perm, doneGate } = useProviderStore.getState()
+        const { permissionMode: perm } = useProviderStore.getState()
+        const doneGate = effectiveDoneGate(useProviderStore.getState().doneGate, harnessMode)
         const agentMode = useProviderStore.getState().agentModeFor(sessionId)
         const gateKind = doneGate === 'test' ? 'test' : doneGate === 'typecheck' ? 'typecheck' : null
         const canAuto =
@@ -766,7 +777,7 @@ export async function agentLoop(
           isError: true
         }
         if (raw.isError) roundErrors++
-        const truncated = truncateToolResult(raw, tc.name)
+        const truncated = truncateToolResult(raw, tc.name, toolResultCap(tc.name, harness.toolResultScale))
 
         if (!raw.isError && (tc.name === 'edit_file' || tc.name === 'write_file' || tc.name === 'delete_file')) {
           turnHadCodeEdits = true
@@ -818,8 +829,8 @@ export async function agentLoop(
       if (signal.aborted) break
     }
 
-    if (round >= MAX_TOOL_ROUNDS) {
-      systemError(projectId, sessionId, i18n.t('chat.errors.maxRounds', { rounds: MAX_TOOL_ROUNDS }))
+    if (round >= harness.maxToolRounds) {
+      systemError(projectId, sessionId, i18n.t('chat.errors.maxRounds', { rounds: harness.maxToolRounds }))
     }
   } catch (err) {
     if (!signal.aborted) {
@@ -910,7 +921,10 @@ export async function agentLoop(
           }).catch(() => {})
           // Quiet merge of near-duplicate cards (threshold 0.92) so memory deepens over time.
           if (
-            useProviderStore.getState().autoMemoryConsolidate &&
+            effectiveAutoMemoryConsolidate(
+              useProviderStore.getState().autoMemoryConsolidate,
+              useProviderStore.getState().harnessModeFor(sessionId)
+            ) &&
             window.api.memory?.consolidate
           ) {
             void window.api.memory.consolidate({

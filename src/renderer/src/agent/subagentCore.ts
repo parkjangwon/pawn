@@ -33,27 +33,77 @@ export function toolCallSignature(calls: ToolCall[]): string {
 export async function mapPool<T, R>(
   items: T[],
   limit: number,
-  fn: (item: T, index: number) => Promise<R>
+  fn: (item: T, index: number) => Promise<R>,
+  opts?: {
+    /** Live concurrency ceiling (≤ limit); workers wait before starting new items. */
+    dynamicLimit?: () => number
+    /** Poll interval while throttled (tests shorten it). */
+    pollMs?: number
+  }
 ): Promise<R[]> {
   if (items.length === 0) return []
   const conc = Math.max(1, Math.min(limit, items.length))
   const out: R[] = new Array(items.length)
+  const pollMs = opts?.pollMs ?? 250
   let next = 0
+  let active = 0
   async function worker(): Promise<void> {
     while (true) {
+      if (opts?.dynamicLimit) {
+        while (next < items.length && active >= Math.max(1, opts.dynamicLimit())) {
+          await new Promise((r) => setTimeout(r, pollMs))
+        }
+      }
       const i = next++
       if (i >= items.length) return
-      out[i] = await fn(items[i], i)
+      active++
+      try {
+        out[i] = await fn(items[i], i)
+      } finally {
+        active--
+      }
     }
   }
   await Promise.all(Array.from({ length: conc }, () => worker()))
   return out
 }
 
+/**
+ * AIMD-style concurrency for wide pools: halve on every new provider failure
+ * (429/5xx), then step back up by one after `recoverMs` without failures.
+ * Keeps a 10-wide fan-out from retrying in lockstep against a rate limit.
+ */
+export function createAdaptiveLimit(
+  max: number,
+  failureCount: () => number,
+  opts?: { recoverMs?: number; now?: () => number }
+): () => number {
+  const recoverMs = opts?.recoverMs ?? 10_000
+  const now = opts?.now ?? Date.now
+  let cur = Math.max(1, max)
+  let seen = failureCount()
+  let lastChange = now()
+  return () => {
+    const failures = failureCount()
+    if (failures > seen) {
+      seen = failures
+      cur = Math.max(1, Math.floor(cur / 2))
+      lastChange = now()
+    } else if (cur < max && now() - lastChange >= recoverMs) {
+      cur++
+      lastChange = now()
+    }
+    return cur
+  }
+}
+
 export const HARD_MAX_ROUNDS = 25
 export const MAX_ROUTE_ATTEMPTS = 3
 export const MAX_REPEATED_TOOL_ROUNDS = 3
-/** Soft budget: parallel subagents should not explode token use. */
+/**
+ * Soft budget per parallel_agents call in default mode. Harness modes override
+ * it via HarnessProfile.maxParallelTasks (eco 3, maxing 12).
+ */
 export const MAX_PARALLEL_SUBAGENTS = 6
 /** Parent-facing summary budget — keep main-chat cache prefix lean. */
 export const SUBAGENT_SUMMARY_CAP = 8_000
@@ -210,8 +260,11 @@ export function normalizeSubagentTask(task: SubagentTask): SubagentTask {
  * For mixed batches where some tasks set background=true, return those as
  * handles immediately (handled in runParallelSubagents).
  */
-export function normalizeParallelTasks(tasks: SubagentTask[]): SubagentTask[] {
-  return tasks.slice(0, MAX_PARALLEL_SUBAGENTS).map(normalizeSubagentTask)
+export function normalizeParallelTasks(
+  tasks: SubagentTask[],
+  max: number = MAX_PARALLEL_SUBAGENTS
+): SubagentTask[] {
+  return tasks.slice(0, Math.max(1, max)).map(normalizeSubagentTask)
 }
 
 const SKILL_PRELOAD_MAX = 4

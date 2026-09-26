@@ -186,6 +186,12 @@ const TOOL_RESULT_CAPS: Record<string, number> = {
 }
 const DEFAULT_TOOL_RESULT_CAP = 12_000
 
+/** Transcript cap for a tool, scaled by the harness mode (eco 0.5x, maxing 1.5x). */
+export function toolResultCap(toolName: string | undefined, scale = 1): number {
+  const base = (toolName && TOOL_RESULT_CAPS[toolName]) || DEFAULT_TOOL_RESULT_CAP
+  return scale === 1 ? base : Math.max(2_000, Math.round(base * scale))
+}
+
 /** Replace image data-URLs with short text so a text-only model can continue. */
 export function demoteVisionPayloadsToText(entries: TranscriptEntry[]): TranscriptEntry[] {
   return entries.map((e) => {

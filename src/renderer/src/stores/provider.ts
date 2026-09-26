@@ -3,6 +3,7 @@ import { uid } from '../utils/uid'
 import { guessPricing, guessSupportsVision } from '../types/provider'
 import type { Provider, ModelEntry, RoutingMode } from '../types/provider'
 import { parseAgentMode, parseDoneGate, type AgentMode, type DoneGate } from '../agent/agentMode'
+import { parseHarnessMode, type HarnessMode } from '../agent/harnessMode'
 import { fetchProviderModels, mergeRemoteModels, isOpenRouterProvider } from '../agent/listModels'
 
 interface ProviderState {
@@ -19,6 +20,8 @@ interface ProviderState {
   agentMode: AgentMode
   /** Per-session overrides (Plan/Build). */
   sessionAgentModes: Record<string, AgentMode>
+  /** Harness mode (Settings → Agent): default | eco | maxing. */
+  harnessMode: HarnessMode
   /** Auto-verify after code edits: off | typecheck | test. */
   doneGate: DoneGate
   /** Agent shell_exec sandbox defaults. */
@@ -64,6 +67,9 @@ interface ProviderState {
   agentModeFor: (sessionId?: string | null) => AgentMode
   hydrateSessionAgentMode: (sessionId: string) => Promise<void>
   toggleAgentMode: () => void
+  /** Global harness mode; changed from Settings only. */
+  setHarnessMode: (mode: HarnessMode) => void
+  harnessModeFor: (sessionId?: string | null) => HarnessMode
   setDoneGate: (gate: DoneGate) => void
   setShellSandbox: (v: boolean) => void
   setShellNetwork: (v: boolean) => void
@@ -119,6 +125,7 @@ function saveToBackend(state: ProviderState): void {
       permissionMode: state.permissionMode,
       reasoningEffort: state.reasoningEffort,
       agentMode: state.agentMode,
+      harnessMode: state.harnessMode,
       doneGate: state.doneGate,
       shellSandbox: state.shellSandbox,
       shellNetwork: state.shellNetwork,
@@ -142,6 +149,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   reasoningEffort: 'auto',
   agentMode: 'build',
   sessionAgentModes: {},
+  harnessMode: 'default',
   doneGate: 'typecheck',
   shellSandbox: true,
   shellNetwork: true,
@@ -182,6 +190,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         permissionMode: (settings.permissionMode as 'ask' | 'auto' | 'yolo') || 'ask',
         reasoningEffort: (settings.reasoningEffort as 'auto' | 'low' | 'medium' | 'high') || 'auto',
         agentMode: parseAgentMode(settings.agentMode),
+        harnessMode: parseHarnessMode(settings.harnessMode),
         doneGate: parseDoneGate(settings.doneGate),
         shellSandbox: settings.shellSandbox !== false,
         shellNetwork: settings.shellNetwork !== false,
@@ -342,6 +351,19 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     const cur = get().agentMode
     get().setAgentMode(cur === 'plan' ? 'build' : 'plan')
   },
+
+  setHarnessMode: (raw) => {
+    const mode = parseHarnessMode(raw)
+    set((s) => {
+      const next = { ...s, harnessMode: mode }
+      saveToBackend(next)
+      return { harnessMode: mode }
+    })
+  },
+
+  // Global (Settings-only). The session arg keeps call sites stable if
+  // per-session modes ever come back.
+  harnessModeFor: () => get().harnessMode,
 
   setDoneGate: (gate) => {
     set((s) => {
