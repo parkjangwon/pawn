@@ -190,7 +190,19 @@ const api = {
       ipcRenderer.invoke('computer:keypress', key, opts || {}),
     clipboard: (action: string, text?: string) =>
       ipcRenderer.invoke('computer:clipboard', action, text),
-    wait: (ms: number) => ipcRenderer.invoke('computer:wait', ms)
+    wait: (ms: number) => ipcRenderer.invoke('computer:wait', ms),
+    exec: (action: string, args?: Record<string, unknown>, policy?: Record<string, unknown>) =>
+      ipcRenderer.invoke('computer:exec', action, args || {}, policy),
+    status: (opts?: { prompt?: boolean }) => ipcRenderer.invoke('computer:status', opts || {}),
+    overlay: (enabled: boolean, text?: string) => ipcRenderer.invoke('computer:overlay', enabled, text),
+    releaseAll: () => ipcRenderer.invoke('computer:releaseAll'),
+    onUserAbort: (cb: (reason: string) => void) => {
+      const handler = (_e: unknown, reason: string): void => cb(reason)
+      ipcRenderer.on('computer:userAbort', handler)
+      return () => {
+        ipcRenderer.removeListener('computer:userAbort', handler)
+      }
+    }
   },
 
   // Browser (embedded WebContentsView, driven by both the UI panel and the agent)

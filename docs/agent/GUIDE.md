@@ -153,23 +153,23 @@ SSRF guards block private/loopback by default. Fetched text wrapped as untrusted
 
 **Browser** (`browser_*`): embedded Chromium, own cookies — navigate, snapshot, click, fill, screenshot, AI cursor.
 
-**Computer** (`computer_*`) — full desktop OS:
+**Computer** (`computer_*`) — full desktop OS. On macOS a bundled native helper (`pawn-cua`, Swift: ScreenCaptureKit, CGEvent, Accessibility, Vision) does the work; no Homebrew deps.
 
 | Tool | Purpose |
 |------|---------|
-| `computer_screenshot` | Vision capture + size meta (`display_id`) |
-| `computer_displays` | List monitors |
-| `computer_click` | Buttons, single/double; image or screen coords |
-| `computer_move` / `computer_drag` / `computer_scroll` | Pointer |
-| `computer_type` / `computer_keypress` | Text + hotkeys (`cmd+c`, …) |
-| `computer_clipboard` | Get/set text |
-| `computer_wait` | UI settle |
+| `computer_ui_snapshot` / `computer_ui_action` | Accessibility outline with element ids → press / set_value / select / show_menu (exact, works on covered windows) |
+| `computer_apps` / `computer_windows` / `computer_menu` / `computer_open` | Launch/activate/quit apps, move/resize windows, run any menu command, open URLs/files |
+| `computer_screenshot` / `computer_zoom` | Vision capture (model-sized: 1568 px or 1920 px tier), `annotate` numbers elements, zoom for small text |
+| `computer_find` / `computer_ocr` | Locate text/elements (accessibility, then on-device OCR) |
+| `computer_click` / `computer_mouse` / `computer_drag` / `computer_scroll` | Pointer (element or image coords, modifiers, down/up, paths) |
+| `computer_type` / `computer_key` / `computer_hold_key` | Any-language text (IME-safe, long text pasted), shortcuts |
+| `computer_clipboard` / `computer_wait` / `computer_displays` / `computer_status` | Clipboard, settle, monitors, permissions |
 
-- Default coord space: **image** from last screenshot; optional `return_screenshot`
-- **macOS:** `brew install cliclick` + Accessibility + Screen Recording
-- **Windows:** PowerShell mouse/keyboard APIs
-- **Linux:** `xdotool`
-- Prefer vision-capable model (or router vision fallback) for screenshots
+- Claude on the Anthropic API also gets its native computer tool (`computer_toolset_20260801` / `computer_20251124` / `computer_20250124` by model; Settings → Agent toggle)
+- Coordinates: pixels of the latest screenshot (multi-monitor aware); `return_screenshot` on any action
+- **macOS:** grant Accessibility + Screen Recording to Pawn (Settings → Agent → Computer use → Check). Esc twice stops the agent
+- **Windows / Linux:** basic mouse/keyboard/screenshot/clipboard (PowerShell / `xdotool`)
+- Headless: `pawn-headless run --computer "…"` gives the CLI agent the same tools
 
 ### 5.6 Service connections (Settings → Connections)
 

@@ -486,7 +486,14 @@
       "toolLoading": "ツールの読み込み",
       "toolLoadingDesc": "スマート: コアのコーディングツールは常に送信し、ブラウザ・コンピューター・アカウント（GitHub/GitLab/Google/CodeCommit）・アプリのツールは必要なときだけ読み込みます。リクエストあたりのツールトークンが約半分になります。すべて: すべてのツールを送信します。",
       "toolLoadingSmart": "スマート（必要時に読み込み）",
-      "toolLoadingAll": "すべてのツール"
+      "toolLoadingAll": "すべてのツール",
+      "computerUse": "コンピューター操作",
+      "computerUseDesc": "この Mac のアプリを操作します：アクセシビリティツリー操作、スクリーンショットと拡大、OCR、マウス・キーボード、ウインドウ・メニュー。アクセシビリティと画面収録の許可が必要です。Esc を2回押すとエージェントが停止します。",
+      "computerCheck": "確認して許可を求める",
+      "computerReady": "準備完了 — {{backend}} ヘルパー {{version}}",
+      "computerUnavailable": "コンピューター操作はデスクトップアプリでのみ使えます。",
+      "nativeComputerTool": "Claude ネイティブのコンピューターツール",
+      "nativeComputerToolDesc": "Anthropic API で Claude に学習済みの専用コンピューターツールを使わせます（まとめて実行、最も正確なクリック）。Pawn のアクセシビリティ・OCR・アプリ・メニューツールも引き続き使えます。"
     },
     "agentsSection": {
       "title": "サブエージェント",
@@ -1124,7 +1131,16 @@
     "batchRunning": "ツール{{count}}件を実行中…",
     "batchDone": "{{count}}件の操作を実行完了",
     "lineStats": "{{added}} 行追加、{{removed}} 行削除",
-    "filesChanged": "{{count}} ファイル"
+    "filesChanged": "{{count}} ファイル",
+    "zoom": "拡大",
+    "uiSnapshot": "UI を読む",
+    "findOnScreen": "画面で探す",
+    "ocr": "文字認識",
+    "apps": "アプリ",
+    "windows": "ウインドウ",
+    "menu": "メニュー",
+    "openItem": "開く",
+    "computerStatus": "コンピューターの状態"
   },
   "diffView": {
     "showAllLines": "すべての行を表示",
@@ -1293,5 +1309,8 @@
       "budget_limited": "予算到達",
       "stopped": "停止済み"
     }
+  },
+  "computer": {
+    "stoppedByUser": "停止しました — Esc が2回押されました。マウスとキーボードの操作を解放しました。"
   }
 }

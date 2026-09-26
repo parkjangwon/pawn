@@ -367,6 +367,26 @@ declare global {
           text?: string
         ) => Promise<{ ok?: boolean; text?: string; error?: string }>
         wait: (ms: number) => Promise<{ ok?: boolean; ms?: number; error?: string }>
+        /** Unified computer-use action (native helper on macOS, legacy elsewhere). */
+        exec?: (
+          action: string,
+          args?: Record<string, unknown>,
+          policy?: { maxLongEdge?: number; maxPixels?: number; format?: 'jpeg' | 'png'; quality?: number }
+        ) => Promise<ComputerResultDto>
+        status?: (opts?: { prompt?: boolean }) => Promise<{
+          ok: boolean
+          backend: 'native' | 'legacy'
+          platform: string
+          accessibility?: boolean
+          screenRecording?: boolean
+          helper?: string | null
+          version?: string
+          notes: string[]
+          errors: string[]
+        }>
+        overlay?: (enabled: boolean, text?: string) => Promise<{ ok: boolean }>
+        releaseAll?: () => Promise<{ ok: boolean }>
+        onUserAbort?: (cb: (reason: string) => void) => () => void
       }
       browser: {
         open: (url: string) => Promise<{ ok?: boolean }>
@@ -971,6 +991,13 @@ declare global {
         ) => Promise<{ ok: boolean; imported: number; skipped: number }>
       }
     }
+  }
+
+  interface ComputerResultDto {
+    ok: boolean
+    text: string
+    image?: { dataUrl: string; width: number; height: number }
+    data?: Record<string, unknown>
   }
 
   interface LspDiagnosticDto {

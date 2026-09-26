@@ -17,7 +17,7 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 - **编程** — 文件、Shell、Git、符号搜索、检查，以及带权限的代理循环
 - **浏览器** — 内嵌 Chromium（`browser_*`）操作真实网页与登录会话。**多标签**：代理、UI 面板与每个子代理各占一个标签（按所有者隔离），并行浏览而不打扰你的画面
 - **检索** — 无需额外 API 的公开网页搜索/阅读（`web_search` / `web_fetch` / `web_research`），另有 **`research_report`**：并行检索子代理（各占标签）收集并去重，综合为附引用的报告产物
-- **计算机操控** — 桌面鼠标、键盘、截图、剪贴板（`computer_*`）
+- **电脑操作** — 像 Codex / Claude computer use 一样操作任何 Mac 应用：原生助手支持辅助功能树元素操作、应用/窗口/菜单控制、高清截图与放大、本地 OCR、输入法安全输入、多显示器、Claude 原生电脑工具；按两次 Esc 停止（`computer_*`；Windows/Linux 为基础鼠标键盘）
 - **记忆** — 本地长期 Memory（`~/.pawn/memory.db`），随使用个性化
 - **Hooks** — 兼容 Claude/Codex 的生命周期钩子（Claude + Pawn 配置合并去重）
 - **连接** — 设置 → 连接 中可选 Google / GitHub（OAuth）与 GitLab / AWS CodeCommit（PAT）工具（令牌仅本地）

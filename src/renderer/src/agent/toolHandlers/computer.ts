@@ -1,221 +1,182 @@
 import type { ToolHandler } from './types'
+import type { ToolCall, ToolResult } from '../toolDefinitionsTypes'
+import { useProviderStore } from '../../stores/provider'
+import { claudeModelVersion } from '../computerToolset'
 
+/**
+ * Computer-use tool handlers. Every tool maps to one engine action executed
+ * in the main process (native macOS helper, or the legacy path on other
+ * platforms) through window.api.computer.exec.
+ */
 
-const computer_screenshot: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.screenshot) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const result = await api.computer.screenshot({
-          displayId: call.arguments.display_id != null ? Number(call.arguments.display_id) : undefined,
-          maxWidth: call.arguments.max_width != null ? Number(call.arguments.max_width) : undefined
-        })
-        if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
-        const meta = [
-          `display=${result.displayId ?? '?'} ${result.displayLabel || ''}`.trim(),
-          `image=${result.width}x${result.height}`,
-          `screen=${result.screenWidth}x${result.screenHeight}`,
-          `scaleFactor=${result.scaleFactor ?? 1}`,
-          'coord_space=image (top-left). Use same space for computer_click/drag/scroll unless coord_space=screen.'
-        ].join('\n')
-        // Meta text + data URL: transcript maps the data URL to a vision image block.
-        return {
-          toolCallId: call.id,
-          content: `${meta}\n${result.dataUrl || ''}`
-        }
-      }
+type Api = typeof window.api
+type Args = Record<string, unknown>
 
+const UNAVAILABLE = 'Computer use is only available in the desktop app.'
 
-const computer_displays: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.displays) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const res = await api.computer.displays()
-        const list = res.displays || []
-        if (!list.length) return { toolCallId: call.id, content: 'No displays found.', isError: true }
-        const lines = list.map(
-          (d) =>
-            `- id=${d.id}${d.primary ? ' (primary)' : ''}: ${d.label} ${d.width}x${d.height}`
-        )
-        return { toolCallId: call.id, content: `# Displays\n${lines.join('\n')}` }
-      }
+/** Screenshot size policy for the model that will look at the image. */
+export function shotPolicyFor(modelId: string | undefined): { maxLongEdge: number; maxPixels: number } {
+  const id = (modelId || '').toLowerCase()
+  // High-resolution vision tiers: Claude Opus 4.7+ and every 5.x model
+  // (2576 px / ~3.75 MP), GPT-5.x, Gemini 2.5+/3. Older Claude models reject
+  // images over 1568 px on the long edge, so they get the standard tier.
+  const claude = claudeModelVersion(id)
+  const highRes = claude
+    ? claude.version >= 5 || (claude.family === 'opus' && claude.version >= 4.7)
+    : /(^|\/)gpt-5/.test(id) || /gemini-(2\.5|3)/.test(id)
+  return highRes ? { maxLongEdge: 1920, maxPixels: 3_000_000 } : { maxLongEdge: 1568, maxPixels: 1_150_000 }
+}
 
-const computer_status: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-  if (!api.computer?.preflight) {
-    return {
-      toolCallId: call.id,
-      content: 'Computer use is only available in the desktop app.',
-      isError: true
-    }
-  }
-  const res = await api.computer.preflight()
-  const lines = [
-    `# Computer status — ${res.ok ? 'ready' : 'needs setup'}`,
-    `platform: ${res.platform}`,
-    ...(res.notes || []).map((n: string) => `- ${n}`),
-    ...(res.errors || []).map((e: string) => `! ${e}`)
-  ]
-  return {
-    toolCallId: call.id,
-    content: lines.join('\n'),
-    isError: !res.ok
+/**
+ * The model that will read the next screenshot: the one the router actually
+ * called last (callLLM notes it). Falls back to the manually selected model.
+ * Must match what llm.ts declares to Claude as display_width/height.
+ */
+let routedModelId: string | undefined
+
+export function noteComputerModel(modelId: string | undefined): void {
+  routedModelId = modelId
+}
+
+export function currentPolicy(): { maxLongEdge: number; maxPixels: number } {
+  if (routedModelId) return shotPolicyFor(routedModelId)
+  try {
+    const st = useProviderStore.getState()
+    const model = st.models.find((m) => m.id === st.activeModelId)
+    return shotPolicyFor(model?.modelId)
+  } catch {
+    return shotPolicyFor(undefined)
   }
 }
 
-const computer_click: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.click) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const x = Number(call.arguments.x)
-        const y = Number(call.arguments.y)
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          return { toolCallId: call.id, content: 'x and y must be numbers', isError: true }
-        }
-        const opts = {
-          button: call.arguments.button != null ? String(call.arguments.button) : undefined,
-          clicks: call.arguments.clicks != null ? Number(call.arguments.clicks) : undefined,
-          coordSpace: call.arguments.coord_space != null ? String(call.arguments.coord_space) : undefined,
-          returnScreenshot: call.arguments.return_screenshot === true
-        }
-        let result = await api.computer.click(x, y, opts)
-        // One soft retry on transient hiccups (e.g. cliclick race).
-        if (result.error && /timeout|EAGAIN|busy|temporarily/i.test(result.error)) {
-          await new Promise((r) => setTimeout(r, 120))
-          result = await api.computer.click(x, y, opts)
-        }
-        if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
-        if (result.screenshot) return { toolCallId: call.id, content: result.screenshot }
-        const clampedNote =
-          (result as { clamped?: boolean }).clamped ? ' (coords clamped to display)' : ''
-        return {
-          toolCallId: call.id,
-          content: `Clicked (${result.x}, ${result.y})${clampedNote} button=${call.arguments.button || 'left'} clicks=${call.arguments.clicks || 1}`
-        }
-      }
+/** Tool result text + optional image data URL (transcript maps it to a vision block). */
+export function toToolResult(callId: string, res: ComputerResultDto): ToolResult {
+  const content = res.image ? `${res.text}\n${res.image.dataUrl}` : res.text
+  return { toolCallId: callId, content, isError: !res.ok }
+}
 
+async function exec(api: Api, call: ToolCall, action: string, args: Args): Promise<ToolResult> {
+  const c = api.computer
+  if (!c) return { toolCallId: call.id, content: UNAVAILABLE, isError: true }
+  if (typeof c.exec === 'function') {
+    const res = await c.exec(action, args, currentPolicy())
+    return toToolResult(call.id, res)
+  }
+  return legacy(api, call, action, args)
+}
 
-const computer_move: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.move) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const result = await api.computer.move(Number(call.arguments.x), Number(call.arguments.y), {
-          coordSpace: call.arguments.coord_space != null ? String(call.arguments.coord_space) : undefined
-        })
-        if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
-        return { toolCallId: call.id, content: `Moved mouse to (${result.x}, ${result.y})` }
-      }
+/** Pre-exec desktop builds / web preview: the original per-action IPC. */
+async function legacy(api: Api, call: ToolCall, action: string, args: Args): Promise<ToolResult> {
+  const c = api.computer
+  const fail = (m: string): ToolResult => ({ toolCallId: call.id, content: m, isError: true })
+  const pt = Array.isArray(args.coordinate)
+    ? (args.coordinate as number[])
+    : typeof args.x === 'number' && typeof args.y === 'number'
+      ? [args.x, args.y]
+      : undefined
+  switch (action) {
+    case 'screenshot': {
+      const r = await c.screenshot({ maxWidth: 1568, displayId: typeof args.display_id === 'number' ? args.display_id : undefined })
+      if (r.error) return fail(r.error)
+      return { toolCallId: call.id, content: `screenshot ${r.width}x${r.height}\n${r.dataUrl || ''}` }
+    }
+    case 'click': {
+      if (!pt) return fail('coordinate [x, y] is required')
+      const r = await c.click(pt[0], pt[1], { button: args.button as string, clicks: args.clicks as number, returnScreenshot: args.return_screenshot === true })
+      if (r.error) return fail(r.error)
+      return { toolCallId: call.id, content: r.screenshot || `Clicked (${pt[0]}, ${pt[1]})` }
+    }
+    case 'move': {
+      if (!pt) return fail('coordinate [x, y] is required')
+      const r = await c.move(pt[0], pt[1])
+      return r.error ? fail(r.error) : { toolCallId: call.id, content: `Moved to (${pt[0]}, ${pt[1]})` }
+    }
+    case 'drag': {
+      const a = args.from as number[] | undefined
+      const b = args.to as number[] | undefined
+      if (!a || !b) return fail('from and to are required')
+      const r = await c.drag(a[0], a[1], b[0], b[1], { button: args.button as string })
+      return r.error ? fail(r.error) : { toolCallId: call.id, content: 'Dragged' }
+    }
+    case 'scroll': {
+      const amount = Number(args.amount) || 3
+      const dir = String(args.direction || 'down')
+      const r = await c.scroll(pt?.[0] ?? 0, pt?.[1] ?? 0, {
+        dy: dir === 'down' ? amount : dir === 'up' ? -amount : 0,
+        dx: dir === 'right' ? amount : dir === 'left' ? -amount : 0
+      })
+      return r.error ? fail(r.error) : { toolCallId: call.id, content: 'Scrolled' }
+    }
+    case 'type': {
+      const r = await c.type(String(args.text ?? ''))
+      return r.error ? fail(r.error) : { toolCallId: call.id, content: 'Typed' }
+    }
+    case 'key': {
+      const r = await c.keypress(String(args.key ?? ''))
+      return r.error ? fail(r.error) : { toolCallId: call.id, content: `Pressed ${args.key}` }
+    }
+    case 'clipboard': {
+      const r = await c.clipboard(String(args.action || 'get'), args.text != null ? String(args.text) : undefined)
+      return r.error ? fail(r.error) : { toolCallId: call.id, content: r.text ?? 'Clipboard updated' }
+    }
+    case 'wait': {
+      const r = await c.wait(Number(args.ms) || 1000)
+      return r.error ? fail(r.error) : { toolCallId: call.id, content: `Waited ${r.ms} ms` }
+    }
+    case 'displays': {
+      const r = await c.displays()
+      return { toolCallId: call.id, content: (r.displays || []).map((d) => `- id=${d.id} ${d.label} ${d.width}x${d.height}${d.primary ? ' (primary)' : ''}`).join('\n') }
+    }
+    default:
+      return fail(`${action} needs a newer Pawn desktop build.`)
+  }
+}
 
+function h(action: string, map?: (a: Args) => Args): ToolHandler {
+  return (call, _projectPath, _signal, _ctx, api) => exec(api, call, action, map ? map(call.arguments) : call.arguments)
+}
 
-const computer_drag: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.drag) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const result = await api.computer.drag(
-          Number(call.arguments.from_x),
-          Number(call.arguments.from_y),
-          Number(call.arguments.to_x),
-          Number(call.arguments.to_y),
-          {
-            button: call.arguments.button != null ? String(call.arguments.button) : undefined,
-            steps: call.arguments.steps != null ? Number(call.arguments.steps) : undefined,
-            coordSpace: call.arguments.coord_space != null ? String(call.arguments.coord_space) : undefined,
-            returnScreenshot: call.arguments.return_screenshot === true
-          }
-        )
-        if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
-        if (result.screenshot) return { toolCallId: call.id, content: result.screenshot }
-        return {
-          toolCallId: call.id,
-          content: `Dragged (${call.arguments.from_x},${call.arguments.from_y}) → (${call.arguments.to_x},${call.arguments.to_y})`
-        }
-      }
-
-
-const computer_scroll: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.scroll) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const result = await api.computer.scroll(Number(call.arguments.x), Number(call.arguments.y), {
-          dy: call.arguments.dy != null ? Number(call.arguments.dy) : undefined,
-          dx: call.arguments.dx != null ? Number(call.arguments.dx) : undefined,
-          coordSpace: call.arguments.coord_space != null ? String(call.arguments.coord_space) : undefined,
-          returnScreenshot: call.arguments.return_screenshot === true
-        })
-        if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
-        if (result.screenshot) return { toolCallId: call.id, content: result.screenshot }
-        return {
-          toolCallId: call.id,
-          content: `Scrolled at (${call.arguments.x},${call.arguments.y}) dy=${call.arguments.dy ?? 0} dx=${call.arguments.dx ?? 0}`
-        }
-      }
-
-
-const computer_type: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.type) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const text = String(call.arguments.text || '')
-        const result = await api.computer.type(text, {
-          returnScreenshot: call.arguments.return_screenshot === true
-        })
-        if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
-        if (result.screenshot) return { toolCallId: call.id, content: result.screenshot }
-        return { toolCallId: call.id, content: `Typed ${text.length} chars` }
-      }
-
-
-const computer_keypress: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.keypress) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const key = String(call.arguments.key || '')
-        if (!key) return { toolCallId: call.id, content: 'key is required', isError: true }
-        const result = await api.computer.keypress(key, {
-          returnScreenshot: call.arguments.return_screenshot === true
-        })
-        if (result.error) return { toolCallId: call.id, content: result.error, isError: true }
-        if (result.screenshot) return { toolCallId: call.id, content: result.screenshot }
-        return { toolCallId: call.id, content: `Pressed key: ${key}` }
-      }
-
-
-const computer_clipboard: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.clipboard) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const action = String(call.arguments.action || 'get')
-        const res = await api.computer.clipboard(
-          action,
-          call.arguments.text != null ? String(call.arguments.text) : undefined
-        )
-        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
-        if (action === 'get' || action === 'read') {
-          return { toolCallId: call.id, content: res.text ?? '' }
-        }
-        return { toolCallId: call.id, content: 'Clipboard updated' }
-      }
-
-
-const computer_wait: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
-        if (!api.computer?.wait) {
-          return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
-        }
-        const ms = Number(call.arguments.ms)
-        const res = await api.computer.wait(ms)
-        if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
-        return { toolCallId: call.id, content: `Waited ${res.ms}ms` }
-      }
-
+const computer_status: ToolHandler = async (call, _p, _s, _c, api) => {
+  const c = api.computer
+  if (!c) return { toolCallId: call.id, content: UNAVAILABLE, isError: true }
+  const res = c.status ? await c.status({ prompt: call.arguments.prompt === true }) : await c.preflight()
+  const lines = [
+    `# Computer use — ${res.ok ? 'ready' : 'needs setup'}`,
+    `platform: ${res.platform}${'backend' in res ? ` · backend: ${res.backend}` : ''}`,
+    ...(res.notes || []).map((n: string) => `- ${n}`),
+    ...(res.errors || []).map((e: string) => `! ${e}`)
+  ]
+  return { toolCallId: call.id, content: lines.join('\n'), isError: !res.ok }
+}
 
 export const computerHandlers: Record<string, ToolHandler> = {
-  'computer_screenshot': computer_screenshot,
-  'computer_displays': computer_displays,
-  'computer_status': computer_status,
-  'computer_click': computer_click,
-  'computer_move': computer_move,
-  'computer_drag': computer_drag,
-  'computer_scroll': computer_scroll,
-  'computer_type': computer_type,
-  'computer_keypress': computer_keypress,
-  'computer_clipboard': computer_clipboard,
-  'computer_wait': computer_wait,
+  computer_screenshot: h('screenshot'),
+  computer_zoom: h('zoom'),
+  computer_click: h('click'),
+  computer_type: h('type'),
+  computer_key: h('key'),
+  computer_scroll: h('scroll'),
+  computer_drag: h('drag'),
+  computer_mouse: (call, _projectPath, _signal, _ctx, api) => {
+    const a = call.arguments
+    const sub = String(a.action || 'move').toLowerCase()
+    const action = sub === 'down' ? 'mouse_down' : sub === 'up' ? 'mouse_up' : sub === 'cursor' || sub === 'position' ? 'cursor' : 'move'
+    return exec(api, call, action, a)
+  },
+  computer_hold_key: h('hold_key'),
+  // Names from earlier Pawn versions (automations, custom agent configs).
+  computer_keypress: h('key'),
+  computer_move: h('move'),
+  computer_ui_snapshot: h('ui_snapshot'),
+  computer_ui_action: h('ui_action'),
+  computer_find: h('find'),
+  computer_ocr: h('ocr'),
+  computer_apps: h('apps'),
+  computer_windows: h('windows'),
+  computer_menu: h('menu'),
+  computer_open: h('open'),
+  computer_clipboard: h('clipboard'),
+  computer_wait: h('wait', (a) => ({ ...a, ...(a.seconds != null ? { duration: a.seconds } : {}) })),
+  computer_displays: h('displays'),
+  computer_status
 }

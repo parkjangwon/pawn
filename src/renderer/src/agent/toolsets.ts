@@ -43,7 +43,7 @@ export const TOOL_GROUPS: ToolGroup[] = [
     id: 'computer',
     prefix: 'computer_',
     keywords:
-      /\bscreen(shot)?\b|\bdesktop\b|\bmouse\b|\bkeyboard\b|computer[ _-]?use|\bfinder\b|\bdock\b|화면|스크린샷|마우스|키보드|데스크톱|바탕화면|画面|スクリーンショット|マウス|デスクトップ|屏幕|截图|鼠标|桌面/i,
+      /\bscreen(shot)?\b|\bdesktop\b|\bmouse\b|\bkeyboard\b|\bcomputer\b|\bfinder\b|\bdock\b|\bmenu ?bar\b|\b(open|launch|quit) (the )?[a-z][\w.]* app\b|\bmac ?os\b|\bsystem settings\b|\bulw\b|화면|스크린샷|마우스|키보드|데스크톱|바탕화면|컴퓨터|맥에서|앱을? (열|실행)|画面|スクリーンショット|マウス|デスクトップ|コンピュータ|屏幕|截图|鼠标|桌面|电脑/i,
     summary: 'desktop control: screenshot, mouse, keyboard, clipboard'
   },
   {
@@ -113,6 +113,10 @@ export function activeToolGroups(entries: TranscriptEntry[]): Set<ToolGroupId> {
   for (const e of entries) {
     if (e.role === 'assistant') {
       for (const tc of e.toolCalls || []) {
+        if (tc.toolset === 'computer' || tc.name === 'computer') {
+          active.add('computer')
+          continue
+        }
         if (tc.name === 'load_tools') {
           for (const g of groupsFromArg(tc.arguments.groups)) active.add(g)
           continue

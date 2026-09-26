@@ -19,6 +19,8 @@ export interface TranscriptToolCall {
   id: string
   name: string
   arguments: Record<string, unknown>
+  /** Anthropic client toolset (e.g. "computer"); echoed as toolset_name. */
+  toolset?: string
 }
 
 /** An opaque provider-native reasoning block that must be echoed back verbatim. */
@@ -426,6 +428,8 @@ export function compactTranscript(
 
 export function toClaudeMessages(entries: TranscriptEntry[]): Array<Record<string, unknown>> {
   const out: Array<Record<string, unknown>> = []
+  // tool_use id → toolset, so results can echo toolset_name.
+  const toolsetById = new Map<string, string>()
 
   for (const e of entries) {
     if (e.role === 'user' || e.role === 'summary') {
@@ -451,7 +455,12 @@ export function toClaudeMessages(entries: TranscriptEntry[]): Array<Record<strin
       }
       if (e.content) blocks.push({ type: 'text', text: e.content })
       for (const tc of e.toolCalls || []) {
-        blocks.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.arguments })
+        if (tc.toolset) {
+          toolsetById.set(tc.id, tc.toolset)
+          blocks.push({ type: 'tool_use', id: tc.id, name: tc.name, toolset_name: tc.toolset, input: tc.arguments })
+        } else {
+          blocks.push({ type: 'tool_use', id: tc.id, name: tc.name, input: tc.arguments })
+        }
       }
       if (blocks.length === 0) continue
       out.push({ role: 'assistant', content: blocks })
@@ -481,12 +490,10 @@ export function toClaudeMessages(entries: TranscriptEntry[]): Array<Record<strin
       }
     }
 
-    const block = {
-      type: 'tool_result',
-      tool_use_id: e.toolCallId,
-      content: blockContent,
-      is_error: e.isError === true
-    }
+    const toolset = toolsetById.get(e.toolCallId)
+    const block: Record<string, unknown> = toolset
+      ? { type: 'tool_result', tool_use_id: e.toolCallId, toolset_name: toolset, content: blockContent, is_error: e.isError === true }
+      : { type: 'tool_result', tool_use_id: e.toolCallId, content: blockContent, is_error: e.isError === true }
     const prev = out[out.length - 1]
     if (prev && prev.role === 'user' && Array.isArray(prev.content)) {
       (prev.content as Array<Record<string, unknown>>).push(block)
@@ -531,7 +538,8 @@ export function toOpenAIMessages(
         msg.tool_calls = e.toolCalls.map((tc) => ({
           id: tc.id,
           type: 'function',
-          function: { name: tc.name, arguments: JSON.stringify(tc.arguments) }
+          // Native Claude toolset members ("left_click") read as computer_* here.
+          function: { name: tc.toolset ? `${tc.toolset}_${tc.name}` : tc.name, arguments: JSON.stringify(tc.arguments) }
         }))
       } else if (!e.content && !e.reasoningContent) {
         continue

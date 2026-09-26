@@ -26,7 +26,13 @@
     "gatekeeperAssess": false,
     "entitlements": "build/entitlements.mac.plist",
     "entitlementsInherit": "build/entitlements.mac.plist",
-    "notarize": false
+    "notarize": false,
+    "extraResources": [
+      {
+        "from": "native/macos/build/pawn-cua",
+        "to": "bin/pawn-cua"
+      }
+    ]
   },
   "win": {
     "target": [

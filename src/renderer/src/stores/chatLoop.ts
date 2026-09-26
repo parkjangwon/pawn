@@ -37,6 +37,7 @@ import { buildTranscriptText, imageAttachments, type ChatAttachment } from '../u
 import { useStreamingStore } from './streaming'
 import { usePlanStore } from './plan'
 import { compactWithSummary } from '../agent/compaction'
+import { COMPUTER_HALT_TEXT, endsWithObservation, isComputerCall, isNativeComputerCall } from '../agent/computerToolset'
 import { decideAfterTurn, evaluateGoal, useUltraWorkStore } from './ultraWork'
 import { ultraWorkPreamble } from '../agent/ultraWork'
 import { getConnectedProviders, hiddenToolNames, refreshConnectedProviders } from '../agent/toolsets'
@@ -65,6 +66,10 @@ export function describeToolAction(tc: ToolCall): string {
   if (name === 'web_search' || name === 'web_research') return 'Searching the web'
   if (name === 'research_report') return 'Compiling research report'
   if (name.startsWith('browser_')) return 'Navigating browser'
+  if (tc.toolset === 'computer' || name === 'computer' || name.startsWith('computer_')) {
+    const action = tc.toolset === 'computer' ? name : name === 'computer' ? String(args.action || '') : name.slice(9)
+    return action === 'screenshot' || action === 'zoom' ? 'Looking at the screen' : `Using the computer (${action.replace(/_/g, ' ')})`
+  }
   return `Running ${name}`
 }
 
@@ -839,9 +844,28 @@ export async function agentLoop(
         const settled = await Promise.all(safe.map((tc) => timedExecute(tc)))
         safe.forEach((tc, i) => resultsById.set(tc.id, settled[i]))
       }
+      // Computer actions run in order; after the first failure the rest of the
+      // batch is answered with the standard halt text (they were planned
+      // assuming the earlier ones worked). A native-tool batch that doesn't
+      // end by looking at the screen gets a screenshot attached to its last
+      // action, saving Claude a round trip.
+      let computerHalted = false
+      const nativeBatch = risky.some(isNativeComputerCall)
+      const lastComputer = [...risky].reverse().find(isComputerCall)
+      const observe = nativeBatch && !endsWithObservation(risky)
       for (const tc of risky) {
         if (signal.aborted) break
-        resultsById.set(tc.id, await timedExecute(tc))
+        const isComputer = isComputerCall(tc)
+        if (isComputer && computerHalted) {
+          resultsById.set(tc.id, { toolCallId: tc.id, content: COMPUTER_HALT_TEXT, isError: true })
+          continue
+        }
+        const run = observe && tc === lastComputer
+          ? { ...tc, arguments: { ...tc.arguments, return_screenshot: true } }
+          : tc
+        const r = await timedExecute(run)
+        resultsById.set(tc.id, r)
+        if (isComputer && r.isError) computerHalted = true
       }
 
       if (lastAssistantMsgId) {
@@ -950,6 +974,9 @@ export async function agentLoop(
     else if (turnEnd !== 'failed') turnEnd = 'completed'
     useChangeLedger.getState().endTurn()
     releaseSleepHold()
+    if (entries.some((e) => e.role === 'tool' && e.name.startsWith('computer_'))) {
+      void window.api?.computer?.releaseAll?.()?.catch?.(() => {})
+    }
     recordTurnDuration(projectId, sessionId, turnAssistantIds, Date.now() - turnStartedAt)
     // Turn finished (normally or aborted) — drop the AI cursor so it doesn't
     // linger on the browser page after browser control ends.

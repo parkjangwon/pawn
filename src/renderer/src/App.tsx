@@ -247,6 +247,21 @@ export default function App(): React.JSX.Element {
     void window.api?.window?.close?.()?.catch(() => {})
   }, [closeLayer])
 
+  // Computer use: Esc pressed twice (a real key press) stops every agent turn
+  // and releases the mouse and keyboard.
+  useEffect(() => {
+    return window.api?.computer?.onUserAbort?.(() => {
+      useChatStore.getState().stopStreaming()
+      try {
+        window.dispatchEvent(
+          new CustomEvent('pawn:toast', { detail: { message: t('computer.stoppedByUser') } })
+        )
+      } catch {
+        /* ignore */
+      }
+    })
+  }, [t])
+
   // Electron: main-process forwarding dispatches every bound action here.
   useEffect(() => {
     return window.api?.onAppShortcut?.((id) => {

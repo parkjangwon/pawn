@@ -17,7 +17,7 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 - **Code** — File tools, shell, git, symbol search, checks, and a full agent loop with permissions
 - **Browse** — Embedded Chromium (`browser_*`) for real web UIs and logged-in sessions. **Multi-tab**: the agent, the UI panel, and every subagent get their own tab (per-owner isolation) and browse in parallel without ever yanking your view
 - **Research** — Public web search/fetch without extra API keys (`web_search`, `web_fetch`, `web_research`), plus **`research_report`**: parallel research subagents (each in its own tab) whose findings are deduplicated and synthesized into a citation-checked report artifact
-- **Computer use** — Desktop mouse, keyboard, screenshot, and clipboard (`computer_*`)
+- **Computer use** — Operate any Mac app like Codex / Claude computer use: native helper with accessibility-tree element actions, app/window/menu control, high-res screenshots + zoom, on-device OCR, IME-safe typing, multi-monitor, Claude's native computer tool; Esc×2 stops (`computer_*`; Windows/Linux: basic mouse/keyboard)
 - **Remember** — Local long-term Memory (`~/.pawn/memory.db`) that personalizes the agent over time
 - **Hooks** — Claude/Codex-compatible lifecycle hooks (Claude + Pawn configs merge with dedupe)
 - **Connect** — Optional Google & GitHub OAuth + GitLab & AWS CodeCommit (PAT) tools via Settings → Connections (tokens stay local)

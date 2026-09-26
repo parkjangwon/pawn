@@ -64,6 +64,7 @@ const HELP = `pawn-headless — run the Pawn agent without the desktop app
 Flags: --config FILE  --mode default|eco|maxing  --model ID  --permission auto|yolo|deny
        --plan (start in Plan mode, auto-approve the plan)  --json
        --ulw [--max-iterations N]  Ultra Work: loop until the goal is verified done
+       --computer  let the agent control this Mac (native helper; Esc twice stops)
 Eval:  --tasks ids/tags  --modes a,b  --models id,id  --repeat N  --out FILE.md  --json-out FILE.json  --keep
 Keys:  PAWN_API_KEY_<PROVIDER_ID>, or OPENAI_API_KEY / ANTHROPIC_API_KEY / DEEPSEEK_API_KEY / OPENROUTER_API_KEY / GEMINI_API_KEY …`
 
@@ -104,6 +105,7 @@ export async function main(argv: string[]): Promise<number> {
       agentMode: flags.plan ? 'plan' : 'build',
       autoApprovePlan: true,
       ...(flags.ulw ? { ultraWork: { maxIterations: Number(flags['max-iterations']) || undefined } } : {}),
+      computer: flags.computer === true,
       onLog
     })
     if (flags.json) console.log(JSON.stringify(res, null, 2))

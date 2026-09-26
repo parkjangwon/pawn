@@ -486,7 +486,14 @@
       "toolLoading": "工具加载",
       "toolLoadingDesc": "智能：始终发送核心编码工具，浏览器、电脑、账户（GitHub/GitLab/Google/CodeCommit）和应用工具仅在对话需要时加载，每次请求的工具 token 约减半。全部：发送所有工具。",
       "toolLoadingSmart": "智能（按需加载）",
-      "toolLoadingAll": "全部工具"
+      "toolLoadingAll": "全部工具",
+      "computerUse": "电脑操作",
+      "computerUseDesc": "控制这台 Mac 上的应用：辅助功能树操作、截图与放大、OCR、鼠标键盘、窗口与菜单。需要辅助功能和屏幕录制权限。按两次 Esc 可停止代理。",
+      "computerCheck": "检查并请求权限",
+      "computerReady": "就绪 — {{backend}} 助手 {{version}}",
+      "computerUnavailable": "电脑操作仅在桌面应用中可用。",
+      "nativeComputerTool": "Claude 原生电脑工具",
+      "nativeComputerToolDesc": "在 Anthropic API 上让 Claude 使用其训练过的专用电脑工具（批量操作，点击最准确）。Pawn 的辅助功能、OCR、应用和菜单工具仍可使用。"
     },
     "agentsSection": {
       "title": "子代理",
@@ -1124,7 +1131,16 @@
     "batchRunning": "正在运行 {{count}} 个工具…",
     "batchDone": "已执行 {{count}} 项操作",
     "lineStats": "新增 {{added}} 行，删除 {{removed}} 行",
-    "filesChanged": "{{count}} 个文件"
+    "filesChanged": "{{count}} 个文件",
+    "zoom": "放大",
+    "uiSnapshot": "读取界面",
+    "findOnScreen": "在屏幕上查找",
+    "ocr": "文字识别",
+    "apps": "应用",
+    "windows": "窗口",
+    "menu": "菜单",
+    "openItem": "打开",
+    "computerStatus": "电脑状态"
   },
   "diffView": {
     "showAllLines": "显示所有行",
@@ -1293,5 +1309,8 @@
       "budget_limited": "预算用尽",
       "stopped": "已停止"
     }
+  },
+  "computer": {
+    "stoppedByUser": "已停止 — 你按了两次 Esc。Pawn 已释放鼠标和键盘。"
   }
 }

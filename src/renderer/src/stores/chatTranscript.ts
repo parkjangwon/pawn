@@ -182,7 +182,12 @@ const TOOL_RESULT_CAPS: Record<string, number> = {
   list_dir: 12_000,
   write_file: 4_000,
   edit_file: 4_000,
-  load_skill: 40_000
+  load_skill: 40_000,
+  // Accessibility outlines are the text-mode "screenshot": keep them whole.
+  computer_ui_snapshot: 30_000,
+  computer_ocr: 20_000,
+  computer_windows: 8_000,
+  computer_apps: 8_000
 }
 const DEFAULT_TOOL_RESULT_CAP = 12_000
 
@@ -202,7 +207,7 @@ export function demoteVisionPayloadsToText(entries: TranscriptEntry[]): Transcri
       return {
         ...e,
         content: meta
-          ? `${meta}\n[screenshot image omitted — no vision model; describe UI from context or retry after setting Vision fallback]`
+          ? `${meta}\n[screenshot image omitted — no vision model. Use computer_ui_snapshot (accessibility outline with element ids) or computer_ocr to read the screen as text, and click by element.]`
           : '[screenshot image omitted — no vision model; set Vision fallback in Settings → Agent]'
       }
     }

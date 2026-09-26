@@ -486,7 +486,14 @@
       "toolLoading": "도구 로딩",
       "toolLoadingDesc": "스마트: 핵심 코딩 도구는 항상 보내고, 브라우저·컴퓨터·계정(GitHub/GitLab/Google/CodeCommit)·앱 도구는 대화에 필요할 때만 불러와요. 요청당 도구 토큰이 약 절반으로 줄어요. 전체: 모든 도구를 보내요.",
       "toolLoadingSmart": "스마트 (필요 시 로드)",
-      "toolLoadingAll": "모든 도구"
+      "toolLoadingAll": "모든 도구",
+      "computerUse": "컴퓨터 사용",
+      "computerUseDesc": "이 Mac의 앱을 제어해요: 접근성 트리 조작, 스크린샷·확대, OCR, 마우스·키보드, 창·메뉴. 손쉬운 사용과 화면 기록 권한이 필요해요. Esc를 두 번 누르면 에이전트가 멈춰요.",
+      "computerCheck": "확인 및 권한 요청",
+      "computerReady": "준비됨 — {{backend}} 헬퍼 {{version}}",
+      "computerUnavailable": "컴퓨터 사용은 데스크톱 앱에서만 가능해요.",
+      "nativeComputerTool": "Claude 네이티브 컴퓨터 도구",
+      "nativeComputerToolDesc": "Anthropic API에서 Claude가 학습된 자체 컴퓨터 도구를 쓰게 해요(여러 동작을 한 번에, 가장 정확한 클릭). Pawn의 접근성·OCR·앱·메뉴 도구는 그대로 쓸 수 있어요."
     },
     "agentsSection": {
       "title": "서브에이전트",
@@ -1124,7 +1131,16 @@
     "batchRunning": "도구 {{count}}개 실행 중…",
     "batchDone": "{{count}}개 작업 실행 완료",
     "lineStats": "{{added}}줄 추가, {{removed}}줄 삭제",
-    "filesChanged": "파일 {{count}}개"
+    "filesChanged": "파일 {{count}}개",
+    "zoom": "확대",
+    "uiSnapshot": "UI 읽기",
+    "findOnScreen": "화면에서 찾기",
+    "ocr": "텍스트 인식",
+    "apps": "앱",
+    "windows": "창",
+    "menu": "메뉴",
+    "openItem": "열기",
+    "computerStatus": "컴퓨터 상태"
   },
   "diffView": {
     "showAllLines": "모든 줄 표시",
@@ -1293,5 +1309,8 @@
       "budget_limited": "예산 소진",
       "stopped": "중지됨"
     }
+  },
+  "computer": {
+    "stoppedByUser": "중지됨 — Esc를 두 번 눌렀어요. 마우스와 키보드 제어를 해제했어요."
   }
 }

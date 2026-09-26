@@ -8,6 +8,8 @@ export interface ToolCall {
   id: string
   name: string
   arguments: Record<string, unknown>
+  /** Anthropic client toolset the call belongs to (e.g. "computer"). */
+  toolset?: string
 }
 
 export interface ToolResult {

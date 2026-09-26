@@ -154,11 +154,17 @@ const WORKER_DENY = [
   'app_set_permission_mode',
   'app_create_automation',
   'computer_click',
-  'computer_move',
+  'computer_mouse',
   'computer_drag',
   'computer_scroll',
   'computer_type',
-  'computer_keypress',
+  'computer_key',
+  'computer_hold_key',
+  'computer_ui_action',
+  'computer_apps',
+  'computer_windows',
+  'computer_menu',
+  'computer_open',
   'computer_clipboard'
 ]
 

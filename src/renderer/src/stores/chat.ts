@@ -219,6 +219,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
     // Stop always ends an Ultra Work run (it must not auto-continue after Stop).
     if (sessionId) useUltraWorkStore.getState().stop(sessionId)
     else for (const id of Object.keys(useUltraWorkStore.getState().runs)) useUltraWorkStore.getState().stop(id)
+    // Never leave a key or mouse button held down after Stop.
+    void window.api?.computer?.releaseAll?.()?.catch?.(() => {})
     if (sessionId) {
       bumpSessionEpoch(sessionId)
       stopSessionController(sessionId)

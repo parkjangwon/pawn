@@ -370,25 +370,35 @@ describe('search tools', () => {
     expect(shellMock.execFile).toHaveBeenCalledWith('git', expect.any(Array), '/p', expect.any(Number))
   })
 
-  it('presses computer keys', async () => {
+  it('presses computer keys (legacy per-action IPC when exec is unavailable)', async () => {
     useProviderStore.setState({ permissionMode: 'yolo' })
-    const result = await executeTool(call('computer_keypress', { key: 'Return' }))
+    const result = await executeTool(call('computer_key', { key: 'Return' }))
     expect(result.content).toContain('Return')
-    expect((window as any).api.computer.keypress).toHaveBeenCalledWith('Return', expect.any(Object))
+    expect((window as any).api.computer.keypress).toHaveBeenCalledWith('Return')
   })
 
-  it('computer click passes options', async () => {
+  it('computer click passes options (legacy)', async () => {
     useProviderStore.setState({ permissionMode: 'yolo' })
     ;(window as any).api.computer.click = vi.fn().mockResolvedValue({ ok: true, x: 10, y: 20 })
-    const result = await executeTool(
-      call('computer_click', { x: 10, y: 20, button: 'right', clicks: 2 })
-    )
+    const result = await executeTool(call('computer_click', { coordinate: [10, 20], button: 'right', clicks: 2 }))
     expect(result.content).toContain('Clicked')
-    expect((window as any).api.computer.click).toHaveBeenCalledWith(
-      10,
-      20,
-      expect.objectContaining({ button: 'right', clicks: 2 })
-    )
+    expect((window as any).api.computer.click).toHaveBeenCalledWith(10, 20, expect.objectContaining({ button: 'right', clicks: 2 }))
+  })
+
+  it('routes computer tools through computer.exec when available', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    const exec = vi.fn().mockResolvedValue({ ok: true, text: 'Pressed cmd+s' })
+    ;(window as any).api.computer.exec = exec
+    const result = await executeTool(call('computer_key', { key: 'cmd+s', repeat: 2 }))
+    expect(result).toMatchObject({ content: 'Pressed cmd+s', isError: false })
+    expect(exec).toHaveBeenCalledWith('key', { key: 'cmd+s', repeat: 2 }, expect.objectContaining({ maxLongEdge: expect.any(Number) }))
+    const mouse = await executeTool(call('computer_mouse', { action: 'down', coordinate: [1, 2] }))
+    expect(mouse.isError).toBe(false)
+    expect(exec).toHaveBeenLastCalledWith('mouse_down', { action: 'down', coordinate: [1, 2] }, expect.anything())
+    exec.mockResolvedValueOnce({ ok: false, text: 'Accessibility permission is required' })
+    const denied = await executeTool(call('computer_click', { element: 3 }))
+    expect(denied).toMatchObject({ isError: true, content: 'Accessibility permission is required' })
+    delete (window as any).api.computer.exec
   })
 
   it('reports no matches', async () => {

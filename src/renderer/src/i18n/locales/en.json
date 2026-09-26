@@ -486,7 +486,14 @@
       "toolLoading": "Tool loading",
       "toolLoadingDesc": "Smart sends core coding tools always and loads browser, computer, account (GitHub/GitLab/Google/CodeCommit) and app tools only when a chat needs them — about half the tool tokens per request. All sends every tool.",
       "toolLoadingSmart": "Smart (on demand)",
-      "toolLoadingAll": "All tools"
+      "toolLoadingAll": "All tools",
+      "computerUse": "Computer use",
+      "computerUseDesc": "Control apps on this Mac: accessibility-tree actions, screenshots and zoom, OCR, mouse and keyboard, windows and menus. Needs Accessibility and Screen Recording permission. Press Esc twice to stop the agent.",
+      "computerCheck": "Check & grant permissions",
+      "computerReady": "Ready — {{backend}} helper {{version}}",
+      "computerUnavailable": "Computer use is only available in the desktop app.",
+      "nativeComputerTool": "Claude native computer tool",
+      "nativeComputerToolDesc": "On the Anthropic API, give Claude its own trained computer tool (batched actions, best click accuracy). Pawn's accessibility, OCR, app and menu tools stay available."
     },
     "agentsSection": {
       "title": "Subagents",
@@ -1124,7 +1131,16 @@
     "batchRunning": "Running {{count}} tools…",
     "batchDone": "Executed {{count}} operations",
     "lineStats": "{{added}} lines added, {{removed}} removed",
-    "filesChanged": "{{count}} file(s)"
+    "filesChanged": "{{count}} file(s)",
+    "zoom": "Zoom",
+    "uiSnapshot": "Read UI",
+    "findOnScreen": "Find on screen",
+    "ocr": "Read text",
+    "apps": "Apps",
+    "windows": "Windows",
+    "menu": "Menu",
+    "openItem": "Open",
+    "computerStatus": "Computer status"
   },
   "diffView": {
     "showAllLines": "Show all lines",
@@ -1293,5 +1309,8 @@
       "budget_limited": "Budget reached",
       "stopped": "Stopped"
     }
+  },
+  "computer": {
+    "stoppedByUser": "Stopped — you pressed Esc twice. Pawn released the mouse and keyboard."
   }
 }

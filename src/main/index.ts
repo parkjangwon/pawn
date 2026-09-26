@@ -2,6 +2,7 @@ import { app, BrowserWindow, session } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { registerAllIpc } from './ipc'
 import { disposeLsp } from './ipc/lsp'
+import { disposeComputer } from './computer/service'
 import { createMainWindow, getMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
 import { killAllMcpServers } from './mcpManager'
@@ -74,6 +75,7 @@ app.whenReady().then(() => {
     // not when the main window closes.
     killAllMcpServers()
     void disposeLsp().catch(() => {})
+    disposeComputer()
     stopRoutineServices()
     destroyTray()
     closeMemoryDb()

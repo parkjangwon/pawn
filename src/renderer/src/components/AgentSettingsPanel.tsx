@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import PermissionsAlwaysPanel from './PermissionsAlwaysPanel'
 import type { SettingsState } from './settingsState'
 import { useProviderStore } from '../stores/provider'
@@ -31,6 +32,9 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
   const setSmartCompaction = useProviderStore((s) => s.setSmartCompaction)
   const toolLoading = useProviderStore((s) => s.toolLoading)
   const setToolLoading = useProviderStore((s) => s.setToolLoading)
+  const nativeComputerTool = useProviderStore((s) => s.nativeComputerTool)
+  const setNativeComputerTool = useProviderStore((s) => s.setNativeComputerTool)
+  const [computerInfo, setComputerInfo] = useState<string | null>(null)
   const lspDiagnostics = useProviderStore((s) => s.lspDiagnostics)
   const setLspDiagnostics = useProviderStore((s) => s.setLspDiagnostics)
   const models = useProviderStore((s) => s.models)
@@ -192,6 +196,45 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           </div>
           <label className="toggle-switch">
             <input type="checkbox" checked={smartCompaction} onChange={(e) => setSmartCompaction(e.target.checked)} />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">{t('settings.agentSection.computerUse')}</span>
+            <span className="settings-row-desc">{t('settings.agentSection.computerUseDesc')}</span>
+            {computerInfo && <span className="settings-row-desc computer-status-line">{computerInfo}</span>}
+          </div>
+          <button
+            type="button"
+            className="test-btn"
+            onClick={() => {
+              const status = window.api?.computer?.status
+              if (!status) {
+                setComputerInfo(t('settings.agentSection.computerUnavailable'))
+                return
+              }
+              void status({ prompt: true })
+                .then((r) =>
+                  setComputerInfo(
+                    r.ok
+                      ? t('settings.agentSection.computerReady', { backend: r.backend, version: r.version || '' })
+                      : r.errors.join(' · ')
+                  )
+                )
+                .catch((e) => setComputerInfo(String(e)))
+            }}
+          >
+            {t('settings.agentSection.computerCheck')}
+          </button>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">{t('settings.agentSection.nativeComputerTool')}</span>
+            <span className="settings-row-desc">{t('settings.agentSection.nativeComputerToolDesc')}</span>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={nativeComputerTool} onChange={(e) => setNativeComputerTool(e.target.checked)} />
             <span className="toggle-slider" />
           </label>
         </div>

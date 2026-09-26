@@ -16,6 +16,8 @@ import { dirname, join, resolve } from 'path'
 import { planExecFile, planShellSpawn, type SandboxOptions } from '../main/shellSandbox'
 import { contentSearch } from '../main/contentSearch'
 import { isProtectedRemovePath, isSecretDotFile } from '../main/fsGuards'
+import { CuaHelper, findHelper, helperCandidates } from '../main/computer/cuaHelper'
+import { ComputerEngine } from '../main/computer/engine'
 
 export interface HeadlessConfig {
   settings?: Record<string, unknown>
@@ -32,6 +34,8 @@ export interface NodeApiOptions {
    * Evals point this at an empty dir so personal context can't skew results.
    */
   homeDir?: string
+  /** Real desktop control through the native helper (macOS; off by default). */
+  computer?: boolean
 }
 
 const WALK_IGNORE = new Set([
@@ -352,8 +356,42 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
     ;(db as Record<string, unknown>)[m] = ok
   }
 
+  // Computer use: the same helper + engine as the desktop app.
+  let cua: CuaHelper | null = null
+  let computer: Record<string, unknown> | undefined
+  if (opts.computer && process.platform === 'darwin') {
+    const path = findHelper(helperCandidates({ cwd: process.cwd() }))
+    if (path) {
+      cua = new CuaHelper({ path })
+      const engine = new ComputerEngine(cua)
+      computer = {
+        exec: async (action: string, args: Record<string, unknown> = {}, policy?: Record<string, unknown>) => {
+          engine.setPolicy(policy as never)
+          try {
+            return await engine.execute(action, args)
+          } catch (err) {
+            return { ok: false, text: err instanceof Error ? err.message : String(err) }
+          }
+        },
+        status: async () => {
+          const p = await cua!.call<{ accessibility: boolean; screenRecording: boolean }>('permissions')
+          return { ok: p.accessibility && p.screenRecording, backend: 'native', platform: 'darwin', ...p, notes: [], errors: [] }
+        },
+        releaseAll: async () => {
+          await cua!.call('release_all').catch(() => {})
+          return { ok: true }
+        },
+        overlay: async (enabled: boolean) => {
+          await cua!.call('overlay', { enabled }).catch(() => {})
+          return { ok: true }
+        }
+      }
+    }
+  }
+
   const api: Record<string, any> = {
     platform: 'headless',
+    ...(computer ? { computer } : {}),
     appVersion: async () => 'headless',
     fs,
     shell,
@@ -385,6 +423,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
     dispose: () => {
       for (const c of Array.from(live)) killTree(c)
       live.clear()
+      cua?.dispose()
     }
   }
 }

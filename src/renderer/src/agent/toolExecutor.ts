@@ -5,9 +5,22 @@ import type { ToolCall, ToolResult } from './toolDefinitionsTypes'
 import { TOOL_HANDLERS, type ToolExecContext } from './toolHandlers'
 import { isToolAllowedInAgentMode, planModeBlockMessage } from './agentMode'
 import { useProviderStore } from '../stores/provider'
+import { isNativeComputerCall, nativeCallToAction, permissionName } from './computerToolset'
+import { currentPolicy, toToolResult } from './toolHandlers/computer'
 
 export type { ToolExecContext } from './toolHandlers'
 export { compileGlob, matchesGlob } from './globMatch'
+
+async function executeNativeComputer(call: ToolCall, api: typeof window.api): Promise<ToolResult> {
+  const exec = api.computer?.exec
+  if (typeof exec !== 'function') {
+    return { toolCallId: call.id, content: 'Computer use is only available in the desktop app.', isError: true }
+  }
+  const { action, args } = nativeCallToAction(call)
+  if (!action) return { toolCallId: call.id, content: 'Missing computer action', isError: true }
+  const res = await exec(action, args, currentPolicy())
+  return toToolResult(call.id, res)
+}
 
 /** Execute a tool call and return the result. */
 export async function executeTool(
@@ -51,12 +64,15 @@ export async function executeTool(
     }
   }
 
+  // Native Claude computer tool: permission + plan checks use computer_<action>.
+  const native = isNativeComputerCall(call)
+  const permName = permissionName(call)
   const agentMode = useProviderStore.getState().agentModeFor(ctx?.sessionId)
-  if (!isToolAllowedInAgentMode(call.name, agentMode)) {
-    return { toolCallId: call.id, content: planModeBlockMessage(call.name), isError: true }
+  if (!isToolAllowedInAgentMode(permName, agentMode)) {
+    return { toolCallId: call.id, content: planModeBlockMessage(permName), isError: true }
   }
 
-  const permitted = await checkPermission(call.name, call.arguments, signal, projectPath, {
+  const permitted = await checkPermission(permName, native ? nativeCallToAction(call).args : call.arguments, signal, projectPath, {
     sessionId: ctx?.sessionId,
     cwd: projectPath
   })
@@ -70,7 +86,9 @@ export async function executeTool(
 
   try {
     let result: ToolResult
-    if (isMcpToolName(call.name)) {
+    if (native) {
+      result = await executeNativeComputer(call, api)
+    } else if (isMcpToolName(call.name)) {
       result = await callMcpTool(call.id, call.name, call.arguments, projectPath)
     } else {
       const handler = TOOL_HANDLERS[call.name]

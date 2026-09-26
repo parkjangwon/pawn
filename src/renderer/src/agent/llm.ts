@@ -6,6 +6,8 @@ import { useAppStore } from '../stores/app'
 import { useStreamingStore } from '../stores/streaming'
 import { useProviderStore } from '../stores/provider'
 import { toolsToClaude, toolsToOpenAI, getMcpToolDefinitions, type ToolCall } from './tools'
+import { NATIVE_DUPLICATES, claudeComputerVersion, planNativeComputer } from './computerToolset'
+import { noteComputerModel, shotPolicyFor } from './toolHandlers/computer'
 import type { CallUsage } from '../stores/usage'
 import type { RouteDecision } from './router'
 import {
@@ -145,6 +147,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     denylist: toolDenylist
   }
   const { provider, model } = decision
+  noteComputerModel(model.modelId)
   const providerState = useProviderStore.getState()
   const userEffort = providerState.reasoningEffort || 'auto'
   const harnessMode = req.harnessMode ?? providerState.harnessModeFor?.(sessionId) ?? 'default'
@@ -219,7 +222,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
           ? { type: 'text', text, cache_control: { type: 'ephemeral' } }
           : { type: 'text', text }
       ),
-      tools: toolsToClaude(mcpTools, toolListOpts),
+      tools: await claudeToolsWithComputer(toolsToClaude(mcpTools, toolListOpts), provider, model.modelId, headers),
       messages: withConversationCacheAnchors(injectClaudePreamble(toClaudeMessages(sendable), projectPreamble))
     }
   } else {
@@ -289,7 +292,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const toolCalls: ToolCall[] = []
   const thinking: TranscriptThinking[] = []
   const usage: CallUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
-  const toolBuffers = new Map<number, { id: string; name: string; args: string }>()
+  const toolBuffers = new Map<number, { id: string; name: string; args: string; toolset?: string }>()
   const thinkingBuffers = new Map<number, TranscriptThinking>()
 
   // Throttle store updates to one per animation frame: a long stream otherwise
@@ -420,7 +423,12 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
             case 'content_block_start': {
               const block = parsed.content_block
               if (block?.type === 'tool_use') {
-                toolBuffers.set(parsed.index, { id: block.id, name: block.name, args: '' })
+                toolBuffers.set(parsed.index, {
+                  id: block.id,
+                  name: block.name,
+                  args: '',
+                  ...(typeof block.toolset_name === 'string' ? { toolset: block.toolset_name } : {})
+                })
               } else if (block?.type === 'thinking') {
                 thinkingBuffers.set(parsed.index, { type: 'thinking', thinking: '', signature: '' })
               } else if (block?.type === 'redacted_thinking') {
@@ -449,7 +457,12 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
             case 'content_block_stop': {
               const buf = toolBuffers.get(parsed.index)
               if (buf) {
-                toolCalls.push({ id: buf.id, name: buf.name, arguments: safeParseArgs(buf.args) })
+                toolCalls.push({
+                  id: buf.id,
+                  name: buf.name,
+                  arguments: buf.args.trim() ? safeParseArgs(buf.args) : {},
+                  ...(buf.toolset ? { toolset: buf.toolset } : {})
+                })
                 toolBuffers.delete(parsed.index)
               }
               const think = thinkingBuffers.get(parsed.index)
@@ -552,6 +565,64 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
  * Parse streamed tool arguments. On failure, mark the call so the executor can
  * refuse to run with empty `{}` (which causes silent bad tool use loops).
  */
+let displaySizeCache: { key: string; at: number; size: { width: number; height: number } } | null = null
+
+/** Screenshot size the native computer tool is declared with (cached briefly). */
+async function nativeDisplaySize(modelId: string): Promise<{ width: number; height: number } | undefined> {
+  const exec = window.api?.computer?.exec
+  if (typeof exec !== 'function') return undefined
+  const policy = shotPolicyFor(modelId)
+  const key = `${policy.maxLongEdge}:${policy.maxPixels}`
+  if (displaySizeCache && displaySizeCache.key === key && Date.now() - displaySizeCache.at < 30_000) return displaySizeCache.size
+  try {
+    const res = await exec('display_size', {}, policy)
+    const w = Number(res.data?.width)
+    const h = Number(res.data?.height)
+    if (!res.ok || !(w > 0) || !(h > 0)) return undefined
+    displaySizeCache = { key, at: Date.now(), size: { width: w, height: h } }
+    return displaySizeCache.size
+  } catch {
+    return undefined
+  }
+}
+
+/**
+ * Swap Pawn's duplicate computer_* tools for Claude's native computer tool
+ * when the model/provider supports it (see agent/computerToolset.ts).
+ */
+export async function claudeToolsWithComputer(
+  tools: Array<Record<string, unknown>>,
+  provider: { apiFormat: string; baseUrl: string },
+  modelId: string,
+  headers: Record<string, string>
+): Promise<Array<Record<string, unknown>>> {
+  const names = tools.map((t) => String(t.name || ''))
+  const desktop = typeof window.api?.computer?.exec === 'function' && window.api?.platform !== 'browser'
+  const version = claudeComputerVersion(modelId)
+  const needsDims = version !== null && version !== 'toolset_20260801'
+  const plan = planNativeComputer({
+    apiFormat: provider.apiFormat,
+    baseUrl: provider.baseUrl,
+    modelId,
+    toolNames: names,
+    desktop,
+    display: needsDims && desktop ? await nativeDisplaySize(modelId) : undefined,
+    enabled: useProviderStore.getState().nativeComputerTool !== false
+  })
+  if (!plan) return tools
+  const kept = tools
+    .filter((t) => !NATIVE_DUPLICATES.has(String(t.name || '')))
+    .map((t) => {
+      const { cache_control: _c, ...rest } = t
+      return rest
+    })
+  kept.push({ ...plan.entry, cache_control: { type: 'ephemeral' } })
+  if (plan.betaHeader) {
+    headers['anthropic-beta'] = headers['anthropic-beta'] ? `${headers['anthropic-beta']},${plan.betaHeader}` : plan.betaHeader
+  }
+  return kept
+}
+
 export function safeParseArgs(raw: string): Record<string, unknown> {
   if (!raw.trim()) return {}
   try {

@@ -25,6 +25,8 @@ export interface HeadlessTurnOptions {
   timeoutMs?: number
   /** Hide the user's personal skills / CLAUDE.md (reproducible evals). */
   homeDir?: string
+  /** Give the agent real desktop control (macOS native helper). */
+  computer?: boolean
   /** Run as an Ultra Work goal loop (prompt = goal). */
   ultraWork?: { maxIterations?: number }
   onLog?: (line: string) => void
@@ -123,7 +125,7 @@ function sleep(ms: number): Promise<void> {
 export async function runHeadlessTurn(opts: HeadlessTurnOptions): Promise<HeadlessTurnResult> {
   const started = Date.now()
   const log = opts.onLog ?? (() => {})
-  const { api, dispose } = createNodeApi({ config: opts.config, onLog: log, homeDir: opts.homeDir })
+  const { api, dispose } = createNodeApi({ config: opts.config, onLog: log, homeDir: opts.homeDir, computer: opts.computer })
   installed?.dispose()
   installed = { dispose }
   installHeadlessGlobals(api)

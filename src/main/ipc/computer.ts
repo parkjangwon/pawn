@@ -15,6 +15,8 @@ import {
   computerPreflight,
   sleep
 } from '../computer'
+import { computerStatus, executeComputer, onUserAbort, releaseAll, setOverlay } from '../computer/service'
+import { getMainWindow } from '../window'
 
 /** Last screenshot geometry for converting image coords → screen logical coords. */
 let lastShotMeta: {
@@ -65,6 +67,28 @@ async function maybeShot(returnScreenshot?: boolean, displayId?: number | null) 
 }
 
 export function registerComputerIpc(): void {
+  // Unified computer-use entry point (native helper on macOS, legacy elsewhere).
+  handleTrusted('computer:exec', async (_e, action: unknown, args: unknown, policy: unknown) => {
+    if (typeof action !== 'string' || !action || action.length > 40) return { ok: false, text: 'Invalid computer action' }
+    const a = args && typeof args === 'object' && !Array.isArray(args) ? (args as Record<string, unknown>) : {}
+    const pol = policy && typeof policy === 'object' ? (policy as Record<string, unknown>) : undefined
+    return executeComputer(action, a, pol as never)
+  })
+  handleTrusted('computer:status', async (_e, opts: unknown) => {
+    return computerStatus({ prompt: !!(opts && typeof opts === 'object' && (opts as { prompt?: boolean }).prompt) })
+  })
+  handleTrusted('computer:overlay', async (_e, enabled: unknown, text: unknown) => {
+    return setOverlay(enabled !== false, typeof text === 'string' ? text.slice(0, 120) : undefined)
+  })
+  handleTrusted('computer:releaseAll', async () => {
+    await releaseAll()
+    return { ok: true }
+  })
+  onUserAbort((reason) => {
+    const win = getMainWindow()
+    if (win && !win.isDestroyed()) win.webContents.send('computer:userAbort', reason)
+  })
+
   handleTrusted('computer:screenshot', async (_e, opts?: { displayId?: number; maxWidth?: number }) => {
     const shot = await takeScreenshot(opts)
     if (shot.dataUrl && shot.width && shot.height && shot.screenWidth && shot.screenHeight) {

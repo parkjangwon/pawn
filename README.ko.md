@@ -17,7 +17,7 @@ Pawn은 또 하나의 클라우드 락인 IDE가 아닙니다. OpenAI·Claude �
 - **코드** — 파일·셸·git·심볼 검색·체크, 권한 있는 에이전트 루프
 - **브라우저** — 내장 Chromium (`browser_*`)으로 실제 웹 UI·로그인 세션. **멀티 탭**: 에이전트·UI 패널·서브에이전트가 각자 탭을 갖고 (owner 격리) 내 화면을 방해하지 않고 병렬 브라우징
 - **리서치** — 추가 키 없이 공개 웹 검색/읽기 (`web_search`, `web_fetch`, `web_research`) + **`research_report`**: 병렬 리서치 서브에이전트(각자 탭)가 자료를 수집·중복 제거해 출처 검증된 레포트 아티팩트로 종합
-- **컴퓨터 사용** — 데스크톱 마우스·키보드·스크린샷·클립보드 (`computer_*`)
+- **컴퓨터 사용** — Codex / Claude 컴퓨터 사용처럼 Mac 앱을 직접 조작: 네이티브 헬퍼로 접근성 트리 요소 조작, 앱·창·메뉴 제어, 고해상도 스크린샷·확대, 온디바이스 OCR, 한글 IME 안전 입력, 멀티 모니터, Claude 네이티브 컴퓨터 도구; Esc 두 번으로 중지 (`computer_*`; Windows/Linux는 기본 마우스·키보드)
 - **기억** — 로컬 장기 Memory (`~/.pawn/memory.db`)로 시간이 지날수록 개인화
 - **훅** — Claude/Codex 호환 라이프사이클 훅 (Claude + Pawn 설정 merge·중복 제거)
 - **연동** — 설정 → 서비스 연동으로 Google·GitHub(OAuth) 및 GitLab·AWS CodeCommit(PAT) 툴 (토큰은 로컬만)

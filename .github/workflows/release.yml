@@ -50,6 +50,9 @@ jobs:
       - name: Build app (injects OAuth via define)
         run: npm run build
 
+      - name: Build native computer-use helper (universal)
+        run: npm run build:native
+
       # Empty CSC_LINK/CSC_KEY_PASSWORD env vars make electron-builder try to load
       # a certificate from the project root and fail with "…/pawn not a file".
       # Only export signing vars when the secret is actually present.
