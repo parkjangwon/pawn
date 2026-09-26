@@ -135,6 +135,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     assistantMsgId, signal, complexity, toolAllowlist, toolDenylist
   } = req
   const toolListOpts = {
+    mode: useProviderStore.getState().agentModeFor(sessionId),
     allowlist: toolAllowlist,
     denylist: toolDenylist
   }

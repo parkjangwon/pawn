@@ -1,12 +1,35 @@
-import { ipcMain, type IpcMainInvokeEvent, type WebContents } from 'electron'
-import { getHeadlessWindow, getMainWindow } from '../window'
+import { ipcMain, type IpcMainInvokeEvent, type WebContents, type WebFrameMain } from 'electron'
+import { getHeadlessWindow, getMainWindow, isAppUrl } from '../window'
 
-/** Only the app's own main window (or the hidden routine runner) may invoke privileged IPC. */
-export function isTrustedSender(event: { sender: WebContents }): boolean {
+/**
+ * Only the app's own main window (or the hidden routine runner) may invoke
+ * privileged IPC, and only from its top-level frame while it is showing the
+ * app document. Matching webContents alone is not enough: a navigated window
+ * or a child frame would inherit the same sender.
+ */
+export function isTrustedSender(event: {
+  sender: WebContents
+  senderFrame?: WebFrameMain | null
+}): boolean {
   const win = getMainWindow()
-  if (win && event.sender === win.webContents) return true
   const hw = getHeadlessWindow()
-  return hw !== null && event.sender === hw.webContents
+  const owned =
+    (win !== null && event.sender === win.webContents) ||
+    (hw !== null && event.sender === hw.webContents)
+  if (!owned) return false
+  let frame: WebFrameMain | null | undefined
+  try {
+    frame = event.senderFrame
+  } catch {
+    // Accessing a disposed frame throws; treat it as untrusted.
+    return false
+  }
+  if (!frame) return false
+  // Compare by ids, not object identity: WebFrameMain wrappers are not guaranteed stable.
+  const main = event.sender.mainFrame
+  if (frame.parent !== null) return false
+  if (frame.processId !== main.processId || frame.routingId !== main.routingId) return false
+  return isAppUrl(frame.url)
 }
 
 /** ipcMain.handle wrapper that rejects calls from any untrusted webContents. */

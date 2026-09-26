@@ -8,6 +8,7 @@ import {
 } from './store'
 import { randomString } from './pkce'
 import { startOAuthLoopback } from './loopback'
+import { httpsOrDefault } from '../safeUrl'
 import {
   endConnectSession,
   isConnectCancelled,
@@ -83,7 +84,8 @@ async function startGithubDeviceFlow(
       return { error: j.error_description || j.error || `Device auth failed (${res.status})` }
     }
 
-    const verificationUri = j.verification_uri || 'https://github.com/login/device'
+    // Server-supplied URI goes to shell.openExternal; only accept https.
+    const verificationUri = httpsOrDefault(j.verification_uri, 'https://github.com/login/device')
     const userCode = j.user_code
 
     // Surface code immediately so the user can type it on github.com/login/device

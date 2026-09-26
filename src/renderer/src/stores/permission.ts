@@ -1,6 +1,14 @@
 import { create } from 'zustand'
 
-export type PermissionType = 'computer_use' | 'file_write' | 'file_read' | 'shell_exec' | 'browser' | 'app' | 'mcp'
+export type PermissionType =
+  | 'computer_use'
+  | 'file_write'
+  | 'file_read'
+  | 'shell_exec'
+  | 'browser'
+  | 'app'
+  | 'mcp'
+  | 'network'
 
 export type AllowRule =
   | { id: string; kind: 'perm_type'; type: PermissionType; scope: 'session' | 'always' }
@@ -256,10 +264,25 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
         if (matchPathPrefix(opts.path, rule.prefix)) return true
       }
       if (rule.kind === 'shell_prefix' && type === 'shell_exec' && opts?.command) {
-        const cmd = opts.command.trim()
-        if (cmd === rule.prefix || cmd.startsWith(rule.prefix)) return true
+        if (matchShellPrefix(opts.command, rule.prefix)) return true
       }
     }
     return false
   }
 }))
+
+// Chaining, substitution, redirection or multi-line input can smuggle a second
+// command past a prefix rule, so those always go back to the user.
+const SHELL_META_RE = /[;&|`<>\n\r]|\$\(/
+
+/** Token-boundary prefix match: "npm" allows "npm test" but not "npmx" or "npm test; rm -rf ~". */
+export function matchShellPrefix(command: string, prefix: string): boolean {
+  const cmd = command.trim()
+  const pre = prefix.trim()
+  if (!cmd || !pre) return false
+  if (SHELL_META_RE.test(cmd)) return false
+  if (cmd === pre) return true
+  if (!cmd.startsWith(pre)) return false
+  const next = cmd.charAt(pre.length)
+  return next === ' ' || next === '\t'
+}

@@ -7,6 +7,11 @@ import {
 } from '../shellSandbox'
 
 describe('shellSandbox', () => {
+  it('detects the classic fork bomb', () => {
+    expect(checkDangerousCommand(':(){ :|:& };:')).not.toBeNull()
+    expect(checkDangerousCommand(':() { : | : & } ; :')).not.toBeNull()
+  })
+
   it('strips secrets from env allowlist', () => {
     const env = sanitizeEnv({
       PATH: '/bin',

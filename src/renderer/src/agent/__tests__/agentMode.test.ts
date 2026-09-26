@@ -24,9 +24,14 @@ describe('agentMode', () => {
     expect(isMutatingTool('codebase_search')).toBe(false)
     expect(isMutatingTool('repo_map')).toBe(false)
     expect(isMutatingTool('update_plan')).toBe(false)
-    expect(isMutatingTool('run_checks')).toBe(false)
     expect(isMutatingTool('shell_poll')).toBe(false)
     expect(isMutatingTool('git_status')).toBe(false)
+  })
+
+  it('treats run_checks and agent-mode switching as mutating so plan cannot escape', () => {
+    expect(isMutatingTool('run_checks')).toBe(true)
+    expect(isMutatingTool('app_set_agent_mode')).toBe(true)
+    expect(isToolAllowedInAgentMode('app_set_agent_mode', 'plan')).toBe(false)
   })
 
   it('blocks mutating tools only in plan mode', () => {

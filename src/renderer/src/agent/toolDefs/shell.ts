@@ -18,12 +18,12 @@ export const SHELL_TOOLS: ToolDefinition[] = [
         sandbox: {
           type: 'boolean',
           description:
-            'Apply sandbox policy (env allowlist + dangerous-command block). Default true. Set false only when the user needs full env/secrets for a trusted local tool.'
+            'Apply sandbox policy (env allowlist + dangerous-command block). Defaults to the user setting. Only the user can disable the sandbox in Settings; false is ignored while their sandbox setting is on.'
         },
         network: {
           type: 'boolean',
           description:
-            'Allow network access (default true). When false on macOS, wraps with sandbox-exec network-deny when available.'
+            'Allow network access (defaults to the user setting). Set false to deny network; true cannot re-enable network the user turned off. On macOS uses sandbox-exec network-deny when available.'
         }
       },
       required: ['command']

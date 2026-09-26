@@ -2,7 +2,7 @@
  * SSRF / redirect safety for agent-facing fetchers.
  * Port of insane-search engine/safety.py (MIT).
  */
-import { isIP } from 'node:net'
+import { BlockList, isIP } from 'node:net'
 import { lookup } from 'node:dns/promises'
 
 const ALLOWED_SCHEMES = new Set(['http:', 'https:'])
@@ -12,25 +12,55 @@ export function allowPrivateDefault(): boolean {
   return v === '1' || v === 'true' || v === 'yes'
 }
 
-function ipBlocked(ipStr: string): boolean {
-  // Node isIP returns 4 or 6 or 0
-  if (!isIP(ipStr)) return false
-  // Block private / loopback / link-local / reserved ranges via simple checks
-  if (ipStr === '0.0.0.0' || ipStr === '::' || ipStr === '::1') return true
-  if (ipStr.startsWith('127.')) return true
-  if (ipStr.startsWith('10.')) return true
-  if (ipStr.startsWith('192.168.')) return true
-  if (ipStr.startsWith('169.254.')) return true
-  // 172.16.0.0 – 172.31.255.255
-  const m172 = /^172\.(\d+)\./.exec(ipStr)
-  if (m172) {
-    const n = Number(m172[1])
-    if (n >= 16 && n <= 31) return true
+// Non-public ranges. BlockList also matches IPv4-mapped IPv6 (::ffff:a.b.c.d)
+// against the IPv4 subnets, which string prefix checks missed.
+const BLOCKED = new BlockList()
+for (const [net, bits] of [
+  ['0.0.0.0', 8], // "this network"
+  ['10.0.0.0', 8],
+  ['100.64.0.0', 10], // CGNAT
+  ['127.0.0.0', 8],
+  ['169.254.0.0', 16], // link-local / cloud metadata
+  ['172.16.0.0', 12],
+  ['192.0.0.0', 24],
+  ['192.168.0.0', 16],
+  ['198.18.0.0', 15], // benchmarking
+  ['224.0.0.0', 4], // multicast
+  ['240.0.0.0', 4] // reserved + broadcast
+] as const) {
+  BLOCKED.addSubnet(net, bits, 'ipv4')
+}
+for (const [net, bits] of [
+  ['::', 128],
+  ['::1', 128],
+  ['64:ff9b::', 96], // NAT64 can reach IPv4 internals
+  ['fc00::', 7], // unique-local
+  ['fe80::', 10], // link-local
+  ['fec0::', 10], // deprecated site-local
+  ['ff00::', 8] // multicast
+] as const) {
+  BLOCKED.addSubnet(net, bits, 'ipv6')
+}
+
+/** Strip URL brackets: new URL('http://[::1]/').hostname === '[::1]'. */
+function unbracket(host: string): string {
+  return host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host
+}
+
+export function ipBlocked(ipStr: string): boolean {
+  const ip = unbracket(ipStr)
+  const family = isIP(ip)
+  if (!family) return false
+  const lower = ip.toLowerCase()
+  // IPv4-compatible / mapped forms written in hex (::ffff:7f00:1, ::7f00:1).
+  const mapped = /^::(?:ffff:)?([0-9a-f]{1,4}):([0-9a-f]{1,4})$/.exec(lower)
+  if (mapped) {
+    const hi = parseInt(mapped[1], 16)
+    const lo = parseInt(mapped[2], 16)
+    const v4 = `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`
+    if (BLOCKED.check(v4, 'ipv4')) return true
   }
-  // IPv6 unique-local / link-local
-  const lower = ipStr.toLowerCase()
-  if (lower.startsWith('fc') || lower.startsWith('fd') || lower.startsWith('fe80')) return true
-  return false
+  return BLOCKED.check(ip, family === 4 ? 'ipv4' : 'ipv6')
 }
 
 export async function classifyUrl(
@@ -46,7 +76,7 @@ export async function classifyUrl(
   if (!ALLOWED_SCHEMES.has(parsed.protocol)) {
     return { safe: false, reason: `scheme:${parsed.protocol || 'none'}` }
   }
-  const host = parsed.hostname
+  const host = unbracket(parsed.hostname)
   if (!host) return { safe: false, reason: 'no_host' }
   if (allowPrivate) return { safe: true, reason: 'allow_private' }
 
@@ -58,14 +88,16 @@ export async function classifyUrl(
 
   try {
     const records = await lookup(host, { all: true })
+    if (records.length === 0) return { safe: false, reason: `resolve_empty:${host}` }
     for (const r of records) {
       if (ipBlocked(r.address)) {
         return { safe: false, reason: `resolves_internal:${host}->${r.address}` }
       }
     }
   } catch {
-    // Resolver hiccup — allow; the real request will fail naturally
-    return { safe: true, reason: 'resolve_failed_allow' }
+    // Fail closed: an unresolvable host has nothing to fetch, and allowing it
+    // lets a second (attacker-timed) resolution land on an internal address.
+    return { safe: false, reason: `resolve_failed:${host}` }
   }
   return { safe: true, reason: 'public' }
 }

@@ -281,6 +281,7 @@
       "shell_exec": "셸 실행",
       "browser": "브라우저",
       "file_read": "파일 읽기",
+      "network": "네트워크 요청",
       "app": "앱 제어",
       "mcp": "MCP 도구"
     },

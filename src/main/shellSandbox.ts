@@ -114,7 +114,7 @@ const DANGEROUS_RE = [
   /\blaunchctl\b/i,
   /\bdiskutil\s+erase/i,
   /\bsecurity\s+delete-keychain\b/i,
-  /\b:(){ :\|:& };:/, // fork bomb
+  /:\(\)\s*\{\s*:\s*\|\s*:\s*&\s*\}\s*;\s*:/, // fork bomb
   /\bnc\s+-[elp]/i, // reverse shells common flags
   /\bpython[23]?\s+-c\s+['"][^'"]*socket\b/i
 ]
