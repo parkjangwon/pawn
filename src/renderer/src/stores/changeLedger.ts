@@ -27,6 +27,75 @@ export interface TurnCheckpoint {
   changes: FileChange[]
 }
 
+/**
+ * Why reverting a change could destroy work the agent didn't make:
+ * - modified: the file changed after the agent's last write (user edit,
+ *   formatter, or a later turn)
+ * - missing: the agent edited an existing file that has since been deleted
+ * - recreated: the agent deleted the file and something recreated it
+ * - oversized: content was too large to keep, so it cannot be restored
+ */
+export type RevertConflictReason = 'modified' | 'missing' | 'recreated' | 'oversized'
+
+export interface RevertConflict {
+  path: string
+  reason: RevertConflictReason
+}
+
+export interface RevertOptions {
+  /** Overwrite files that changed after the agent touched them. */
+  force?: boolean
+  /** Revert only conflict-free files and leave the rest as they are. */
+  skipConflicts?: boolean
+}
+
+export interface RevertTurnResult {
+  ok: boolean
+  reverted: number
+  error?: string
+  /** Present when the revert was blocked (or partially skipped) by conflicts. */
+  conflicts?: RevertConflict[]
+  skipped?: number
+}
+
+async function readCurrent(path: string): Promise<{ known: boolean; content: string | null }> {
+  const read = window.api?.fs?.readFile
+  if (typeof read !== 'function') return { known: false, content: null }
+  try {
+    const r = await read(path)
+    return { known: true, content: typeof r === 'string' ? r : null }
+  } catch {
+    return { known: false, content: null }
+  }
+}
+
+/** Compare the file on disk with what the agent left behind. */
+export async function inspectChange(change: FileChange): Promise<RevertConflictReason | null> {
+  if (change.oversized) return 'oversized'
+  const { known, content } = await readCurrent(change.path)
+  if (!known) return null
+  if (change.op === 'delete') return content === null ? null : 'recreated'
+  if (content === null) return change.before === null ? null : 'missing'
+  if (change.after === undefined) return null
+  return content === change.after ? null : 'modified'
+}
+
+async function restoreChange(change: FileChange): Promise<string | null> {
+  if (change.before === null) {
+    const res = await window.api.fs.delete(change.path)
+    if (res && 'error' in res && res.error) {
+      // Already gone is the state we wanted.
+      const { known, content } = await readCurrent(change.path)
+      if (known && content === null) return null
+      return res.error
+    }
+    return null
+  }
+  const res = await window.api.fs.writeFile(change.path, change.before)
+  if (res && 'error' in res && res.error) return res.error
+  return null
+}
+
 interface ChangeLedgerState {
   turns: TurnCheckpoint[]
   activeTurnId: string | null
@@ -34,8 +103,13 @@ interface ChangeLedgerState {
   beginTurn: (sessionId: string, projectId: string, label: string) => string
   endTurn: () => void
   recordChange: (change: Omit<FileChange, 'status'>) => void
-  revertFile: (path: string) => Promise<{ ok: boolean; error?: string }>
-  revertTurn: (turnId?: string) => Promise<{ ok: boolean; reverted: number; error?: string }>
+  revertFile: (
+    path: string,
+    opts?: RevertOptions
+  ) => Promise<{ ok: boolean; error?: string; conflict?: RevertConflictReason }>
+  /** Dry run: which files of a turn can be reverted without losing later edits. */
+  previewRevert: (turnId?: string) => Promise<{ turnId: string | null; safe: string[]; conflicts: RevertConflict[] }>
+  revertTurn: (turnId?: string, opts?: RevertOptions) => Promise<RevertTurnResult>
   latestTurn: (sessionId?: string | null) => TurnCheckpoint | null
   clearSession: (sessionId: string) => void
   /** Load durable turns from SQLite after app start. */
@@ -175,22 +249,21 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
     if (updated) persistTurn(updated)
   },
 
-  revertFile: async (path) => {
+  revertFile: async (path, opts) => {
     const turn = get().latestTurn()
     if (!turn) return { ok: false, error: 'No changes to revert' }
     const change = [...turn.changes].reverse().find((c) => c.path === path && c.status === 'applied')
     if (!change) return { ok: false, error: 'File not in latest turn' }
     if (change.oversized) {
-      return { ok: false, error: 'File too large to auto-revert; restore from git or backup' }
+      return { ok: false, conflict: 'oversized', error: 'File too large to auto-revert; restore from git or backup' }
+    }
+    const conflict = await inspectChange(change)
+    if (conflict && !opts?.force) {
+      return { ok: false, conflict, error: `File changed after the agent edited it (${conflict})` }
     }
     try {
-      if (change.before === null) {
-        const res = await window.api.fs.delete(path)
-        if (res && 'error' in res && res.error) return { ok: false, error: res.error }
-      } else {
-        const res = await window.api.fs.writeFile(path, change.before)
-        if (res && 'error' in res && res.error) return { ok: false, error: res.error }
-      }
+      const error = await restoreChange(change)
+      if (error) return { ok: false, error }
       let updated: TurnCheckpoint | null = null
       set((s) => ({
         turns: s.turns.map((t) => {
@@ -212,32 +285,58 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
     }
   },
 
-  revertTurn: async (turnId) => {
+  previewRevert: async (turnId) => {
+    const turn = turnId ? get().turns.find((t) => t.id === turnId) : get().latestTurn()
+    if (!turn) return { turnId: null, safe: [], conflicts: [] }
+    const safe: string[] = []
+    const conflicts: RevertConflict[] = []
+    for (const change of turn.changes.filter((c) => c.status === 'applied')) {
+      const reason = await inspectChange(change)
+      if (reason) conflicts.push({ path: change.path, reason })
+      else safe.push(change.path)
+    }
+    return { turnId: turn.id, safe, conflicts }
+  },
+
+  revertTurn: async (turnId, opts) => {
     const turn = turnId
       ? get().turns.find((t) => t.id === turnId)
       : get().latestTurn()
     if (!turn) return { ok: false, reverted: 0, error: 'No turn to revert' }
     const applied = [...turn.changes].filter((c) => c.status === 'applied').reverse()
+
+    // Check everything before touching anything, so a blocked revert leaves
+    // the working tree exactly as it was.
+    const reasons = new Map<string, RevertConflictReason>()
+    for (const change of applied) {
+      const reason = await inspectChange(change)
+      if (reason) reasons.set(change.path, reason)
+    }
+    const conflicts: RevertConflict[] = [...reasons].map(([path, reason]) => ({ path, reason }))
+    const blocking = conflicts.filter((c) => c.reason !== 'oversized')
+    if (blocking.length > 0 && !opts?.force && !opts?.skipConflicts) {
+      return { ok: false, reverted: 0, conflicts, error: 'conflicts' }
+    }
+
     let reverted = 0
+    let skipped = 0
     const errors: string[] = []
     for (const change of applied) {
-      if (change.oversized) {
+      const reason = reasons.get(change.path)
+      if (reason === 'oversized') {
         errors.push(`${change.path}: oversized`)
+        skipped++
+        continue
+      }
+      if (reason && !opts?.force) {
+        skipped++
         continue
       }
       try {
-        if (change.before === null) {
-          const res = await window.api.fs.delete(change.path)
-          if (res && 'error' in res && res.error) {
-            errors.push(`${change.path}: ${res.error}`)
-            continue
-          }
-        } else {
-          const res = await window.api.fs.writeFile(change.path, change.before)
-          if (res && 'error' in res && res.error) {
-            errors.push(`${change.path}: ${res.error}`)
-            continue
-          }
+        const error = await restoreChange(change)
+        if (error) {
+          errors.push(`${change.path}: ${error}`)
+          continue
         }
         reverted++
         set((s) => ({
@@ -263,6 +362,8 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
     return {
       ok: reverted > 0,
       reverted,
+      skipped: skipped || undefined,
+      conflicts: conflicts.length ? conflicts : undefined,
       error: errors.length ? errors.slice(0, 3).join('; ') : undefined
     }
   },

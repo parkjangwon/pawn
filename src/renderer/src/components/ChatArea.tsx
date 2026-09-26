@@ -18,6 +18,10 @@ import ConfirmDialog from './ConfirmDialog'
 import ChatFindBar from './ChatFindBar'
 import TurnNavigator from './TurnNavigator'
 import SelectionActions from './SelectionActions'
+import QuestionCard from './QuestionCard'
+import UltraWorkBanner from './UltraWorkBanner'
+import { parseUltraWork } from '../agent/ultraWork'
+import { useUltraWorkStore } from '../stores/ultraWork'
 import { appendQuoteToDraft, formatQuote } from '../utils/turnNavigator'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { MAX_ATTACHMENTS, MAX_IMAGE_BYTES, MAX_TEXT_BYTES, truncateText, type ChatAttachment } from '../utils/attachments'
@@ -589,6 +593,14 @@ export default function ChatArea({
         action: () => setAgentMode('build', activeSessionId)
       },
       {
+        id: 'ultra-work',
+        label: t('ultraWork.slashLabel'),
+        description: t('ultraWork.slashDesc'),
+        hint: 'ulw',
+        icon: ic(<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
+        insert: '/ultra-work '
+      },
+      {
         id: 'issue-pr',
         label: t('chat.slash.issuePr'),
         description: t('chat.slash.issuePrDesc'),
@@ -596,7 +608,7 @@ export default function ChatArea({
         insert: '/issue-pr '
       },
       ...skills
-        .filter((s) => !['new', 'clear', 'model', 'theme', 'settings', 'export', 'plan', 'build', 'issue-pr'].includes(s.name.toLowerCase()))
+        .filter((s) => !['new', 'clear', 'model', 'theme', 'settings', 'export', 'plan', 'build', 'issue-pr', 'ultra-work', 'ulw'].includes(s.name.toLowerCase()))
         .map((s) => {
         const firstLine = (s.content.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('---') && !l.startsWith('#')) || s.source.split('/').pop() || '').slice(0, 60)
         return {
@@ -753,7 +765,14 @@ export default function ChatArea({
 
     let projectId = activeProjectId
     let sessionId = activeSessionId
-    const typedPrompt = input.trim()
+    const ultra = parseUltraWork(input)
+    if (ultra && !ultra.goal) {
+      // "$ulw" alone: nothing to pursue yet.
+      sendingRef.current = false
+      window.dispatchEvent(new CustomEvent('pawn:toast', { detail: { message: t('ultraWork.needGoal') } }))
+      return
+    }
+    const typedPrompt = ultra ? ultra.goal : input.trim()
     const sendAttachments = attachments
     // Clear composer immediately so a second Enter cannot re-send the same text
     // while we await @mention / git expansion.
@@ -890,9 +909,14 @@ export default function ChatArea({
     const finalContent = blocks.length ? blocks.join('\n\n') + '\n\n' + typedPrompt : typedPrompt
 
     // Remember the raw typed prompt (not expanded @mentions) for ↑/↓ recall.
-    pushPromptHistory(ensurePromptHistory(sessionId), typedPrompt)
+    pushPromptHistory(ensurePromptHistory(sessionId), ultra ? input.trim() : typedPrompt)
 
-    sendMessage(projectId, sessionId, finalContent, mode, sendAttachments)
+    if (ultra) {
+      // Ultra Work: Build mode + MAXING until the goal is verified done.
+      setAgentMode('build', sessionId)
+      useUltraWorkStore.getState().start(sessionId, ultra.goal, ultra.maxIterations)
+    }
+    sendMessage(projectId, sessionId, finalContent, ultra ? 'steer' : mode, sendAttachments)
     } finally {
       sendingRef.current = false
     }
@@ -1131,7 +1155,11 @@ export default function ChatArea({
           </>
         )}
       </div>
+      <UltraWorkBanner sessionId={activeSessionId} />
       <PlanStrip sessionId={activeSessionId} />
+      <div className="question-card-slot">
+        <QuestionCard sessionId={activeSessionId} />
+      </div>
       <TurnReviewBar sessionId={activeSessionId} />
       <Composer
         activeSession={!!activeSession}

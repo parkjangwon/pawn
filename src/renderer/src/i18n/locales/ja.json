@@ -45,7 +45,9 @@
     "running": "実行中",
     "renameHint": "ダブルクリックで名前変更",
     "searchResults": "検索結果",
-    "noSearchResults": "一致するセッションがありません"
+    "noSearchResults": "一致するセッションがありません",
+    "waiting": "応答待ち",
+    "waitingHint": "エージェントが回答または承認を待っています"
   },
   "chat": {
     "placeholder": "メッセージを入力... (/ コマンド、@ ファイル、ドロップで添付)",
@@ -80,7 +82,8 @@
       "partialPreserved": "_({{model}} のストリームが中断 — 部分応答を保持しました。再試行中…)_",
       "sessionBudget": "セッション予算到達 (${{cost}} / ${{cap}})",
       "dailyBudget": "日次予算到達 (${{cost}} / ${{cap}})",
-      "compactedManual": "コンテキストを手動で圧縮しました"
+      "compactedManual": "コンテキストを手動で圧縮しました",
+      "compactedSmart": "モデルが書いた要約でコンテキストを圧縮しました — キャッシュのプレフィックスを再構築しています。"
     },
     "errors": {
       "noProvider": "プロバイダーまたはモデルが設定されていません。設定 → プロバイダー、設定 → モデルで追加してください。",
@@ -185,7 +188,8 @@
       "h": "{{n}}時間",
       "m": "{{n}}分",
       "s": "{{n}}秒"
-    }
+    },
+    "compacting": "コンテキストを圧縮中…"
   },
   "automation": {
     "title": "自動化",
@@ -474,7 +478,15 @@
       "cwdJail": "作業ディレクトリ制限",
       "cwdJailDesc": "プロジェクトルート外のシェル cwd を拒否",
       "autoMemoryConsolidate": "メモリ自動統合",
-      "autoMemoryConsolidateDesc": "ターン終了時にほぼ重複するメモリカードを統合"
+      "autoMemoryConsolidateDesc": "ターン終了時にほぼ重複するメモリカードを統合",
+      "smartCompaction": "スマート圧縮",
+      "smartCompactionDesc": "コンテキストが一杯になると、最も安価なモデルが引き継ぎ要約（目的・決定・変更ファイル・残作業）を書きます。オフにすると無料のヒューリスティック要約になります。",
+      "lspDiagnostics": "言語サーバー診断",
+      "lspDiagnosticsDesc": "インストール済みの言語サーバー（TypeScript、Python、Go、Rust）を実行し、編集直後に実際のエラーを確認して定義・参照へ移動できるようにします。",
+      "toolLoading": "ツールの読み込み",
+      "toolLoadingDesc": "スマート: コアのコーディングツールは常に送信し、ブラウザ・コンピューター・アカウント（GitHub/GitLab/Google/CodeCommit）・アプリのツールは必要なときだけ読み込みます。リクエストあたりのツールトークンが約半分になります。すべて: すべてのツールを送信します。",
+      "toolLoadingSmart": "スマート（必要時に読み込み）",
+      "toolLoadingAll": "すべてのツール"
     },
     "agentsSection": {
       "title": "サブエージェント",
@@ -1110,7 +1122,9 @@
     "gitBranch": "git branch",
     "gitStash": "git stash",
     "batchRunning": "ツール{{count}}件を実行中…",
-    "batchDone": "{{count}}件の操作を実行完了"
+    "batchDone": "{{count}}件の操作を実行完了",
+    "lineStats": "{{added}} 行追加、{{removed}} 行削除",
+    "filesChanged": "{{count}} ファイル"
   },
   "diffView": {
     "showAllLines": "すべての行を表示",
@@ -1120,7 +1134,9 @@
     "revert": "元に戻す",
     "reverted": "元に戻しました",
     "revertFailed": "失敗しました",
-    "noPath": "パスがありません"
+    "noPath": "パスがありません",
+    "revertConflict": "エージェントの編集後にこのファイルは変更されています。元に戻すと後の変更は失われます。それでも元に戻しますか？",
+    "revertCancelled": "取り消しました — ファイルは保持されます"
   },
   "usage": {
     "diagnostics": {
@@ -1162,7 +1178,18 @@
     "showMore": "+{{count}} more",
     "showLess": "Show less",
     "history": "History ({{count}})",
-    "undoTurnHint": "Restore files from this turn"
+    "undoTurnHint": "Restore files from this turn",
+    "conflictTitle": "エージェントの編集後に変更されたファイルがあります",
+    "conflictMessage": "{{count}} 件のファイルがこのターンの後に変更されました（手動編集、フォーマッタ、後続のターンなど）。元に戻すとその変更は失われます。",
+    "revertSafeOnly": "残りだけ元に戻す",
+    "overwriteAll": "それでも上書き",
+    "revertedSkipped": "{{count}} 件を元に戻し、変更済みの {{skipped}} 件は保持しました",
+    "conflictReason": {
+      "modified": "変更済み",
+      "missing": "削除済み",
+      "recreated": "再作成",
+      "oversized": "大きすぎる"
+    }
   },
   "notifications": {
     "taskComplete": "タスク完了",
@@ -1227,5 +1254,44 @@
     "collapseCode": "折りたたむ",
     "copyCode": "コードをコピー",
     "codeCopied": "クリップボードにコピーしました"
+  },
+  "questions": {
+    "badge": "質問",
+    "planBadge": "計画",
+    "dismiss": "閉じる (Esc)",
+    "submit": "回答",
+    "otherPlaceholder": "または自分で入力…",
+    "answerPlaceholder": "回答を入力…",
+    "keyboardHint": "1-9で選択 · Enterで送信 · Escで閉じる",
+    "planApprovalTitle": "この計画を承認して実装を開始しますか？",
+    "approveLabel": "承認",
+    "reviseLabel": "修正を依頼",
+    "approveAndBuild": "承認して実装",
+    "requestChanges": "修正を依頼",
+    "planFeedbackPlaceholder": "メモや変更点（任意）…",
+    "showPlan": "計画を表示",
+    "hidePlan": "計画を隠す"
+  },
+  "ultraWork": {
+    "title": "ウルトラワーク",
+    "slashLabel": "ultra-work",
+    "slashDesc": "トークンを惜しまない自律モード：目標が検証されるまで作業を続けます ($ulw)",
+    "needGoal": "$ulw の後に目標を書いてください — 例: \"$ulw すべてのテストを通す\"",
+    "armedHint": "目標が検証されるまで作業を継続 · Build + Maxing · Enter で開始",
+    "goal": "目標",
+    "nextUp": "次",
+    "verdict": "結果",
+    "iteration": "反復 {{current}}/{{max}}",
+    "iterationHint": "1回の反復は1ターンです。毎ターン後に高速モデルが目標を確認します",
+    "stop": "停止",
+    "dismiss": "閉じる",
+    "notifyAchieved": "目標を達成しました",
+    "status": {
+      "active": "作業中",
+      "achieved": "達成",
+      "unmet": "ブロック",
+      "budget_limited": "予算到達",
+      "stopped": "停止済み"
+    }
   }
 }

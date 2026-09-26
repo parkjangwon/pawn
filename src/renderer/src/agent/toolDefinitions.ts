@@ -11,10 +11,12 @@ import { MEMORY_TOOLS } from './toolDefs/memory'
 import { APP_TOOLS } from './toolDefs/app'
 import { CONNECTIONS_TOOLS } from './toolDefs/connections'
 import { AGENT_TOOLS } from './toolDefs/agent'
+import { LSP_TOOLS } from './toolDefs/lsp'
 
 /** Tool definitions sent to the LLM (concatenated by domain modules). */
 export const TOOLS: ToolDefinition[] = [
   ...FS_TOOLS,
+  ...LSP_TOOLS,
   ...SHELL_TOOLS,
   ...GIT_TOOLS,
   ...COMPUTER_TOOLS,

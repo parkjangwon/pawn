@@ -48,6 +48,10 @@ function migrateSchema(db: Database.Database): void {
   if (!names.has('model_label')) {
     db.exec("ALTER TABLE messages ADD COLUMN model_label TEXT NOT NULL DEFAULT ''")
   }
+  if (!names.has('tool_meta')) {
+    // Structured tool-call record (JSON: name, status, target, duration, +/- lines).
+    db.exec("ALTER TABLE messages ADD COLUMN tool_meta TEXT NOT NULL DEFAULT ''")
+  }
   if (!names.has('duration_ms')) {
     // Wall-clock time the agent spent on the turn that ended with this message.
     db.exec('ALTER TABLE messages ADD COLUMN duration_ms INTEGER NOT NULL DEFAULT 0')
@@ -235,11 +239,13 @@ export function getMessagesBySession(sessionId: string): Array<{
   thinking?: string
   modelLabel?: string
   durationMs?: number
+  toolMeta?: string
 }> {
   return getDb()
     .prepare(
       `SELECT id, role, content, created_at as createdAt,
-              thinking, model_label as modelLabel, duration_ms as durationMs
+              thinking, model_label as modelLabel, duration_ms as durationMs,
+              tool_meta as toolMeta
        FROM messages WHERE session_id = ? ORDER BY created_at`
     )
     .all(sessionId) as never[]
@@ -289,13 +295,14 @@ export function addMessage(
   sessionId: string,
   role: string,
   content: string,
-  meta?: { thinking?: string; modelLabel?: string }
+  meta?: { thinking?: string; modelLabel?: string; toolMeta?: string }
 ): void {
+  const toolMeta = typeof meta?.toolMeta === 'string' ? meta.toolMeta.slice(0, 4000) : ''
   getDb()
     .prepare(
-      'INSERT INTO messages (id, session_id, role, content, thinking, model_label) VALUES (?, ?, ?, ?, ?, ?)'
+      'INSERT INTO messages (id, session_id, role, content, thinking, model_label, tool_meta) VALUES (?, ?, ?, ?, ?, ?, ?)'
     )
-    .run(id, sessionId, role, content, meta?.thinking || '', meta?.modelLabel || '')
+    .run(id, sessionId, role, content, meta?.thinking || '', meta?.modelLabel || '', toolMeta)
 }
 
 export function updateMessageMeta(

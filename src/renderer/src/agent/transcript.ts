@@ -211,28 +211,100 @@ export function estimateTokens(entries: TranscriptEntry[]): number {
  * result is persisted — so it costs exactly one cache re-prime, not one per turn.
  * A sliding window applied on every request would silently re-prime forever.
  *
- * Strategy: keep the last `keepEntries` entries verbatim, replace everything
- * older with a single summary entry that preserves the user's asks and the
- * files touched. Tool output — by far the bulkiest part — is dropped first.
+ * Strategy: keep the most recent entries verbatim (by token budget, or a
+ * fixed entry count for legacy callers), replace everything older with a
+ * single summary entry. The summary is either written by a model
+ * (`llmSummary`, see agent/compaction.ts) or built heuristically from the
+ * user's asks, conclusions, edits, and the *most recent* tool results.
+ * The current plan is re-injected so the agent keeps its checklist.
  */
-export function compactTranscript(entries: TranscriptEntry[], keepEntries = 30): TranscriptEntry[] {
-  if (entries.length <= keepEntries) return entries
+export interface CompactOptions {
+  /** Keep at most this many tail entries (legacy; default 30 when no keepTokens). */
+  keepEntries?: number
+  /** Keep tail entries up to this many estimated tokens. */
+  keepTokens?: number
+  /** Always keep at least this many tail entries (default 4). */
+  minKeep?: number
+  /** Model-written summary of the older part; replaces the heuristic digest. */
+  llmSummary?: string
+  /** Current plan (update_plan) to carry across compaction. */
+  plan?: Array<{ content: string; status: string }>
+}
 
-  // Never split an assistant/tool pair: a tool_result with no matching tool_use
-  // is a hard API error on both wire formats.
-  let cut = entries.length - keepEntries
+const PRESERVED_RESULT_BUDGET = 4500
+
+const PLAN_MARK: Record<string, string> = {
+  done: '[x]',
+  in_progress: '[~]',
+  cancelled: '[-]',
+  pending: '[ ]'
+}
+
+function normalizeCompactOptions(opts?: number | CompactOptions): CompactOptions {
+  if (typeof opts === 'number') return { keepEntries: opts }
+  return opts ?? {}
+}
+
+/**
+ * Where the verbatim tail starts, or -1 when there is nothing worth folding.
+ * Never starts the tail on a tool result (an orphan tool_result is a hard API
+ * error on both wire formats).
+ */
+export function compactionCut(entries: TranscriptEntry[], opts?: number | CompactOptions): number {
+  const o = normalizeCompactOptions(opts)
+  const minKeep = Math.max(1, o.minKeep ?? 4)
+  let cut: number
+  if (o.keepTokens !== undefined) {
+    let used = 0
+    cut = entries.length
+    while (cut > 0) {
+      const cost = estimateTokens([entries[cut - 1]])
+      const kept = entries.length - cut
+      if (kept >= minKeep && used + cost > o.keepTokens) break
+      used += cost
+      cut--
+    }
+    if (o.keepEntries !== undefined) cut = Math.max(cut, entries.length - o.keepEntries)
+  } else {
+    const keep = o.keepEntries ?? 30
+    if (entries.length <= keep) return -1
+    cut = entries.length - keep
+  }
   while (cut < entries.length && entries[cut].role === 'tool') cut++
+  // Folding a lone summary into a new summary gains nothing.
+  if (cut <= 0 || (cut === 1 && entries[0].role === 'summary')) return -1
+  if (cut >= entries.length) return -1
+  return cut
+}
 
-  const older = entries.slice(0, cut)
-  const recent = entries.slice(cut)
+function formatPlan(plan: CompactOptions['plan']): string | null {
+  if (!plan?.length) return null
+  return (
+    'Current plan (still authoritative — keep updating it with update_plan):\n' +
+    plan.map((p) => `- ${PLAN_MARK[p.status] || '[ ]'} ${p.content}`).join('\n')
+  )
+}
 
+/** Paths the older part touched (for the re-read reminder). */
+function touchedFiles(older: TranscriptEntry[]): string[] {
+  const files = new Set<string>()
+  for (const e of older) {
+    if (e.role !== 'assistant') continue
+    for (const tc of e.toolCalls || []) {
+      const p = tc.arguments.path || tc.arguments.file_path || tc.arguments.cwd
+      if (typeof p === 'string') files.add(p)
+    }
+  }
+  return Array.from(files)
+}
+
+/** Heuristic digest of the older part of a transcript. */
+export function heuristicDigest(older: TranscriptEntry[]): string[] {
   const asks: string[] = []
   const conclusions: string[] = []
   const toolNames = new Map<string, number>()
-  const files = new Set<string>()
   const decisions: string[] = []
   const preservedResults: string[] = []
-  const MAX_PRESERVED_CHARS = 4500
   for (const e of older) {
     if (e.role === 'user') asks.push(e.content.slice(0, 400))
     if (e.role === 'summary') asks.unshift(e.content)
@@ -247,8 +319,7 @@ export function compactTranscript(entries: TranscriptEntry[], keepEntries = 30):
       for (const tc of e.toolCalls || []) {
         toolNames.set(tc.name, (toolNames.get(tc.name) || 0) + 1)
         const p = tc.arguments.path || tc.arguments.file_path || tc.arguments.cwd
-        if (typeof p === 'string') files.add(p)
-        if (tc.name === 'edit_file' || tc.name === 'write_file' || tc.name === 'git_commit') {
+        if (tc.name === 'edit_file' || tc.name === 'write_file' || tc.name === 'delete_file' || tc.name === 'git_commit') {
           decisions.push(`${tc.name}${typeof p === 'string' ? ` → ${p}` : ''}`)
         }
       }
@@ -272,33 +343,19 @@ export function compactTranscript(entries: TranscriptEntry[], keepEntries = 30):
     }
   }
 
-  const parts = ['--- Earlier conversation (compacted) ---']
+  const parts: string[] = []
   if (asks.length) {
-    parts.push(
-      'User asked:\n' +
-        asks
-          .slice(-12)
-          .map((a) => `- ${a}`)
-          .join('\n')
-    )
+    parts.push('User asked:\n' + asks.slice(-12).map((a) => `- ${a}`).join('\n'))
   }
   if (conclusions.length) {
     parts.push(
       'Assistant conclusions (earlier):\n' +
-        conclusions
-          .slice(-8)
-          .map((c) => `- ${c.replace(/\n+/g, ' ')}`)
-          .join('\n')
+        conclusions.slice(-8).map((c) => `- ${c.replace(/\n+/g, ' ')}`).join('\n')
     )
   }
   if (decisions.length) {
-    parts.push(
-      'Key actions:\n' +
-        [...new Set(decisions)]
-          .slice(0, 24)
-          .map((d) => `- ${d}`)
-          .join('\n')
-    )
+    // Most recent actions matter most; keep the tail when there are many.
+    parts.push('Key actions:\n' + [...new Set(decisions)].slice(-24).map((d) => `- ${d}`).join('\n'))
   }
   if (toolNames.size) {
     parts.push(
@@ -308,30 +365,58 @@ export function compactTranscript(entries: TranscriptEntry[], keepEntries = 30):
           .join(', ')
     )
   }
-  if (files.size) {
-    parts.push(
-      'Files touched:\n' +
-        Array.from(files)
-          .slice(0, 50)
-          .map((f) => `- ${f}`)
-          .join('\n')
-    )
-  }
+  // Newest results first under the budget, then back to chronological order —
+  // the latest state (last test run, last diff) is what the agent needs.
   let usedChars = 0
   const keptResults: string[] = []
-  for (const r of preservedResults) {
-    if (usedChars + r.length > MAX_PRESERVED_CHARS) break
+  for (let i = preservedResults.length - 1; i >= 0; i--) {
+    const r = preservedResults[i]
+    if (usedChars + r.length > PRESERVED_RESULT_BUDGET) {
+      if (keptResults.length > 0) break
+      continue
+    }
     keptResults.push(r)
     usedChars += r.length
   }
+  keptResults.reverse()
   if (keptResults.length > 0) {
     parts.push('Key results from earlier:\n' + keptResults.map((r) => `- ${r}`).join('\n'))
   }
+  return parts
+}
+
+/** Assemble the summary entry text from its sections. */
+export function buildCompactionSummary(older: TranscriptEntry[], opts: CompactOptions): string {
+  const parts = ['--- Earlier conversation (compacted) ---']
+  if (opts.llmSummary?.trim()) {
+    // A model summary replaces the digest; still carry prior summaries' facts
+    // through the model (they are part of `older`).
+    parts.push(opts.llmSummary.trim())
+  } else {
+    parts.push(...heuristicDigest(older))
+  }
+  const files = touchedFiles(older)
+  if (files.length) {
+    parts.push('Files touched:\n' + files.slice(-50).map((f) => `- ${f}`).join('\n'))
+  }
+  const plan = formatPlan(opts.plan)
+  if (plan) parts.push(plan)
   parts.push(
     'Re-read any file above before editing it; full contents are no longer in context. Prefer git_status/git_diff if unsure what landed.'
   )
+  return parts.join('\n\n')
+}
 
-  return [{ role: 'summary', content: parts.join('\n\n') }, ...recent]
+export function compactTranscript(
+  entries: TranscriptEntry[],
+  opts: number | CompactOptions = 30
+): TranscriptEntry[] {
+  const o = normalizeCompactOptions(opts)
+  const cut = compactionCut(entries, o)
+  if (cut < 0) return entries
+  const older = entries.slice(0, cut)
+  const recent = entries.slice(cut)
+  return [{ role: 'summary', content: buildCompactionSummary(older, o) }, ...recent]
 }
 
 // --- Wire format conversion -------------------------------------------------

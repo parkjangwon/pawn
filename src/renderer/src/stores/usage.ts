@@ -77,14 +77,18 @@ const EMPTY: UsageTotals = {
  * rates, so a call with a warm prefix can cost an order of magnitude less than
  * the same call cold — this is the number that makes caching visible.
  */
+/** Pricing comes from user-editable config: a missing field must not turn totals (and budgets) into NaN. */
+const price = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0)
+const count = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? v : 0)
+
 export function computeCost(model: ModelEntry, u: CallUsage): number {
   const p = model.pricing
   if (!p) return 0
   return (
-    u.inputTokens * p.input +
-    u.outputTokens * p.output +
-    u.cacheReadTokens * p.cacheRead +
-    u.cacheWriteTokens * p.cacheWrite
+    count(u.inputTokens) * price(p.input) +
+    count(u.outputTokens) * price(p.output) +
+    count(u.cacheReadTokens) * price(p.cacheRead) +
+    count(u.cacheWriteTokens) * price(p.cacheWrite)
   ) / 1_000_000
 }
 
@@ -92,8 +96,8 @@ export function computeCost(model: ModelEntry, u: CallUsage): number {
 export function computeUncachedCost(model: ModelEntry, u: CallUsage): number {
   const p = model.pricing
   if (!p) return 0
-  const promptTokens = u.inputTokens + u.cacheReadTokens + u.cacheWriteTokens
-  return (promptTokens * p.input + u.outputTokens * p.output) / 1_000_000
+  const promptTokens = count(u.inputTokens) + count(u.cacheReadTokens) + count(u.cacheWriteTokens)
+  return (promptTokens * price(p.input) + count(u.outputTokens) * price(p.output)) / 1_000_000
 }
 
 export const useUsageStore = create<UsageState>((set, get) => ({

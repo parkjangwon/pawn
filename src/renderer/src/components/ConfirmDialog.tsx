@@ -10,6 +10,11 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
+  /** Optional extra content under the message (e.g. an affected-files list). */
+  details?: React.ReactNode
+  /** Optional middle action (e.g. "Revert the rest"). */
+  secondaryLabel?: string
+  onSecondary?: () => void
   onConfirm: () => void
   onCancel: () => void
 }
@@ -20,6 +25,9 @@ export default function ConfirmDialog({
   confirmLabel = 'Delete',
   cancelLabel = 'Cancel',
   danger = true,
+  details,
+  secondaryLabel,
+  onSecondary,
   onConfirm,
   onCancel
 }: ConfirmDialogProps): React.JSX.Element {
@@ -56,10 +64,16 @@ export default function ConfirmDialog({
         >
           <h3 id="confirm-dialog-title">{title}</h3>
           <p id="confirm-dialog-desc">{message}</p>
+          {details ? <div className="confirm-details">{details}</div> : null}
           <div className="confirm-actions">
             <button type="button" className="confirm-btn cancel" onClick={onCancel}>
               {cancelLabel}
             </button>
+            {secondaryLabel && onSecondary ? (
+              <button type="button" className="confirm-btn secondary" onClick={onSecondary}>
+                {secondaryLabel}
+              </button>
+            ) : null}
             <button
               type="button"
               className={`confirm-btn ${danger ? 'danger' : 'primary'}`}

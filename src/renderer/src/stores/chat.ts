@@ -1,3 +1,4 @@
+import { useUltraWorkStore } from './ultraWork'
 import { create } from 'zustand'
 import { useAppStore } from './app'
 import { usePermissionStore } from './permission'
@@ -215,6 +216,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   stopStreaming: (sessionId) => {
+    // Stop always ends an Ultra Work run (it must not auto-continue after Stop).
+    if (sessionId) useUltraWorkStore.getState().stop(sessionId)
+    else for (const id of Object.keys(useUltraWorkStore.getState().runs)) useUltraWorkStore.getState().stop(id)
     if (sessionId) {
       bumpSessionEpoch(sessionId)
       stopSessionController(sessionId)

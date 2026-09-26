@@ -32,7 +32,8 @@ export const FS_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'write_file',
-    description: 'Write content to a file. Creates the file if it does not exist. Paths may be absolute or project-relative.',
+    description:
+      'Write content to a file. Creates the file if it does not exist. Paths may be absolute or project-relative. Refuses to overwrite a file that changed on disk since you last read it — re-read it first. Prefer edit_file for changes to existing files.',
     parameters: {
       type: 'object',
       properties: {

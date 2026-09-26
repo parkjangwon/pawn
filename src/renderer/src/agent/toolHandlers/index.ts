@@ -9,6 +9,7 @@ import { gitHandlers } from './git'
 import { memoryHandlers } from './memory'
 import { shellHandlers } from './shell'
 import { webHandlers } from './web'
+import { lspHandlers } from './lsp'
 
 export type { ToolExecContext, ToolHandler } from './types'
 
@@ -23,4 +24,5 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   ...memoryHandlers,
   ...shellHandlers,
   ...webHandlers,
+  ...lspHandlers,
 }

@@ -52,7 +52,7 @@ export function registerDbIpc(): void {
     }
     const m =
       meta && typeof meta === 'object'
-        ? (meta as { thinking?: string; modelLabel?: string })
+        ? (meta as { thinking?: string; modelLabel?: string; toolMeta?: string })
         : undefined
     db.addMessage(id, sessionId, String(role || 'user'), typeof content === 'string' ? content : '', m)
     return { ok: true }

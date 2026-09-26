@@ -27,6 +27,12 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
   } = state
   const harnessMode = useProviderStore((s) => s.harnessMode)
   const setHarnessMode = useProviderStore((s) => s.setHarnessMode)
+  const smartCompaction = useProviderStore((s) => s.smartCompaction)
+  const setSmartCompaction = useProviderStore((s) => s.setSmartCompaction)
+  const toolLoading = useProviderStore((s) => s.toolLoading)
+  const setToolLoading = useProviderStore((s) => s.setToolLoading)
+  const lspDiagnostics = useProviderStore((s) => s.lspDiagnostics)
+  const setLspDiagnostics = useProviderStore((s) => s.setLspDiagnostics)
   const models = useProviderStore((s) => s.models)
 
   // A mode only feels different in auto routing when there are tiers to move between.
@@ -162,6 +168,40 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           </div>
           <label className="toggle-switch">
             <input type="checkbox" checked={autoMemoryConsolidate} onChange={(e) => setAutoMemoryConsolidate(e.target.checked)} />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">{t('settings.agentSection.toolLoading')}</span>
+            <span className="settings-row-desc">{t('settings.agentSection.toolLoadingDesc')}</span>
+          </div>
+          <select
+            className="settings-select"
+            value={toolLoading}
+            onChange={(e) => setToolLoading(e.target.value === 'all' ? 'all' : 'smart')}
+          >
+            <option value="smart">{t('settings.agentSection.toolLoadingSmart')}</option>
+            <option value="all">{t('settings.agentSection.toolLoadingAll')}</option>
+          </select>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">{t('settings.agentSection.smartCompaction')}</span>
+            <span className="settings-row-desc">{t('settings.agentSection.smartCompactionDesc')}</span>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={smartCompaction} onChange={(e) => setSmartCompaction(e.target.checked)} />
+            <span className="toggle-slider" />
+          </label>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">{t('settings.agentSection.lspDiagnostics')}</span>
+            <span className="settings-row-desc">{t('settings.agentSection.lspDiagnosticsDesc')}</span>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={lspDiagnostics} onChange={(e) => setLspDiagnostics(e.target.checked)} />
             <span className="toggle-slider" />
           </label>
         </div>

@@ -131,6 +131,18 @@ describe('message duration', () => {
   })
 })
 
+describe('tool meta', () => {
+  it('persists the structured tool record with the message', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s', 'proj', 'S', '/p')
+    addMessage('t1', 's', 'system', '[Tool: read_file] OK', { toolMeta: '{"v":1,"name":"read_file","status":"ok"}' })
+    addMessage('u1', 's', 'user', 'hi')
+    const rows = getMessagesBySession('s')
+    expect(rows.find((r) => r.id === 't1')?.toolMeta).toBe('{"v":1,"name":"read_file","status":"ok"}')
+    expect(rows.find((r) => r.id === 'u1')?.toolMeta).toBe('')
+  })
+})
+
 describe('searchSessions', () => {
   it('finds sessions by title', () => {
     addProject('proj', 'P', '/p')

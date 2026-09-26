@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { __resetFileSnapshotsForTests } from '../fileSnapshots'
 import { TOOLS, TOOL_SAFETY, executeTool, matchesGlob, type ToolCall } from '../tools'
 import { useProviderStore } from '../../stores/provider'
 import { usePermissionStore } from '../../stores/permission'
@@ -35,6 +36,7 @@ const browserApi = {
 }
 
 beforeEach(() => {
+  __resetFileSnapshotsForTests()
   ;(window as any).api = {
     fs: fsMock,
     shell: shellMock,
@@ -199,6 +201,52 @@ describe('file tools', () => {
     fsMock.writeFile.mockResolvedValue({ ok: true })
     const result = await executeTool(call('write_file', { path: '/a.ts', content: 'new content' }))
     expect(result.diffData).toEqual({ oldText: 'old content', newText: 'new content', filename: 'a.ts', path: '/a.ts' })
+  })
+
+  it('refuses a whole-file overwrite when the file changed since the agent read it', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    fsMock.readFile.mockResolvedValue('v1')
+    fsMock.writeFile.mockResolvedValue({ ok: true })
+    await executeTool(call('read_file', { path: '/s.ts' }), undefined, undefined, { sessionId: 'sx' })
+    // The user edits the file in their editor.
+    fsMock.readFile.mockResolvedValue('v1 + user edit')
+    const blocked = await executeTool(call('write_file', { path: '/s.ts', content: 'v2' }), undefined, undefined, { sessionId: 'sx' })
+    expect(blocked.isError).toBe(true)
+    expect(blocked.content).toContain('changed on disk')
+    expect(fsMock.writeFile).not.toHaveBeenCalled()
+
+    // Re-reading refreshes the agent's view; the write then goes through.
+    await executeTool(call('read_file', { path: '/s.ts' }), undefined, undefined, { sessionId: 'sx' })
+    const ok = await executeTool(call('write_file', { path: '/s.ts', content: 'v2' }), undefined, undefined, { sessionId: 'sx' })
+    expect(ok.isError).toBeFalsy()
+    expect(fsMock.writeFile).toHaveBeenCalledWith('/s.ts', 'v2')
+  })
+
+  it('does not block writes to files the agent never read, or other sessions', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    fsMock.readFile.mockResolvedValue('v1')
+    fsMock.writeFile.mockResolvedValue({ ok: true })
+    await executeTool(call('read_file', { path: '/o.ts' }), undefined, undefined, { sessionId: 'a' })
+    fsMock.readFile.mockResolvedValue('changed')
+    const other = await executeTool(call('write_file', { path: '/o.ts', content: 'x' }), undefined, undefined, { sessionId: 'b' })
+    expect(other.isError).toBeFalsy()
+  })
+
+  it('applies anchored edits on a changed file but warns the agent', async () => {
+    useProviderStore.setState({ permissionMode: 'yolo' })
+    fsMock.readFile.mockResolvedValue('alpha\nbeta\n')
+    fsMock.writeFile.mockResolvedValue({ ok: true })
+    await executeTool(call('read_file', { path: '/e.ts' }), undefined, undefined, { sessionId: 'se' })
+    fsMock.readFile.mockResolvedValue('alpha\nbeta\ngamma\n')
+    const r = await executeTool(
+      call('edit_file', { path: '/e.ts', old_string: 'beta', new_string: 'BETA' }),
+      undefined,
+      undefined,
+      { sessionId: 'se' }
+    )
+    expect(r.isError).toBeFalsy()
+    expect(r.content).toContain('changed on disk')
+    expect(fsMock.writeFile).toHaveBeenCalledWith('/e.ts', 'alpha\nBETA\ngamma\n')
   })
 
   it('edits a file with unique old_string and returns diff data', async () => {

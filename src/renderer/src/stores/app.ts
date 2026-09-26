@@ -3,6 +3,7 @@ import { uid } from '../utils/uid'
 import { clearSessionRoute } from '../agent/router'
 import { useUsageStore } from './usage'
 import { enqueueDbWrite } from '../utils/dbWriteQueue'
+import { parseToolMeta, serializeToolMeta, type ToolMeta } from '../agent/toolMeta'
 
 export interface Session {
   id: string
@@ -23,6 +24,8 @@ export interface Message {
   thinking?: string
   /** Assistant only: wall-clock time the agent worked on the turn ending here. */
   durationMs?: number
+  /** Tool rows only: structured record of the call (see agent/toolMeta). */
+  toolMeta?: ToolMeta
 }
 
 export interface Project {
@@ -235,7 +238,12 @@ export const useAppStore = create<AppState>((set, get) => ({
     if (!claimed) return
     try {
       const raw = await window.api.db.getMessages(sessionId)
-      const fetched: Message[] = Array.isArray(raw) ? (raw as Message[]) : []
+      const fetched: Message[] = Array.isArray(raw)
+        ? (raw as Array<Omit<Message, 'toolMeta'> & { toolMeta?: unknown }>).map((m) => ({
+            ...m,
+            toolMeta: parseToolMeta(m.toolMeta)
+          }))
+        : []
       set((s) => {
         // Session may have been deleted while the fetch was in flight.
         const stillExists = s.projects.some((p) => p.sessions.some((ss) => ss.id === sessionId))
@@ -312,7 +320,11 @@ export const useAppStore = create<AppState>((set, get) => ({
       )
     }))
     enqueueDbWrite(`msg:add:${message.id}`, () =>
-      window.api.db.addMessage(message.id, sessionId, message.role, message.content)
+      message.toolMeta
+        ? window.api.db.addMessage(message.id, sessionId, message.role, message.content, {
+            toolMeta: serializeToolMeta(message.toolMeta)
+          })
+        : window.api.db.addMessage(message.id, sessionId, message.role, message.content)
     )
   },
 

@@ -4,12 +4,15 @@ import './ToolMessage.css'
 import DiffView from './DiffView'
 import { parseDiffMarker, stripDiffMarker } from '../utils/diffMarker'
 import { openFileInPanel } from '../stores/filesPanel'
+import { displayTarget, formatToolDuration, type ToolMeta } from '../agent/toolMeta'
 
 interface ToolMessageProps {
   content: string
+  /** Structured record (new rows); older rows fall back to parsing `content`. */
+  meta?: ToolMeta
 }
 
-export default function ToolMessage({ content }: ToolMessageProps): React.JSX.Element {
+export default function ToolMessage({ content, meta }: ToolMessageProps): React.JSX.Element {
   const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(true)
   const [showAll, setShowAll] = useState(false)
@@ -24,8 +27,8 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
 
   const firstLine = content.split('\n')[0] || ''
   const toolMatch = firstLine.match(/\[Tool: (\w+)\] (\w+)/)
-  const toolName = toolMatch?.[1] || firstLine.match(/\[Tool: (\w+)\]/)?.[1] || 'tool'
-  const toolStatus = toolMatch?.[2] || 'running'
+  const toolName = meta?.name || toolMatch?.[1] || firstLine.match(/\[Tool: (\w+)\]/)?.[1] || 'tool'
+  const toolStatus = meta ? (meta.status === 'error' ? 'ERROR' : 'OK') : toolMatch?.[2] || 'running'
   const isError = toolStatus === 'ERROR'
   const isRunning = toolStatus === 'running'
 
@@ -79,6 +82,9 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
   }
 
   const info = toolLabels[toolName] || { icon: '', label: toolName }
+  const target = meta ? displayTarget(meta) : undefined
+  const hasLineStats = Boolean(meta && ((meta.added ?? 0) > 0 || (meta.removed ?? 0) > 0))
+  const duration = meta && (meta.durationMs ?? 0) >= 1000 ? formatToolDuration(meta.durationMs) : undefined
 
   return (
     <div
@@ -114,7 +120,19 @@ export default function ToolMessage({ content }: ToolMessageProps): React.JSX.El
           </svg>
         )}
         <span className="tool-name">{info.label}</span>
+        {target && (
+          <span className="tool-target" title={meta?.path || meta?.target}>
+            {target}
+          </span>
+        )}
+        {hasLineStats && (
+          <span className="tool-line-stats" aria-label={t('toolMessage.lineStats', { added: meta?.added ?? 0, removed: meta?.removed ?? 0 })}>
+            {(meta?.added ?? 0) > 0 && <span className="tool-added">+{meta?.added}</span>}
+            {(meta?.removed ?? 0) > 0 && <span className="tool-removed">−{meta?.removed}</span>}
+          </span>
+        )}
         {structureWarn && <span className="tool-badge-warn" title="Structure check warnings">structure</span>}
+        {duration && <span className="tool-duration">{duration}</span>}
         <span className={`tool-status ${isRunning ? 'running' : isError ? 'error' : 'ok'}`}>
           {isRunning ? '⋯' : isError ? 'ERR' : 'OK'}
         </span>

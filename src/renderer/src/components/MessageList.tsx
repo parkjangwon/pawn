@@ -210,7 +210,7 @@ const MessageRow = memo(function MessageRow({
   if (msg.role === 'system') {
     return (
       <div className={`message system${enterClass}`} data-message-id={msg.id}>
-        <ToolMessage content={content} />
+        <ToolMessage content={content} meta={msg.toolMeta} />
       </div>
     )
   }

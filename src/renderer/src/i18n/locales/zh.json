@@ -45,7 +45,9 @@
     "running": "运行中",
     "renameHint": "双击重命名",
     "searchResults": "搜索结果",
-    "noSearchResults": "无匹配会话"
+    "noSearchResults": "无匹配会话",
+    "waiting": "等待回复",
+    "waitingHint": "代理正在等待你的回答或批准"
   },
   "chat": {
     "placeholder": "输入消息... (/ 命令、@ 文件、拖拽附加)",
@@ -80,7 +82,8 @@
       "partialPreserved": "_({{model}} 流中断 — 已保留部分回复。正在重试…)_",
       "sessionBudget": "会话预算已达 (${{cost}} / ${{cap}})",
       "dailyBudget": "每日预算已达 (${{cost}} / ${{cap}})",
-      "compactedManual": "已手动压缩上下文"
+      "compactedManual": "已手动压缩上下文",
+      "compactedSmart": "已用模型撰写的摘要压缩上下文 — 正在重新预热缓存前缀。"
     },
     "errors": {
       "noProvider": "未配置提供商或模型。请打开设置 → 提供商，然后设置 → 模型。",
@@ -185,7 +188,8 @@
       "h": "{{n}} 小时",
       "m": "{{n}} 分",
       "s": "{{n}} 秒"
-    }
+    },
+    "compacting": "正在压缩上下文…"
   },
   "automation": {
     "title": "自动化",
@@ -474,7 +478,15 @@
       "cwdJail": "工作目录限制",
       "cwdJailDesc": "拒绝项目根目录之外的 Shell cwd",
       "autoMemoryConsolidate": "自动合并记忆",
-      "autoMemoryConsolidateDesc": "每轮结束后合并近似重复的记忆卡片"
+      "autoMemoryConsolidateDesc": "每轮结束后合并近似重复的记忆卡片",
+      "smartCompaction": "智能压缩",
+      "smartCompactionDesc": "上下文将满时，由最便宜的已启用模型撰写交接摘要（目标、决策、变更文件、未完成工作）。关闭则使用免费的启发式摘要。",
+      "lspDiagnostics": "语言服务器诊断",
+      "lspDiagnosticsDesc": "运行已安装的语言服务器（TypeScript、Python、Go、Rust），让代理在每次编辑后立即看到真实错误，并可跳转到定义/引用。",
+      "toolLoading": "工具加载",
+      "toolLoadingDesc": "智能：始终发送核心编码工具，浏览器、电脑、账户（GitHub/GitLab/Google/CodeCommit）和应用工具仅在对话需要时加载，每次请求的工具 token 约减半。全部：发送所有工具。",
+      "toolLoadingSmart": "智能（按需加载）",
+      "toolLoadingAll": "全部工具"
     },
     "agentsSection": {
       "title": "子代理",
@@ -1110,7 +1122,9 @@
     "gitBranch": "git branch",
     "gitStash": "git stash",
     "batchRunning": "正在运行 {{count}} 个工具…",
-    "batchDone": "已执行 {{count}} 项操作"
+    "batchDone": "已执行 {{count}} 项操作",
+    "lineStats": "新增 {{added}} 行，删除 {{removed}} 行",
+    "filesChanged": "{{count}} 个文件"
   },
   "diffView": {
     "showAllLines": "显示所有行",
@@ -1120,7 +1134,9 @@
     "revert": "还原",
     "reverted": "已还原",
     "revertFailed": "还原失败",
-    "noPath": "无路径"
+    "noPath": "无路径",
+    "revertConflict": "此文件在代理修改后又被更改。撤销会丢弃之后的更改。仍要撤销吗？",
+    "revertCancelled": "已取消撤销 — 文件保持不变"
   },
   "usage": {
     "diagnostics": {
@@ -1162,7 +1178,18 @@
     "showMore": "还有 {{count}} 个",
     "showLess": "收起",
     "history": "历史 ({{count}})",
-    "undoTurnHint": "撤销本轮文件更改"
+    "undoTurnHint": "撤销本轮文件更改",
+    "conflictTitle": "部分文件在代理修改后又被更改",
+    "conflictMessage": "有 {{count}} 个文件在此轮之后被修改（手动编辑、格式化工具或后续轮次）。撤销将丢弃这些更改。",
+    "revertSafeOnly": "仅撤销其余文件",
+    "overwriteAll": "仍然覆盖",
+    "revertedSkipped": "已撤销 {{count}} 个文件，保留了 {{skipped}} 个已修改的文件",
+    "conflictReason": {
+      "modified": "已修改",
+      "missing": "已删除",
+      "recreated": "已重新创建",
+      "oversized": "过大"
+    }
   },
   "notifications": {
     "taskComplete": "任务完成",
@@ -1227,5 +1254,44 @@
     "collapseCode": "收起",
     "copyCode": "复制代码",
     "codeCopied": "已复制到剪贴板"
+  },
+  "questions": {
+    "badge": "提问",
+    "planBadge": "计划",
+    "dismiss": "关闭 (Esc)",
+    "submit": "回答",
+    "otherPlaceholder": "或输入你自己的回答…",
+    "answerPlaceholder": "输入你的回答…",
+    "keyboardHint": "1-9 选择 · Enter 发送 · Esc 关闭",
+    "planApprovalTitle": "批准此计划并开始实现？",
+    "approveLabel": "批准",
+    "reviseLabel": "要求修改",
+    "approveAndBuild": "批准并实现",
+    "requestChanges": "要求修改",
+    "planFeedbackPlaceholder": "可选备注或需要修改的内容…",
+    "showPlan": "显示计划",
+    "hidePlan": "隐藏计划"
+  },
+  "ultraWork": {
+    "title": "Ultra Work",
+    "slashLabel": "ultra-work",
+    "slashDesc": "不计 token 的自主模式：持续工作直到目标经验证完成 ($ulw)",
+    "needGoal": "请在 $ulw 后写上目标 — 例如 \"$ulw 让所有测试通过\"",
+    "armedHint": "持续工作直到目标经验证完成 · Build + Maxing · 按 Enter 开始",
+    "goal": "目标",
+    "nextUp": "下一步",
+    "verdict": "结果",
+    "iteration": "第 {{current}}/{{max}} 轮",
+    "iterationHint": "每一轮是一次完整的代理回合；每轮结束后由快速模型检查目标",
+    "stop": "停止",
+    "dismiss": "关闭",
+    "notifyAchieved": "目标已达成",
+    "status": {
+      "active": "工作中",
+      "achieved": "已达成",
+      "unmet": "受阻",
+      "budget_limited": "预算用尽",
+      "stopped": "已停止"
+    }
   }
 }

@@ -1,6 +1,7 @@
 import { app, BrowserWindow, session } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { registerAllIpc } from './ipc'
+import { disposeLsp } from './ipc/lsp'
 import { createMainWindow, getMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
 import { killAllMcpServers } from './mcpManager'
@@ -72,6 +73,7 @@ app.whenReady().then(() => {
     // headless routine run may still depend on — only torn down at quit,
     // not when the main window closes.
     killAllMcpServers()
+    void disposeLsp().catch(() => {})
     stopRoutineServices()
     destroyTray()
     closeMemoryDb()

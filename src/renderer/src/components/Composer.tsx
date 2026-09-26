@@ -1,3 +1,5 @@
+import { ultraWorkTriggerLength } from '../agent/ultraWork'
+import './UltraWork.css'
 import { useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
@@ -153,9 +155,12 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
     e.target.value = ''
   }
 
+  // `$ulw` / `/ultra-work` at the start of the draft arms Ultra Work.
+  const ulwArmed = ultraWorkTriggerLength(input) > 0
+
   return (
       <div className="chat-input-wrapper">
-       <div className="chat-input-container" role="group" aria-label={t('chat.placeholder')}>
+       <div className={`chat-input-container${ulwArmed ? ' ulw-armed' : ''}`} role="group" aria-label={t('chat.placeholder')}>
           <TriggerMenu
             open={triggerOpen}
             trigger={trigger?.type ?? null}
@@ -224,6 +229,12 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
 
           {/* Text input */}
           <div className="chat-input-box">
+            {ulwArmed && (
+              <div className="ulw-input-hint" aria-live="polite">
+                <span className="ulw-rainbow-text">ULTRA WORK</span>
+                <span className="ulw-hint-text">{t('ultraWork.armedHint')}</span>
+              </div>
+            )}
             {attachments.length > 0 && (
               <div className="attachment-bar">
                 {attachments.map((a) => (

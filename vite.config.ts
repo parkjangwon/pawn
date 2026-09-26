@@ -145,7 +145,13 @@ function apiProxyPlugin(): Plugin {
                 send({ ok: true })
                 break
               case 'addMessage':
-                db.addMessage(data.id as string, data.sessionId as string, data.role as string, data.content as string)
+                db.addMessage(
+                  data.id as string,
+                  data.sessionId as string,
+                  data.role as string,
+                  data.content as string,
+                  (data.meta as { thinking?: string; modelLabel?: string; toolMeta?: string } | undefined) || undefined
+                )
                 send({ ok: true })
                 break
               case 'updateMessageContent':

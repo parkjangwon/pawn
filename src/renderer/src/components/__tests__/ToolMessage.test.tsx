@@ -64,4 +64,25 @@ describe('ToolMessage', () => {
     fireEvent.click(link)
     expect(reveal).toHaveBeenCalledWith('/tmp/project/src/app.ts')
   })
+
+  it('renders a one-line summary from the structured record', () => {
+    const { container } = render(
+      <ToolMessage
+        content={'[Tool: edit_file] OK\nFile edited: /p/src/agent/router.ts'}
+        meta={{ v: 1, name: 'edit_file', status: 'ok', path: '/p/src/agent/router.ts', added: 4, removed: 2, durationMs: 2500 }}
+      />
+    )
+    const header = container.querySelector('.tool-message-header')!
+    expect(header.querySelector('.tool-target')).toHaveTextContent('agent/router.ts')
+    expect(header).toHaveTextContent('+4')
+    expect(header).toHaveTextContent('−2')
+    expect(header.querySelector('.tool-duration')).toHaveTextContent('2.5s')
+  })
+
+  it('prefers the structured status over the text prefix', () => {
+    const { container } = render(
+      <ToolMessage content={'[Tool: shell_exec] OK\nnope'} meta={{ v: 1, name: 'shell_exec', status: 'error', target: 'npm test' }} />
+    )
+    expect(container.querySelector('.tool-message')).toHaveClass('tool-error')
+  })
 })

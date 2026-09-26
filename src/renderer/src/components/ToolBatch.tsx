@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import ToolMessage from './ToolMessage'
 import type { Message } from '../stores/app'
+import { aggregateToolMeta, formatToolDuration } from '../agent/toolMeta'
 import './ToolBatch.css'
 
 interface ToolBatchProps {
@@ -12,23 +13,13 @@ interface ToolBatchProps {
 export default function ToolBatch({ messages, animateIn }: ToolBatchProps): React.JSX.Element {
   const { t } = useTranslation()
 
-  // Single tool message fallback
-  if (messages.length === 1) {
-    const msg = messages[0]
-    return (
-      <div className={`message system${animateIn ? ' message-enter' : ''}`}>
-        <ToolMessage content={msg.content} />
-      </div>
-    )
-  }
-
   // Parse details from batch
   const parsedTools = useMemo(() => {
     return messages.map((m) => {
       const firstLine = m.content.split('\n')[0] || ''
       const toolMatch = firstLine.match(/\[Tool: (\w+)\] (\w+)/)
-      const toolName = toolMatch?.[1] || firstLine.match(/\[Tool: (\w+)\]/)?.[1] || 'tool'
-      const toolStatus = toolMatch?.[2] || 'running'
+      const toolName = m.toolMeta?.name || toolMatch?.[1] || firstLine.match(/\[Tool: (\w+)\]/)?.[1] || 'tool'
+      const toolStatus = m.toolMeta ? (m.toolMeta.status === 'error' ? 'ERROR' : 'OK') : toolMatch?.[2] || 'running'
       const isError = toolStatus === 'ERROR'
       const isRunning = toolStatus === 'running'
       const hasDiff = m.content.includes('__DIFF__:')
@@ -44,6 +35,7 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
     })
   }, [messages])
 
+  const stats = useMemo(() => aggregateToolMeta(messages.map((m) => m.toolMeta)), [messages])
   const hasRunning = parsedTools.some((p) => p.isRunning)
   const hasError = parsedTools.some((p) => p.isError)
   const hasDiff = parsedTools.some((p) => p.hasDiff)
@@ -59,6 +51,17 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
     }
     return map
   }, [parsedTools])
+
+  // Single tool: plain row. Checked after all hooks so a batch growing from one
+  // to two tools (same React key) keeps a stable hook order.
+  if (messages.length === 1) {
+    const msg = messages[0]
+    return (
+      <div className={`message system${animateIn ? ' message-enter' : ''}`} data-message-id={msg.id}>
+        <ToolMessage content={msg.content} meta={msg.toolMeta} />
+      </div>
+    )
+  }
 
   return (
     <div className={`message system tool-batch-container${animateIn ? ' message-enter' : ''}`}>
@@ -106,7 +109,17 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
           </div>
 
           <div className="tool-batch-header-right">
-            {hasDiff && (
+            {stats.filesChanged > 0 && (
+              <span className="tool-batch-lines" title={t('toolMessage.filesChanged', { count: stats.filesChanged })}>
+                <span className="tool-batch-files">{t('toolMessage.filesChanged', { count: stats.filesChanged })}</span>
+                {stats.added > 0 && <span className="tool-added">+{stats.added}</span>}
+                {stats.removed > 0 && <span className="tool-removed">−{stats.removed}</span>}
+              </span>
+            )}
+            {stats.durationMs >= 1000 && (
+              <span className="tool-batch-duration">{formatToolDuration(stats.durationMs)}</span>
+            )}
+            {hasDiff && stats.filesChanged === 0 && (
               <span className="tool-batch-diff-badge" title="Files modified">
                 Diff
               </span>
@@ -129,7 +142,7 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
           <div className="tool-batch-body">
             {messages.map((m) => (
               <div key={m.id} className="tool-batch-item">
-                <ToolMessage content={m.content} />
+                <ToolMessage content={m.content} meta={m.toolMeta} />
               </div>
             ))}
           </div>

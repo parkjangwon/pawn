@@ -42,6 +42,17 @@ export default function DiffView({
       return
     }
     const r = await useChangeLedger.getState().revertFile(openPath)
+    if (!r.ok && r.conflict && r.conflict !== 'oversized') {
+      // Changed after the agent's edit — make the user opt in to overwriting.
+      const overwrite = window.confirm(t('diffView.revertConflict'))
+      if (!overwrite) {
+        setActionMsg(t('diffView.revertCancelled'))
+        return
+      }
+      const forced = await useChangeLedger.getState().revertFile(openPath, { force: true })
+      setActionMsg(forced.ok ? t('diffView.reverted') : forced.error || t('diffView.revertFailed'))
+      return
+    }
     setActionMsg(r.ok ? t('diffView.reverted') : r.error || t('diffView.revertFailed'))
   }
 

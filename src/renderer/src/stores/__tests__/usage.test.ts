@@ -146,3 +146,13 @@ describe('record', () => {
     expect(useUsageStore.getState().lastRoute.s).toEqual({ label: 'gpt-4o', reason: 'auto: medium' })
   })
 })
+
+describe('cost math robustness', () => {
+  it('treats missing or invalid pricing fields as zero instead of NaN', () => {
+    const partial = model({ input: 1, output: 2 } as unknown as ModelEntry['pricing'])
+    const u = { inputTokens: 1_000_000, outputTokens: 1_000_000, cacheReadTokens: 500_000, cacheWriteTokens: 10 }
+    expect(computeCost(partial, u)).toBe(3)
+    expect(Number.isNaN(computeUncachedCost(partial, u))).toBe(false)
+    expect(computeCost(model({ input: NaN, output: -1, cacheRead: 0, cacheWrite: 0 }), u)).toBe(0)
+  })
+})

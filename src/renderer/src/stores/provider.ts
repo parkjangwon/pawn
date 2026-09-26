@@ -1,3 +1,5 @@
+import { isUltraWorkSession } from './ultraWorkRegistry'
+import { parseToolLoadingMode, type ToolLoadingMode } from '../agent/toolsets'
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
 import { guessPricing, guessSupportsVision } from '../types/provider'
@@ -30,6 +32,12 @@ interface ProviderState {
   shellCwdJail: boolean
   /** Merge near-duplicate memories after each agent turn. */
   autoMemoryConsolidate: boolean
+  /** Compaction writes a model summary (cheapest model) instead of a heuristic digest. */
+  smartCompaction: boolean
+  /** Run language servers (tsserver, pyright, …) for diagnostics after edits. */
+  lspDiagnostics: boolean
+  /** smart = optional tool groups load on demand; all = send every tool. */
+  toolLoading: ToolLoadingMode
   /**
    * Subagent tier pin policy for cost control:
    * frugal | balanced (default) | quality
@@ -75,6 +83,9 @@ interface ProviderState {
   setShellNetwork: (v: boolean) => void
   setShellCwdJail: (v: boolean) => void
   setAutoMemoryConsolidate: (v: boolean) => void
+  setSmartCompaction: (v: boolean) => void
+  setLspDiagnostics: (v: boolean) => void
+  setToolLoading: (mode: ToolLoadingMode) => void
   setSubagentCostMode: (mode: 'frugal' | 'balanced' | 'quality') => void
   setMaxParallelSubagents: (n: number) => void
   setAutoOpenAgentsPanel: (v: boolean) => void
@@ -131,6 +142,9 @@ function saveToBackend(state: ProviderState): void {
       shellNetwork: state.shellNetwork,
       shellCwdJail: state.shellCwdJail,
       autoMemoryConsolidate: state.autoMemoryConsolidate,
+      smartCompaction: state.smartCompaction,
+      lspDiagnostics: state.lspDiagnostics,
+      toolLoading: state.toolLoading,
       subagentCostMode: state.subagentCostMode,
       maxParallelSubagents: state.maxParallelSubagents,
       autoOpenAgentsPanel: state.autoOpenAgentsPanel
@@ -155,6 +169,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   shellNetwork: true,
   shellCwdJail: true,
   autoMemoryConsolidate: true,
+  smartCompaction: true,
+  lspDiagnostics: true,
+  toolLoading: 'smart',
   subagentCostMode: 'balanced',
   maxParallelSubagents: 4,
   autoOpenAgentsPanel: true,
@@ -196,6 +213,9 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         shellNetwork: settings.shellNetwork !== false,
         shellCwdJail: settings.shellCwdJail !== false,
         autoMemoryConsolidate: settings.autoMemoryConsolidate !== false,
+        smartCompaction: settings.smartCompaction !== false,
+        lspDiagnostics: settings.lspDiagnostics !== false,
+        toolLoading: parseToolLoadingMode(settings.toolLoading),
         subagentCostMode: parseSubagentCostMode(settings.subagentCostMode),
         maxParallelSubagents: parseMaxParallelSubagents(settings.maxParallelSubagents),
         autoOpenAgentsPanel: settings.autoOpenAgentsPanel !== false,
@@ -363,7 +383,8 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   // Global (Settings-only). The session arg keeps call sites stable if
   // per-session modes ever come back.
-  harnessModeFor: () => get().harnessMode,
+  // Ultra Work forces MAXING for its session only.
+  harnessModeFor: (sessionId) => (isUltraWorkSession(sessionId) ? 'maxing' : get().harnessMode),
 
   setDoneGate: (gate) => {
     set((s) => {
@@ -399,6 +420,29 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const next = { ...s, autoMemoryConsolidate: v }
       saveToBackend(next)
       return { autoMemoryConsolidate: v }
+    })
+  },
+  setSmartCompaction: (v) => {
+    set((s) => {
+      const next = { ...s, smartCompaction: v }
+      saveToBackend(next)
+      return { smartCompaction: v }
+    })
+  },
+  setLspDiagnostics: (v) => {
+    set((s) => {
+      const next = { ...s, lspDiagnostics: v }
+      saveToBackend(next)
+      return { lspDiagnostics: v }
+    })
+    void window.api?.lsp?.setEnabled?.(v)?.catch?.(() => {})
+  },
+  setToolLoading: (mode) => {
+    const m = parseToolLoadingMode(mode)
+    set((s) => {
+      const next = { ...s, toolLoading: m }
+      saveToBackend(next)
+      return { toolLoading: m }
     })
   },
   setSubagentCostMode: (mode) => {

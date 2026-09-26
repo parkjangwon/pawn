@@ -25,6 +25,7 @@ import {
   compactTranscript, estimateTokens, transcriptNeedsVision, type TranscriptEntry
 } from '../agent/transcript'
 import { formatToolMessageContent } from '../agent/toolMessage'
+import { buildToolMeta } from '../agent/toolMeta'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
 import {
@@ -34,6 +35,12 @@ import { fireHook } from '../agent/hooksClient'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildTranscriptText, imageAttachments, type ChatAttachment } from '../utils/attachments'
 import { useStreamingStore } from './streaming'
+import { usePlanStore } from './plan'
+import { compactWithSummary } from '../agent/compaction'
+import { decideAfterTurn, evaluateGoal, useUltraWorkStore } from './ultraWork'
+import { ultraWorkPreamble } from '../agent/ultraWork'
+import { getConnectedProviders, hiddenToolNames, refreshConnectedProviders } from '../agent/toolsets'
+import { TOOLS } from '../agent/toolDefinitions'
 import i18n from '../i18n'
 
 export function describeToolAction(tc: ToolCall): string {
@@ -118,6 +125,32 @@ async function checkSpendBudget(sessionId: string): Promise<string | null> {
   return null
 }
 
+const STATIC_TOOL_NAMES = TOOLS.map((t) => t.name)
+
+/** Plan items for the session, carried across compaction. */
+function currentPlanFor(sessionId: string): Array<{ content: string; status: string }> | undefined {
+  try {
+    const plan = usePlanStore.getState().getPlan(sessionId)
+    return plan.length ? plan.map((p) => ({ content: p.content, status: p.status })) : undefined
+  } catch {
+    return undefined
+  }
+}
+
+/** One-line "compacting context…" indicator on the live assistant area. */
+function setCompactingActivity(projectId: string, sessionId: string, on: boolean): void {
+  try {
+    const session = useAppStore
+      .getState()
+      .projects.find((p) => p.id === projectId)
+      ?.sessions.find((s) => s.id === sessionId)
+    const last = session?.messages.filter((m) => m.role === 'assistant').pop()
+    if (last) useStreamingStore.getState().setActivity(last.id, on ? i18n.t('chat.compacting') : null)
+  } catch {
+    /* cosmetic */
+  }
+}
+
 /**
  * Manually compact the active session transcript (user-triggered).
  * Returns true if compaction ran.
@@ -132,7 +165,15 @@ export async function compactSessionNow(sessionId: string): Promise<boolean> {
     const entries = await loadTranscript(project.id, sessionId)
     if (entries.length < 4) return false
     const before = estimateTokens(entries)
-    const next = compactTranscript(entries)
+    const smart = await compactWithSummary(entries, {
+      sessionId,
+      contextWindow: DEFAULT_CONTEXT_WINDOW,
+      plan: currentPlanFor(sessionId),
+      useModel: useProviderStore.getState().smartCompaction
+    }).catch(() => null)
+    const next = smart?.compacted
+      ? smart.entries
+      : compactTranscript(entries, { keepEntries: 30, plan: currentPlanFor(sessionId) })
     const after = estimateTokens(next)
     if (after >= before * 0.95) {
       // Already compact — still refresh meter
@@ -277,7 +318,7 @@ export async function agentLoop(
         '--- Agent mode: PLAN ---\n' +
         'You are in Plan mode: explore, design, and call update_plan. ' +
         'Do not edit files, run shell that changes state, or use computer/browser actions that mutate. ' +
-        'When ready to implement, ask the user to switch to Build.'
+        'When the plan is ready, call request_plan_approval with it; if approved you switch to Build and implement in the same turn.'
     }
     // Harness mode (eco / maxing) rides in the preamble like Plan mode so the
     // system prefix cache stays shared; default adds nothing.
@@ -286,6 +327,11 @@ export async function agentLoop(
     const harnessBlock = harnessPreamble(harnessMode)
     if (harnessBlock) {
       projectPreamble += (projectPreamble ? '\n\n' : '') + harnessBlock
+    }
+    // Ultra Work: goal contract rides in the preamble (stable across rounds).
+    const ultraRun = useUltraWorkStore.getState().get(sessionId)
+    if (ultraRun?.status === 'active') {
+      projectPreamble += (projectPreamble ? '\n\n' : '') + ultraWorkPreamble(ultraRun)
     }
     // Long-term Memory injection (local, optional)
     try {
@@ -382,6 +428,8 @@ export async function agentLoop(
 
     let lastDecision: RouteDecision | null = null
     const loopCounter = new ToolLoopCounter(MAX_REPEATED_TOOL_ROUNDS)
+    // Account-backed tool groups are hidden while disconnected (bounded wait).
+    await refreshConnectedProviders()
 
     // Persist immediately so a crash mid-first-LLM-call can still resume.
     checkpointSnapshot({
@@ -419,9 +467,27 @@ export async function agentLoop(
       const tokenEst = estimateTokens(entries)
       useUsageStore.getState().noteContext(sessionId, tokenEst, contextWindow, false)
       if (tokenEst > contextWindow * harness.compactAtRatio) {
-        entries = compactTranscript(entries)
+        setCompactingActivity(projectId, sessionId, true)
+        const compacted = await compactWithSummary(entries, {
+          sessionId,
+          contextWindow,
+          plan: currentPlanFor(sessionId),
+          useModel: useProviderStore.getState().smartCompaction,
+          signal
+        }).catch(() => null)
+        setCompactingActivity(projectId, sessionId, false)
+        if (signal.aborted) break
+        entries = compacted?.compacted
+          ? compacted.entries
+          : compactTranscript(entries, { keepEntries: 30, plan: currentPlanFor(sessionId) })
         persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
-        useUsageStore.getState().noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.compacted'))
+        useUsageStore
+          .getState()
+          .noteDiagnostic(
+            sessionId,
+            'info',
+            i18n.t(compacted?.usedModel ? 'chat.diagnostics.compactedSmart' : 'chat.diagnostics.compacted')
+          )
         useUsageStore
           .getState()
           .noteContext(sessionId, estimateTokens(entries), contextWindow, true)
@@ -495,7 +561,13 @@ export async function agentLoop(
         try {
          result = await callLLM({
             decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal,
-            complexity
+            complexity,
+            toolDenylist: hiddenToolNames({
+              entries,
+              allToolNames: STATIC_TOOL_NAMES,
+              connected: getConnectedProviders(),
+              mode: useProviderStore.getState().toolLoading
+            })
          })
           noteProviderSuccess(decision.provider.id)
           // Vision-only fallbacks must not steal sticky from the text model
@@ -754,15 +826,22 @@ export async function agentLoop(
       }
 
       const resultsById = new Map<string, ToolResult>()
+      const durationsById = new Map<string, number>()
+      const timedExecute = async (tc: ToolCall): Promise<ToolResult> => {
+        const started = Date.now()
+        try {
+          return await executeTool(tc, toolCwd, signal, { sessionId, projectId })
+        } finally {
+          durationsById.set(tc.id, Date.now() - started)
+        }
+      }
       if (safe.length > 0 && !signal.aborted) {
-        const settled = await Promise.all(
-          safe.map((tc) => executeTool(tc, toolCwd, signal, { sessionId, projectId }))
-        )
+        const settled = await Promise.all(safe.map((tc) => timedExecute(tc)))
         safe.forEach((tc, i) => resultsById.set(tc.id, settled[i]))
       }
       for (const tc of risky) {
         if (signal.aborted) break
-        resultsById.set(tc.id, await executeTool(tc, toolCwd, signal, { sessionId, projectId }))
+        resultsById.set(tc.id, await timedExecute(tc))
       }
 
       if (lastAssistantMsgId) {
@@ -795,7 +874,8 @@ export async function agentLoop(
           id: toolMsgId,
           role: 'system',
           content: formatToolMessageContent(tc.name, raw.isError === true, truncated, raw.diffData),
-          createdAt: Date.now()
+          createdAt: Date.now(),
+          toolMeta: buildToolMeta(tc, raw, durationsById.get(tc.id))
         })
 
         entries.push({
@@ -953,11 +1033,88 @@ export async function agentLoop(
           window.api?.notification?.send?.('Pawn', i18n.t('notifications.taskComplete'))?.catch(() => {})
         }
       }
+      // Ultra Work: evaluate the goal and auto-continue (or end the run).
+      const ultra = useUltraWorkStore.getState().get(sessionId)
+      if (ultra?.status === 'active') {
+        if (aborted) {
+          useUltraWorkStore.getState().stop(sessionId)
+        } else {
+          void continueUltraWork(projectId, sessionId, entries, lastAssistantText(projectId, sessionId), set, get)
+          return
+        }
+      }
       // Drain the queue even after a manual stop: queued messages were
       // explicitly scheduled and must not wait for the next user input.
       processQueue(set, get, sessionId)
     }
   }
+}
+
+function lastAssistantText(projectId: string, sessionId: string): string {
+  const session = useAppStore
+    .getState()
+    .projects.find((p) => p.id === projectId)
+    ?.sessions.find((s) => s.id === sessionId)
+  const last = session?.messages.filter((m) => m.role === 'assistant' && m.content.trim()).pop()
+  return last?.content || ''
+}
+
+/**
+ * After an Ultra Work turn: ask the evaluator, then either start the next
+ * iteration (shown as a system note + continuation prompt) or end the run.
+ * User messages queued meanwhile win — the run yields to the human.
+ */
+async function continueUltraWork(
+  projectId: string,
+  sessionId: string,
+  entries: TranscriptEntry[],
+  finalText: string,
+  set: ChatSet,
+  get: ChatGet
+): Promise<void> {
+  const store = useUltraWorkStore.getState()
+  const run = store.get(sessionId)
+  if (!run || run.status !== 'active') {
+    processQueue(set, get, sessionId)
+    return
+  }
+  // A human message waiting in the queue takes priority over auto-continue.
+  if (get().queue.some((q) => q.sessionId === sessionId)) {
+    processQueue(set, get, sessionId)
+    return
+  }
+  setSessionStreamingFlags(set, get, sessionId, true)
+  let decision
+  try {
+    decision = await decideAfterTurn(run, finalText, entries, (goal, e) => evaluateGoal(goal, e, sessionId))
+  } catch {
+    decision = { action: 'end' as const, status: 'unmet' as const, reason: 'Evaluator failed.' }
+  }
+  setSessionStreamingFlags(set, get, sessionId, false)
+  // Stopped by the user while the evaluator was thinking.
+  const latest = useUltraWorkStore.getState().get(sessionId)
+  if (!latest || latest.status !== 'active') {
+    processQueue(set, get, sessionId)
+    return
+  }
+  if (decision.action === 'end') {
+    useUltraWorkStore.getState().update(sessionId, {
+      status: decision.status ?? 'unmet',
+      endedAt: Date.now(),
+      lastReason: decision.reason
+    })
+    if (decision.status === 'achieved' && !document.hasFocus()) {
+      window.api?.notification?.send?.('Pawn · Ultra Work', i18n.t('ultraWork.notifyAchieved'))?.catch?.(() => {})
+    }
+    processQueue(set, get, sessionId)
+    return
+  }
+  if (get().queue.some((q) => q.sessionId === sessionId)) {
+    processQueue(set, get, sessionId)
+    return
+  }
+  useUltraWorkStore.getState().update(sessionId, { iteration: latest.iteration + 1, lastReason: decision.reason })
+  get().sendMessage(projectId, sessionId, decision.prompt || '', 'steer')
 }
 
 /**

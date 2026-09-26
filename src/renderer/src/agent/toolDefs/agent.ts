@@ -120,6 +120,75 @@ export const AGENT_TOOLS: ToolDefinition[] = [
     }
   },
   {
+    name: 'ask_user',
+    description:
+      'Ask the user a question and wait for the answer. Use only when you are genuinely blocked on a decision you cannot make yourself ' +
+      '(ambiguous requirements, choosing between real trade-offs, missing credentials/values, confirming a risky action). ' +
+      'Offer 2-5 concrete options with short descriptions; the user can also type their own answer. ' +
+      'Do not use it for progress updates or to ask permission for normal tool use.',
+    parameters: {
+      type: 'object',
+      properties: {
+        question: { type: 'string', description: 'The question, ending with "?"' },
+        options: {
+          type: 'array',
+          description: 'Suggested answers (2-5). Put the recommended one first.',
+          items: {
+            type: 'object',
+            properties: {
+              label: { type: 'string', description: 'Short answer (1-6 words)' },
+              description: { type: 'string', description: 'What choosing it implies (optional)' }
+            },
+            required: ['label']
+          }
+        },
+        multi_select: { type: 'boolean', description: 'Allow choosing several options (default false)' },
+        allow_other: { type: 'boolean', description: 'Allow a free-text answer (default true)' }
+      },
+      required: ['question']
+    }
+  },
+  {
+    name: 'request_plan_approval',
+    description:
+      'Plan mode only: present the finished implementation plan and ask the user to approve it. ' +
+      'If approved, the session switches to Build mode and you can start implementing immediately in this turn. ' +
+      'If the user requests changes, revise the plan and ask again. Call update_plan first so the checklist is visible.',
+    parameters: {
+      type: 'object',
+      properties: {
+        plan: {
+          type: 'string',
+          description: 'Concise Markdown plan: approach, files to change, risks, and how you will verify.'
+        }
+      },
+      required: ['plan']
+    }
+  },
+  {
+    name: 'load_tools',
+    description:
+      'Load optional tool groups that are not in your tool list yet; their tools become callable on your next step. ' +
+      'Groups: browser (embedded browser: navigate/snapshot/click/fill/eval/tabs), computer (desktop screenshot/mouse/keyboard/clipboard), ' +
+      'github, gitlab, google (Gmail/Drive/Calendar/Tasks/Sheets/Docs/Slides), codecommit, ' +
+      'app (switch model/permission mode/reasoning/theme, open panels, automations). ' +
+      'Account groups need the account connected in Settings → Connections.',
+    parameters: {
+      type: 'object',
+      properties: {
+        groups: {
+          type: 'array',
+          description: 'Groups to load',
+          items: {
+            type: 'string',
+            enum: ['browser', 'computer', 'github', 'gitlab', 'google', 'codecommit', 'app']
+          }
+        }
+      },
+      required: ['groups']
+    }
+  },
+  {
     name: 'load_skill',
     description: 'Read the full instructions of a project skill listed in "Available Skills". Call this before following a skill.',
     parameters: {

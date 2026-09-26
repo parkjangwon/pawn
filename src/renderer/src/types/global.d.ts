@@ -494,7 +494,7 @@ declare global {
           sessionId: string,
           role: string,
           content: string,
-          meta?: { thinking?: string; modelLabel?: string }
+          meta?: { thinking?: string; modelLabel?: string; toolMeta?: string }
         ) => Promise<{ ok?: boolean }>
         updateMessageContent: (id: string, content: string) => Promise<{ ok?: boolean }>
         updateMessageMeta: (
@@ -512,6 +512,7 @@ declare global {
             thinking?: string
             modelLabel?: string
             durationMs?: number
+            toolMeta?: string
           }>
         >
         searchSessions: (query: string) => Promise<
@@ -815,6 +816,39 @@ declare global {
           errors: string[]
         }>
       }
+      /** Language servers (tsserver, pyright, gopls, rust-analyzer) run in main. */
+      lsp?: {
+        setEnabled: (enabled: boolean) => Promise<{ ok: boolean }>
+        status: (root: string) => Promise<LspServerStatusDto[]>
+        diagnostics: (
+          root: string,
+          paths: string[],
+          opts?: { waitMs?: number; content?: Record<string, string> }
+        ) => Promise<{
+          ok: boolean
+          error?: string
+          files: Array<{ path: string; diagnostics: LspDiagnosticDto[] }>
+          unsupported?: string[]
+        }>
+        definition: (
+          root: string,
+          path: string,
+          line: number,
+          character: number
+        ) => Promise<{ ok: boolean; error?: string; locations: LspLocationDto[] }>
+        references: (
+          root: string,
+          path: string,
+          line: number,
+          character: number
+        ) => Promise<{ ok: boolean; error?: string; locations: LspLocationDto[] }>
+        hover: (
+          root: string,
+          path: string,
+          line: number,
+          character: number
+        ) => Promise<{ ok: boolean; error?: string; text?: string }>
+      }
       /** Long-term local Memory (self-learning knowledge cards). */
       memory?: {
         settings: () => Promise<{
@@ -937,6 +971,35 @@ declare global {
         ) => Promise<{ ok: boolean; imported: number; skipped: number }>
       }
     }
+  }
+
+  interface LspDiagnosticDto {
+    /** 1-based line / column. */
+    line: number
+    column: number
+    endLine?: number
+    endColumn?: number
+    severity: 'error' | 'warning' | 'info' | 'hint'
+    message: string
+    source?: string
+    code?: string | number
+  }
+
+  interface LspLocationDto {
+    path: string
+    /** 1-based line / column. */
+    line: number
+    column: number
+    endLine?: number
+    endColumn?: number
+    preview?: string
+  }
+
+  interface LspServerStatusDto {
+    language: string
+    server: string
+    state: 'starting' | 'ready' | 'error' | 'unavailable' | 'stopped'
+    error?: string
   }
 
   interface MemoryRecordDto {

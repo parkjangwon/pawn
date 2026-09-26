@@ -28,6 +28,7 @@ export interface ModelConfig {
 export interface PawnConfig {
   [key: string]: unknown
   settings?: {
+    lspDiagnostics?: boolean
     theme?: string
     language?: string
     routingMode?: string

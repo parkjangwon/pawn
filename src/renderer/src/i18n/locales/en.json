@@ -45,7 +45,9 @@
     "running": "Running",
     "renameHint": "Double-click to rename",
     "searchResults": "Search results",
-    "noSearchResults": "No matching sessions"
+    "noSearchResults": "No matching sessions",
+    "waiting": "Waiting",
+    "waitingHint": "The agent is waiting for your answer or approval"
   },
   "chat": {
     "placeholder": "Send a message... (/ for commands, @ for files, drop to attach)",
@@ -80,7 +82,8 @@
       "partialPreserved": "_(Stream interrupted on {{model}} — partial reply preserved. Retrying…)_",
       "sessionBudget": "Session budget hit (${{cost}} / ${{cap}})",
       "dailyBudget": "Daily budget hit (${{cost}} / ${{cap}})",
-      "compactedManual": "Context compacted manually"
+      "compactedManual": "Context compacted manually",
+      "compactedSmart": "Context compacted with a model-written summary — the cache prefix is being re-primed."
     },
     "errors": {
       "noProvider": "No provider or model configured. Open Settings → Providers, then Settings → Models.",
@@ -185,7 +188,8 @@
       "h": "{{n}}h",
       "m": "{{n}}m",
       "s": "{{n}}s"
-    }
+    },
+    "compacting": "Compacting context…"
   },
   "automation": {
     "title": "Automations",
@@ -474,7 +478,15 @@
       "cwdJail": "CWD jail",
       "cwdJailDesc": "Refuse shell cwd outside the project root",
       "autoMemoryConsolidate": "Auto-consolidate memory",
-      "autoMemoryConsolidateDesc": "Merge near-duplicate memory cards after each turn"
+      "autoMemoryConsolidateDesc": "Merge near-duplicate memory cards after each turn",
+      "smartCompaction": "Smart compaction",
+      "smartCompactionDesc": "When the context fills up, the cheapest enabled model writes a handoff summary (goal, decisions, changed files, open work). Off = free heuristic digest.",
+      "lspDiagnostics": "Language server diagnostics",
+      "lspDiagnosticsDesc": "Run installed language servers (TypeScript, Python, Go, Rust) so the agent sees real errors right after each edit and can jump to definitions/references.",
+      "toolLoading": "Tool loading",
+      "toolLoadingDesc": "Smart sends core coding tools always and loads browser, computer, account (GitHub/GitLab/Google/CodeCommit) and app tools only when a chat needs them — about half the tool tokens per request. All sends every tool.",
+      "toolLoadingSmart": "Smart (on demand)",
+      "toolLoadingAll": "All tools"
     },
     "agentsSection": {
       "title": "Subagents",
@@ -1110,7 +1122,9 @@
     "gitBranch": "git branch",
     "gitStash": "git stash",
     "batchRunning": "Running {{count}} tools…",
-    "batchDone": "Executed {{count}} operations"
+    "batchDone": "Executed {{count}} operations",
+    "lineStats": "{{added}} lines added, {{removed}} removed",
+    "filesChanged": "{{count}} file(s)"
   },
   "diffView": {
     "showAllLines": "Show all lines",
@@ -1120,7 +1134,9 @@
     "revert": "Revert",
     "reverted": "Reverted",
     "revertFailed": "Revert failed",
-    "noPath": "No path to revert"
+    "noPath": "No path to revert",
+    "revertConflict": "This file changed after the agent edited it. Reverting will discard those later changes. Revert anyway?",
+    "revertCancelled": "Revert cancelled — file kept"
   },
   "usage": {
     "diagnostics": {
@@ -1162,7 +1178,18 @@
     "showMore": "+{{count}} more",
     "showLess": "Show less",
     "history": "History ({{count}})",
-    "undoTurnHint": "Restore files from this turn"
+    "undoTurnHint": "Restore files from this turn",
+    "conflictTitle": "Some files changed since the agent edited them",
+    "conflictMessage": "{{count}} file(s) were modified after this turn (by you, a formatter, or a later turn). Reverting them would discard those changes.",
+    "revertSafeOnly": "Revert the rest",
+    "overwriteAll": "Overwrite anyway",
+    "revertedSkipped": "Reverted {{count}} file(s), kept {{skipped}} modified file(s)",
+    "conflictReason": {
+      "modified": "modified",
+      "missing": "deleted",
+      "recreated": "recreated",
+      "oversized": "too large"
+    }
   },
   "notifications": {
     "taskComplete": "Task complete",
@@ -1227,5 +1254,44 @@
     "collapseCode": "Collapse",
     "copyCode": "Copy code",
     "codeCopied": "Copied to clipboard"
+  },
+  "questions": {
+    "badge": "Question",
+    "planBadge": "Plan",
+    "dismiss": "Dismiss (Esc)",
+    "submit": "Answer",
+    "otherPlaceholder": "Or type your own answer…",
+    "answerPlaceholder": "Type your answer…",
+    "keyboardHint": "1-9 to pick · Enter to send · Esc to dismiss",
+    "planApprovalTitle": "Approve this plan and start building?",
+    "approveLabel": "Approve",
+    "reviseLabel": "Request changes",
+    "approveAndBuild": "Approve & build",
+    "requestChanges": "Request changes",
+    "planFeedbackPlaceholder": "Optional notes, or what to change…",
+    "showPlan": "Show plan",
+    "hidePlan": "Hide plan"
+  },
+  "ultraWork": {
+    "title": "Ultra Work",
+    "slashLabel": "ultra-work",
+    "slashDesc": "Token-maxing autonomous mode: keeps working until the goal is verified done ($ulw)",
+    "needGoal": "Add a goal after $ulw — e.g. \"$ulw make all tests pass\"",
+    "armedHint": "Keeps working until the goal is verified done · Build + Maxing · Enter to start",
+    "goal": "Goal",
+    "nextUp": "Next",
+    "verdict": "Result",
+    "iteration": "Iteration {{current}}/{{max}}",
+    "iterationHint": "Each iteration is a full agent turn; a fast model checks the goal after each one",
+    "stop": "Stop",
+    "dismiss": "Dismiss",
+    "notifyAchieved": "Goal achieved",
+    "status": {
+      "active": "Working",
+      "achieved": "Achieved",
+      "unmet": "Blocked",
+      "budget_limited": "Budget reached",
+      "stopped": "Stopped"
+    }
   }
 }

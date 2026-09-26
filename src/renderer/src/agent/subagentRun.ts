@@ -1,4 +1,6 @@
 import { callLLM } from './llm'
+import { getConnectedProviders, hiddenToolNames } from './toolsets'
+import { TOOLS as SUBAGENT_TOOLS } from './toolDefinitions'
 import { executeTool } from './toolExecutor'
 import { TOOL_SAFETY } from './toolPermission'
 import {
@@ -72,6 +74,8 @@ import {
 import { finalizeWorktree, maybeCreateWorktree } from './subagentWorktree'
 import { releaseBrowserAgent } from './browser'
 import type { SubagentIsolation, SubagentResult, SubagentTask } from './subagentTypes'
+
+const SUBAGENT_STATIC_TOOL_NAMES = SUBAGENT_TOOLS.map((t) => t.name)
 
 // --- Side-panel close debounce --------------------------------------------
 //
@@ -408,7 +412,15 @@ export async function runSubagent(
             signal,
             complexity,
             toolAllowlist: profile.tools,
-            toolDenylist: profile.disallowedTools,
+            toolDenylist: [
+              ...(profile.disallowedTools || []),
+              ...hiddenToolNames({
+                entries,
+                allToolNames: SUBAGENT_STATIC_TOOL_NAMES,
+                connected: getConnectedProviders(),
+                mode: useProviderStore.getState().toolLoading
+              })
+            ],
             harnessMode: parentHarnessMode
           })
           noteProviderSuccess(decision.provider.id)

@@ -77,3 +77,44 @@
 .app.dark .confirm-btn.primary {
   color: var(--on-accent, #1c1c1e);
 }
+
+.confirm-details {
+  max-height: 180px;
+  overflow: auto;
+  margin: calc(-1 * var(--space-sm)) 0 var(--space-lg);
+  padding: var(--space-sm) var(--space-md);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.confirm-details ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.confirm-details li {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.confirm-details code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.confirm-details .confirm-reason {
+  flex-shrink: 0;
+  color: var(--warning);
+}
+
+.confirm-btn.secondary {
+  color: var(--text-primary);
+}

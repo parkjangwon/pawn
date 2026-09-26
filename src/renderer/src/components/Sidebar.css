@@ -243,6 +243,8 @@ body.resizing-sidebar .settings-sidebar {
 
 .item-title {
   flex: 1;
+  /* Badges (ULW / Waiting) and the preview must never squeeze the title away. */
+  min-width: 56px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

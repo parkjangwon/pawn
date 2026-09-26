@@ -32,6 +32,14 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   read_spreadsheet: 'safe',
   list_dir: 'safe',
   load_skill: 'safe',
+  load_tools: 'safe',
+  lsp_diagnostics: 'safe',
+  lsp_definition: 'safe',
+  lsp_references: 'safe',
+  // Interactive, but no side effects; kept 'risky' so it runs serially after
+  // parallel reads instead of racing them.
+  ask_user: 'risky',
+  request_plan_approval: 'risky',
   search_files: 'safe',
   grep_search: 'safe',
   git_status: 'safe',

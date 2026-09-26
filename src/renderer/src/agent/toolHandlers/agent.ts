@@ -1,3 +1,15 @@
+import i18n from '../../i18n'
+import { formatAnswerForModel, useQuestionStore, type QuestionOption } from '../../stores/userQuestions'
+import { TOOLS } from '../toolDefinitions'
+import {
+  TOOL_GROUP_IDS,
+  connectionForGroup,
+  describeToolGroup,
+  groupOfTool,
+  isGroupAvailable,
+  parseToolGroupArgs,
+  refreshConnectedProviders
+} from '../toolsets'
 import { readSkill } from '../skills'
 import { installSkillFromRepo } from '../skillInstaller'
 import { resolveToolPath } from '../pathUtils'
@@ -185,6 +197,140 @@ const list_artifacts: ToolHandler = async (call, projectPath, _signal, ctx, api)
         return { toolCallId: call.id, content: await listArtifactsDir(dir, sub) }
       }
 
+
+const MAX_QUESTION_OPTIONS = 6
+
+function normalizeOptions(raw: unknown): QuestionOption[] {
+  if (!Array.isArray(raw)) return []
+  const out: QuestionOption[] = []
+  const seen = new Set<string>()
+  for (const item of raw) {
+    const label =
+      typeof item === 'string'
+        ? item
+        : item && typeof item === 'object' && typeof (item as { label?: unknown }).label === 'string'
+          ? (item as { label: string }).label
+          : ''
+    const clean = label.trim().slice(0, 120)
+    if (!clean || seen.has(clean)) continue
+    seen.add(clean)
+    const description =
+      item && typeof item === 'object' && typeof (item as { description?: unknown }).description === 'string'
+        ? (item as { description: string }).description.trim().slice(0, 300) || undefined
+        : undefined
+    out.push({ label: clean, ...(description ? { description } : {}) })
+    if (out.length >= MAX_QUESTION_OPTIONS) break
+  }
+  return out
+}
+
+const ask_user: ToolHandler = async (call, _projectPath, signal, ctx) => {
+  if (ctx?.subagent || !ctx?.sessionId) {
+    return {
+      toolCallId: call.id,
+      content: 'ask_user is only available to the main agent. Make a reasonable assumption, state it in your result, and continue.',
+      isError: true
+    }
+  }
+  const question = String(call.arguments.question || '').trim().slice(0, 1000)
+  if (!question) return { toolCallId: call.id, content: 'question is required', isError: true }
+  const options = normalizeOptions(call.arguments.options)
+  const allowOther = call.arguments.allow_other !== false || options.length === 0
+  const q = {
+    sessionId: ctx.sessionId,
+    kind: 'question' as const,
+    question,
+    options,
+    multiSelect: call.arguments.multi_select === true && options.length > 1,
+    allowOther
+  }
+  const answer = await useQuestionStore.getState().ask(q, signal)
+  return {
+    toolCallId: call.id,
+    content: formatAnswerForModel(q, answer),
+    isError: answer.aborted === true
+  }
+}
+
+const request_plan_approval: ToolHandler = async (call, _projectPath, signal, ctx) => {
+  if (ctx?.subagent || !ctx?.sessionId) {
+    return { toolCallId: call.id, content: 'request_plan_approval is only available to the main agent.', isError: true }
+  }
+  const sessionId = ctx.sessionId
+  const provider = useProviderStore.getState()
+  if (provider.agentModeFor(sessionId) !== 'plan') {
+    return {
+      toolCallId: call.id,
+      content: 'Already in Build mode — no approval needed. Proceed with the implementation.'
+    }
+  }
+  const plan = String(call.arguments.plan || '').trim().slice(0, 12_000)
+  if (!plan) return { toolCallId: call.id, content: 'plan is required', isError: true }
+  const APPROVE = i18n.t('questions.approveLabel')
+  const REVISE = i18n.t('questions.reviseLabel')
+  const answer = await useQuestionStore.getState().ask(
+    {
+      sessionId,
+      kind: 'plan_approval',
+      question: i18n.t('questions.planApprovalTitle'),
+      details: plan,
+      options: [{ label: APPROVE }, { label: REVISE }],
+      multiSelect: false,
+      allowOther: true
+    },
+    signal
+  )
+  if (answer.aborted) {
+    return { toolCallId: call.id, content: 'The user stopped the turn before approving the plan.', isError: true }
+  }
+  const approved = answer.selected.includes(APPROVE)
+  if (approved) {
+    useProviderStore.getState().setAgentMode('build', sessionId)
+    const note = answer.text?.trim() ? `\nUser note: ${answer.text.trim()}` : ''
+    return {
+      toolCallId: call.id,
+      content:
+        'Plan approved. The session is now in Build mode: file edits, shell, and other mutating tools are available from your next step. ' +
+        'Implement the plan now, keep update_plan statuses current, and verify with run_checks.' +
+        note
+    }
+  }
+  const feedback = answer.text?.trim()
+  return {
+    toolCallId: call.id,
+    content: answer.dismissed
+      ? 'The user closed the approval without deciding. Stay in Plan mode; summarize the plan and stop.'
+      : `The user wants changes before approving.${feedback ? `\nFeedback: ${feedback}` : ''}\nRevise the plan (still in Plan mode) and call request_plan_approval again.`
+  }
+}
+
+const load_tools: ToolHandler = async (call) => {
+  const groups = parseToolGroupArgs(call.arguments.groups)
+  if (groups.length === 0) {
+    return {
+      toolCallId: call.id,
+      content: `No valid groups. Choose from: ${TOOL_GROUP_IDS.join(', ')}.`,
+      isError: true
+    }
+  }
+  const connected = await refreshConnectedProviders()
+  const loaded: string[] = []
+  const blocked: string[] = []
+  for (const g of groups) {
+    const names = TOOLS.filter((t) => groupOfTool(t.name)?.id === g).map((t) => t.name)
+    if (!isGroupAvailable(g, connected)) {
+      blocked.push(
+        `${g}: account not connected — ask the user to connect ${connectionForGroup(g)} in Settings → Connections.`
+      )
+      continue
+    }
+    loaded.push(`${g} (${describeToolGroup(g)}): ${names.join(', ')}`)
+  }
+  const parts: string[] = []
+  if (loaded.length) parts.push(`Loaded — callable from your next step:\n${loaded.map((l) => `- ${l}`).join('\n')}`)
+  if (blocked.length) parts.push(`Not loaded:\n${blocked.map((b) => `- ${b}`).join('\n')}`)
+  return { toolCallId: call.id, content: parts.join('\n\n'), isError: loaded.length === 0 }
+}
 
 const load_skill: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
         const name = call.arguments.name as string
@@ -576,6 +722,9 @@ export const agentHandlers: Record<string, ToolHandler> = {
   codebase_search,
   write_artifact,
   list_artifacts,
+  ask_user,
+  request_plan_approval,
+  load_tools,
   load_skill,
   install_skill,
   repo_map,

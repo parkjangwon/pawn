@@ -2595,3 +2595,13 @@
   width: 1px;
   background: rgba(255, 255, 255, 0.14);
 }
+
+/* Agent question / plan approval sits right above the composer */
+.question-card-slot {
+  flex-shrink: 0;
+  padding: 0 var(--space-xl);
+}
+
+.question-card-slot:empty {
+  display: none;
+}

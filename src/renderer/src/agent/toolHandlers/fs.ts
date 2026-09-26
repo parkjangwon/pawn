@@ -4,7 +4,14 @@ import { useChangeLedger } from '../../stores/changeLedger'
 import { compileGlob, matchesGlob } from '../globMatch'
 import { formatVerifyNote, verifyEditedSource } from '../editVerify'
 import { clearRepoMapCache } from '../repoMap'
+import { checkStale, forgetFile, noteFileSeen, snapshotScope } from '../fileSnapshots'
 import type { ToolHandler } from './types'
+import { postEditDiagnostics } from './lsp'
+
+const STALE_WRITE_MESSAGE = (path: string): string =>
+  `Refused to overwrite ${path}: the file changed on disk since you last read it ` +
+  '(edited by the user, a formatter, or another command). Overwriting would discard those changes. ' +
+  'Call read_file on it again, then re-apply your change (prefer edit_file for targeted edits).'
 
 const read_spreadsheet: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
   const filePath = resolveToolPath(call.arguments.path as string, projectPath)
@@ -64,6 +71,7 @@ const read_file: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
           }
           return { toolCallId: call.id, content: result.error, isError: true }
         }
+        noteFileSeen(snapshotScope(ctx), filePath, result as string)
         const offset = call.arguments.offset !== undefined ? Number(call.arguments.offset) : undefined
         const limit = call.arguments.limit !== undefined ? Number(call.arguments.limit) : undefined
         return {
@@ -78,10 +86,16 @@ const write_file: ToolHandler = async (call, projectPath, _signal, ctx, api) => 
         const newContent = call.arguments.content as string
         const existing = await api.fs.readFile(wPath)
         const before = typeof existing === 'string' ? existing : null
+        const scope = snapshotScope(ctx)
+        if (before !== null && before !== newContent && checkStale(scope, wPath, before) === 'stale') {
+          return { toolCallId: call.id, content: STALE_WRITE_MESSAGE(wPath), isError: true }
+        }
         const result = await api.fs.writeFile(wPath, newContent)
         if ('error' in result) {
           return { toolCallId: call.id, content: result.error!, isError: true }
         }
+        noteFileSeen(scope, wPath, newContent)
+        const lspNote = await postEditDiagnostics(wPath, newContent, projectPath)
         const filename = wPath.split('/').pop() || wPath
         useChangeLedger.getState().recordChange({
           path: wPath,
@@ -95,13 +109,13 @@ const write_file: ToolHandler = async (call, projectPath, _signal, ctx, api) => 
         if (before !== null) {
           return {
             toolCallId: call.id,
-            content: `File written: ${wPath}${note}`,
+            content: `File written: ${wPath}${note}${lspNote}`,
             diffData: { oldText: before, newText: newContent, filename, path: wPath }
           }
         }
         return {
           toolCallId: call.id,
-          content: `File created: ${wPath}${note}`,
+          content: `File created: ${wPath}${note}${lspNote}`,
           diffData: { oldText: '', newText: newContent, filename, path: wPath }
         }
       }
@@ -117,6 +131,10 @@ const edit_file: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
           return { toolCallId: call.id, content: fileContent.error, isError: true }
         }
         const before = fileContent as string
+        const scope = snapshotScope(ctx)
+        // Anchored edits are safe on a changed file (they apply to the current
+        // text), but the agent's mental model is out of date — tell it.
+        const externallyChanged = checkStale(scope, path, before) === 'stale'
         const applied = applyEdit(before, oldStr, newStr, replaceAll)
         if (!applied.ok) {
           return {
@@ -129,6 +147,7 @@ const edit_file: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
         if ('error' in writeResult) {
           return { toolCallId: call.id, content: writeResult.error!, isError: true }
         }
+        noteFileSeen(scope, path, applied.updated)
         const filename = path.split('/').pop() || path
         const modeNote = applied.mode === 'flex_ws' ? ', whitespace-flex match' : ''
         useChangeLedger.getState().recordChange({
@@ -140,9 +159,14 @@ const edit_file: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
         })
         clearRepoMapCache(projectPath)
         const note = formatVerifyNote(path, verifyEditedSource(path, applied.updated))
+        const lspNote = await postEditDiagnostics(path, applied.updated, projectPath)
+        const staleNote = externallyChanged
+          ? '\nNote: this file had changed on disk since you last read it (external edit). ' +
+            'Your edit was applied to the current content; re-read the file before further edits.'
+          : ''
         return {
           toolCallId: call.id,
-          content: `File edited: ${path} (${applied.replacements} replacement${applied.replacements > 1 ? 's' : ''}${modeNote})${note}`,
+          content: `File edited: ${path} (${applied.replacements} replacement${applied.replacements > 1 ? 's' : ''}${modeNote})${note}${lspNote}${staleNote}`,
           diffData: { oldText: before, newText: applied.updated, filename, path }
         }
       }
@@ -163,6 +187,7 @@ const delete_file: ToolHandler = async (call, projectPath, _signal, ctx, api) =>
           op: 'delete',
           toolCallId: call.id
         })
+        forgetFile(snapshotScope(ctx), path)
         return { toolCallId: call.id, content: `Deleted: ${path}` }
       }
 

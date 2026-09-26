@@ -1,8 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useRoutineStore } from '../stores/routine'
+import { useQuestionStore } from '../stores/userQuestions'
+import { useUltraWorkStore } from '../stores/ultraWork'
+import './UltraWork.css'
+import { usePermissionStore } from '../stores/permission'
+import './QuestionCard.css'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { useSidebarResize } from '../hooks/useSidebarResize'
 import { activateOnKey } from '../utils/focusTrap'
@@ -41,6 +46,18 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
   } = useAppStore()
   const streamingSessionIds = useChatStore((s) => s.streamingSessionIds)
   const runningRoutineIds = useRoutineStore((s) => s.runningIds)
+  // Sessions blocked on the user: an agent question or a permission prompt.
+  const waitingQuestionSessions = useQuestionStore((s) => s.pending.map((q) => q.sessionId).join('|'))
+  const waitingPermissionSessions = usePermissionStore((s) =>
+    s.pending.map((p) => p.sessionId || '').join('|')
+  )
+  const ultraSessions = useUltraWorkStore((s) =>
+    Object.values(s.runs).filter((r) => r.status === 'active').map((r) => r.sessionId).join('|')
+  )
+  const waitingSessions = useMemo(
+    () => new Set([...waitingQuestionSessions.split('|'), ...waitingPermissionSessions.split('|')].filter(Boolean)),
+    [waitingQuestionSessions, waitingPermissionSessions]
+  )
   const keybindings = useKeybindingsStore((s) => s.bindings)
   const initialized = useAppStore((s) => s.initialized)
 
@@ -167,6 +184,8 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
     preview: string
     lastActivity: number
     running: boolean
+    waiting: boolean
+    ultra: boolean
   } => {
     const last = session.messages[session.messages.length - 1]
     const firstLine = (last?.content || '').split('\n').find((l) => l.trim()) || ''
@@ -174,14 +193,29 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
     return {
       preview,
       lastActivity: last?.createdAt || session.createdAt,
-      running: runningRoutineIds.has(session.id) || streamingSessionIds.includes(session.id)
+      running: runningRoutineIds.has(session.id) || streamingSessionIds.includes(session.id),
+      waiting: waitingSessions.has(session.id),
+      ultra: ultraSessions.split('|').includes(session.id)
     }
   }
 
   const renderSessionMeta = (meta: ReturnType<typeof sessionMeta>, withPreview: boolean): React.ReactNode => (
     <>
-      {meta.running && <span className="session-running" title={t('sidebar.running')} />}
-      {withPreview && meta.preview && <span className="session-preview">{meta.preview}</span>}
+      {meta.ultra && (
+        <span className="session-ulw ulw-rainbow-text" title={t('ultraWork.title')}>
+          ULW
+        </span>
+      )}
+      {meta.waiting ? (
+        <span className="session-waiting" title={t('sidebar.waitingHint')}>
+          {t('sidebar.waiting')}
+        </span>
+      ) : (
+        meta.running && <span className="session-running" title={t('sidebar.running')} />
+      )}
+      {withPreview && meta.preview && !meta.waiting && !meta.ultra && (
+        <span className="session-preview">{meta.preview}</span>
+      )}
     </>
   )
 

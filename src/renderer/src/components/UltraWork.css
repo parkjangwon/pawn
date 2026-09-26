@@ -1,0 +1,266 @@
+/*
+ * Ultra Work — rainbow emphasis, homage to the "ultrathink" keyword glow.
+ * Rainbow stays on accents (ring, wordmark, keyword, progress) — never on a
+ * full surface — so the rest of the UI keeps Pawn's calm palette.
+ */
+
+@property --ulw-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+:root {
+  --ulw-rainbow: #ff5f6d, #ffb347, #ffe66d, #5ee7a0, #4fc3f7, #7c6cff, #e86bff, #ff5f6d;
+}
+
+/* Animated gradient text: the gradient is 2× wide and slides. */
+.ulw-rainbow-text {
+  background: linear-gradient(90deg, var(--ulw-rainbow));
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: ulwShift 3.2s linear infinite;
+}
+
+@keyframes ulwShift {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+/* ── Status banner above the composer ─────────────────────────────── */
+.ulw-banner {
+  flex-shrink: 0;
+  width: calc(100% - 2 * var(--space-xl));
+  max-width: var(--chat-content-max, 720px);
+  margin: 0 auto 10px;
+  padding: 1.5px;
+  border-radius: var(--radius-lg);
+  background: var(--border-color);
+  animation: riseIn var(--dur-med) var(--ease-spring) both;
+}
+
+.ulw-banner.ulw-active {
+  background: conic-gradient(from var(--ulw-angle), var(--ulw-rainbow));
+  animation:
+    riseIn var(--dur-med) var(--ease-spring) both,
+    ulwSpin 4s linear infinite;
+  box-shadow: 0 0 24px -6px color-mix(in srgb, #7c6cff 45%, transparent);
+}
+
+.ulw-banner.ulw-achieved {
+  background: linear-gradient(90deg, var(--ulw-rainbow));
+}
+
+@keyframes ulwSpin {
+  to {
+    --ulw-angle: 360deg;
+  }
+}
+
+.ulw-banner-inner {
+  padding: 8px 12px 0;
+  border-radius: calc(var(--radius-lg) - 1.5px);
+  background: var(--bg-elevated);
+  overflow: hidden;
+}
+
+.ulw-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.ulw-wordmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+}
+
+.ulw-bolt {
+  color: #ffb347;
+}
+
+.ulw-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+.ulw-status-achieved {
+  background: color-mix(in srgb, var(--success) 15%, transparent);
+  color: var(--success);
+}
+
+.ulw-status-unmet,
+.ulw-status-budget_limited {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+  color: var(--warning);
+}
+
+.ulw-pulse {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: conic-gradient(var(--ulw-rainbow));
+  animation: turnNavPulse 1.2s ease-in-out infinite;
+}
+
+.ulw-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.ulw-num {
+  font-variant-numeric: tabular-nums;
+}
+
+.ulw-btn {
+  margin-left: auto;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.ulw-btn:hover {
+  background: var(--bg-hover);
+}
+
+.ulw-btn.ghost {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.ulw-goal,
+.ulw-reason {
+  display: flex;
+  gap: 8px;
+  margin-top: 5px;
+  min-width: 0;
+  font-size: var(--font-sm);
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.ulw-goal-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ulw-reason {
+  color: var(--text-secondary);
+}
+
+.ulw-reason > span:last-child {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.ulw-goal-label {
+  flex-shrink: 0;
+  min-width: 36px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding-top: 2px;
+}
+
+.ulw-progress {
+  height: 2px;
+  margin: 8px -12px 0;
+  background: var(--bg-secondary);
+}
+
+.ulw-progress > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--ulw-rainbow));
+  background-size: 200% 100%;
+  animation: ulwShift 3.2s linear infinite;
+  transition: width var(--dur-slow) var(--ease-out-soft);
+}
+
+/* ── Composer: rainbow keyword while typing $ulw / /ultra-work ────── */
+.ulw-input-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 0 6px 2px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.6px;
+}
+
+.ulw-input-hint .ulw-hint-text {
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-muted);
+}
+
+.chat-input-container.ulw-armed,
+.chat-input-container.ulw-armed:focus-within,
+.app.dark .chat-input-container.ulw-armed:focus-within {
+  border-color: transparent;
+  background:
+    linear-gradient(var(--bg-elevated, var(--bg-input)), var(--bg-elevated, var(--bg-input))) padding-box,
+    conic-gradient(from var(--ulw-angle), var(--ulw-rainbow)) border-box;
+  animation: ulwSpin 4s linear infinite;
+}
+
+/* Sidebar badge */
+.session-ulw {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ulw-rainbow-text,
+  .ulw-progress > span,
+  .ulw-banner.ulw-active,
+  .chat-input-container.ulw-armed,
+  .ulw-pulse {
+    animation: none !important;
+  }
+}

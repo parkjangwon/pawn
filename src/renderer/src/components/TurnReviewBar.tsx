@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { useChangeLedger } from '../stores/changeLedger'
+import { useChangeLedger, type RevertConflict } from '../stores/changeLedger'
 import { openFileInPanel } from '../stores/filesPanel'
+import ConfirmDialog from './ConfirmDialog'
 import './TurnReviewBar.css'
 
 function relativeTime(ts: number, t: (k: string, o?: Record<string, unknown>) => string): string {
@@ -39,6 +40,8 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
   const [expanded, setExpanded] = useState(false)
+  /** Revert blocked because files changed after the agent touched them. */
+  const [pending, setPending] = useState<{ turnId: string; conflicts: RevertConflict[] } | null>(null)
 
   const sessionTurns = useMemo(
     () =>
@@ -52,12 +55,29 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
   const applied = turn.changes.filter((c) => c.status === 'applied')
   if (applied.length === 0) return null
 
-  const undoTurn = async (turnId?: string): Promise<void> => {
+  const undoTurn = async (turnId?: string, mode?: 'force' | 'skip'): Promise<void> => {
+    const id = turnId || turn.id
     setBusy(true)
     setMsg(null)
-    const r = await useChangeLedger.getState().revertTurn(turnId || turn.id)
+    setPending(null)
+    const r = await useChangeLedger.getState().revertTurn(id, {
+      force: mode === 'force',
+      skipConflicts: mode === 'skip'
+    })
     setBusy(false)
-    setMsg(r.ok ? t('turnReview.reverted', { count: r.reverted }) : r.error || t('turnReview.failed'))
+    if (!r.ok && r.error === 'conflicts' && r.conflicts?.length) {
+      setPending({ turnId: id, conflicts: r.conflicts })
+      return
+    }
+    if (r.ok) {
+      setMsg(
+        r.skipped
+          ? t('turnReview.revertedSkipped', { count: r.reverted, skipped: r.skipped })
+          : t('turnReview.reverted', { count: r.reverted })
+      )
+    } else {
+      setMsg(r.error || t('turnReview.failed'))
+    }
   }
 
   const files = expanded ? applied : applied.slice(0, 8)
@@ -152,6 +172,30 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
           {busy ? t('turnReview.undoing') : t('turnReview.undoTurn')}
         </button>
       </div>
+      {pending && (
+        <ConfirmDialog
+          title={t('turnReview.conflictTitle')}
+          message={t('turnReview.conflictMessage', { count: pending.conflicts.length })}
+          details={
+            <ul>
+              {pending.conflicts.map((c) => (
+                <li key={c.path}>
+                  <code title={c.path}>{c.path.split('/').slice(-2).join('/')}</code>
+                  <span className="confirm-reason">{t(`turnReview.conflictReason.${c.reason}`)}</span>
+                </li>
+              ))}
+            </ul>
+          }
+          cancelLabel={t('common.cancel')}
+          secondaryLabel={
+            pending.conflicts.length < applied.length ? t('turnReview.revertSafeOnly') : undefined
+          }
+          onSecondary={() => void undoTurn(pending.turnId, 'skip')}
+          confirmLabel={t('turnReview.overwriteAll')}
+          onConfirm={() => void undoTurn(pending.turnId, 'force')}
+          onCancel={() => setPending(null)}
+        />
+      )}
     </div>
   )
 }

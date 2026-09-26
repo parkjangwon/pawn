@@ -282,7 +282,7 @@ const api = {
       sessionId: string,
       role: string,
       content: string,
-      meta?: { thinking?: string; modelLabel?: string }
+      meta?: { thinking?: string; modelLabel?: string; toolMeta?: string }
     ) => ipcRenderer.invoke('db:addMessage', id, sessionId, role, content, meta),
     updateMessageContent: (id: string, content: string) => ipcRenderer.invoke('db:updateMessageContent', id, content),
     updateMessageMeta: (
@@ -368,6 +368,18 @@ const api = {
       ipcRenderer.on('routine:fire', handler)
       return () => { ipcRenderer.removeListener('routine:fire', handler) }
     }
+  },
+  lsp: {
+    setEnabled: (enabled: boolean) => ipcRenderer.invoke('lsp:setEnabled', enabled),
+    status: (root: string) => ipcRenderer.invoke('lsp:status', root),
+    diagnostics: (root: string, paths: string[], opts?: { waitMs?: number; content?: Record<string, string> }) =>
+      ipcRenderer.invoke('lsp:diagnostics', root, paths, opts),
+    definition: (root: string, path: string, line: number, character: number) =>
+      ipcRenderer.invoke('lsp:definition', root, path, line, character),
+    references: (root: string, path: string, line: number, character: number) =>
+      ipcRenderer.invoke('lsp:references', root, path, line, character),
+    hover: (root: string, path: string, line: number, character: number) =>
+      ipcRenderer.invoke('lsp:hover', root, path, line, character)
   },
   connections: {
     list: () => ipcRenderer.invoke('connections:list'),
