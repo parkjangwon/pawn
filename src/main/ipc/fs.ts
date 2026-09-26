@@ -5,6 +5,7 @@ import { readFile, writeFile, readdir, stat, mkdir, unlink, rmdir, access } from
 import { cp, rm } from 'fs/promises'
 import { readSpreadsheet } from '../spreadsheet'
 import { contentSearch, formatContentMatches, type ContentSearchOpts } from '../contentSearch'
+import { isProtectedRemovePath, isSecretDotFile } from '../fsGuards'
 
 const WALK_IGNORE = new Set([
   'node_modules',
@@ -45,15 +46,10 @@ const WALK_ALLOW_DOT_DIRS = new Set([
 ])
 // Dot-files we want searchable (configs agents actually need)
 const WALK_ALLOW_DOT_FILES = new Set([
-  '.env',
   '.env.example',
-  '.env.local',
-  '.env.development',
-  '.env.production',
   '.gitignore',
   '.gitattributes',
   '.editorconfig',
-  '.npmrc',
   '.nvmrc',
   '.node-version',
   '.prettierrc',
@@ -210,8 +206,8 @@ function shouldSkipEntry(name: string, isDirectory: boolean): boolean {
   if (!name.startsWith('.')) return false
   if (isDirectory) return !WALK_ALLOW_DOT_DIRS.has(name)
   if (WALK_ALLOW_DOT_FILES.has(name)) return false
-  // Allow .env.* variants and common RC files
-  if (name.startsWith('.env.')) return false
+  // Secret-bearing files stay out of search/walk results (read_file can still open them explicitly).
+  if (isSecretDotFile(name)) return true
   if (name.endsWith('rc') || name.endsWith('rc.js') || name.endsWith('rc.cjs') || name.endsWith('rc.json')) return false
   return true
 }
@@ -447,19 +443,7 @@ export function registerFsIpc(): void {
   handleTrusted('fs:removeDir', async (_, dirPath: string) => {
     const path = safePath(dirPath)
     if (!path) return { error: 'Invalid path' }
-    // Refuse filesystem roots and bare home — recursive delete is too dangerous.
-    const normalized = path.replace(/\\/g, '/').replace(/\/+$/, '') || '/'
-    if (
-      normalized === '/' ||
-      normalized === '' ||
-      /^[A-Za-z]:$/.test(normalized) ||
-      normalized === '/Users' ||
-      normalized === '/home' ||
-      normalized === '/etc' ||
-      normalized === '/var' ||
-      normalized === '/System' ||
-      normalized === '/Library'
-    ) {
+    if (isProtectedRemovePath(path)) {
       return { error: `Refused to remove protected path: ${path}` }
     }
     try {

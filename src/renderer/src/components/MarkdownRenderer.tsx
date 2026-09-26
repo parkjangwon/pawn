@@ -7,6 +7,7 @@ import rehypeHighlight from 'rehype-highlight'
 import 'highlight.js/styles/github-dark.css'
 import './MarkdownRenderer.css'
 import { HIGHLIGHT_LANGUAGES } from '../utils/highlightLanguages'
+import { isInlineImageSrc } from '../utils/safeUrl'
 
 interface Props {
   content: string
@@ -89,6 +90,12 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
     img: ({ src, alt }: { src?: string; alt?: string }) => {
       if (!src) return null
       const label = alt || t('chat.attachedImage')
+      if (!isInlineImageSrc(src)) {
+        // Remote/file images never auto-load; show a plain link the user can choose to open.
+        const safe = safeHref(src)
+        if (!safe || safe.startsWith('file://')) return <span>{label}</span>
+        return <a href={safe} target="_blank" rel="noopener noreferrer">{label}</a>
+      }
       return (
         <img
           className="md-inline-image"
@@ -255,4 +262,3 @@ function extractLang(children: React.ReactNode): string {
   }
   return ''
 }
-

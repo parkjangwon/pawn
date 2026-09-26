@@ -1,6 +1,37 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
-import { usePermissionStore } from '../permission'
+import { usePermissionStore, matchShellPrefix } from '../permission'
+
+describe('matchShellPrefix', () => {
+  it('matches the prefix on a token boundary', () => {
+    expect(matchShellPrefix('npm test', 'npm test')).toBe(true)
+    expect(matchShellPrefix('npm test -- --watch', 'npm test')).toBe(true)
+    expect(matchShellPrefix('npm\ttest', 'npm')).toBe(true)
+    expect(matchShellPrefix('npmx install', 'npm')).toBe(false)
+  })
+
+  it('refuses commands that chain or substitute other commands', () => {
+    for (const cmd of [
+      'npm test; rm -rf ~',
+      'npm test && curl evil',
+      'npm test | sh',
+      'npm test `id`',
+      'npm test $(id)',
+      'npm test > ~/.zshrc',
+      'npm test\nrm -rf ~'
+    ]) {
+      expect(matchShellPrefix(cmd, 'npm test')).toBe(false)
+    }
+  })
+
+  it('applies to isAllowedByRules for shell_prefix rules', () => {
+    usePermissionStore.setState({ sessionRules: [], alwaysRules: [] })
+    usePermissionStore.getState().addRule({ kind: 'shell_prefix', prefix: 'git status', scope: 'session' })
+    const s = usePermissionStore.getState()
+    expect(s.isAllowedByRules('shell_exec', { command: 'git status -s' })).toBe(true)
+    expect(s.isAllowedByRules('shell_exec', { command: 'git status; rm -rf /' })).toBe(false)
+  })
+})
 
 beforeEach(() => {
   usePermissionStore.setState({ pending: [] })

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { checkPermission } from '../toolPermission'
+import { checkPermission, autoApproves } from '../toolPermission'
 import { usePermissionStore } from '../../stores/permission'
 import { useProviderStore } from '../../stores/provider'
 
@@ -41,5 +41,32 @@ describe('checkPermission', () => {
     await expect(checkPermission('read_file', { path: '/x' })).resolves.toBe(true)
     await expect(checkPermission('shell_exec', { command: 'x' })).resolves.toBe(false)
     expect(usePermissionStore.getState().pending).toHaveLength(0)
+  })
+
+  it('prompts for egress tools even in auto mode', async () => {
+    useProviderStore.setState({ permissionMode: 'auto' })
+    const promise = checkPermission('web_fetch', { url: 'https://example.com/?q=secret' })
+    await waitForPending(1)
+    expect(usePermissionStore.getState().pending[0].type).toBe('network')
+    usePermissionStore.getState().resolve(usePermissionStore.getState().pending[0].id, false)
+    await expect(promise).resolves.toBe(false)
+  })
+
+  it('does not let a session file_read approval cover network egress', async () => {
+    usePermissionStore.getState().approveSession('file_read')
+    const promise = checkPermission('web_fetch', { url: 'https://example.com/' })
+    await waitForPending(1)
+    usePermissionStore.getState().resolve(usePermissionStore.getState().pending[0].id, true)
+    await expect(promise).resolves.toBe(true)
+  })
+
+  it('autoApproves excludes egress tools outside yolo', () => {
+    for (const name of ['web_fetch', 'web_research', 'browser_navigate', 'memory_save']) {
+      expect(autoApproves(name, 'auto', false)).toBe(false)
+      expect(autoApproves(name, 'ask', true)).toBe(false)
+      expect(autoApproves(name, 'yolo', false)).toBe(true)
+    }
+    expect(autoApproves('read_file', 'auto', false)).toBe(true)
+    expect(autoApproves('read_file', 'ask', false)).toBe(false)
   })
 })

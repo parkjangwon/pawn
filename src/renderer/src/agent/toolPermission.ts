@@ -6,6 +6,27 @@ import { isToolAllowedInAgentMode } from './agentMode'
 
 export type SafetyLevel = 'safe' | 'risky'
 
+/**
+ * Tools that are side-effect free locally (so TOOL_SAFETY keeps them 'safe' for
+ * parallel batching) but can carry data off the machine via URLs, or persist
+ * model-chosen content. A prompt-injected model could otherwise exfiltrate
+ * secrets through a query string without any prompt in auto mode.
+ */
+export const NEEDS_APPROVAL_IN_AUTO = new Set<string>([
+  'web_fetch',
+  'web_research',
+  'browser_navigate',
+  'memory_save'
+])
+
+/** Whether a tool may run without a user prompt under the given permission mode. */
+export function autoApproves(callName: string, mode: 'ask' | 'auto' | 'yolo', hidden: boolean): boolean {
+  if (mode === 'yolo') return true
+  const safety = TOOL_SAFETY[callName] || 'risky'
+  if (safety !== 'safe' || NEEDS_APPROVAL_IN_AUTO.has(callName)) return false
+  return mode === 'auto' || (mode === 'ask' && hidden)
+}
+
 export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   read_file: 'safe',
   read_spreadsheet: 'safe',
@@ -202,8 +223,9 @@ function permissionTypeFor(callName: string): PermissionType {
     terminal_list: 'file_read',
     terminal_read: 'file_read',
     web_search: 'file_read',
-    web_fetch: 'file_read',
-    web_research: 'file_read',
+    // Egress gets its own type so a session-wide file_read approval doesn't cover it.
+    web_fetch: 'network',
+    web_research: 'network',
     memory_search: 'file_read',
     memory_list: 'file_read',
     memory_save: 'file_write',
@@ -312,13 +334,9 @@ export async function checkPermission(
   if (mode === 'yolo') return true
 
   const hidden = typeof document !== 'undefined' && document.hidden === true
-  if (hidden && mode === 'ask') {
-    const safety = TOOL_SAFETY[callName] || 'risky'
-    return safety === 'safe'
-  }
-
-  const safety = TOOL_SAFETY[callName] || 'risky'
-  if (mode === 'auto' && safety === 'safe') return true
+  if (autoApproves(callName, mode, hidden)) return true
+  // Hidden window in ask mode cannot show a dialog; refuse anything not auto-approvable.
+  if (hidden && mode === 'ask') return false
 
   if (usePermissionStore.getState().isAllowedByRules(type, { path: pathArg, command })) {
     return true

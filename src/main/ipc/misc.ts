@@ -8,6 +8,7 @@ import { setTrayEnabled, setTrayLanguage, trayEnabled } from '../tray'
 import { setAppStreaming, setSessionStreaming, clearAllStreaming } from '../streamingState'
 import { getPawnDir } from '../config'
 import { getMainWindow } from '../window'
+import { safeExternalUrl } from '../safeUrl'
 import { isConfirmQuitEnabled, setConfirmQuitEnabled } from '../quit'
 
 const execFileAsync = promisify(execFileCb)
@@ -101,20 +102,6 @@ async function extractIcnsPng(icnsPath: string): Promise<Buffer | null> {
     }
   }
   return null
-}
-
-const SCHEME_RE = /^[a-z][a-z0-9+.-]*:/i
-
-function safeExternalUrl(rawUrl: string): string | null {
-  const url = String(rawUrl || '').trim()
-  if (!url) return null
-  if (!SCHEME_RE.test(url)) return null
-  try {
-    const parsed = new URL(url)
-    return parsed.protocol === 'http:' || parsed.protocol === 'https:' ? parsed.href : null
-  } catch {
-    return null
-  }
 }
 
 /** POSIX single-quote a value so it can never break out of a shell word. */

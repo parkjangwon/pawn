@@ -161,7 +161,7 @@ const app_set_permission_mode: ToolHandler = async (call, projectPath, _signal, 
         return { toolCallId: call.id, content: `Permission mode set to ${mode}` }
       }
 
-const app_set_agent_mode: ToolHandler = async (call, _projectPath, _signal, _ctx, _api) => {
+const app_set_agent_mode: ToolHandler = async (call, _projectPath, _signal, ctx, _api) => {
   const mode = String(call.arguments.mode || '').toLowerCase()
   if (mode !== 'plan' && mode !== 'build') {
     return {
@@ -170,7 +170,7 @@ const app_set_agent_mode: ToolHandler = async (call, _projectPath, _signal, _ctx
       isError: true
     }
   }
-  useProviderStore.getState().setAgentMode(mode)
+  useProviderStore.getState().setAgentMode(mode, ctx?.sessionId)
   return {
     toolCallId: call.id,
     content:

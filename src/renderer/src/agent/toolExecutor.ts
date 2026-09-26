@@ -51,7 +51,7 @@ export async function executeTool(
     }
   }
 
-  const agentMode = useProviderStore.getState().agentMode
+  const agentMode = useProviderStore.getState().agentModeFor(ctx?.sessionId)
   if (!isToolAllowedInAgentMode(call.name, agentMode)) {
     return { toolCallId: call.id, content: planModeBlockMessage(call.name), isError: true }
   }

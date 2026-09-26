@@ -273,7 +273,7 @@ export async function agentLoop(
         '--- Agent mode: PLAN ---\n' +
         'You are in Plan mode: explore, design, and call update_plan. ' +
         'Do not edit files, run shell that changes state, or use computer/browser actions that mutate. ' +
-        'When ready to implement, ask the user to switch to Build (or call app_set_agent_mode build if allowed).'
+        'When ready to implement, ask the user to switch to Build.'
     }
     // Long-term Memory injection (local, optional)
     try {
@@ -980,4 +980,3 @@ export function processQueue(set: ChatSet, get: ChatGet, preferSessionId?: strin
     void agentLoop(next.projectId, next.sessionId, next.content, set, get, next.attachments, epoch)
   }, 50)
 }
-

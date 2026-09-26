@@ -1,10 +1,12 @@
 import { BrowserWindow, dialog, nativeTheme, screen, shell } from 'electron'
 import { join } from 'path'
+import { pathToFileURL } from 'url'
 import { is } from '@electron-toolkit/utils'
 import { existsSync } from 'fs'
 import { loadConfig, saveConfig } from './config'
 import { isAppStreaming, setAppStreaming, clearAllStreaming } from './streamingState'
 import { killAllAgentShells } from './ipc/shell'
+import { isAppRendererUrl, safeExternalUrl } from './safeUrl'
 
 let mainWindow: BrowserWindow | null = null
 let headlessWindow: BrowserWindow | null = null
@@ -90,12 +92,52 @@ function resolvePreload(): string {
     : join(__dirname, '../preload/index.js')
 }
 
+function rendererIndexPath(): string {
+  return join(__dirname, '../renderer/index.html')
+}
+
+function devRendererUrl(): string | null {
+  return is.dev && process.env['ELECTRON_RENDERER_URL'] ? process.env['ELECTRON_RENDERER_URL'] : null
+}
+
+/** Is `url` the app's own renderer document (dev server or packaged index.html)? */
+export function isAppUrl(url: string | undefined | null): boolean {
+  return isAppRendererUrl(url, {
+    devUrl: devRendererUrl(),
+    fileUrl: pathToFileURL(rendererIndexPath()).href
+  })
+}
+
 function loadRenderer(win: BrowserWindow): void {
-  if (is.dev && process.env['ELECTRON_RENDERER_URL']) {
-    win.loadURL(process.env['ELECTRON_RENDERER_URL']).catch(() => {})
+  const devUrl = devRendererUrl()
+  if (devUrl) {
+    win.loadURL(devUrl).catch(() => {})
   } else {
-    win.loadFile(join(__dirname, '../renderer/index.html')).catch(() => {})
+    win.loadFile(rendererIndexPath()).catch(() => {})
   }
+}
+
+/**
+ * Keep privileged windows on the app document. A stray navigation (dropped
+ * file, injected link, window.location from rendered content) would otherwise
+ * load foreign content into a webContents that has window.api.
+ */
+function guardNavigation(win: BrowserWindow): void {
+  const wc = win.webContents
+  wc.on('will-navigate', (event, url) => {
+    if (isAppUrl(url)) return
+    event.preventDefault()
+    const external = safeExternalUrl(url)
+    if (external && win === mainWindow) void shell.openExternal(external).catch(() => {})
+  })
+  wc.on('will-redirect', (event, url) => {
+    if (!isAppUrl(url)) event.preventDefault()
+  })
+  wc.setWindowOpenHandler((details) => {
+    const external = safeExternalUrl(details.url)
+    if (external && win === mainWindow) void shell.openExternal(external).catch(() => {})
+    return { action: 'deny' }
+  })
 }
 
 /** Reload after a renderer crash, at most once per 10s to avoid a crash loop. */
@@ -189,10 +231,7 @@ export function createMainWindow(): BrowserWindow {
     }
   })
 
-  win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
-    return { action: 'deny' }
-  })
+  guardNavigation(win)
 
   attachRecovery(win, () => {
     if (mainWindow === win) mainWindow = null
@@ -220,6 +259,7 @@ export function ensureHeadlessWindow(): BrowserWindow {
     }
   })
   headlessWindow = win
+  guardNavigation(win)
   attachRecovery(win, () => {
     if (headlessWindow === win) headlessWindow = null
   })

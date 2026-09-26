@@ -34,7 +34,9 @@ const MUTATING_EXACT = new Set([
   'browser_eval',
   'browser_open_external',
   'app_set_permission_mode', // avoid plan elevating to yolo via tools
+  'app_set_agent_mode', // plan must not self-promote to build; only the user switches
   'app_set_model',
+  'run_checks', // executes project scripts (package.json/Makefile), so it is shell-equivalent
   'git_add',
   'git_commit',
   'git_push',
@@ -51,10 +53,8 @@ const MUTATING_EXACT = new Set([
 /** Explicitly allowed mutators that are actually planning (none currently). */
 const PLAN_EXTRA_ALLOW = new Set([
   'update_plan',
-  'run_checks', // verification is read-only enough for planning
   'repo_map',
   'load_skill',
-  'app_set_agent_mode',
   'app_set_reasoning',
   'app_open_tab',
   'app_close_tab',
@@ -83,7 +83,7 @@ export function planModeBlockMessage(toolName: string): string {
   return (
     `Blocked in Plan mode: \`${toolName}\` can change the system.\n` +
     `Switch to **Build** (composer chip or Tab) to edit files, run shell, or use computer/browser actions.\n` +
-    `In Plan mode: read, search, repo_map, git inspect, web research, update_plan, run_checks.`
+    `In Plan mode: read, search, repo_map, git inspect, web research, update_plan.`
   )
 }
 

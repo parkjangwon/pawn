@@ -6,6 +6,7 @@ import { useMcpStore } from '../stores/mcp'
 import { usePrefsStore } from '../stores/prefs'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
+import { httpsOrDefault } from '../utils/safeUrl'
 import {
   KEYBINDING_IDS, DEFAULT_KEYBINDINGS, comboToString, formatCombo,
   useKeybindingsStore, type KeyBindingId
@@ -599,7 +600,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
           setDeviceAuth({
             provider: payload.provider,
             userCode: payload.userCode,
-            verificationUri: payload.verificationUri || 'https://github.com/login/device'
+            verificationUri: httpsOrDefault(payload.verificationUri, 'https://github.com/login/device')
           })
         }
       }

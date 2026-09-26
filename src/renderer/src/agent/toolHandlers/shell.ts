@@ -22,18 +22,12 @@ const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
         const workDir = cwd === '.' ? projectPath : cwd
         const background = Boolean(call.arguments.background)
         const prefs = useProviderStore.getState()
-        const sandboxEnabled =
-          call.arguments.sandbox === false
-            ? false
-            : call.arguments.sandbox === true
-              ? true
-              : prefs.shellSandbox !== false
-        const network =
-          call.arguments.network === false
-            ? false
-            : call.arguments.network === true
-              ? true
-              : prefs.shellNetwork !== false
+        // User prefs are a ceiling: the model may tighten (sandbox on, network
+        // off) but never loosen what the user configured.
+        const prefSandbox = prefs.shellSandbox !== false
+        const sandboxEnabled = prefSandbox ? true : call.arguments.sandbox === true
+        const prefNetwork = prefs.shellNetwork !== false
+        const network = prefNetwork ? call.arguments.network !== false : false
         const sandbox = {
           enabled: sandboxEnabled,
           network,

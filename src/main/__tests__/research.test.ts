@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { classifyUrl } from '../research/safety'
+import { classifyUrl, ipBlocked } from '../research/safety'
 import { applyTransform, iterTransformed } from '../research/urlTransforms'
 import { validateResponse, isSuccessVerdict } from '../research/validators'
 import { htmlToMarkdown, extractContent, extractJsonLdText } from '../research/extract'
@@ -9,6 +9,32 @@ import { formatFetchForAgent } from '../research/fetchChain'
 import type { FetchResult } from '../research/types'
 
 describe('research/safety', () => {
+  it('blocks bracketed IPv6 loopback and IPv4-mapped forms', async () => {
+    for (const u of [
+      'http://[::1]:8080/',
+      'http://[::ffff:127.0.0.1]/',
+      'http://[::ffff:7f00:1]/',
+      'http://[fd00::1]/',
+      'http://100.64.0.1/',
+      'http://0.1.2.3/'
+    ]) {
+      const r = await classifyUrl(u, false)
+      expect(r.safe, u).toBe(false)
+    }
+  })
+
+  it('ipBlocked covers private, CGNAT, and mapped ranges', () => {
+    expect(ipBlocked('10.0.0.1')).toBe(true)
+    expect(ipBlocked('::ffff:169.254.169.254')).toBe(true)
+    expect(ipBlocked('93.184.216.34')).toBe(false)
+    expect(ipBlocked('2606:4700::1111')).toBe(false)
+  })
+
+  it('fails closed when DNS resolution fails', async () => {
+    const r = await classifyUrl('http://nonexistent.invalid/', false)
+    expect(r.safe).toBe(false)
+  })
+
   it('allows public https URLs', async () => {
     const r = await classifyUrl('https://example.com/path', true)
     expect(r.safe).toBe(true)

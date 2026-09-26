@@ -49,7 +49,8 @@ export default function PermissionDialog(): React.JSX.Element | null {
     shell_exec: t('permission.types.shell_exec'),
     browser: t('permission.types.browser'),
     app: t('permission.types.app'),
-    mcp: t('permission.types.mcp')
+    mcp: t('permission.types.mcp'),
+    network: t('permission.types.network')
   }
 
   const pathPrefix = current.path
