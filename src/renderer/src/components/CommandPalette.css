@@ -375,3 +375,14 @@
 .app.dark .cp-shortcut kbd {
   background: var(--bg-hover);
 }
+
+/* Fuzzy-match highlight in result labels */
+.cp-match {
+  background: transparent;
+  color: inherit;
+  font-weight: 700;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  text-decoration-thickness: 2px;
+  text-underline-offset: 3px;
+}

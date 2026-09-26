@@ -460,6 +460,10 @@
   min-height: 0;
   overflow: hidden;
   width: 100%;
+  /* Anchor for the find bar, turn navigator and jump-to-latest overlays; the
+     navigator only appears when the pane has room beside the chat column. */
+  position: relative;
+  container: chatpane / inline-size;
 }
 
 .session-pane-enter {
@@ -605,7 +609,7 @@
 }
 
 .message-content {
-  font-size: var(--font-lg);
+  font-size: var(--chat-font-size, var(--font-lg));
   line-height: 1.7;
   color: var(--text-primary);
   white-space: pre-wrap;
@@ -668,12 +672,82 @@
   padding: 0;
 }
 
-.message-model-label {
+/* Assistant footer: worked-for · model · time */
+.message-meta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 10px;
   margin-top: var(--space-xs);
+  min-height: 16px;
   font-size: 11px;
+  color: var(--text-muted);
+}
+
+.message-model-label {
   color: var(--text-muted);
   opacity: 0.6;
   letter-spacing: 0.2px;
+}
+
+.message-worked {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.message-worked svg {
+  opacity: 0.7;
+}
+
+/* Send time: quiet until the message is hovered or focused. */
+.message-time {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  opacity: 0;
+  transition: opacity var(--dur-fast) ease;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.message-actions .message-time {
+  align-self: center;
+  margin-left: auto;
+}
+
+.message:hover .message-time,
+.message:focus-within .message-time {
+  opacity: 0.8;
+}
+
+/* Brief outline after jumping here from the turn navigator. */
+.message.message-flash .message-content {
+  animation: messageFlash 1.3s var(--ease-out-soft) both;
+}
+
+@keyframes messageFlash {
+  0%, 30% {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+.message.assistant.message-flash .message-content {
+  border-radius: var(--radius-sm);
+}
+
+/* Chat text size (Settings → Appearance) scales message bodies only. */
+.message-content .markdown-body {
+  font-size: inherit;
+}
+
+.message-content .code-block-wrapper pre {
+  font-size: calc(var(--chat-font-size, 14px) - 2px);
 }
 
 .message-content.streaming .cursor-blink {
@@ -2151,4 +2225,373 @@
   gap: 8px;
   margin-top: 8px;
   justify-content: flex-end;
+}
+
+
+/* ── In-conversation find (Cmd/Ctrl+F) ─────────────────────────────── */
+.chat-find {
+  position: absolute;
+  top: 10px;
+  right: 18px;
+  z-index: 12;
+  width: min(380px, calc(100% - 36px));
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-elevated);
+  animation: chatFindIn var(--dur-fast) var(--ease-spring) both;
+}
+
+.chat-find:focus-within {
+  border-color: color-mix(in srgb, var(--accent) 40%, var(--border-strong));
+}
+
+@keyframes chatFindIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.chat-find-row {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 4px 4px 10px;
+}
+
+.chat-find-icon {
+  flex-shrink: 0;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.chat-find-input {
+  flex: 1;
+  min-width: 0;
+  height: 26px;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-md);
+}
+
+.chat-find-input:focus-visible {
+  outline: none;
+}
+
+.chat-find-input::placeholder {
+  color: var(--text-muted);
+}
+
+.chat-find-count {
+  flex-shrink: 0;
+  padding: 0 6px;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.chat-find-count.empty {
+  color: var(--danger);
+}
+
+.chat-find-btn {
+  flex-shrink: 0;
+  width: 26px;
+  height: 26px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background var(--dur-instant) ease, color var(--dur-instant) ease;
+}
+
+.chat-find-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.chat-find-btn:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chat-find-earlier {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px 6px 12px;
+  border-top: 1px solid var(--border-color);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.chat-find-earlier-btn {
+  flex-shrink: 0;
+  padding: 3px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-xs);
+  cursor: pointer;
+}
+
+.chat-find-earlier-btn:hover {
+  background: var(--bg-hover);
+}
+
+/* Painted via the CSS Custom Highlight API (no DOM mutation). */
+::highlight(pawn-chat-find) {
+  background-color: var(--find-highlight, #fde68a);
+}
+
+::highlight(pawn-chat-find-active) {
+  background-color: var(--find-highlight-active, #f59e0b);
+  color: var(--find-highlight-active-text, #111111);
+}
+
+/* ── Turn navigator rail ──────────────────────────────────────────── */
+.turn-nav {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 8px;
+  width: 44px;
+  z-index: 6;
+  pointer-events: none;
+  display: none;
+}
+
+@container chatpane (min-width: 880px) {
+  .turn-nav {
+    display: block;
+    animation: fadeIn var(--dur-med) ease both;
+  }
+}
+
+.turn-nav-rail {
+  pointer-events: auto;
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 38px;
+  max-height: calc(100% - 120px);
+  padding: 4px 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+}
+
+.turn-nav-rail::-webkit-scrollbar {
+  display: none;
+}
+
+.turn-nav-item {
+  display: flex;
+  align-items: center;
+  width: 38px;
+  height: 10px;
+  padding: 0 0 0 2px;
+  border: none;
+  border-radius: 3px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.turn-nav-item:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 0;
+}
+
+.turn-nav-bar {
+  display: block;
+  width: 12px;
+  height: 2px;
+  border-radius: 999px;
+  background: var(--text-muted);
+  transform-origin: left center;
+  transition:
+    transform var(--dur-fast) var(--ease-out-soft),
+    opacity var(--dur-fast) ease,
+    background-color var(--dur-fast) ease;
+}
+
+.turn-nav-item.active .turn-nav-bar,
+.turn-nav-item:hover .turn-nav-bar,
+.turn-nav-item:focus-visible .turn-nav-bar {
+  background: var(--text-primary);
+}
+
+.turn-nav-item.running .turn-nav-bar {
+  animation: turnNavPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes turnNavPulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+.turn-nav-preview {
+  position: absolute;
+  left: 50px;
+  width: 300px;
+  max-width: calc(100cqw - 72px);
+  transform: translateY(-50%);
+  padding: 10px 12px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-elevated);
+  pointer-events: none;
+  animation: fadeIn var(--dur-fast) ease both;
+}
+
+.turn-nav-preview-index {
+  margin-bottom: 4px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.turn-nav-preview-user,
+.turn-nav-preview-reply {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  line-height: 1.45;
+}
+
+.turn-nav-preview-user {
+  -webkit-line-clamp: 2;
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.turn-nav-preview-reply {
+  -webkit-line-clamp: 3;
+  margin-top: 6px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.turn-nav-preview-reply.muted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+/* ── Jump to latest ───────────────────────────────────────────────── */
+.jump-latest {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  z-index: 8;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px 6px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  box-shadow: var(--shadow-elevated);
+  cursor: pointer;
+  transform: translateX(-50%);
+  animation: jumpLatestIn var(--dur-med) var(--ease-spring) both;
+  transition: background var(--dur-fast) ease;
+}
+
+.jump-latest:hover {
+  background: var(--bg-hover);
+}
+
+.jump-latest:active {
+  transform: translateX(-50%) scale(var(--press-scale));
+}
+
+.jump-latest.live::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  margin-left: 2px;
+  border-radius: 50%;
+  background: var(--success);
+  animation: turnNavPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes jumpLatestIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* ── Selection actions (portaled to <body>, outside theme scope) ──── */
+.selection-actions {
+  position: fixed;
+  z-index: 1000;
+  display: flex;
+  align-items: stretch;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  background: rgba(24, 24, 28, 0.96);
+  color: #f4f4f6;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
+  font-size: 12px;
+  line-height: 1;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.28);
+  animation: fadeIn 120ms ease both;
+  user-select: none;
+}
+
+.selection-actions-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.selection-actions-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.selection-actions-btn.copied {
+  color: #34d399;
+}
+
+.selection-actions-sep {
+  width: 1px;
+  background: rgba(255, 255, 255, 0.14);
 }

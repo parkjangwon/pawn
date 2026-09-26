@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useMemo } from 'react'
+import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
@@ -15,6 +15,10 @@ import Composer from './Composer'
 import PlanStrip from './PlanStrip'
 import TurnReviewBar from './TurnReviewBar'
 import ConfirmDialog from './ConfirmDialog'
+import ChatFindBar from './ChatFindBar'
+import TurnNavigator from './TurnNavigator'
+import SelectionActions from './SelectionActions'
+import { appendQuoteToDraft, formatQuote } from '../utils/turnNavigator'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { MAX_ATTACHMENTS, MAX_IMAGE_BYTES, MAX_TEXT_BYTES, truncateText, type ChatAttachment } from '../utils/attachments'
 import {
@@ -41,6 +45,29 @@ interface ChatAreaProps {
 // Smaller window = snappier switch + less markdown work (user can load earlier).
 const DEFAULT_VISIBLE_MESSAGES = 100
 const EARLIER_BATCH = 80
+/** Show "jump to latest" once the reader is this far above the tail. */
+const JUMP_LATEST_THRESHOLD_PX = 320
+
+function isMacPlatform(): boolean {
+  const plat = window.api?.platform
+  if (plat && plat !== 'browser') return plat === 'darwin'
+  return typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || '')
+}
+
+/** Scroll `el` to the top of `scroller` (with a small inset) without touching ancestors. */
+function scrollIntoScroller(scroller: HTMLElement, el: Element, behavior: ScrollBehavior): void {
+  const delta = el.getBoundingClientRect().top - scroller.getBoundingClientRect().top - 16
+  if (typeof scroller.scrollBy === 'function') scroller.scrollBy({ top: delta, behavior })
+  else scroller.scrollTop += delta
+}
+
+function prefersReducedMotion(): boolean {
+  try {
+    return window.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true
+  } catch {
+    return false
+  }
+}
 
 export default function ChatArea({
   onToggleSidebar, onOpenSettings, canGoBack, canGoForward, onGoBack, onGoForward
@@ -102,6 +129,20 @@ export default function ChatArea({
   const promptHistoryRef = useRef<Map<string, string[]>>(new Map())
   const [historyIndex, setHistoryIndex] = useState(-1)
   const historyDraftRef = useRef('')
+  /** `.chat-messages` element — shared by find, turn navigator, selection menu. */
+  const [scrollEl, setScrollEl] = useState<HTMLDivElement | null>(null)
+  const [findOpen, setFindOpen] = useState(false)
+  const [findNonce, setFindNonce] = useState(0)
+  const [findSeed, setFindSeed] = useState('')
+  const findOpenRef = useRef(false)
+  findOpenRef.current = findOpen
+  const [showJumpLatest, setShowJumpLatest] = useState(false)
+  const [pendingJump, setPendingJump] = useState<{ id: string; nonce: number } | null>(null)
+  const handledJumpRef = useRef(0)
+  const jumpTimersRef = useRef<number[]>([])
+  /** Programmatic jumps into earlier history must not snap back to the tail
+   *  when scroll anchoring fires a scroll event near the bottom. */
+  const holdWindowUntilRef = useRef(0)
 
   const activeProject = projects.find((p) => p.id === activeProjectId)
   const activeSession = activeProject?.sessions.find((s) => s.id === activeSessionId)
@@ -237,6 +278,9 @@ export default function ChatArea({
     setHistoryIndex(-1)
     historyDraftRef.current = ''
     stickToBottomRef.current = true
+    setFindOpen(false)
+    setShowJumpLatest(false)
+    setPendingJump(null)
     // Cross-fade pane on session switch
     setSessionPaneClass('session-pane session-pane-enter')
     const t = window.setTimeout(() => setSessionPaneClass('session-pane'), 220)
@@ -263,12 +307,128 @@ export default function ChatArea({
 
   const handleMessageScroll = (e: React.UIEvent<HTMLDivElement>): void => {
     const el = e.currentTarget
-    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 80
+    const distance = el.scrollHeight - el.scrollTop - el.clientHeight
+    const nearBottom = distance < 80
     stickToBottomRef.current = nearBottom
     setNearTop(el.scrollTop < 40)
+    setShowJumpLatest(distance > JUMP_LATEST_THRESHOLD_PX)
     // Reached the bottom: drop the earlier-messages window and follow the tail.
-    if (nearBottom && startIndex !== null) setStartIndex(null)
+    // Not while find is open — it may have loaded earlier messages to search.
+    if (
+      nearBottom &&
+      startIndex !== null &&
+      !findOpenRef.current &&
+      Date.now() > holdWindowUntilRef.current
+    ) {
+      setStartIndex(null)
+    }
   }
+
+  const jumpToLatest = useCallback((): void => {
+    stickToBottomRef.current = true
+    setShowJumpLatest(false)
+    setStartIndex(null)
+    messagesEndRef.current?.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }, [])
+
+  /** Turn navigator: scroll to a prompt, mounting earlier history if needed. */
+  const jumpToMessage = useCallback((messageId: string): void => {
+    const idx = messages.findIndex((m) => m.id === messageId)
+    if (idx < 0) return
+    stickToBottomRef.current = false
+    holdWindowUntilRef.current = Date.now() + 1500
+    if (idx < effectiveStart) setStartIndex(idx)
+    setPendingJump((prev) => ({ id: messageId, nonce: (prev?.nonce ?? 0) + 1 }))
+  }, [messages, effectiveStart])
+
+  useEffect(() => {
+    if (!pendingJump || !scrollEl || handledJumpRef.current === pendingJump.nonce) return
+    handledJumpRef.current = pendingJump.nonce
+    const id = pendingJump.id
+    const target = scrollEl.querySelector(
+      `[data-message-id="${typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(id) : id}"]`
+    )
+    if (!target) return
+    for (const timer of jumpTimersRef.current) window.clearTimeout(timer)
+    const behavior: ScrollBehavior = prefersReducedMotion() ? 'auto' : 'smooth'
+    scrollIntoScroller(scrollEl, target, behavior)
+    // Messages above may still be at their estimated (content-visibility)
+    // height; correct once layout has settled.
+    const settle = window.setTimeout(() => {
+      const off = target.getBoundingClientRect().top - scrollEl.getBoundingClientRect().top - 16
+      if (Math.abs(off) > 24) scrollIntoScroller(scrollEl, target, 'auto')
+    }, 420)
+    target.classList.remove('message-flash')
+    void (target as HTMLElement).offsetWidth
+    target.classList.add('message-flash')
+    const unflash = window.setTimeout(() => target.classList.remove('message-flash'), 1400)
+    jumpTimersRef.current = [settle, unflash]
+  }, [pendingJump, scrollEl])
+
+  useEffect(() => () => {
+    for (const timer of jumpTimersRef.current) window.clearTimeout(timer)
+  }, [])
+
+  const openFind = useCallback((seed?: string): void => {
+    setFindSeed(seed ?? '')
+    setFindOpen(true)
+    setFindNonce((n) => n + 1)
+  }, [])
+
+  const closeFind = useCallback((): void => {
+    setFindOpen(false)
+    setFindSeed('')
+    // Hand focus back to the composer, the most likely next action.
+    textareaRef.current?.focus()
+  }, [])
+
+  const insertQuote = useCallback((text: string): void => {
+    const quote = formatQuote(text)
+    if (!quote) return
+    let next = ''
+    setInput((prev) => {
+      next = appendQuoteToDraft(prev, quote)
+      return next
+    })
+    setTrigger(null)
+    requestAnimationFrame(() => {
+      const ta = textareaRef.current
+      if (!ta) return
+      ta.focus()
+      const end = next.length || ta.value.length
+      try {
+        ta.setSelectionRange(end, end)
+      } catch {
+        /* ignore */
+      }
+    })
+  }, [])
+
+  // Cmd+F (macOS) / Ctrl+F: find in this conversation. Panels with their own
+  // text surfaces (editor, terminal, settings, palette) keep the key.
+  const hasMessages = !!activeSession && messages.length > 0
+  useEffect(() => {
+    if (!hasMessages) return
+    const mac = isMacPlatform()
+    const onKey = (e: KeyboardEvent): void => {
+      const mod = mac ? e.metaKey && !e.ctrlKey : e.ctrlKey && !e.metaKey
+      if (!mod || e.altKey || e.shiftKey || e.isComposing) return
+      if (e.key.toLowerCase() !== 'f' && e.code !== 'KeyF') return
+      const target = e.target instanceof Element ? e.target : null
+      if (target?.closest('.right-panel, .bottom-terminal, .settings-page, .cp-overlay')) return
+      if (document.querySelector('.settings-page, .cp-overlay, [role="dialog"][aria-modal="true"]')) return
+      e.preventDefault()
+      const sel = window.getSelection?.()?.toString().trim() || ''
+      openFind(sel && sel.length <= 80 && !sel.includes('\n') ? sel : undefined)
+    }
+    const onOpenFind = (): void => openFind()
+    window.addEventListener('keydown', onKey)
+    window.addEventListener('pawn:open-find', onOpenFind)
+    return () => {
+      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('pawn:open-find', onOpenFind)
+    }
+  }, [hasMessages, openFind])
 
   // Close any open dropdown when the user presses outside of it.
   const anyDropdownOpen = showProjectPicker || showPermPicker || showModelPicker || showUsagePopover
@@ -919,18 +1079,56 @@ export default function ChatArea({
             onOpenSettings={onOpenSettings}
           />
         ) : (
-          <MessageList
-            messages={messages}
-            isStreaming={sessionStreaming}
-            endRef={messagesEndRef}
-            startIndex={effectiveStart}
-            nearTop={nearTop}
-            onShowEarlier={() => setStartIndex(Math.max(0, effectiveStart - EARLIER_BATCH))}
-            onScroll={handleMessageScroll}
-            sessionKey={activeSessionId || ''}
-            projectId={activeProjectId}
-            sessionId={activeSessionId}
-          />
+          <>
+            <MessageList
+              messages={messages}
+              isStreaming={sessionStreaming}
+              endRef={messagesEndRef}
+              startIndex={effectiveStart}
+              nearTop={nearTop}
+              onShowEarlier={() => setStartIndex(Math.max(0, effectiveStart - EARLIER_BATCH))}
+              onScroll={handleMessageScroll}
+              scrollRef={setScrollEl}
+              sessionKey={activeSessionId || ''}
+              projectId={activeProjectId}
+              sessionId={activeSessionId}
+            />
+            <TurnNavigator
+              messages={messages}
+              scrollEl={scrollEl}
+              busy={sessionStreaming}
+              onJump={jumpToMessage}
+            />
+            {findOpen && (
+              <ChatFindBar
+                scrollEl={scrollEl}
+                focusNonce={findNonce}
+                initialQuery={findSeed}
+                messages={messages}
+                startIndex={effectiveStart}
+                onLoadEarlier={() => {
+                  holdWindowUntilRef.current = Date.now() + 1500
+                  setStartIndex(0)
+                }}
+                onClose={closeFind}
+              />
+            )}
+            <SelectionActions scrollEl={scrollEl} onQuote={insertQuote} onFind={openFind} />
+            {showJumpLatest && (
+              <button
+                type="button"
+                className={`jump-latest${sessionStreaming ? ' live' : ''}`}
+                onClick={jumpToLatest}
+                aria-label={t('chat.jumpToLatest')}
+                title={t('chat.jumpToLatest')}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" />
+                </svg>
+                <span>{t('chat.jumpToLatest')}</span>
+              </button>
+            )}
+          </>
         )}
       </div>
       <PlanStrip sessionId={activeSessionId} />

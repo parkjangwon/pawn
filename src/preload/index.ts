@@ -287,7 +287,7 @@ const api = {
     updateMessageContent: (id: string, content: string) => ipcRenderer.invoke('db:updateMessageContent', id, content),
     updateMessageMeta: (
       id: string,
-      meta: { thinking?: string; modelLabel?: string; content?: string }
+      meta: { thinking?: string; modelLabel?: string; content?: string; durationMs?: number }
     ) => ipcRenderer.invoke('db:updateMessageMeta', id, meta),
     deleteMessage: (id: string) => ipcRenderer.invoke('db:deleteMessage', id),
     clearMessages: (sessionId: string) => ipcRenderer.invoke('db:clearMessages', sessionId),

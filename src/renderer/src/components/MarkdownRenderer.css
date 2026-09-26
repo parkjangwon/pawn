@@ -210,6 +210,65 @@
   text-transform: uppercase;
 }
 
+.code-lines {
+  margin-left: auto;
+  margin-right: 8px;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Long code folds to a preview; a fade hints there is more below. */
+.code-block-body {
+  position: relative;
+}
+
+.code-block-wrapper.folded pre {
+  max-height: calc(18 * 1.5em + 24px);
+  overflow-y: hidden;
+}
+
+.code-block-wrapper.folded .code-block-body::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 56px;
+  pointer-events: none;
+  background: linear-gradient(to bottom, rgba(30, 30, 30, 0), #1e1e1e);
+}
+
+.app.dark .code-block-wrapper.folded .code-block-body::after {
+  background: linear-gradient(to bottom, rgba(22, 22, 24, 0), #161618);
+}
+
+.code-fold-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 12px;
+  border: none;
+  border-top: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--dur-fast) ease, background var(--dur-fast) ease;
+}
+
+.code-fold-toggle:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.code-fold-toggle svg {
+  transition: transform var(--dur-fast) var(--ease-out-soft);
+}
+
 .copy-btn {
   font-size: var(--font-sm);
   padding: 2px 8px;

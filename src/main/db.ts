@@ -48,6 +48,10 @@ function migrateSchema(db: Database.Database): void {
   if (!names.has('model_label')) {
     db.exec("ALTER TABLE messages ADD COLUMN model_label TEXT NOT NULL DEFAULT ''")
   }
+  if (!names.has('duration_ms')) {
+    // Wall-clock time the agent spent on the turn that ended with this message.
+    db.exec('ALTER TABLE messages ADD COLUMN duration_ms INTEGER NOT NULL DEFAULT 0')
+  }
   db.exec(`
     CREATE TABLE IF NOT EXISTS session_plans (
       session_id TEXT PRIMARY KEY,
@@ -230,11 +234,12 @@ export function getMessagesBySession(sessionId: string): Array<{
   createdAt: number
   thinking?: string
   modelLabel?: string
+  durationMs?: number
 }> {
   return getDb()
     .prepare(
       `SELECT id, role, content, created_at as createdAt,
-              thinking, model_label as modelLabel
+              thinking, model_label as modelLabel, duration_ms as durationMs
        FROM messages WHERE session_id = ? ORDER BY created_at`
     )
     .all(sessionId) as never[]
@@ -295,7 +300,7 @@ export function addMessage(
 
 export function updateMessageMeta(
   id: string,
-  meta: { thinking?: string; modelLabel?: string; content?: string }
+  meta: { thinking?: string; modelLabel?: string; content?: string; durationMs?: number }
 ): void {
   const d = getDb()
   if (meta.content !== undefined) {
@@ -306,6 +311,12 @@ export function updateMessageMeta(
   }
   if (meta.modelLabel !== undefined) {
     d.prepare('UPDATE messages SET model_label = ? WHERE id = ?').run(meta.modelLabel, id)
+  }
+  if (meta.durationMs !== undefined) {
+    const ms = Number(meta.durationMs)
+    if (Number.isFinite(ms) && ms >= 0) {
+      d.prepare('UPDATE messages SET duration_ms = ? WHERE id = ?').run(Math.round(ms), id)
+    }
   }
 }
 

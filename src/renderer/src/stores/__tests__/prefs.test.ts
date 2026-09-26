@@ -67,4 +67,26 @@ describe('prefs store', () => {
     expect(usePrefsStore.getState().taskNotificationsEnabled).toBe(false)
     expect(saveMock).toHaveBeenCalledWith({ settings: { taskNotificationsEnabled: false } })
   })
+
+  it('applies, caches, and persists the chat font size', () => {
+    usePrefsStore.getState().setChatFontSize(16)
+    expect(usePrefsStore.getState().chatFontSize).toBe(16)
+    expect(document.documentElement.style.getPropertyValue('--chat-font-size')).toBe('16px')
+    expect(localStorage.getItem('pawn-chat-font-size')).toBe('16')
+    expect(saveMock).toHaveBeenCalledWith({ settings: { chatFontSize: 16 } })
+  })
+
+  it('clamps out-of-range chat font sizes', () => {
+    usePrefsStore.getState().setChatFontSize(99)
+    expect(usePrefsStore.getState().chatFontSize).toBe(20)
+    usePrefsStore.getState().setChatFontSize(Number.NaN)
+    expect(usePrefsStore.getState().chatFontSize).toBe(14)
+  })
+
+  it('restores the chat font size from config on init', async () => {
+    loadMock.mockResolvedValue({ settings: { chatFontSize: 15 } })
+    await usePrefsStore.getState().init()
+    expect(usePrefsStore.getState().chatFontSize).toBe(15)
+    expect(document.documentElement.style.getPropertyValue('--chat-font-size')).toBe('15px')
+  })
 })

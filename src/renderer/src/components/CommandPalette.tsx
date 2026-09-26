@@ -6,9 +6,10 @@ import { useChatStore } from '../stores/chat'
 import { useThemeStore } from '../stores/theme'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { useFocusTrap } from '../utils/focusTrap'
+import { fuzzyMatchRanges, scoreFields } from '../utils/fuzzyMatch'
 import './CommandPalette.css'
 
-type GroupId = 'actions' | 'navigation' | 'sessions' | 'projects'
+type GroupId = 'recent' | 'actions' | 'navigation' | 'sessions' | 'projects'
 
 interface Command {
   id: string
@@ -28,9 +29,46 @@ interface CommandPaletteProps {
 }
 
 const GENERAL_ID = '__general__'
-const GROUP_ORDER: GroupId[] = ['sessions', 'actions', 'projects', 'navigation']
+const GROUP_ORDER: GroupId[] = ['sessions', 'recent', 'actions', 'projects', 'navigation']
 const MAX_SESSIONS = 14
 const MAX_PROJECTS = 20
+const RECENT_KEY = 'pawn-cp-recent'
+const MAX_RECENT = 4
+
+/** Recently run palette actions (sessions/projects already sort by recency). */
+export function readRecentCommands(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]')
+    return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === 'string').slice(0, MAX_RECENT) : []
+  } catch {
+    return []
+  }
+}
+
+export function recordRecentCommand(id: string): void {
+  if (id.startsWith('session-') || id.startsWith('project-')) return
+  try {
+    const next = [id, ...readRecentCommands().filter((x) => x !== id)].slice(0, MAX_RECENT)
+    localStorage.setItem(RECENT_KEY, JSON.stringify(next))
+  } catch {
+    /* storage unavailable */
+  }
+}
+
+/** Label with fuzzy-matched characters wrapped in <mark>. */
+function HighlightedText({ text, query }: { text: string; query: string }): React.JSX.Element {
+  const ranges = query.trim() ? fuzzyMatchRanges(text, query) : []
+  if (ranges.length === 0) return <>{text}</>
+  const parts: React.ReactNode[] = []
+  let cursor = 0
+  ranges.forEach((r, i) => {
+    if (r.start > cursor) parts.push(text.slice(cursor, r.start))
+    parts.push(<mark key={i} className="cp-match">{text.slice(r.start, r.end)}</mark>)
+    cursor = r.end
+  })
+  if (cursor < text.length) parts.push(text.slice(cursor))
+  return <>{parts}</>
+}
 
 function Icon({ d }: { d: React.ReactNode }): React.JSX.Element {
   return (
@@ -94,6 +132,13 @@ export default function CommandPalette({
   const toggleTheme = useThemeStore((s) => s.toggle)
   const setTheme = useThemeStore((s) => s.set)
   const keybindings = useKeybindingsStore((s) => s.bindings)
+  const [recentIds] = useState<string[]>(() => readRecentCommands())
+  const hasChat = useAppStore((s) => {
+    const session = s.projects
+      .find((p) => p.id === s.activeProjectId)
+      ?.sessions.find((ss) => ss.id === s.activeSessionId)
+    return Boolean(session && session.messages.length > 0)
+  })
 
   const run = useCallback((fn: () => void) => {
     fn()
@@ -127,6 +172,22 @@ export default function CommandPalette({
           startNewChat()
         })
       },
+      ...(hasChat
+        ? [{
+            id: 'find-in-chat',
+            label: t('commandPalette.commands.findInChat'),
+            description: t('commandPalette.commands.findInChatDesc'),
+            shortcut: formatCombo('Meta+F'),
+            group: 'actions' as GroupId,
+            keywords: 'find search conversation text ctrl+f',
+            icon: <Icon d={<><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>} />,
+            action: () => run(() => {
+              onMainViewChange?.('chat')
+              // After the palette's focus-restore frame, or it steals focus back.
+              window.setTimeout(() => window.dispatchEvent(new Event('pawn:open-find')), 80)
+            })
+          }]
+        : []),
       {
         id: 'open-automations',
         label: t('commandPalette.commands.openAutomations'),
@@ -282,29 +343,67 @@ export default function CommandPalette({
     return [...sessions, ...actions, ...projectCmds, ...navigation]
   }, [
     projects, keybindings, t, run, onMainViewChange, onOpenSettings, startNewChat,
-    stopStreaming, isStreaming, theme, toggleTheme, setTheme, setActiveProject, setActiveSession
+    stopStreaming, isStreaming, theme, toggleTheme, setTheme, setActiveProject, setActiveSession,
+    hasChat
   ])
 
-  const filtered = useMemo(() => {
-    const q = query.trim().toLowerCase()
-    if (!q) return commands
-    return commands.filter((c) => {
-      const hay = `${c.label} ${c.description} ${c.keywords || ''} ${c.id}`.toLowerCase()
-      return hay.includes(q)
-    })
-  }, [commands, query])
+  // Empty query: recently run actions surface in their own group. With a
+  // query: tiered fuzzy score (label > description > keywords), best first.
+  const scored = useMemo((): Array<{ cmd: Command; score: number }> => {
+    const q = query.trim()
+    if (!q) {
+      const recent = recentIds
+        .map((id) => commands.find((c) => c.id === id))
+        .filter((c): c is Command => Boolean(c))
+      const recentSet = new Set(recent.map((c) => c.id))
+      return [
+        ...recent.map((c, i) => ({ cmd: { ...c, group: 'recent' as GroupId }, score: i })),
+        ...commands.filter((c) => !recentSet.has(c.id)).map((cmd, i) => ({ cmd, score: i }))
+      ]
+    }
+    const out: Array<{ cmd: Command; score: number }> = []
+    for (const cmd of commands) {
+      const score = scoreFields(
+        [
+          { text: cmd.label, weight: 0 },
+          { text: cmd.description, weight: 60 },
+          { text: cmd.keywords, weight: 120 },
+          { text: cmd.id, weight: 200 }
+        ],
+        q
+      )
+      if (score !== null) out.push({ cmd, score })
+    }
+    return out
+  }, [commands, query, recentIds])
 
   const groups = useMemo(() => {
-    return GROUP_ORDER
-      .map((g) => ({ id: g, items: filtered.filter((c) => c.group === g) }))
+    const byGroup = GROUP_ORDER
+      .map((g) => {
+        const items = scored.filter((x) => x.cmd.group === g)
+        if (query.trim()) items.sort((a, b) => a.score - b.score)
+        return {
+          id: g,
+          best: items.length ? Math.min(...items.map((x) => x.score)) : Infinity,
+          items: items.map((x) => x.cmd)
+        }
+      })
       .filter((g) => g.items.length > 0)
-  }, [filtered])
+    // With a query the group holding the best match leads, so Enter picks it.
+    if (query.trim()) byGroup.sort((a, b) => a.best - b.best)
+    return byGroup
+  }, [scored, query])
 
   const flatItems = useMemo(() => {
     return groups.flatMap((g) => g.items)
   }, [groups])
 
   const safeIndex = flatItems.length === 0 ? 0 : Math.min(Math.max(0, selectedIndex), flatItems.length - 1)
+
+  const execute = useCallback((cmd: Command) => {
+    recordRecentCommand(cmd.id)
+    cmd.action()
+  }, [])
 
   useEffect(() => {
     inputRef.current?.focus()
@@ -350,7 +449,7 @@ export default function CommandPalette({
         e.preventDefault()
         e.stopPropagation()
         if (flatItems[safeIndex]) {
-          flatItems[safeIndex].action()
+          execute(flatItems[safeIndex])
         }
       } else if (e.key === 'Escape') {
         e.preventDefault()
@@ -377,7 +476,7 @@ export default function CommandPalette({
 
     window.addEventListener('keydown', handleGlobalKeyDown, true)
     return () => window.removeEventListener('keydown', handleGlobalKeyDown, true)
-  }, [flatItems, safeIndex, groups, onClose])
+  }, [flatItems, safeIndex, groups, onClose, execute])
 
   let flatCursor = -1
 
@@ -462,7 +561,7 @@ export default function CommandPalette({
                     role="option"
                     aria-selected={selected}
                     className={`cp-item ${selected ? 'selected' : ''} ${isActiveSession || isActiveProject ? 'current' : ''}`}
-                    onClick={() => cmd.action()}
+                    onClick={() => execute(cmd)}
                     onMouseMove={() => {
                       if (selectedIndex !== idx) setSelectedIndex(idx)
                     }}
@@ -470,7 +569,9 @@ export default function CommandPalette({
                     <span className="cp-item-icon">{cmd.icon}</span>
                     <span className="cp-item-info">
                       <span className="cp-item-label">
-                        <span className="cp-item-label-text">{cmd.label}</span>
+                        <span className="cp-item-label-text">
+                          <HighlightedText text={cmd.label} query={query} />
+                        </span>
                         {(isActiveSession || isActiveProject) && (
                           <span className="cp-badge">{t('commandPalette.current')}</span>
                         )}

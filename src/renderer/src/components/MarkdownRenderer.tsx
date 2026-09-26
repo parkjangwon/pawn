@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useState, useMemo } from 'react'
+import React, { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
@@ -8,6 +8,10 @@ import 'highlight.js/styles/github-dark.css'
 import './MarkdownRenderer.css'
 import { HIGHLIGHT_LANGUAGES } from '../utils/highlightLanguages'
 import { isInlineImageSrc } from '../utils/safeUrl'
+import { REVEAL_EVENT } from '../utils/conversationFind'
+
+/** Code blocks longer than this fold to a preview with "Show all N lines". */
+export const CODE_FOLD_THRESHOLD_LINES = 30
 
 interface Props {
   content: string
@@ -218,39 +222,88 @@ function getNodeText(node: React.ReactNode): string {
 }
 
 function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Element {
+  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
+  const [expanded, setExpanded] = useState(false)
+  const wrapperRef = useRef<HTMLDivElement>(null)
   const lang = extractLang(children)
+  const text = useMemo(() => getNodeText(children).replace(/\n$/, ''), [children])
+  const lineCount = text ? text.split('\n').length : 0
+  const foldable = lineCount > CODE_FOLD_THRESHOLD_LINES
+  const folded = foldable && !expanded
+
+  // Conversation find unfolds the block when its active match is inside.
+  useEffect(() => {
+    const el = wrapperRef.current
+    if (!el || !foldable) return
+    const reveal = (): void => setExpanded(true)
+    el.addEventListener(REVEAL_EVENT, reveal)
+    return () => el.removeEventListener(REVEAL_EVENT, reveal)
+  }, [foldable])
 
   const handleCopy = useCallback((): void => {
-    const text = getNodeText(children).replace(/\n$/, '')
     if (!text) return
-    navigator.clipboard.writeText(text)
+    void navigator.clipboard?.writeText(text)?.catch?.(() => {})
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
-  }, [children])
+  }, [text])
 
   return (
-    <div className="code-block-wrapper">
-      <div className="code-block-header">
+    <div
+      ref={wrapperRef}
+      className={`code-block-wrapper${folded ? ' folded' : ''}`}
+      data-folded={folded ? 'true' : undefined}
+    >
+      <div className="code-block-header" data-find-ignore="true">
         <span className="code-lang">{lang}</span>
+        {foldable && (
+          <span className="code-lines">{t('markdown.codeLines', { count: lineCount })}</span>
+        )}
         <button
           className={`copy-btn ${copied ? 'copied' : ''}`}
           onClick={handleCopy}
-          aria-label={copied ? 'Copied to clipboard' : 'Copy code'}
+          aria-label={copied ? t('markdown.codeCopied') : t('markdown.copyCode')}
         >
           {copied ? (
             <>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span>Copied!</span>
+              <span>{t('chat.copied')}</span>
             </>
           ) : (
-            'Copy'
+            t('chat.copy')
           )}
         </button>
       </div>
-      <pre>{children}</pre>
+      <div className="code-block-body">
+        <pre>{children}</pre>
+      </div>
+      {foldable && (
+        <button
+          type="button"
+          className="code-fold-toggle"
+          aria-expanded={!folded}
+          onClick={() => {
+            const collapsing = !folded
+            setExpanded((v) => !v)
+            // Collapsing a long block can leave the reader far below it.
+            if (collapsing) {
+              requestAnimationFrame(() => {
+                const el = wrapperRef.current
+                if (!el || typeof el.scrollIntoView !== 'function') return
+                const viewTop = el.closest('.chat-messages')?.getBoundingClientRect().top ?? 0
+                if (el.getBoundingClientRect().top < viewTop) el.scrollIntoView({ block: 'nearest' })
+              })
+            }
+          }}
+        >
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ transform: folded ? 'none' : 'rotate(180deg)' }}>
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+          {folded ? t('markdown.expandCode', { count: lineCount }) : t('markdown.collapseCode')}
+        </button>
+      )}
     </div>
   )
 }

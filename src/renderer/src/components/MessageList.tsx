@@ -7,6 +7,7 @@ import SubagentActivity from './SubagentActivity'
 import { useStreamingStore } from '../stores/streaming'
 import { useChatStore } from '../stores/chat'
 import { stripDisplayImages } from '../utils/attachments'
+import { formatDuration, formatMessageTime, formatMessageTimeFull, normalizeTimestampMs } from '../utils/messageTime'
 import type { Message } from '../stores/app'
 
 class MessageErrorBoundary extends React.Component<
@@ -37,6 +38,8 @@ interface MessageListProps {
   nearTop: boolean
   onShowEarlier: () => void
   onScroll?: (e: React.UIEvent<HTMLDivElement>) => void
+  /** Receives the scroll container (find, turn navigator, selection menu). */
+  scrollRef?: (el: HTMLDivElement | null) => void
   /** Session switch key — remounts list for clean enter animation. */
   sessionKey?: string
   projectId?: string | null
@@ -126,6 +129,44 @@ function ThinkingBlock({
   )
 }
 
+/** Hover-revealed send time (full timestamp in the tooltip). */
+function MessageTime({ createdAt }: { createdAt: number }): React.JSX.Element | null {
+  const { t, i18n } = useTranslation()
+  const locale = i18n?.language || 'en'
+  const label = formatMessageTime(createdAt, locale, (time) => t('chat.time.yesterday', { time }))
+  if (!label) return null
+  const ms = normalizeTimestampMs(createdAt)
+  return (
+    <time
+      className="message-time"
+      dateTime={ms ? new Date(ms).toISOString() : undefined}
+      title={formatMessageTimeFull(createdAt, locale) || undefined}
+    >
+      {label}
+    </time>
+  )
+}
+
+/** "Worked for 1m 5s" — how long the agent spent on the turn ending here. */
+export function WorkedFor({ durationMs }: { durationMs?: number }): React.JSX.Element | null {
+  const { t } = useTranslation()
+  const text = formatDuration(durationMs, {
+    d: (n) => t('chat.duration.d', { n }),
+    h: (n) => t('chat.duration.h', { n }),
+    m: (n) => t('chat.duration.m', { n }),
+    s: (n) => t('chat.duration.s', { n })
+  })
+  if (!text) return null
+  return (
+    <span className="message-worked">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" />
+      </svg>
+      {t('chat.duration.worked', { duration: text })}
+    </span>
+  )
+}
+
 const MessageRow = memo(function MessageRow({
   msg,
   animateIn,
@@ -168,7 +209,7 @@ const MessageRow = memo(function MessageRow({
 
   if (msg.role === 'system') {
     return (
-      <div className={`message system${enterClass}`}>
+      <div className={`message system${enterClass}`} data-message-id={msg.id}>
         <ToolMessage content={content} />
       </div>
     )
@@ -177,6 +218,7 @@ const MessageRow = memo(function MessageRow({
   return (
     <div
       className={`message ${msg.role}${enterClass}${isStreamingTail || isLive ? ' message-live' : ''}`}
+      data-message-id={msg.id}
     >
       <div className="message-role">
         {msg.role === 'user' ? t('chat.you') : t('chat.assistant')}
@@ -282,11 +324,15 @@ const MessageRow = memo(function MessageRow({
               {t('chat.regenerate')}
             </button>
           )}
+          {!isLive && <MessageTime createdAt={msg.createdAt} />}
         </div>
       </div>
-      {msg.role === 'assistant' && msg.modelLabel && !isLive && (
-        <div className="message-model-label">{msg.modelLabel}</div>
-      )}
+      {msg.role === 'assistant' && !isLive && (msg.modelLabel || msg.durationMs) ? (
+        <div className="message-meta">
+          <WorkedFor durationMs={msg.durationMs} />
+          {msg.modelLabel && <span className="message-model-label">{msg.modelLabel}</span>}
+        </div>
+      ) : null}
     </div>
   )
 })
@@ -299,6 +345,7 @@ export default function MessageList({
   nearTop,
   onShowEarlier,
   onScroll,
+  scrollRef,
   sessionKey,
   projectId,
   sessionId
@@ -334,7 +381,7 @@ export default function MessageList({
   }
 
   return (
-    <div className="chat-messages" onScroll={onScroll} data-session={sessionKey || ''}>
+    <div className="chat-messages" ref={scrollRef} onScroll={onScroll} data-session={sessionKey || ''}>
       {startIndex > 0 && nearTop && (
         <button className="message-load-earlier" onClick={onShowEarlier}>
           {t('chat.showEarlier', { count: startIndex })}

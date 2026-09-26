@@ -187,6 +187,9 @@ export async function agentLoop(
 
   // Hoisted so finally can auto-capture Memory from this turn's transcript.
   let entries: TranscriptEntry[] = []
+  /** Wall-clock start + assistant bubbles of this turn, for the "worked for" label. */
+  const turnStartedAt = Date.now()
+  const turnAssistantIds: string[] = []
   /** Code mutations this user turn — drives free local typecheck auto-verify. */
   let turnHadCodeEdits = resumeFrom?.turnHadCodeEdits ?? false
   let turnRanChecks = resumeFrom?.turnRanChecks ?? false
@@ -487,6 +490,7 @@ export async function agentLoop(
         useAppStore.getState().addMessage(projectId, sessionId, {
           id: assistantMsgId, role: 'assistant', content: '', createdAt: Date.now()
         })
+        turnAssistantIds.push(assistantMsgId)
 
         try {
          result = await callLLM({
@@ -866,6 +870,7 @@ export async function agentLoop(
     else if (turnEnd !== 'failed') turnEnd = 'completed'
     useChangeLedger.getState().endTurn()
     releaseSleepHold()
+    recordTurnDuration(projectId, sessionId, turnAssistantIds, Date.now() - turnStartedAt)
     // Turn finished (normally or aborted) — drop the AI cursor so it doesn't
     // linger on the browser page after browser control ends.
     // Release the browser claim when this turn ends. The claim is a no-op
@@ -952,6 +957,35 @@ export async function agentLoop(
       // explicitly scheduled and must not wait for the next user input.
       processQueue(set, get, sessionId)
     }
+  }
+}
+
+/**
+ * Tag the last surviving assistant bubble of a turn with how long the agent
+ * worked (empty tool-round placeholders are removed, so walk backwards).
+ */
+export function recordTurnDuration(
+  projectId: string,
+  sessionId: string,
+  assistantIds: string[],
+  durationMs: number
+): void {
+  if (assistantIds.length === 0 || durationMs <= 0) return
+  try {
+    const session = useAppStore
+      .getState()
+      .projects.find((p) => p.id === projectId)
+      ?.sessions.find((s) => s.id === sessionId)
+    if (!session) return
+    const present = new Set(session.messages.map((m) => m.id))
+    for (let i = assistantIds.length - 1; i >= 0; i--) {
+      if (present.has(assistantIds[i])) {
+        useAppStore.getState().updateMessageDuration(projectId, sessionId, assistantIds[i], durationMs)
+        return
+      }
+    }
+  } catch {
+    /* cosmetic metadata — never break turn teardown */
   }
 }
 

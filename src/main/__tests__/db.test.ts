@@ -13,7 +13,7 @@ import {
   getDb, closeDb,
   addProject, getAllProjects, updateProjectName, updateProjectPaths, removeProject,
   addSession, getSessionsByProject, updateSessionTitle, updateSessionPath, removeSession,
-  addMessage, getMessagesBySession, updateMessageContent, deleteMessage, clearMessages,
+  addMessage, getMessagesBySession, updateMessageContent, updateMessageMeta, deleteMessage, clearMessages,
   searchSessions,
   saveTranscript, getTranscript, clearTranscript,
   addUsage, getUsageBySession, getUsageSummary, loadFullState,
@@ -100,6 +100,34 @@ describe('messages', () => {
     clearMessages('s')
     expect(getMessagesBySession('s')).toHaveLength(0)
     expect(getTranscript('s')).toBeNull()
+  })
+})
+
+describe('message duration', () => {
+  it('persists the turn duration and returns it with the message row', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s', 'proj', 'S', '/p')
+    addMessage('m1', 's', 'assistant', 'done')
+    expect(getMessagesBySession('s')[0].durationMs).toBe(0)
+
+    updateMessageMeta('m1', { durationMs: 65_432.4 })
+    expect(getMessagesBySession('s')[0].durationMs).toBe(65_432)
+  })
+
+  it('ignores invalid durations', () => {
+    addProject('proj', 'P', '/p')
+    addSession('s', 'proj', 'S', '/p')
+    addMessage('m1', 's', 'assistant', 'done')
+    updateMessageMeta('m1', { durationMs: 1200 })
+    updateMessageMeta('m1', { durationMs: Number.NaN })
+    updateMessageMeta('m1', { durationMs: -5 })
+    expect(getMessagesBySession('s')[0].durationMs).toBe(1200)
+  })
+
+  it('adds the duration_ms column to databases created before it existed', () => {
+    const d = getDb()
+    const cols = d.prepare('PRAGMA table_info(messages)').all() as Array<{ name: string }>
+    expect(cols.map((c) => c.name)).toContain('duration_ms')
   })
 })
 

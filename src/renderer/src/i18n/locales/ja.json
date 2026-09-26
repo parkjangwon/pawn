@@ -151,7 +151,41 @@
     "regenerate": "再生成",
     "saveAndResend": "保存して再送",
     "dropFilesTitle": "ファイル・画像を添付",
-    "dropFilesDesc": "ここにドロップして会話コンテキストに添付します"
+    "dropFilesDesc": "ここにドロップして会話コンテキストに添付します",
+    "find": {
+      "placeholder": "会話内を検索",
+      "count": "{{current}}/{{total}}",
+      "noResults": "一致なし",
+      "previous": "前の一致 (Shift+Enter)",
+      "next": "次の一致 (Enter)",
+      "close": "閉じる (Esc)",
+      "earlierMatches": "以前のメッセージ {{count}} 件にも一致があります",
+      "loadEarlier": "読み込む"
+    },
+    "turnNav": {
+      "label": "会話のターン",
+      "jumpTo": "{{total}} 件中 {{index}} 番目の質問へ移動",
+      "position": "質問 {{index}} / {{total}}",
+      "attachmentOnly": "(添付のみ)",
+      "working": "作業中…",
+      "noReply": "まだ返信はありません"
+    },
+    "selection": {
+      "label": "選択範囲の操作",
+      "quote": "引用",
+      "find": "検索"
+    },
+    "jumpToLatest": "最新へ移動",
+    "time": {
+      "yesterday": "昨日 {{time}}"
+    },
+    "duration": {
+      "worked": "{{duration}} 作業",
+      "d": "{{n}}日",
+      "h": "{{n}}時間",
+      "m": "{{n}}分",
+      "s": "{{n}}秒"
+    }
   },
   "automation": {
     "title": "自動化",
@@ -340,7 +374,10 @@
       "theme": "テーマ",
       "themeDesc": "ライト、ダーク、システムテーマから選択",
       "language": "言語",
-      "languageDesc": "希望のインターフェース言語を選択"
+      "languageDesc": "希望のインターフェース言語を選択",
+      "chatFontSize": "メッセージの文字サイズ",
+      "chatFontSizeDesc": "チャットメッセージとコードの文字サイズです。その他の画面要素は変わりません。",
+      "chatFontSizeDefault": "標準 (14px)"
     },
     "providerSection": {
       "title": "プロバイダー",
@@ -986,7 +1023,8 @@
       "actions": "操作",
       "navigation": "表示・外観",
       "sessions": "最近のセッション",
-      "projects": "プロジェクト"
+      "projects": "プロジェクト",
+      "recent": "最近使用"
     },
     "commands": {
       "newSession": "新しい作業",
@@ -1011,7 +1049,9 @@
       "toggleSidebar": "サイドバーを切替",
       "toggleSidebarDesc": "プロジェクトサイドバーの表示/非表示",
       "openAgents": "Agents パネルを開く",
-      "openAgentsDesc": "ヘルパーの進捗・コスト・ファイル変更を確認"
+      "openAgentsDesc": "ヘルパーの進捗・コスト・ファイル変更を確認",
+      "findInChat": "会話内を検索",
+      "findInChatDesc": "このチャットを検索して一致箇所を移動"
     }
   },
   "fileTree": {
@@ -1180,5 +1220,12 @@
     "inlineWorking_one": "ヘルパー 1件 作業中…",
     "inlineDone": "ヘルパー完了",
     "inlineDoneCount": "{{count}}件完了"
+  },
+  "markdown": {
+    "codeLines": "{{count}} 行",
+    "expandCode": "全 {{count}} 行を表示",
+    "collapseCode": "折りたたむ",
+    "copyCode": "コードをコピー",
+    "codeCopied": "クリップボードにコピーしました"
   }
 }

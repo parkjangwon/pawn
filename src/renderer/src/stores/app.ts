@@ -21,6 +21,8 @@ export interface Message {
   modelLabel?: string
   /** Model reasoning / chain-of-thought shown in a collapsible block (not in content). */
   thinking?: string
+  /** Assistant only: wall-clock time the agent worked on the turn ending here. */
+  durationMs?: number
 }
 
 export interface Project {
@@ -70,6 +72,8 @@ interface AppState {
     thinking: string
   ) => void
   updateMessageModel: (projectId: string, sessionId: string, messageId: string, modelLabel: string) => void
+  /** Record how long the agent worked on the turn that ended with this message. */
+  updateMessageDuration: (projectId: string, sessionId: string, messageId: string, durationMs: number) => void
   /** Drop messages from index of messageId (inclusive) through the end. */
   truncateMessagesFrom: (
     projectId: string,
@@ -275,7 +279,8 @@ export const useAppStore = create<AppState>((set, get) => ({
                     const merged = Array.from(byId.values()).map((m) => ({
                       ...m,
                       thinking: m.thinking || undefined,
-                      modelLabel: m.modelLabel || undefined
+                      modelLabel: m.modelLabel || undefined,
+                      durationMs: m.durationMs && m.durationMs > 0 ? m.durationMs : undefined
                     }))
                     merged.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0))
                     return { ...ss, messages: merged }
@@ -339,6 +344,21 @@ export const useAppStore = create<AppState>((set, get) => ({
     }))
     enqueueDbWrite(`msg:model:${messageId}`, () =>
       window.api.db.updateMessageMeta?.(messageId, { modelLabel })
+    )
+  },
+
+  updateMessageDuration: (projectId, sessionId, messageId, durationMs) => {
+    if (!Number.isFinite(durationMs) || durationMs <= 0) return
+    const ms = Math.round(durationMs)
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId
+          ? { ...p, sessions: p.sessions.map((ss) => ss.id === sessionId ? { ...ss, messages: ss.messages.map((m) => m.id === messageId ? { ...m, durationMs: ms } : m) } : ss) }
+          : p
+      )
+    }))
+    enqueueDbWrite(`msg:duration:${messageId}`, () =>
+      window.api.db.updateMessageMeta?.(messageId, { durationMs: ms })
     )
   },
 

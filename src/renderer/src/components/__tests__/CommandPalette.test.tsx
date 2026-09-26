@@ -106,3 +106,88 @@ describe('CommandPalette — Keyboard navigation and actions', () => {
     expect(items[1]).toHaveClass('selected')
   })
 })
+
+describe('CommandPalette — fuzzy search and recent actions', () => {
+  beforeEach(() => {
+    localStorage.removeItem('pawn-cp-recent')
+    useAppStore.setState({
+      projects: [
+        {
+          id: 'p1',
+          name: 'Pawn',
+          paths: ['/path/to/pawn'],
+          sessions: [{ id: 's1', path: '/path/to/pawn', title: 'Session One', createdAt: 100, messages: [] }]
+        }
+      ],
+      activeProjectId: 'p1',
+      activeSessionId: 's1',
+      initialized: true
+    })
+  })
+
+  it('matches subsequences and ranks the best match first', () => {
+    render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
+    fireEvent.change(screen.getByPlaceholderText('commandPalette.placeholder'), {
+      target: { value: 'tglsdb' }
+    })
+    const items = screen.getAllByRole('option')
+    expect(items[0]).toHaveTextContent('commandPalette.commands.toggleSidebar')
+  })
+
+  it('highlights matched characters in labels', () => {
+    render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
+    fireEvent.change(screen.getByPlaceholderText('commandPalette.placeholder'), { target: { value: 'Session' } })
+    const marks = document.querySelectorAll('mark.cp-match')
+    expect(marks.length).toBeGreaterThan(0)
+    expect(marks[0].textContent).toBe('Session')
+  })
+
+  it('remembers executed actions and lists them under Recently used', () => {
+    const onOpenSettings = vi.fn()
+    const { unmount } = render(<CommandPalette onClose={vi.fn()} onOpenSettings={onOpenSettings} />)
+    fireEvent.change(screen.getByPlaceholderText('commandPalette.placeholder'), { target: { value: 'settings' } })
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(onOpenSettings).toHaveBeenCalled()
+    expect(JSON.parse(localStorage.getItem('pawn-cp-recent') || '[]')).toEqual(['open-settings'])
+    unmount()
+
+    render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
+    expect(screen.getByRole('group', { name: 'commandPalette.groups.recent' })).toHaveTextContent(
+      'commandPalette.commands.openSettings'
+    )
+    // Sessions keep the first slot so Enter still reopens the latest chat.
+    expect(screen.getAllByRole('option')[0]).toHaveTextContent('Session One')
+  })
+
+  it('does not record session jumps as recent actions', () => {
+    render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
+    fireEvent.keyDown(window, { key: 'Enter' })
+    expect(localStorage.getItem('pawn-cp-recent')).toBeNull()
+  })
+
+  it('offers find-in-conversation only when the active chat has messages', () => {
+    const { unmount } = render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
+    expect(screen.queryByText('commandPalette.commands.findInChat')).not.toBeInTheDocument()
+    unmount()
+    useAppStore.setState({
+      projects: [
+        {
+          id: 'p1',
+          name: 'Pawn',
+          paths: [],
+          sessions: [
+            {
+              id: 's1',
+              path: '',
+              title: 'Session One',
+              createdAt: 100,
+              messages: [{ id: 'm', role: 'user', content: 'hi', createdAt: 1 }]
+            }
+          ]
+        }
+      ]
+    })
+    render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
+    expect(screen.getByText('commandPalette.commands.findInChat')).toBeInTheDocument()
+  })
+})

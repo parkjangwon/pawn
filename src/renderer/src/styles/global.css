@@ -32,6 +32,8 @@
   --press-scale: 0.97;
   /* Shared chat column width: welcome, messages, composer stay aligned */
   --chat-content-max: 720px;
+  /* Message text size — Settings → Appearance overrides at runtime */
+  --chat-font-size: 14px;
 }
 
 * {
@@ -310,6 +312,9 @@ select:focus-visible {
   --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.12);
   --control-bg: #f4f4f5;
   --control-border: #d4d4d4;
+  --find-highlight: #fde68a;
+  --find-highlight-active: #f59e0b;
+  --find-highlight-active-text: #1a1a1a;
 }
 
 /*
@@ -356,6 +361,9 @@ select:focus-visible {
 
   --control-bg: #1e1e23;
   --control-border: rgba(255, 255, 255, 0.12);
+  --find-highlight: rgba(250, 204, 21, 0.3);
+  --find-highlight-active: #facc15;
+  --find-highlight-active-text: #161619;
 }
 
 /* Scrollbar — thin, fade-in on hover for a calmer chrome */

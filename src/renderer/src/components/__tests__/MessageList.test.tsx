@@ -149,4 +149,27 @@ describe('MessageList', () => {
     fireEvent.click(screen.getByText('chat.thinking'))
     expect(screen.getByText('deep reasoning text')).toBeInTheDocument()
   })
+
+  it('tags rows with their message id for find / turn navigation', () => {
+    const { container } = renderList({ messages: [msg('u1', 'user', 'q'), msg('a1', 'assistant', 'r')] })
+    expect(container.querySelector('[data-message-id="u1"]')).toHaveClass('message', 'user')
+    expect(container.querySelector('[data-message-id="a1"]')).toHaveClass('message', 'assistant')
+  })
+
+  it('shows how long the agent worked on a finished turn', () => {
+    const done: Message = { ...msg('a1', 'assistant', 'done'), durationMs: 65_000 }
+    renderList({ messages: [msg('u1', 'user', 'q'), done] })
+    expect(document.querySelector('.message-worked')).toHaveTextContent('chat.duration.worked')
+  })
+
+  it('renders a hover timestamp for real send times only', () => {
+    const now = Date.now()
+    const { container } = renderList({
+      messages: [{ ...msg('u1', 'user', 'q'), createdAt: now }, msg('a1', 'assistant', 'r')]
+    })
+    const times = container.querySelectorAll('time.message-time')
+    // The fixture assistant message has createdAt=1 (no real timestamp).
+    expect(times).toHaveLength(1)
+    expect(times[0].getAttribute('datetime')).toBe(new Date(now).toISOString())
+  })
 })

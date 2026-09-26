@@ -64,7 +64,11 @@ export function registerDbIpc(): void {
   })
   handleTrusted(
     'db:updateMessageMeta',
-    async (_, id, meta: { thinking?: string; modelLabel?: string; content?: string }) => {
+    async (
+      _,
+      id,
+      meta: { thinking?: string; modelLabel?: string; content?: string; durationMs?: number }
+    ) => {
       if (typeof id !== 'string') return { ok: false, error: 'Invalid id' }
       db.updateMessageMeta(id, meta || {})
       return { ok: true }

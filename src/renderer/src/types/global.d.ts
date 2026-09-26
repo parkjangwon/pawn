@@ -499,7 +499,7 @@ declare global {
         updateMessageContent: (id: string, content: string) => Promise<{ ok?: boolean }>
         updateMessageMeta: (
           id: string,
-          meta: { thinking?: string; modelLabel?: string; content?: string }
+          meta: { thinking?: string; modelLabel?: string; content?: string; durationMs?: number }
         ) => Promise<{ ok?: boolean }>
         deleteMessage: (id: string) => Promise<{ ok?: boolean }>
         clearMessages: (sessionId: string) => Promise<{ ok?: boolean }>
@@ -511,6 +511,7 @@ declare global {
             createdAt: number
             thinking?: string
             modelLabel?: string
+            durationMs?: number
           }>
         >
         searchSessions: (query: string) => Promise<

@@ -151,7 +151,41 @@
     "regenerate": "Regenerate",
     "saveAndResend": "Save & resend",
     "dropFilesTitle": "Attach Files & Images",
-    "dropFilesDesc": "Drop here to attach to conversation context"
+    "dropFilesDesc": "Drop here to attach to conversation context",
+    "find": {
+      "placeholder": "Find in conversation",
+      "count": "{{current}}/{{total}}",
+      "noResults": "No results",
+      "previous": "Previous match (Shift+Enter)",
+      "next": "Next match (Enter)",
+      "close": "Close (Esc)",
+      "earlierMatches": "{{count}} earlier messages also match",
+      "loadEarlier": "Load them"
+    },
+    "turnNav": {
+      "label": "Conversation turns",
+      "jumpTo": "Jump to prompt {{index}} of {{total}}",
+      "position": "Prompt {{index}} / {{total}}",
+      "attachmentOnly": "(attachment only)",
+      "working": "Working on it…",
+      "noReply": "No reply yet"
+    },
+    "selection": {
+      "label": "Selection actions",
+      "quote": "Quote",
+      "find": "Find"
+    },
+    "jumpToLatest": "Jump to latest",
+    "time": {
+      "yesterday": "Yesterday {{time}}"
+    },
+    "duration": {
+      "worked": "Worked for {{duration}}",
+      "d": "{{n}}d",
+      "h": "{{n}}h",
+      "m": "{{n}}m",
+      "s": "{{n}}s"
+    }
   },
   "automation": {
     "title": "Automations",
@@ -340,7 +374,10 @@
       "theme": "Theme",
       "themeDesc": "Choose between light, dark, or system theme",
       "language": "Language",
-      "languageDesc": "Select your preferred interface language"
+      "languageDesc": "Select your preferred interface language",
+      "chatFontSize": "Message text size",
+      "chatFontSizeDesc": "Size of chat message text and code. The rest of the interface stays the same.",
+      "chatFontSizeDefault": "Default (14px)"
     },
     "providerSection": {
       "title": "Providers",
@@ -986,7 +1023,8 @@
       "sessions": "Chats",
       "actions": "Quick actions",
       "projects": "Projects",
-      "navigation": "View & appearance"
+      "navigation": "View & appearance",
+      "recent": "Recently used"
     },
     "commands": {
       "newSession": "New chat",
@@ -1011,7 +1049,9 @@
       "toggleTerminal": "Toggle terminal",
       "toggleTerminalDesc": "Show or hide the bottom terminal",
       "toggleSidebar": "Toggle sidebar",
-      "toggleSidebarDesc": "Show or hide the project sidebar"
+      "toggleSidebarDesc": "Show or hide the project sidebar",
+      "findInChat": "Find in conversation",
+      "findInChatDesc": "Search this chat and jump between matches"
     }
   },
   "fileTree": {
@@ -1180,5 +1220,12 @@
     "inlineWorking_one": "{{count}} helper working…",
     "inlineDone": "Helpers finished",
     "inlineDoneCount": "{{count}} done"
+  },
+  "markdown": {
+    "codeLines": "{{count}} lines",
+    "expandCode": "Show all {{count}} lines",
+    "collapseCode": "Collapse",
+    "copyCode": "Copy code",
+    "codeCopied": "Copied to clipboard"
   }
 }

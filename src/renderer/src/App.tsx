@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useEffectiveTheme, useThemeStore } from './stores/theme'
 import { useAppStore } from './stores/app'
 import { useProviderStore } from './stores/provider'
-import { usePrefsStore } from './stores/prefs'
+import { applyChatFontSize, usePrefsStore } from './stores/prefs'
 import { useRoutineStore } from './stores/routine'
 import { useMcpStore } from './stores/mcp'
 import { useKeybindingsStore, useKeybinding } from './stores/keybindings'
@@ -62,6 +62,7 @@ export default function App(): React.JSX.Element {
   // handles in either place commit back through this callback.
   useLayoutEffect(() => {
     document.documentElement.style.setProperty('--sidebar-width', `${readStoredSidebarWidth()}px`)
+    applyChatFontSize(usePrefsStore.getState().chatFontSize)
   }, [])
 
   const commitSidebarWidth = useCallback((width: number) => {

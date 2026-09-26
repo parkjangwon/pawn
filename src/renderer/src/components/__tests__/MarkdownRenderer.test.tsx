@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, act } from '@testing-library/react'
 import MarkdownRenderer from '../MarkdownRenderer'
 
 vi.mock('react-i18next', async (importOriginal) => {
@@ -91,5 +91,33 @@ describe('MarkdownRenderer', () => {
     render(<MarkdownRenderer content={'<img src=x onerror="window.__xss=1">'} />)
     expect(screen.queryByRole('img')).not.toBeInTheDocument()
     expect((window as unknown as Record<string, unknown>).__xss).toBeUndefined()
+  })
+
+  it('folds long code blocks and expands them on demand', () => {
+    const code = Array.from({ length: 45 }, (_, i) => `line ${i + 1}`).join('\n')
+    const { container } = render(<MarkdownRenderer content={'```ts\n' + code + '\n```'} />)
+    const wrapper = container.querySelector('.code-block-wrapper')!
+    expect(wrapper).toHaveAttribute('data-folded', 'true')
+    const toggle = screen.getByRole('button', { name: 'markdown.expandCode' })
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    fireEvent.click(toggle)
+    expect(wrapper).not.toHaveAttribute('data-folded')
+    expect(screen.getByRole('button', { name: 'markdown.collapseCode' })).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('leaves short code blocks unfolded', () => {
+    const { container } = render(<MarkdownRenderer content={'```\na\nb\n```'} />)
+    expect(container.querySelector('.code-block-wrapper')).not.toHaveAttribute('data-folded')
+    expect(screen.queryByRole('button', { name: 'markdown.expandCode' })).not.toBeInTheDocument()
+  })
+
+  it('unfolds when conversation find reveals a match inside', () => {
+    const code = Array.from({ length: 40 }, (_, i) => `row ${i}`).join('\n')
+    const { container } = render(<MarkdownRenderer content={'```\n' + code + '\n```'} />)
+    const wrapper = container.querySelector('.code-block-wrapper')!
+    act(() => {
+      wrapper.dispatchEvent(new CustomEvent('pawn:reveal'))
+    })
+    expect(wrapper).not.toHaveAttribute('data-folded')
   })
 })

@@ -151,7 +151,41 @@
     "regenerate": "다시 생성",
     "saveAndResend": "저장 후 다시 보내기",
     "dropFilesTitle": "파일 및 이미지 첨부",
-    "dropFilesDesc": "여기에 놓으면 대화 컨텍스트로 첨부됩니다"
+    "dropFilesDesc": "여기에 놓으면 대화 컨텍스트로 첨부됩니다",
+    "find": {
+      "placeholder": "대화에서 찾기",
+      "count": "{{current}}/{{total}}",
+      "noResults": "결과 없음",
+      "previous": "이전 결과 (Shift+Enter)",
+      "next": "다음 결과 (Enter)",
+      "close": "닫기 (Esc)",
+      "earlierMatches": "이전 메시지 {{count}}개에도 일치 항목이 있어요",
+      "loadEarlier": "불러오기"
+    },
+    "turnNav": {
+      "label": "대화 턴",
+      "jumpTo": "{{total}}개 중 {{index}}번째 질문으로 이동",
+      "position": "질문 {{index}} / {{total}}",
+      "attachmentOnly": "(첨부만 있음)",
+      "working": "작업 중…",
+      "noReply": "아직 답변 없음"
+    },
+    "selection": {
+      "label": "선택 영역 작업",
+      "quote": "인용하기",
+      "find": "찾기"
+    },
+    "jumpToLatest": "최신 메시지로 이동",
+    "time": {
+      "yesterday": "어제 {{time}}"
+    },
+    "duration": {
+      "worked": "{{duration}} 동안 작업함",
+      "d": "{{n}}일",
+      "h": "{{n}}시간",
+      "m": "{{n}}분",
+      "s": "{{n}}초"
+    }
   },
   "automation": {
     "title": "자동화",
@@ -340,7 +374,10 @@
       "theme": "테마",
       "themeDesc": "라이트, 다크 또는 시스템 테마 중에서 선택하세요",
       "language": "언어",
-      "languageDesc": "원하는 인터페이스 언어를 선택하세요"
+      "languageDesc": "원하는 인터페이스 언어를 선택하세요",
+      "chatFontSize": "메시지 글자 크기",
+      "chatFontSizeDesc": "채팅 메시지와 코드의 글자 크기입니다. 나머지 화면 요소는 그대로 유지돼요.",
+      "chatFontSizeDefault": "기본 (14px)"
     },
     "providerSection": {
       "title": "프로바이더",
@@ -986,7 +1023,8 @@
       "sessions": "채팅",
       "actions": "빠른 액션",
       "projects": "프로젝트",
-      "navigation": "화면 · 외관"
+      "navigation": "화면 · 외관",
+      "recent": "최근 사용"
     },
     "commands": {
       "newSession": "새 작업",
@@ -1011,7 +1049,9 @@
       "toggleSidebar": "사이드바 토글",
       "toggleSidebarDesc": "프로젝트 사이드바 표시/숨기기",
       "openAgents": "Agents 패널 열기",
-      "openAgentsDesc": "에이전트 진행 상황·비용·파일 변경을 실시간으로 봅니다"
+      "openAgentsDesc": "에이전트 진행 상황·비용·파일 변경을 실시간으로 봅니다",
+      "findInChat": "대화에서 찾기",
+      "findInChatDesc": "현재 대화를 검색하고 결과 사이를 이동"
     }
   },
   "fileTree": {
@@ -1180,5 +1220,12 @@
     "inlineWorking_one": "에이전트 1명 작업 중…",
     "inlineDone": "에이전트 작업 완료",
     "inlineDoneCount": "{{count}}건 완료"
+  },
+  "markdown": {
+    "codeLines": "{{count}}줄",
+    "expandCode": "전체 {{count}}줄 펼치기",
+    "collapseCode": "접기",
+    "copyCode": "코드 복사",
+    "codeCopied": "클립보드에 복사됨"
   }
 }
