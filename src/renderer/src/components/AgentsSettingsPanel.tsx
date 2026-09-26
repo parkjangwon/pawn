@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useProviderStore, type SubagentCostMode } from '../stores/provider'
+import { harnessProfile } from '../agent/harnessMode'
 import {
   loadAgentProfiles,
   profileToDraft,
@@ -429,6 +430,12 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
             <div className="settings-row-info">
               <span className="settings-row-label">{t('settings.agentsSection.maxParallel')}</span>
               <span className="settings-row-desc">{t('settings.agentsSection.maxParallelDesc')}</span>
+              <span className="settings-row-desc">
+                {t('settings.agentsSection.maxParallelHarness', {
+                  eco: harnessProfile('eco').parallelPool,
+                  maxing: harnessProfile('maxing').parallelPool
+                })}
+              </span>
             </div>
             <div
               className="theme-toggle agents-pool-toggle"

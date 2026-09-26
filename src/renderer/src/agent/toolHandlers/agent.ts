@@ -29,6 +29,7 @@ import {
   waitForSessionSubagents
 } from '../../stores/subagentRuns'
 import { useProviderStore } from '../../stores/provider'
+import { effectivePoolLimit, harnessProfile } from '../harnessMode'
 import type { ToolHandler } from './types'
 
 function parseIsolation(raw: unknown): SubagentIsolation | undefined {
@@ -351,7 +352,10 @@ const list_agents: ToolHandler = async (call, projectPath, _signal, ctx, _api) =
   const store = useSubagentRunsStore.getState()
   const sessionId = ctx?.sessionId
   const running = (sessionId ? store.activeForSession(sessionId) : store.runs.filter((r) => r.status === 'running')).slice(0, 16)
-  const pool = useProviderStore.getState().maxParallelSubagents || 4
+  const providerState = useProviderStore.getState()
+  const harnessMode = providerState.harnessModeFor?.(sessionId) ?? 'default'
+  const maxTasks = harnessProfile(harnessMode).maxParallelTasks
+  const pool = effectivePoolLimit(providerState.maxParallelSubagents || 4, harnessMode)
   const lines = [
     `# Available subagents (${catalog.length})`,
     '',
@@ -372,7 +376,11 @@ const list_agents: ToolHandler = async (call, projectPath, _signal, ctx, _api) =
     }),
     '',
     'Use spawn_agent with agent="<name>" (or parallel_agents tasks[].agent).',
-    `Independent multi-module work: prefer parallel_agents (max ${MAX_PARALLEL_HINT} tasks; pool=${pool} concurrent).`,
+    harnessMode === 'eco'
+      ? `Eco mode: use parallel_agents only when work clearly splits (max ${maxTasks} tasks; pool=${pool} concurrent).`
+      : harnessMode === 'maxing'
+        ? `Maxing mode: split independent work aggressively with parallel_agents (max ${maxTasks} tasks; pool=${pool} concurrent).`
+        : `Independent multi-module work: prefer parallel_agents (max ${maxTasks} tasks; pool=${pool} concurrent).`,
     'Pipelines: name tasks + depends_on + shared_context; later waves get sibling findings.',
     'background=true returns immediately; await_agent / cancel_agent manage runs.',
     'await_agent id="*" waits for all running session subagents; comma-separated ids also work.',
@@ -399,8 +407,6 @@ const list_agents: ToolHandler = async (call, projectPath, _signal, ctx, _api) =
   }
   return { toolCallId: call.id, content: lines.join('\n') }
 }
-
-const MAX_PARALLEL_HINT = 6
 
 function abortableWait<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
   if (!signal) return promise

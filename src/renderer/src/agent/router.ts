@@ -26,6 +26,7 @@ import {
   type Provider
 } from '../types/provider'
 import { estimateTokens, type TranscriptEntry } from './transcript'
+import { contextFitRatio, harnessProfile, parseHarnessMode, type HarnessMode } from './harnessMode'
 
 // Models that refused an image this session — treated as non-vision until restart.
 const visionIncapableKeys = new Set<string>()
@@ -99,7 +100,6 @@ function isEffectivelyVisionCapable(model: ModelEntry): boolean {
 
 export type Complexity = 'simple' | 'medium' | 'complex'
 
-const TIER_OF: Record<Complexity, ModelTier> = { simple: 'low', medium: 'mid', complex: 'high' }
 const TIER_ORDER: ModelTier[] = ['low', 'mid', 'high']
 
 export interface RouteTarget {
@@ -135,7 +135,15 @@ interface Health {
 
 const health = new Map<string, Health>()
 
+/** Monotonic count of provider failures; wide subagent pools back off on it. */
+let providerFailureTotal = 0
+
+export function providerFailureCount(): number {
+  return providerFailureTotal
+}
+
 export function noteProviderFailure(providerId: string): void {
+  providerFailureTotal++
   const h = health.get(providerId) || { failures: 0, cooldownUntil: 0 }
   h.failures++
   // 5s, 15s, 45s, capped at 2min.
@@ -332,10 +340,16 @@ interface WarmCache {
 
 /**
  * Rank same-tier candidates: healthy first, then the session's warm model
- * (cache stability beats marginal price differences), then cheapest, then
- * stable by id.
+ * (cache stability beats marginal price differences), then cheapest (or, with
+ * preferStrongest, priciest as a strength proxy), then stable by id.
  */
-function rank(list: RouteTarget[], promptTokens: number, warm: WarmCache | null): RouteTarget[] {
+function rank(
+  list: RouteTarget[],
+  promptTokens: number,
+  warm: WarmCache | null,
+  preferStrongest = false
+): RouteTarget[] {
+  const dir = preferStrongest ? -1 : 1
   return list.slice().sort((a, b) => {
     const aUp = isProviderAvailable(a.provider.id) ? 0 : 1
     const bUp = isProviderAvailable(b.provider.id) ? 0 : 1
@@ -349,7 +363,7 @@ function rank(list: RouteTarget[], promptTokens: number, warm: WarmCache | null)
     // at the cache-read rate; everything else pays full freight.
     const aCost = estimateRoundCost(a.model, promptTokens, 1000, aWarm ? warm!.ratio : 0)
     const bCost = estimateRoundCost(b.model, promptTokens, 1000, bWarm ? warm!.ratio : 0)
-    if (aCost !== null && bCost !== null && aCost !== bCost) return aCost - bCost
+    if (aCost !== null && bCost !== null && aCost !== bCost) return (aCost - bCost) * dir
     if (aCost === null && bCost !== null) return 1
     if (aCost !== null && bCost === null) return -1
 
@@ -358,9 +372,16 @@ function rank(list: RouteTarget[], promptTokens: number, warm: WarmCache | null)
 }
 
 /** A model can carry the transcript when the estimate fits with headroom. */
-function fitsContext(model: ModelEntry, promptTokens: number): boolean {
+function fitsContext(model: ModelEntry, promptTokens: number, ratio = 0.6): boolean {
   if (!model.contextWindow || model.contextWindow <= 0) return true
-  return promptTokens <= model.contextWindow * 0.6
+  return promptTokens <= model.contextWindow * ratio
+}
+
+/** Explicit request mode wins; otherwise the session's mode from the store. */
+function resolveHarnessMode(req: { sessionId: string; harnessMode?: HarnessMode }): HarnessMode {
+  if (req.harnessMode) return parseHarnessMode(req.harnessMode)
+  const state = useProviderStore.getState() as { harnessModeFor?: (id?: string | null) => HarnessMode }
+  return parseHarnessMode(state.harnessModeFor?.(req.sessionId))
 }
 
 /** Share of the current prompt that was warm at the last successful call. */
@@ -389,6 +410,8 @@ export interface RouteRequest {
    * Sticky models above the cap are ignored so cost pins are not overridden by a warm high-tier.
    */
   maxTier?: ModelTier
+  /** Harness mode (default | eco | maxing). Omitted = the session's mode. */
+  harnessMode?: HarnessMode
 }
 
 /**
@@ -415,9 +438,11 @@ function routeBase(req: RouteRequest): RouteDecision | null {
 
   const exclude = req.exclude || new Set<string>()
   const promptTokens = estimateTokens(req.entries)
+  const mode = resolveHarnessMode(req)
   // Models whose context window cannot hold the transcript are not candidates;
   // if none fit at all, fall back to everything rather than giving up.
-  const contextFit = all.filter((c) => fitsContext(c.model, promptTokens))
+  const fitRatio = contextFitRatio(mode)
+  const contextFit = all.filter((c) => fitsContext(c.model, promptTokens, fitRatio))
   const basePool = contextFit.length > 0 ? contextFit : all
   const contextLimited = contextFit.length === 0
   const usable = basePool.filter((c) => !exclude.has(routeKey(c.model)))
@@ -450,8 +475,13 @@ function routeBase(req: RouteRequest): RouteDecision | null {
   }
 
   // --- Auto: tier from complexity, adjusted for stickiness and escalation ----
-  let targetIdx = TIER_ORDER.indexOf(TIER_OF[req.complexity])
+  // The harness mode reshapes the complexity→tier map, same-tier ranking, and
+  // downgrade appetite. Default mode is byte-for-byte the old behaviour.
+  const profile = harnessProfile(mode)
+  const ceilingIdx = profile.tierCeiling ? TIER_ORDER.indexOf(profile.tierCeiling) : -1
+  let targetIdx = TIER_ORDER.indexOf(profile.tierFor[req.complexity])
   let reason = `auto: ${req.complexity}`
+  let keptSticky = false
 
   if (sticky && !exclude.has(sticky.key)) {
     const current = pool.find((c) => routeKey(c.model) === sticky.key)
@@ -460,17 +490,38 @@ function routeBase(req: RouteRequest): RouteDecision | null {
       if (stickyIdx > targetIdx) {
         // The session is already on a stronger model with a warm prefix. Only step
         // down if the remaining conversation is long enough for the savings to
-        // repay the re-prime, and only at a user-turn boundary.
-        const target = rank(pool.filter((c) => c.model.tier === TIER_ORDER[targetIdx]), promptTokens, warm)[0]
-        const worthIt = req.newTurn === true && target && isDowngradeWorthIt(current.model, target.model, promptTokens, warm!.ratio)
+        // repay the re-prime, and only at a user-turn boundary. Eco steps down at
+        // every user-turn boundary regardless of the re-prime maths.
+        const target = rank(
+          pool.filter((c) => c.model.tier === TIER_ORDER[targetIdx]),
+          promptTokens,
+          warm,
+          profile.preferStrongest
+        )[0]
+        const worthIt =
+          req.newTurn === true &&
+          target &&
+          (profile.eagerDowngrade || isDowngradeWorthIt(current.model, target.model, promptTokens, warm!.ratio))
         if (!worthIt) {
           targetIdx = stickyIdx
+          keptSticky = true
           reason = 'sticky: keeping warm cache'
         } else {
-          reason = `auto: ${req.complexity} (downgrade pays for re-prime)`
+          reason = profile.eagerDowngrade
+            ? `auto: ${req.complexity} (eco downgrade)`
+            : `auto: ${req.complexity} (downgrade pays for re-prime)`
         }
       }
     }
+  }
+
+  // Mode ceiling (eco → mid) caps the planned tier; failure escalation below may
+  // still break through so a stuck turn can recover. A sticky pick mid-turn is
+  // left alone: dropping it would throw away the warm prefix (eco steps down at
+  // the next user-turn boundary instead).
+  if (ceilingIdx >= 0 && targetIdx > ceilingIdx && !keptSticky) {
+    targetIdx = ceilingIdx
+    reason = `${reason} (ceiling=${profile.tierCeiling})`
   }
 
   if (req.escalate && req.escalate > 0) {
@@ -495,20 +546,23 @@ function routeBase(req: RouteRequest): RouteDecision | null {
     if (targetIdx - d >= 0) order.push(TIER_ORDER[targetIdx - d])
   }
 
+  // Non-default modes tag the reason so the badge tooltip shows why.
+  const tag = (s: string): string => (mode === 'default' ? s : `${mode}: ${s}`)
+
   for (const tier of order) {
-    const tierPool = rank(pool.filter((c) => c.model.tier === tier), promptTokens, warm)
+    const tierPool = rank(pool.filter((c) => c.model.tier === tier), promptTokens, warm, profile.preferStrongest)
     const healthy = tierPool.find((c) => isProviderAvailable(c.provider.id))
     const pick = healthy || tierPool[0]
     if (!pick) continue
     const key = routeKey(pick.model)
     const note = (tier === TIER_ORDER[targetIdx] ? reason : `${reason} → fell back to ${tier}`) +
       (contextLimited ? ' (context too small for smaller models)' : '')
-    return { ...pick, key, tier, reason: healthy ? note : `${note} (all providers cooling down)` }
+    return { ...pick, key, tier, reason: tag(healthy ? note : `${note} (all providers cooling down)`) }
   }
 
-  const last = rank(pool, promptTokens, warm)[0]
+  const last = rank(pool, promptTokens, warm, profile.preferStrongest)[0]
   return last
-    ? { ...last, key: routeKey(last.model), tier: last.model.tier, reason: 'only model available' + (contextLimited ? ' (context too small)' : '') }
+    ? { ...last, key: routeKey(last.model), tier: last.model.tier, reason: tag('only model available' + (contextLimited ? ' (context too small)' : '')) }
     : null
 }
 

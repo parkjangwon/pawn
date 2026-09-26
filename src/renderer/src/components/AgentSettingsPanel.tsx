@@ -1,5 +1,7 @@
 import PermissionsAlwaysPanel from './PermissionsAlwaysPanel'
 import type { SettingsState } from './settingsState'
+import { useProviderStore } from '../stores/provider'
+import { HARNESS_MODES } from '../agent/harnessMode'
 
 export default function AgentSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -23,6 +25,23 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
     autoMemoryConsolidate,
     setAutoMemoryConsolidate
   } = state
+  const harnessMode = useProviderStore((s) => s.harnessMode)
+  const setHarnessMode = useProviderStore((s) => s.setHarnessMode)
+  const models = useProviderStore((s) => s.models)
+
+  // A mode only feels different in auto routing when there are tiers to move between.
+  const enabledProviderIds = new Set(providers.filter((p) => p.enabled).map((p) => p.id))
+  const tiers = new Set(
+    models.filter((m) => m.enabled && enabledProviderIds.has(m.providerId)).map((m) => m.tier)
+  )
+  const harnessTierHint =
+    routingMode !== 'auto'
+      ? t('settings.agentSection.harnessManualHint')
+      : harnessMode === 'maxing' && !tiers.has('high')
+        ? t('settings.agentSection.harnessNoHighTier')
+        : harnessMode === 'eco' && !tiers.has('low')
+          ? t('settings.agentSection.harnessNoLowTier')
+          : ''
 
   return (
     <div className="settings-section">
@@ -82,6 +101,27 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <button className={permissionMode === 'ask' ? 'active' : ''} onClick={() => setPermissionMode('ask')}>{t('permission.ask')}</button>
             <button className={permissionMode === 'auto' ? 'active' : ''} onClick={() => setPermissionMode('auto')}>{t('permission.auto')}</button>
             <button className={permissionMode === 'yolo' ? 'active' : ''} onClick={() => setPermissionMode('yolo')}>{t('permission.yolo')}</button>
+          </div>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">{t('settings.agentSection.harnessMode')}</span>
+            <span className="settings-row-desc">{t(`settings.agentSection.harnessDesc_${harnessMode}`)}</span>
+            {harnessTierHint && harnessMode !== 'default' && (
+              <span className="settings-row-desc vision-fallback-warn">{harnessTierHint}</span>
+            )}
+          </div>
+          <div className="theme-toggle" role="group" aria-label={t('settings.agentSection.harnessMode')}>
+            {HARNESS_MODES.map((m) => (
+              <button
+                key={m}
+                className={harnessMode === m ? 'active' : ''}
+                aria-pressed={harnessMode === m}
+                onClick={() => setHarnessMode(m)}
+              >
+                {t(`settings.agentSection.harness_${m}`)}
+              </button>
+            ))}
           </div>
         </div>
         <PermissionsAlwaysPanel />

@@ -6,8 +6,10 @@ import {
   setSessionRoute,
   noteProviderFailure,
   noteProviderSuccess,
+  providerFailureCount,
   type RouteDecision
 } from './router'
+import { effectiveCostMode, effectivePoolLimit, harnessProfile } from './harnessMode'
 import { estimateTokens, type TranscriptEntry } from './transcript'
 import type { ToolCall, ToolResult } from './toolDefinitionsTypes'
 import { useUsageStore } from '../stores/usage'
@@ -56,6 +58,7 @@ import {
   enterSubagent,
   leaveSubagent,
   mapPool,
+  createAdaptiveLimit,
   HARD_MAX_ROUNDS,
   MAX_REPEATED_TOOL_ROUNDS,
   MAX_ROUTE_ATTEMPTS,
@@ -306,7 +309,10 @@ export async function runSubagent(
 
     const modelPref = task.model || profile.model || 'inherit'
     const complexity = complexityFromModelPref(modelPref, task.prompt)
-    const costMode = useProviderStore.getState().subagentCostMode || 'balanced'
+    const providerState = useProviderStore.getState()
+    // Subagents run under a sub-session id; the harness mode is the parent's.
+    const parentHarnessMode = providerState.harnessModeFor?.(opts.sessionId) ?? 'default'
+    const costMode = effectiveCostMode(providerState.subagentCostMode || 'balanced', parentHarnessMode)
     const maxTier = profileMaxTier(profile.name, modelPref, costMode)
     const allowEscalate = profileAllowEscalate(maxTier, costMode)
     const runUsage = emptyUsage()
@@ -381,7 +387,8 @@ export async function runSubagent(
           exclude: excluded,
           newTurn: rounds === 1 && attempt === 0,
           needsVision: false,
-          maxTier
+          maxTier,
+          harnessMode: parentHarnessMode
         })
         if (!decision) break
 
@@ -401,7 +408,8 @@ export async function runSubagent(
             signal,
             complexity,
             toolAllowlist: profile.tools,
-            toolDenylist: profile.disallowedTools
+            toolDenylist: profile.disallowedTools,
+            harnessMode: parentHarnessMode
           })
           noteProviderSuccess(decision.provider.id)
           if (!decision.ephemeral) {
@@ -790,13 +798,18 @@ export async function runParallelSubagents(
 ): Promise<SubagentResult[]> {
   const batchId = uid('batch-')
   const failPolicy: DependencyFailPolicy = opts.onDependencyFail || 'skip'
-  const capped = normalizeParallelTasks(tasks).map((t, i) => ({
+  const providerState = useProviderStore.getState()
+  const harnessMode = providerState.harnessModeFor?.(opts.sessionId) ?? 'default'
+  const harness = harnessProfile(harnessMode)
+  const capped = normalizeParallelTasks(tasks, harness.maxParallelTasks).map((t, i) => ({
     ...t,
     batchId,
     // Stable names for depends_on when omitted
     name: t.name || `task-${i + 1}`
   }))
-  const poolLimit = useProviderStore.getState().maxParallelSubagents || 4
+  const poolLimit = effectivePoolLimit(providerState.maxParallelSubagents || 4, harnessMode)
+  // Wide pools (maxing) back off on 429/5xx instead of retrying in lockstep.
+  const dynamicLimit = poolLimit > 6 ? createAdaptiveLimit(poolLimit, providerFailureCount) : undefined
   const shared = (opts.sharedContext || '').trim()
 
   // Background: no depends_on (fire-and-forget). Tasks with both bg+deps run as FG.
@@ -862,7 +875,8 @@ export async function runParallelSubagents(
           sharedContext: shared || undefined,
           siblingFindings: findings
         }
-      )
+      ),
+      dynamicLimit ? { dynamicLimit } : undefined
     )
     for (const r of waveResults) {
       fgResults.push(r)

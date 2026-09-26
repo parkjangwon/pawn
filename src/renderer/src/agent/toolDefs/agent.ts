@@ -210,7 +210,7 @@ export const AGENT_TOOLS: ToolDefinition[] = [
   {
     name: 'parallel_agents',
     description:
-      'Run up to 6 subagents with true concurrency and optional DAG waves. ' +
+      'Run up to 6 subagents (harness mode may change this; see the mode preamble) with true concurrency and optional DAG waves. ' +
       'Independent tasks run in parallel (bounded by Settings pool). ' +
       'Use depends_on: ["task-name"] so a worker waits for explores; prior summaries are injected as sibling findings. ' +
       'shared_context on the call (or per task) is prepended to every prompt. ' +
@@ -230,7 +230,7 @@ export const AGENT_TOOLS: ToolDefinition[] = [
         },
         tasks: {
           type: 'array',
-          description: 'Tasks (max 6). Use name + depends_on for multi-wave pipelines.',
+          description: 'Tasks (max 6 by default; eco/maxing limits are in the mode preamble). Use name + depends_on for multi-wave pipelines.',
           items: {
             type: 'object',
             properties: {
