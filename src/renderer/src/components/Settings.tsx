@@ -90,15 +90,15 @@ export default function Settings({
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('settings.searchPlaceholder', { defaultValue: '설정 검색...' })}
-              aria-label="Settings search"
+              placeholder={t('settings.searchPlaceholder')}
+              aria-label={t('settings.searchPlaceholder')}
             />
             {searchQuery && (
               <button
                 type="button"
                 className="sidebar-search-clear"
                 onClick={() => setSearchQuery('')}
-                aria-label="Clear"
+                aria-label={t('common.clear')}
               >
                 ×
               </button>
@@ -110,7 +110,7 @@ export default function Settings({
           {filteredSections ? (
             <div className="sidebar-section">
               <div className="section-label">
-                {t('settings.searchResults', { defaultValue: '검색 결과' })} ({filteredSections.length})
+                {t('settings.searchResults')} ({filteredSections.length})
               </div>
               {filteredSections.map((section) => (
                 <button
@@ -125,7 +125,7 @@ export default function Settings({
                 </button>
               ))}
               {filteredSections.length === 0 && (
-                <div className="tree-empty">{t('settings.noResults', { defaultValue: '일치하는 설정 없음' })}</div>
+                <div className="tree-empty">{t('settings.noResults')}</div>
               )}
             </div>
           ) : (

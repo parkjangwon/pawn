@@ -90,12 +90,11 @@ export default function StatusBar(): React.JSX.Element {
         {totals && totals.calls > 0 && (
           <span
             className="status-usage"
-            title={`cache hit ${(totals.cacheHitRate * 100).toFixed(0)}% · saved $${totals.savedCost.toFixed(4)}`}
+            title={t('statusBar.usageHint', { rate: (totals.cacheHitRate * 100).toFixed(0), saved: totals.savedCost.toFixed(4) })}
           >
-            {formatTokens(totals.inputTokens + totals.cacheReadTokens)}in · $
-            {totals.cost.toFixed(3)}
+            {t('statusBar.usageTokens', { tokens: formatTokens(totals.inputTokens + totals.cacheReadTokens) })} · ${totals.cost.toFixed(3)}
             {totals.cacheHitRate > 0
-              ? ` · ${(totals.cacheHitRate * 100).toFixed(0)}% cache`
+              ? ` · ${t('statusBar.usageCache', { rate: (totals.cacheHitRate * 100).toFixed(0) })}`
               : ''}
           </span>
         )}

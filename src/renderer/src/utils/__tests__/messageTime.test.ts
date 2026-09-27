@@ -79,3 +79,19 @@ describe('formatDuration', () => {
     expect(formatDuration(-5, units)).toBeNull()
   })
 })
+
+describe('formatDateTime (lists: next run, saved at…)', () => {
+  const now = new Date(2026, 8, 27, 18, 0).getTime()
+  it('uses the app language and never shows seconds', async () => {
+    const { formatDateTime, formatMessageTimeFull } = await import('../messageTime')
+    const nextMorning = new Date(2026, 8, 28, 9, 0, 0).getTime()
+    const ko = formatDateTime(nextMorning, 'ko', now)
+    expect(ko).toMatch(/9\. 28\./)
+    expect(ko).not.toMatch(/:00:00/)
+    expect(formatDateTime(nextMorning, 'en', now)).toMatch(/^9\/28, 09:00( AM)?$/)
+    expect(formatDateTime(new Date(2026, 8, 27, 9, 5).getTime(), 'ja', now)).toBe('09:05')
+    expect(formatDateTime(new Date(2025, 0, 2, 9, 5).getTime(), 'en', now)).toContain('2025')
+    expect(formatDateTime(0, 'en', now)).toBe('')
+    expect(formatMessageTimeFull(nextMorning, 'zh')).not.toMatch(/:00:00/)
+  })
+})

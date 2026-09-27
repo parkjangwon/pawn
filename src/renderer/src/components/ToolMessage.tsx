@@ -96,10 +96,10 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
             {(meta?.removed ?? 0) > 0 && <span className="tool-removed">−{meta?.removed}</span>}
           </span>
         )}
-        {structureWarn && <span className="tool-badge-warn" title="Structure check warnings">structure</span>}
+        {structureWarn && <span className="tool-badge-warn" title={t('toolMessage.structureHint')}>{t('toolMessage.structure')}</span>}
         {duration && <span className="tool-duration">{duration}</span>}
         <span className={`tool-status ${isRunning ? 'running' : isError ? 'error' : 'ok'}`}>
-          {isRunning ? '⋯' : isError ? 'ERR' : 'OK'}
+          {isRunning ? '⋯' : isError ? t('toolMessage.statusError') : t('toolMessage.statusOk')}
         </span>
       </div>
       {!collapsed && remaining && (

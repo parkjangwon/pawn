@@ -528,7 +528,7 @@ export default function ChatArea({
             try {
               window.dispatchEvent(
                 new CustomEvent('pawn:toast', {
-                  detail: { kind: 'info', message: `Exported → ${r.path}` }
+                  detail: { kind: 'info', message: t('chat.exportedTo', { path: r.path }) }
                 })
               )
             } catch {
@@ -1112,7 +1112,7 @@ export default function ChatArea({
         onGoForward={onGoForward}
       />
       {projectPaths.length > 1 && (
-        <div className="multi-root-bar" role="group" aria-label="Project roots">
+        <div className="multi-root-bar" role="group" aria-label={t('chat.projectRoots')}>
           {projectPaths.map((p, i) => {
             const label = p.split('/').filter(Boolean).pop() || p
             return (
@@ -1140,7 +1140,7 @@ export default function ChatArea({
       )}
       <div className={sessionPaneClass} key={activeSessionId || 'none'}>
         {sessionLoading ? (
-          <div className="chat-skeleton" aria-busy="true" aria-label="Loading messages">
+          <div className="chat-skeleton" aria-busy="true" aria-label={t('chat.loadingMessages')}>
             <div className="chat-skeleton-row user">
               <div className="chat-skeleton-line short" />
               <div className="chat-skeleton-bubble" />

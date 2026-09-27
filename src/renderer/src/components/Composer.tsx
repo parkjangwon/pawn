@@ -246,7 +246,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
           <div className="chat-input-box">
             {ulwArmed && (
               <div className="ulw-input-hint" aria-live="polite">
-                <span className="ulw-rainbow-text">ULTRA WORK</span>
+                <span className="ulw-rainbow-text">{t('ultraWork.wordmark')}</span>
                 <span className="ulw-hint-text">{t('ultraWork.armedHint')}</span>
               </div>
             )}

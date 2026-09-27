@@ -86,7 +86,7 @@ describe('MessageList', () => {
       ]
     })
     // Collapsed by default: the header (name + status) shows, the body doesn't.
-    expect(screen.getByText('OK')).toBeInTheDocument()
+    expect(screen.getByText('toolMessage.statusOk')).toBeInTheDocument()
     expect(screen.queryByText('line one')).not.toBeInTheDocument()
     // No message-role label or copy button for the tool row — only the two
     // real chat bubbles get one.

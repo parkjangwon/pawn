@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRoutineStore } from '../stores/routine'
 import { useAutomationDraftStore } from '../stores/automationDraft'
+import { formatDateTime } from '../utils/messageTime'
 import { useAppStore } from '../stores/app'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { activateOnKey, useFocusTrap } from '../utils/focusTrap'
@@ -193,7 +194,7 @@ export default function AutomationView({
 
   const formatRunTime = (ms: number): string => {
     if (!ms) return t('settings.automationSection.never')
-    return new Date(ms).toLocaleString(i18n.language)
+    return formatDateTime(ms, i18n.language)
   }
 
   const buildSchedulePayload = (): RoutineSchedule & {

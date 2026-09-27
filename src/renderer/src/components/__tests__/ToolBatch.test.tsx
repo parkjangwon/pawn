@@ -32,7 +32,7 @@ describe('ToolBatch', () => {
       { id: '3', role: 'system', content: '[Tool: grep_search] OK\ncontent 3', createdAt: Date.now() }
     ]
     render(<ToolBatch messages={messages} />)
-    expect(screen.getByText('Executed 3 operations')).toBeInTheDocument()
+    expect(screen.getByText('toolMessage.batchDone')).toBeInTheDocument()
     // Readable labels, raw id in the tooltip.
     expect(screen.getByText('toolMessage.read ×2')).toHaveAttribute('title', 'read_file')
     expect(screen.getByText('toolMessage.family.findFiles')).toHaveAttribute('title', 'grep_search')

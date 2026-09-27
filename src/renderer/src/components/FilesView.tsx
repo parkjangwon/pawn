@@ -104,7 +104,7 @@ export default function FilesView({ projectPath }: FilesViewProps): React.JSX.El
     )
   }
 
-  if (!projectPath) return <div className="rp-files-empty">No project selected</div>
+  if (!projectPath) return <div className="rp-files-empty">{t('rightPanel.files.noProject')}</div>
 
   if (selectedFile) {
     return (

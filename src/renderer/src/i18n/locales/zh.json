@@ -7,31 +7,32 @@
     "cancel": "取消",
     "delete": "删除",
     "close": "关闭",
-    "loading": "加载中...",
+    "loading": "加载中…",
     "empty": "暂无内容",
     "ok": "确定",
     "error": "错误",
     "noResults": "未找到结果",
-    "skipToContent": "跳至主要内容"
+    "skipToContent": "跳至主要内容",
+    "clear": "清除"
   },
   "sidebar": {
     "project": "项目",
-    "session": "会话",
-    "newSession": "新会话",
+    "session": "对话",
+    "newSession": "新对话",
     "addProject": "添加项目",
     "settings": "设置",
-    "search": "搜索会话...",
+    "search": "搜索对话…",
     "pinned": "已置顶",
     "projects": "项目",
     "recent": "最近",
     "noProjects": "暂无项目",
-    "noSessions": "暂无会话",
+    "noSessions": "暂无对话",
     "deleteProject": "删除项目",
-    "deleteSession": "删除会话",
+    "deleteSession": "删除对话",
     "deleteProjectConfirm": "确定要删除此项目吗？此操作无法撤销。",
-    "deleteSessionConfirm": "确定要删除此会话吗？此操作无法撤销。",
+    "deleteSessionConfirm": "确定删除此对话吗？此操作无法撤销。",
     "projectName": "项目名称",
-    "sessionTitle": "会话标题",
+    "sessionTitle": "对话标题",
     "newProject": "新建项目",
     "editProject": "编辑项目",
     "addFolder": "添加文件夹",
@@ -45,12 +46,12 @@
     "running": "运行中",
     "renameHint": "双击重命名",
     "searchResults": "搜索结果",
-    "noSearchResults": "无匹配会话",
+    "noSearchResults": "没有匹配的对话",
     "waiting": "等待回复",
     "waitingHint": "代理正在等待你的回答或批准"
   },
   "chat": {
-    "placeholder": "输入消息... (/ 命令、@ 文件、拖拽附加)",
+    "placeholder": "输入消息…（/ 命令、@ 文件、拖放附件）",
     "welcome": "有什么可以帮你的？",
     "welcomeSub": "编码、浏览、自动化 — 尽在一处。",
     "send": "发送",
@@ -100,8 +101,8 @@
       "agentError": "代理循环错误: {{error}}",
       "emptyResponse": "模型返回了空回复。请重试，或换用更强的模型。（不支持发送邮件 — Google 连接仅为只读。）",
       "hookBlocked": "已被钩子阻止 (UserPromptSubmit)",
-      "sessionBudgetHit": "已停止：会话花费 ${{cost}}（上限 ${{cap}}）。请在 Settings → Usage 提高上限，或新开会话。",
-      "dailyBudgetHit": "已停止：今日花费 ${{cost}}（上限 ${{cap}}）。请在 Settings → Usage 提高上限。",
+      "sessionBudgetHit": "已停止：此对话花费达到 ${{cost}}（上限 ${{cap}}）。请在 设置 → 用量 中提高上限，或开始新对话。",
+      "dailyBudgetHit": "已停止：今日花费达到 ${{cost}}（上限 ${{cap}}）。请在 设置 → 用量 中提高上限。",
       "stuckAskUser": "代理反复卡住，已停止（{{detail}}）。尝试过的内容已在上方总结 — 请告诉它如何继续。"
     },
     "showEarlier": "显示更早的消息 ({{count}}条)",
@@ -126,9 +127,9 @@
       "title": "命令",
       "noResults": "没有匹配的命令",
       "new": "新对话",
-      "newDesc": "开始新会话",
+      "newDesc": "开始新对话",
       "clear": "清空对话",
-      "clearDesc": "删除当前会话的消息",
+      "clearDesc": "删除此对话中的消息",
       "model": "模型",
       "modelDesc": "选择使用的模型",
       "theme": "主题",
@@ -148,7 +149,7 @@
       "title": "文件与文件夹",
       "noResults": "没有匹配的文件",
       "gitDesc": "注入 git 状态与分支",
-      "diffDesc": "注入 git diff HEAD"
+      "diffDesc": "插入 git diff HEAD"
     },
     "checklist": {
       "title": "开始使用",
@@ -207,7 +208,10 @@
     "visionNoneAuto": "没有启用能查看图片的模型 — 图片不会被读取。请在 设置 → 模型 中启用视觉模型。",
     "visionFallbackNote": "{{model}} 无法查看图片，此消息将改由 {{fallback}} 处理。",
     "repeat": "重复执行",
-    "repeatHint": "把这个请求变成按计划自动运行的自动化"
+    "repeatHint": "把这个请求变成按计划自动运行的自动化",
+    "projectRoots": "项目文件夹",
+    "loadingMessages": "正在加载消息",
+    "exportedTo": "已导出到 {{path}}"
   },
   "automation": {
     "title": "自动化",
@@ -304,9 +308,9 @@
     "usageInput": "输入",
     "cached": "已缓存",
     "usageCacheRead": "缓存读取",
-    "usageTitle": "本次会话用量",
+    "usageTitle": "本对话用量",
     "usageSaved": "缓存节省",
-    "noSession": "无会话",
+    "noSession": "无对话",
     "statusIdle": "空闲",
     "statusRunning": "运行中",
     "sendSteer": "转向",
@@ -385,23 +389,29 @@
     },
     "previewLabel": "将要更改的内容",
     "moreLines_one": "… 还有 {{count}} 行",
-    "moreLines_other": "… 还有 {{count}} 行"
+    "moreLines_other": "… 还有 {{count}} 行",
+    "queueFull": "权限请求过多，此请求已被拒绝",
+    "timedOut": "权限请求未得到回应，已被拒绝"
   },
   "statusBar": {
-    "working": "工作中...",
+    "working": "工作中…",
     "ready": "就绪",
     "noProvider": "无提供商",
     "auto": "自动",
     "manual": "手动",
-    "workingMulti": "工作中（{{count}} 个会话）",
+    "workingMulti": "工作中（{{count}} 个对话）",
     "openAgents": "打开代理面板",
     "subagentsRunning": "{{count}} 个代理",
-    "subagentError": "代理错误"
+    "subagentsRunning_one": "{{count}} 个代理",
+    "subagentError": "代理错误",
+    "usageHint": "缓存命中 {{rate}}% · 节省 ${{saved}}",
+    "usageTokens": "输入 {{tokens}}",
+    "usageCache": "缓存 {{rate}}%"
   },
   "settings": {
     "title": "设置",
     "toggleNav": "切换设置侧边栏",
-    "searchPlaceholder": "搜索设置...",
+    "searchPlaceholder": "搜索设置…",
     "searchResults": "搜索结果",
     "noResults": "未找到匹配的设置",
     "appearance": "外观",
@@ -441,14 +451,14 @@
       "baseUrl": "基础URL",
       "apiKey": "API密钥",
       "test": "测试连接",
-      "testing": "测试中...",
+      "testing": "测试中…",
       "openai": "OpenAI",
       "claude": "Claude",
       "apiKeyMethod": "API密钥",
       "oauth": "OAuth",
       "namePlaceholder": "我的提供商",
       "baseUrlPlaceholder": "https://api.example.com",
-      "apiKeyPlaceholder": "sk-...",
+      "apiKeyPlaceholder": "sk-…",
       "addWithModels": "添加（包含{{count}}个模型）",
       "presetDesc": "知名提供商 — 粘贴API密钥即可使用。尽可能从提供商 API 同步模型列表。",
       "pasteApiKey": "粘贴API密钥",
@@ -700,7 +710,8 @@
       "title": "插件",
       "desc": "管理插件和集成",
       "contextTitle": "Claude 兼容上下文",
-      "contextApplied": "已注入 {{blocks}} 个上下文块 · 已启用技能 {{enabled}}/{{total}}",
+      "contextApplied": "已注入 {{count}} 个上下文块 · 已启用技能 {{enabled}}/{{total}}",
+      "contextApplied_one": "已注入 {{count}} 个上下文块 · 已启用技能 {{enabled}}/{{total}}",
       "detected": "已检测",
       "missing": "未检测到",
       "noProjectPath": "无活动项目路径",
@@ -720,7 +731,7 @@
         "device": "本设备",
         "builtin": "内建类"
       },
-      "searchPlaceholder": "搜索技能...",
+      "searchPlaceholder": "搜索技能…",
       "emptySkills": "未找到技能",
       "kind": {
         "skill": "技能",
@@ -783,6 +794,7 @@
       "backupCancelled": "已取消备份",
       "desktopOnly": "仅桌面应用可用",
       "importOk": "已导入 {{count}} 项",
+      "importOk_one": "已导入 {{count}} 项",
       "importEmpty": "文件中没有提供商或模型",
       "importFailed": "导入失败：{{error}}",
       "restoreBackup": "恢复备份",
@@ -837,7 +849,9 @@
       "optional": "可选",
       "privacyNote": "登录令牌与密钥仅保存在本机的 ~/.pawn 下，绝不会上传或共享至其他服务。",
       "writeScopesMissing": "缺少写入权限（{{scopes}}）。请断开后重新连接以启用完整访问。",
-      "writeScopesReady": "写入权限已就绪"
+      "writeScopesReady": "写入权限已就绪",
+      "finishInBrowser": "请在浏览器中完成登录…",
+      "finishGoogle": "请在浏览器中完成 Google 登录…"
     },
     "automationSection": {
       "title": "自动化",
@@ -939,16 +953,16 @@
       "refresh": "刷新",
       "totalCost": "总费用",
       "totalCalls": "API 调用",
-      "totalTokens": "Tokens",
+      "totalTokens": "令牌",
       "cacheHit": "缓存命中",
       "empty": "该时间范围内无用量记录。",
       "desktopOnly": "用量历史仅在桌面应用中可用。",
       "colModel": "模型",
       "colProvider": "提供商",
       "colCalls": "调用",
-      "colTokens": "Tokens",
+      "colTokens": "令牌",
       "colCost": "费用",
-      "sessionBudget": "会话花费上限 ($)",
+      "sessionBudget": "对话花费上限 ($)",
       "sessionBudgetDesc": "当本会话 USD 费用达到上限时软停止代理。0 = 不限。",
       "dailyBudget": "每日花费上限 ($)",
       "dailyBudgetDesc": "当今日本机用量达到上限时停止。0 = 不限。"
@@ -1009,7 +1023,7 @@
     "deleteAutomationConfirm": "确定删除此自动化吗？此操作无法撤销。",
     "deleteProviderConfirm": "确定要删除此提供商吗？其关联模型可能会不可用。",
     "deleteModelConfirm": "确定要删除此模型吗？此操作无法撤销。",
-    "clearSessionConfirm": "确定要清空此会话的全部消息吗？此操作无法撤销。"
+    "clearSessionConfirm": "确定清空此对话的全部消息吗？此操作无法撤销。"
   },
   "chatHeader": {
     "running": "运行中",
@@ -1036,7 +1050,7 @@
     "git": {
       "noRepo": "没有Git仓库",
       "noChanges": "无更改",
-      "commitPlaceholder": "提交信息...",
+      "commitPlaceholder": "提交信息…",
       "history": "历史记录 ({{count}})",
       "checkoutFailed": "无法切换分支",
       "noBranches": "未找到分支",
@@ -1050,7 +1064,7 @@
       "openPr": "打开 PR",
       "openingPr": "打开中…",
       "openPrHint": "为 {{repo}} 创建 GitHub PR",
-      "prNeedGithub": "请在 Settings → Connections 连接 GitHub",
+      "prNeedGithub": "请在 设置 → 服务连接 中连接 GitHub",
       "prOpened": "已创建 Pull request",
       "errCheckout": "检出失败 ({{code}})",
       "errStage": "暂存失败",
@@ -1075,7 +1089,7 @@
     "addTool": "添加工具",
     "selectTool": "选择工具",
     "browser": {
-      "enterUrl": "输入URL...",
+      "enterUrl": "输入 URL…",
       "back": "后退",
       "forward": "前进",
       "refresh": "刷新",
@@ -1095,7 +1109,10 @@
       "feedbackPlaceholder": "希望代理修改或检查什么？（可选）",
       "bubbleHint": "↵ Enter 发送 · ⇧↵ 换行 · Esc 取消",
       "newTab": "新建标签页",
-      "closeTab": "关闭标签页"
+      "closeTab": "关闭标签页",
+      "tabSwitchFailed": "无法切换标签页：{{error}}",
+      "tabCloseFailed": "无法关闭标签页：{{error}}",
+      "newTabFailed": "无法打开新标签页：{{error}}"
     },
     "diff": {
       "title": "最近更改",
@@ -1132,15 +1149,18 @@
       "sources": {
         "automation": "自动化"
       }
+    },
+    "files": {
+      "noProject": "没有项目文件夹 — 打开项目后即可浏览文件"
     }
   },
   "bottomTerminal": {
     "close": "关闭终端"
   },
   "commandPalette": {
-    "title": "命令面板",
-    "placeholder": "搜索命令、会话、项目…",
-    "noResults": "无匹配命令",
+    "title": "搜索对话",
+    "placeholder": "搜索对话…",
+    "noResults": "没有匹配的对话",
     "noResultsHint": "请尝试其他关键词，或清空搜索。",
     "navigate": "移动",
     "select": "执行",
@@ -1190,7 +1210,7 @@
     }
   },
   "fileTree": {
-    "loading": "加载文件中...",
+    "loading": "正在加载文件…",
     "empty": "没有可显示的文件"
   },
   "fileEditor": {
@@ -1289,7 +1309,13 @@
       "checks": "运行检查",
       "app": "Pawn 设置",
       "terminal": "终端"
-    }
+    },
+    "structure": "结构",
+    "structureHint": "结构检查警告",
+    "statusOk": "完成",
+    "statusError": "错误",
+    "filesModified": "文件已修改",
+    "diffBadge": "差异"
   },
   "diffView": {
     "showAllLines": "显示所有行",
@@ -1350,7 +1376,8 @@
     "conflictMessage_one": "有 {{count}} 个文件在此轮之后被修改（手动编辑、格式化工具或后续轮次）。撤销将丢弃这些更改。",
     "revertSafeOnly": "仅撤销其余文件",
     "overwriteAll": "仍然覆盖",
-    "revertedSkipped": "已撤销 {{count}} 个文件，保留了 {{skipped}} 个已修改的文件",
+    "revertedSkipped": "已撤销 {{count}} 个文件，保留了你修改过的 {{skipped}} 个",
+    "revertedSkipped_one": "已撤销 {{count}} 个文件，保留了你修改过的 {{skipped}} 个",
     "conflictReason": {
       "modified": "已修改",
       "missing": "已删除",
@@ -1415,8 +1442,8 @@
     "applyFail": "应用失败",
     "discardOk": "已丢弃 worktree",
     "discardFail": "丢弃失败",
-    "inlineWorking": "{{count}} 个助手工作中…",
-    "inlineWorking_one": "1 个助手工作中…",
+    "inlineWorking": "{{count}} 个代理工作中…",
+    "inlineWorking_one": "{{count}} 个代理工作中…",
     "inlineDone": "助手已完成",
     "inlineDoneCount": "{{count}} 个已完成"
   },
@@ -1449,7 +1476,7 @@
     "hidePlan": "隐藏计划"
   },
   "ultraWork": {
-    "title": "Ultra Work",
+    "title": "极限工作",
     "slashLabel": "ultra-work",
     "slashDesc": "不计 token 的自主模式：持续工作直到目标经验证完成 ($ulw)",
     "needGoal": "请在 $ulw 后写上目标 — 例如 \"$ulw 让所有测试通过\"",
@@ -1468,7 +1495,8 @@
       "unmet": "受阻",
       "budget_limited": "预算用尽",
       "stopped": "已停止"
-    }
+    },
+    "wordmark": "极限工作"
   },
   "computer": {
     "stoppedByUser": "已停止 — 你按了两次 Esc。Pawn 已释放鼠标和键盘。"

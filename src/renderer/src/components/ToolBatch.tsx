@@ -94,8 +94,8 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
             </span>
             <span className="tool-batch-title">
               {hasRunning
-                ? t('toolMessage.batchRunning', { count: messages.length, defaultValue: `Running ${messages.length} tools...` })
-                : t('toolMessage.batchDone', { count: messages.length, defaultValue: `Executed ${messages.length} operations` })}
+                ? t('toolMessage.batchRunning', { count: messages.length })
+                : t('toolMessage.batchDone', { count: messages.length })}
             </span>
             <div className="tool-batch-chips">
               {Object.entries(counts).slice(0, 4).map(([name, count]) => (
@@ -122,8 +122,8 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
               <span className="tool-batch-duration">{formatToolDuration(stats.durationMs)}</span>
             )}
             {hasDiff && stats.filesChanged === 0 && (
-              <span className="tool-batch-diff-badge" title="Files modified">
-                Diff
+              <span className="tool-batch-diff-badge" title={t('toolMessage.filesModified')}>
+                {t('toolMessage.diffBadge')}
               </span>
             )}
             <svg

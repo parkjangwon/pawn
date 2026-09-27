@@ -67,15 +67,26 @@ export function formatMessageTime(
   return formatter(locale, 'full').format(date)
 }
 
+/**
+ * A date+time for lists (next run, saved at…), in the app language, without
+ * seconds: today → "14:32", this year → "9/28 09:00", else the full date.
+ * Future times read the same way ("today 09:00" is just "09:00").
+ */
+export function formatDateTime(ms: number | undefined | null, locale: string, now: number = Date.now()): string {
+  const v = normalizeTimestampMs(ms ?? undefined)
+  if (v === null) return ''
+  const date = new Date(v)
+  const today = new Date(now)
+  if (sameDay(date, today)) return formatter(locale, 'time').format(date)
+  if (date.getFullYear() === today.getFullYear()) return formatter(locale, 'monthDayTime').format(date)
+  return formatter(locale, 'full').format(date)
+}
+
 /** Full, unambiguous timestamp for tooltips. */
 export function formatMessageTimeFull(createdAt: number | undefined, locale: string): string | null {
   const ms = normalizeTimestampMs(createdAt)
   if (ms === null) return null
-  try {
-    return new Date(ms).toLocaleString(locale)
-  } catch {
-    return new Date(ms).toLocaleString()
-  }
+  return formatter(locale, 'full').format(new Date(ms))
 }
 
 export interface DurationUnits {

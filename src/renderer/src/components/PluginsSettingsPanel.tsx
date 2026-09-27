@@ -30,7 +30,7 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
           <span className="settings-row-label">{t('settings.pluginSection.contextTitle')}</span>
           <span className="settings-row-desc">
             {t('settings.pluginSection.contextApplied', {
-              blocks: contextAdditionCount,
+              count: contextAdditionCount,
               enabled: enabledSkillCount,
               total: loadedSkills.length
             })}

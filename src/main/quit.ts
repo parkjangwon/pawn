@@ -6,6 +6,7 @@
 import { app, dialog, type BrowserWindow } from 'electron'
 import { loadConfig, saveConfig } from './config'
 import { getMainWindow } from './window'
+import { appLanguage } from './appLanguage'
 import { streamingSessionCount } from './streamingState'
 import { getAllRoutines } from './db'
 
@@ -30,12 +31,7 @@ export function setConfirmQuitEnabled(enabled: boolean): void {
 }
 
 function dialogLanguage(): string {
-  try {
-    const cfg = loadConfig() as { settings?: { language?: string } }
-    return cfg.settings?.language || app.getLocale().slice(0, 2) || 'en'
-  } catch {
-    return 'en'
-  }
+  return appLanguage()
 }
 
 interface QuitDialogCopy {

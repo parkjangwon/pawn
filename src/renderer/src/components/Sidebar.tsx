@@ -261,12 +261,12 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
         <span className="sidebar-logo">Pawn</span>
         <div className="sidebar-top-actions">
           {onOpenCommandPalette && (
-            <Tooltip label={t('commandPalette.title', { defaultValue: '채팅 검색' })} shortcut={formatCombo(keybindings['open-command-palette'])} placement="bottom">
+            <Tooltip label={t('commandPalette.title')} shortcut={formatCombo(keybindings['open-command-palette'])} placement="bottom">
               <button
                 type="button"
                 className="sidebar-icon-btn"
                 onClick={onOpenCommandPalette}
-                aria-label={t('commandPalette.title', { defaultValue: '채팅 검색' })}
+                aria-label={t('commandPalette.title')}
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                   <circle cx="11" cy="11" r="8" />

@@ -169,7 +169,7 @@ function NativeBrowserView(): React.JSX.Element {
       const res = await window.api.browser.tabSwitch(id)
       if (res.error) setError(res.error)
     } catch (err) {
-      setError(`Tab switch failed: ${String(err)}`)
+      setError(t('rightPanel.browser.tabSwitchFailed', { error: String(err) }))
     }
   }
 
@@ -178,7 +178,7 @@ function NativeBrowserView(): React.JSX.Element {
       const res = await window.api.browser.tabClose(id)
       if (res.error) setError(res.error)
     } catch (err) {
-      setError(`Tab close failed: ${String(err)}`)
+      setError(t('rightPanel.browser.tabCloseFailed', { error: String(err) }))
     }
   }
 
@@ -192,7 +192,7 @@ function NativeBrowserView(): React.JSX.Element {
       setError(null)
       urlInputRef.current?.focus()
     } catch (err) {
-      setError(`New tab failed: ${String(err)}`)
+      setError(t('rightPanel.browser.newTabFailed', { error: String(err) }))
     }
   }
 

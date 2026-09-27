@@ -19,12 +19,12 @@ describe('ToolMessage', () => {
   it('renders the tool name and OK status', () => {
     render(<ToolMessage content="[Tool: write_file] OK\nwrote 5 chars" />)
     expect(screen.getByText('toolMessage.write')).toBeInTheDocument()
-    expect(screen.getByText('OK')).toBeInTheDocument()
+    expect(screen.getByText('toolMessage.statusOk')).toBeInTheDocument()
   })
 
-  it('shows ERR for failed tools', () => {
+  it('shows the error status for failed tools', () => {
     render(<ToolMessage content="[Tool: shell_exec] ERROR\ncommand not found" />)
-    expect(screen.getByText('ERR')).toBeInTheDocument()
+    expect(screen.getByText('toolMessage.statusError')).toBeInTheDocument()
   })
 
   it('expands on header click and shows the output without the diff marker', () => {

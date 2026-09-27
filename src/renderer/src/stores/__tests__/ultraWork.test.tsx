@@ -138,7 +138,7 @@ describe('UltraWorkBanner', () => {
   it('shows the goal, iteration, and a Stop button while active', () => {
     useUltraWorkStore.getState().start('s1', 'make CI green', 12)
     render(<UltraWorkBanner sessionId="s1" />)
-    expect(screen.getByText('ULTRA WORK')).toHaveClass('ulw-rainbow-text')
+    expect(screen.getByText('ultraWork.wordmark')).toHaveClass('ulw-rainbow-text')
     expect(screen.getByText('make CI green')).toBeInTheDocument()
     expect(screen.getByText('ultraWork.iteration:1/12')).toBeInTheDocument()
     fireEvent.click(screen.getByRole('button', { name: 'ultraWork.stop' }))

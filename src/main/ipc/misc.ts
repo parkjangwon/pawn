@@ -4,9 +4,11 @@ import { promisify } from 'util'
 import { resolve, sep, join } from 'path'
 import { readFile, readdir } from 'fs/promises'
 import { handleTrusted, isTrustedSender } from './trust'
+import { setAppLanguage, ui } from '../appLanguage'
+import { rebuildAppMenu } from '../appMenu'
 import { setTrayEnabled, setTrayLanguage, trayEnabled } from '../tray'
 import { setAppStreaming, setSessionStreaming, clearAllStreaming } from '../streamingState'
-import { getPawnDir } from '../config'
+import { getPawnDir, loadConfig, saveConfig } from '../config'
 import { getMainWindow } from '../window'
 import { safeExternalUrl } from '../safeUrl'
 import { isConfirmQuitEnabled, setConfirmQuitEnabled } from '../quit'
@@ -265,11 +267,11 @@ export function registerMiscIpc(): void {
         const save = win
           ? await dialog.showSaveDialog(win, {
               defaultPath: defaultName,
-              filters: [{ name: 'Zip', extensions: ['zip'] }]
+              filters: [{ name: ui('dialog').zip, extensions: ['zip'] }]
             })
           : await dialog.showSaveDialog({
               defaultPath: defaultName,
-              filters: [{ name: 'Zip', extensions: ['zip'] }]
+              filters: [{ name: ui('dialog').zip, extensions: ['zip'] }]
             })
         if (save.canceled || !save.filePath) return { ok: false, cancelled: true }
         const outPath = save.filePath.endsWith('.zip') ? save.filePath : `${save.filePath}.zip`
@@ -350,11 +352,11 @@ export function registerMiscIpc(): void {
         const save = win
           ? await dialog.showSaveDialog(win, {
               defaultPath: `pawn-${title}.md`,
-              filters: [{ name: 'Markdown', extensions: ['md'] }]
+              filters: [{ name: ui('dialog').markdown, extensions: ['md'] }]
             })
           : await dialog.showSaveDialog({
               defaultPath: `pawn-${title}.md`,
-              filters: [{ name: 'Markdown', extensions: ['md'] }]
+              filters: [{ name: ui('dialog').markdown, extensions: ['md'] }]
             })
         if (save.canceled || !save.filePath) return { ok: false, cancelled: true }
         const lines = [
@@ -393,11 +395,11 @@ export function registerMiscIpc(): void {
       const win = getMainWindow()
       const open = win
         ? await dialog.showOpenDialog(win, {
-            filters: [{ name: 'Zip', extensions: ['zip'] }],
+            filters: [{ name: ui('dialog').zip, extensions: ['zip'] }],
             properties: ['openFile']
           })
         : await dialog.showOpenDialog({
-            filters: [{ name: 'Zip', extensions: ['zip'] }],
+            filters: [{ name: ui('dialog').zip, extensions: ['zip'] }],
             properties: ['openFile']
           })
       if (open.canceled || !open.filePaths?.[0]) return { ok: false, cancelled: true }
@@ -458,8 +460,18 @@ export function registerMiscIpc(): void {
     setTrayEnabled(enabled === true)
     return { ok: true }
   })
+  // The renderer's language (Settings → Appearance / OS on first launch) is the
+  // app language: native dialogs, tray and app menu follow it, and it is saved
+  // so the next launch shows native UI in the right language before the window loads.
   handleTrusted('tray:setLanguage', async (_, lang: string) => {
-    setTrayLanguage(String(lang || ''))
+    const next = setAppLanguage(String(lang || ''))
+    setTrayLanguage(next)
+    rebuildAppMenu()
+    try {
+      if ((loadConfig() as { settings?: { language?: string } }).settings?.language !== next) saveConfig({ settings: { language: next } })
+    } catch {
+      /* config is optional */
+    }
     return { ok: true }
   })
 

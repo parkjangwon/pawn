@@ -4,6 +4,7 @@ import { pathToFileURL } from 'url'
 import { is } from '@electron-toolkit/utils'
 import { existsSync } from 'fs'
 import { loadConfig, saveConfig } from './config'
+import { ui } from './appLanguage'
 import { isAppStreaming, setAppStreaming, clearAllStreaming } from './streamingState'
 import { killAllAgentShells } from './ipc/shell'
 import { isAppRendererUrl, safeExternalUrl } from './safeUrl'
@@ -193,6 +194,8 @@ export function createMainWindow(): BrowserWindow {
     show: false,
     backgroundColor: initialBackground(),
     titleBarStyle: process.platform === 'darwin' ? 'hiddenInset' : 'default',
+    // Windows/Linux: the (localized) menu bar appears on Alt, like most chat apps.
+    autoHideMenuBar: process.platform !== 'darwin',
     trafficLightPosition: { x: 16, y: 18 },
     webPreferences: {
       preload: resolvePreload(),
@@ -213,12 +216,13 @@ export function createMainWindow(): BrowserWindow {
   // ask before letting the renderer go away.
   win.on('close', (event) => {
     if (!isAppStreaming() || win.isDestroyed()) return
+    const s = ui('closeRunning')
     const choice = dialog.showMessageBoxSync(win, {
       type: 'warning',
       title: 'Pawn',
-      message: 'A task is still running.',
-      detail: 'Closing the window cancels the running task. Close anyway?',
-      buttons: ['Cancel', 'Close anyway'],
+      message: s.message,
+      detail: s.detail,
+      buttons: [s.cancel, s.close],
       defaultId: 0,
       cancelId: 0,
       noLink: true

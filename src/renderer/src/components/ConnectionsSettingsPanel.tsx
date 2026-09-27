@@ -89,17 +89,14 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                         <span className="conn-write-scope-warn">
                           {' · '}
                           {t('settings.connectionsSection.writeScopesMissing', {
-                            scopes: st.writeScopesMissing?.join(', ') || '',
-                            defaultValue: `Write scopes missing${st.writeScopesMissing?.length ? ` (${st.writeScopesMissing.join(', ')})` : ''}. Disconnect → Connect to enable full access.`
+                            scopes: st.writeScopesMissing?.join(', ') || ''
                           })}
                         </span>
                       )}
                       {provider === 'google' && connected && st?.writeScopesReady === true && (
                         <span className="conn-write-scope-ok">
                           {' · '}
-                          {t('settings.connectionsSection.writeScopesReady', {
-                            defaultValue: 'Write scopes ready'
-                          })}
+                          {t('settings.connectionsSection.writeScopesReady')}
                         </span>
                       )}
                     </span>

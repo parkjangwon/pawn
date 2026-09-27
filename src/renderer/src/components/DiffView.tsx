@@ -53,7 +53,8 @@ export default function DiffView({
       setActionMsg(forced.ok ? t('diffView.reverted') : forced.error || t('diffView.revertFailed'))
       return
     }
-    setActionMsg(r.ok ? t('diffView.reverted') : r.error || t('diffView.revertFailed'))
+    setActionMsg(r.ok ? t('diffView.reverted') : t('diffView.revertFailed'))
+    if (!r.ok && r.error) console.warn('[revert]', r.error)
   }
 
   const onReveal = (): void => {

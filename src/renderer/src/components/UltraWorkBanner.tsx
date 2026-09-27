@@ -43,7 +43,7 @@ export default function UltraWorkBanner({ sessionId }: { sessionId: string | nul
             <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="ulw-bolt">
               <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
             </svg>
-            <span className="ulw-rainbow-text">ULTRA WORK</span>
+            <span className="ulw-rainbow-text">{t('ultraWork.wordmark')}</span>
           </span>
           <span className={`ulw-status ulw-status-${run.status}`}>
             {active && <span className="ulw-pulse" aria-hidden />}

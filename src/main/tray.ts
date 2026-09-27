@@ -3,6 +3,7 @@ import { join } from 'path'
 import { getMainWindow, createMainWindow } from './window'
 import { loadConfig, saveConfig } from './config'
 import { menuLabels } from './trayLabels'
+import { appLanguage, setAppLanguage } from './appLanguage'
 
 // Fallback only: 18x18 monochrome pawn silhouette (template image adapts to
 // light/dark menus). The shipped logo in resources/icon.png is preferred.
@@ -10,10 +11,9 @@ const TRAY_ICON_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAMklEQVR4nGNgGNHgPxKmiiFkG4bNELIMo5pBuAwjG1DFkGFs0DBNR1QxCJ8GqsQgTgAA73NEvJQmHWAAAAAASUVORK5CYII='
 
 let tray: Tray | null = null
-let currentLang = 'en'
 
 function labels(): { show: string; open: string; quit: string } {
-  return menuLabels(currentLang, process.platform === 'win32')
+  return menuLabels(appLanguage(), process.platform === 'win32')
 }
 
 function openWindow(): void {
@@ -52,19 +52,15 @@ function buildMenu(): Menu {
   ])
 }
 
-/** Update the tray menu language live when the renderer changes its language. */
+/** Rebuild the tray menu after the app language changed. */
 export function setTrayLanguage(lang: string): void {
-  currentLang = lang === 'ko' || lang === 'ja' || lang === 'zh' ? lang : 'en'
+  setAppLanguage(lang)
   if (!tray) return
   tray.setContextMenu(buildMenu())
 }
 
 export function createTray(): void {
   if (tray || (process.platform !== 'darwin' && process.platform !== 'win32')) return
-  try {
-    const lang = (loadConfig() as { settings?: { language?: string } }).settings?.language
-    if (lang) currentLang = lang
-  } catch { /* defaults */ }
   const size = process.platform === 'win32' ? 16 : 18
   const logo = nativeImage.createFromPath(join(__dirname, '../../resources/icon.png'))
   const image = logo.isEmpty()

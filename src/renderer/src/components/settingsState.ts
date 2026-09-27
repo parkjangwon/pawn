@@ -611,8 +611,9 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
           })
         }
       }
-      if (payload.phase === 'browser' && payload.message) {
-        setConnMsg(payload.message)
+      // Main sends a phase; the words are ours (localized), not its English message.
+      if (payload.phase === 'browser') {
+        setConnMsg(payload.provider === 'google' ? t('settings.connectionsSection.finishGoogle') : t('settings.connectionsSection.finishInBrowser'))
       }
     })
   }, [])

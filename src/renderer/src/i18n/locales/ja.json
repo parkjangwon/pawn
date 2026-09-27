@@ -7,31 +7,32 @@
     "cancel": "キャンセル",
     "delete": "削除",
     "close": "閉じる",
-    "loading": "読み込み中...",
+    "loading": "読み込み中…",
     "empty": "まだ何もありません",
     "ok": "OK",
     "error": "エラー",
     "noResults": "検索結果が見つかりません",
-    "skipToContent": "本文へスキップ"
+    "skipToContent": "本文へスキップ",
+    "clear": "クリア"
   },
   "sidebar": {
     "project": "プロジェクト",
-    "session": "セッション",
-    "newSession": "新しいセッション",
+    "session": "チャット",
+    "newSession": "新しいチャット",
     "addProject": "プロジェクトを追加",
     "settings": "設定",
-    "search": "セッションを検索...",
+    "search": "チャットを検索…",
     "pinned": "ピン留め",
     "projects": "プロジェクト",
     "recent": "最近",
     "noProjects": "プロジェクトがありません",
-    "noSessions": "セッションがありません",
+    "noSessions": "チャットがありません",
     "deleteProject": "プロジェクトを削除",
-    "deleteSession": "セッションを削除",
+    "deleteSession": "チャットを削除",
     "deleteProjectConfirm": "このプロジェクトを削除してもよろしいですか？この操作は元に戻せません。",
-    "deleteSessionConfirm": "このセッションを削除してもよろしいですか？この操作は元に戻せません。",
+    "deleteSessionConfirm": "このチャットを削除しますか？元に戻せません。",
     "projectName": "プロジェクト名",
-    "sessionTitle": "セッションタイトル",
+    "sessionTitle": "チャットのタイトル",
     "newProject": "新規プロジェクト",
     "editProject": "プロジェクトを編集",
     "addFolder": "フォルダを追加",
@@ -40,17 +41,17 @@
     "pin": "ピン留め",
     "unpin": "ピン留め解除",
     "rename": "名前を変更",
-    "newChat": "新規チャット",
+    "newChat": "新しいチャット",
     "automations": "自動化",
     "running": "実行中",
     "renameHint": "ダブルクリックで名前変更",
     "searchResults": "検索結果",
-    "noSearchResults": "一致するセッションがありません",
+    "noSearchResults": "一致するチャットがありません",
     "waiting": "応答待ち",
     "waitingHint": "エージェントが回答または承認を待っています"
   },
   "chat": {
-    "placeholder": "メッセージを入力... (/ コマンド、@ ファイル、ドロップで添付)",
+    "placeholder": "メッセージを入力…（/ コマンド、@ ファイル、ドロップで添付）",
     "welcome": "お手伝いできることはありますか？",
     "welcomeSub": "コーディング、ブラウジング、自動化 — すべてここで。",
     "send": "送信",
@@ -100,8 +101,8 @@
       "agentError": "エージェントループエラー: {{error}}",
       "emptyResponse": "モデルが空の応答を返しました。再試行するか、より強いモデルに切り替えてください。（メール送信は非対応 — Google 連携は読み取り専用です。）",
       "hookBlocked": "フックによりブロックされました (UserPromptSubmit)",
-      "sessionBudgetHit": "停止: セッション費用 ${{cost}}（上限 ${{cap}}）。Settings → Usage で上限を上げるか、新しいセッションを開始してください。",
-      "dailyBudgetHit": "停止: 本日の費用 ${{cost}}（上限 ${{cap}}）。Settings → Usage で上限を上げてください。",
+      "sessionBudgetHit": "停止: このチャットの費用が ${{cost}} に達しました（上限 ${{cap}}）。設定 → 使用量 で上限を上げるか、新しいチャットを始めてください。",
+      "dailyBudgetHit": "停止: 本日の費用が ${{cost}} に達しました（上限 ${{cap}}）。設定 → 使用量 で上限を上げてください。",
       "stuckAskUser": "エージェントが行き詰まりを繰り返したため停止しました（{{detail}}）。試したことは上にまとめています — 進め方を指示してください。"
     },
     "showEarlier": "以前のメッセージを表示 ({{count}}件)",
@@ -126,9 +127,9 @@
       "title": "コマンド",
       "noResults": "一致するコマンドがありません",
       "new": "新しいチャット",
-      "newDesc": "新しいセッションを開始",
+      "newDesc": "新しいチャットを開始",
       "clear": "チャットをクリア",
-      "clearDesc": "このセッションのメッセージを削除",
+      "clearDesc": "このチャットのメッセージを削除",
       "model": "モデル",
       "modelDesc": "使用するモデルを選択",
       "theme": "テーマ",
@@ -138,11 +139,11 @@
       "export": "エクスポート",
       "exportDesc": "チャットをMarkdownで保存",
       "plan": "plan",
-      "planDesc": "Switch to Plan mode (read-only)",
+      "planDesc": "プランモードに切り替え（読み取り専用）",
       "build": "build",
-      "buildDesc": "Switch to Build mode (full tools)",
+      "buildDesc": "ビルドモードに切り替え（すべてのツール）",
       "issuePr": "issue-pr",
-      "issuePrDesc": "Fix an issue and prepare a PR"
+      "issuePrDesc": "課題を修正して PR を準備"
     },
     "mention": {
       "title": "ファイルとフォルダ",
@@ -207,7 +208,10 @@
     "visionNoneAuto": "画像を見られるモデルが有効になっていません — 画像は読まれません。設定 → モデルでビジョンモデルを有効にしてください。",
     "visionFallbackNote": "{{model}} は画像を見られないため、このメッセージは {{fallback}} に送られます。",
     "repeat": "繰り返す",
-    "repeatHint": "この依頼を決まった時間に自動実行するようにします"
+    "repeatHint": "この依頼を決まった時間に自動実行するようにします",
+    "projectRoots": "プロジェクトフォルダ",
+    "loadingMessages": "メッセージを読み込み中",
+    "exportedTo": "{{path}} に書き出しました"
   },
   "automation": {
     "title": "自動化",
@@ -304,24 +308,24 @@
     "usageInput": "入力",
     "cached": "キャッシュ済み",
     "usageCacheRead": "キャッシュ読み込み",
-    "usageTitle": "このセッションの使用量",
+    "usageTitle": "このチャットの使用量",
     "usageSaved": "キャッシュ節約",
-    "noSession": "セッションなし",
+    "noSession": "チャットなし",
     "statusIdle": "待機中",
     "statusRunning": "実行中",
     "sendSteer": "ステア",
     "sendSteerHint": "中断して新しいメッセージで指示します",
-    "agentPlan": "Plan",
-    "agentBuild": "Build",
+    "agentPlan": "プラン",
+    "agentBuild": "ビルド",
     "agentPlanHint": "プラン: 調べて計画だけ提案します。何も変更しません。Alt+P で切替。",
     "agentBuildHint": "ビルド: 実際に作業します（ファイル編集・コマンド実行）。Alt+P でプランに切替。",
-    "doneGateLabel": "Done gate",
-    "doneGateOff": "Off",
-    "doneGateOffDesc": "No auto checks after edits",
-    "doneGateTypecheck": "Typecheck",
-    "doneGateTypecheckDesc": "Auto typecheck after edits (auto/yolo)",
-    "doneGateTest": "Test",
-    "doneGateTestDesc": "Auto test after edits (auto/yolo)",
+    "doneGateLabel": "完了チェック",
+    "doneGateOff": "オフ",
+    "doneGateOffDesc": "編集後に自動チェックしない",
+    "doneGateTypecheck": "型チェック",
+    "doneGateTypecheckDesc": "コード編集後に自動で型チェック（自動承認・完全自動）",
+    "doneGateTest": "テスト",
+    "doneGateTestDesc": "コード編集後に自動でテスト（自動承認・完全自動）",
     "contextFill": "コンテキスト {{pct}}% ({{used}} / {{total}})",
     "contextWindow": "コンテキスト窓",
     "contextCompacted": "空き容量のため履歴を圧縮しました",
@@ -385,23 +389,29 @@
     },
     "previewLabel": "変更される内容",
     "moreLines_one": "… さらに {{count}} 行",
-    "moreLines_other": "… さらに {{count}} 行"
+    "moreLines_other": "… さらに {{count}} 行",
+    "queueFull": "権限リクエストが多すぎるため、このリクエストは拒否されました",
+    "timedOut": "権限リクエストに応答がなかったため拒否されました"
   },
   "statusBar": {
-    "working": "処理中...",
+    "working": "処理中…",
     "ready": "準備完了",
     "noProvider": "プロバイダーなし",
     "auto": "自動",
     "manual": "手動",
-    "workingMulti": "作業中（{{count}} セッション）",
+    "workingMulti": "作業中（チャット {{count}} 件）",
     "openAgents": "エージェントパネルを開く",
-    "subagentsRunning": "エージェント {{count}}",
-    "subagentError": "エージェントエラー"
+    "subagentsRunning": "エージェント {{count}} 件",
+    "subagentsRunning_one": "エージェント {{count}} 件",
+    "subagentError": "エージェントエラー",
+    "usageHint": "キャッシュヒット {{rate}}% · ${{saved}} 節約",
+    "usageTokens": "入力 {{tokens}}",
+    "usageCache": "キャッシュ {{rate}}%"
   },
   "settings": {
     "title": "設定",
     "toggleNav": "設定サイドバーを切り替え",
-    "searchPlaceholder": "設定を検索...",
+    "searchPlaceholder": "設定を検索…",
     "searchResults": "検索結果",
     "noResults": "設定が見つかりません",
     "appearance": "外観",
@@ -441,14 +451,14 @@
       "baseUrl": "ベースURL",
       "apiKey": "APIキー",
       "test": "接続テスト",
-      "testing": "テスト中...",
+      "testing": "テスト中…",
       "openai": "OpenAI",
       "claude": "Claude",
       "apiKeyMethod": "APIキー",
       "oauth": "OAuth",
       "namePlaceholder": "マイプロバイダー",
       "baseUrlPlaceholder": "https://api.example.com",
-      "apiKeyPlaceholder": "sk-...",
+      "apiKeyPlaceholder": "sk-…",
       "addWithModels": "追加（{{count}}モデル含む）",
       "presetDesc": "有名プロバイダー — APIキーを入力するだけで利用できます。可能なら API からモデル一覧を同期します。",
       "pasteApiKey": "APIキーを貼り付け",
@@ -700,7 +710,8 @@
       "title": "プラグイン",
       "desc": "プラグインと統合を管理",
       "contextTitle": "Claude互換コンテキスト",
-      "contextApplied": "コンテキストブロック {{blocks}} 件を注入 · 有効スキル {{enabled}}/{{total}}",
+      "contextApplied": "コンテキストブロック {{count}} 件を注入 · 有効なスキル {{enabled}}/{{total}}",
+      "contextApplied_one": "コンテキストブロック {{count}} 件を注入 · 有効なスキル {{enabled}}/{{total}}",
       "detected": "検出済み",
       "missing": "なし",
       "noProjectPath": "有効なプロジェクトパスがありません",
@@ -720,7 +731,7 @@
         "device": "このデバイス",
         "builtin": "内蔵系"
       },
-      "searchPlaceholder": "スキルを検索...",
+      "searchPlaceholder": "スキルを検索…",
       "emptySkills": "表示できるスキルがありません",
       "kind": {
         "skill": "スキル",
@@ -782,7 +793,8 @@
       "backupFailed": "バックアップ失敗",
       "backupCancelled": "バックアップ取消",
       "desktopOnly": "デスクトップアプリで利用可能",
-      "importOk": "{{count}} 件をインポート",
+      "importOk": "{{count}} 件をインポートしました",
+      "importOk_one": "{{count}} 件をインポートしました",
       "importEmpty": "ファイルにプロバイダ/モデルがありません",
       "importFailed": "インポート失敗: {{error}}",
       "restoreBackup": "バックアップを復元",
@@ -824,7 +836,7 @@
       "copyCode": "コピー",
       "codeCopied": "コードをコピーしました",
       "openDevicePage": "GitHub デバイス承認ページを開く",
-      "gitlabPatTitle": "GitLab Personal Access Token",
+      "gitlabPatTitle": "GitLab 個人アクセストークン",
       "gitlabPatHint": "gitlab.com およびセルフホスト GitLab に対応。User Settings → Access Tokens で api（または read_api）スコープの PAT を発行してください。",
       "codecommitPatTitle": "AWS 資格情報（IAM）",
       "codecommitPatHint": "CodeCommit にブラウザ OAuth はありません。codecommit 権限付き IAM アクセスキーを入力してください。一時資格情報の場合はセッショントークンも指定します。",
@@ -837,7 +849,9 @@
       "optional": "任意",
       "privacyNote": "サインイン トークンとシークレットはこの端末の ~/.pawn にのみ保存され、他のサービスへアップロードされません。",
       "writeScopesMissing": "書き込み権限が不足しています（{{scopes}}）。再接続して有効化してください。",
-      "writeScopesReady": "書き込み権限が有効です"
+      "writeScopesReady": "書き込み権限が有効です",
+      "finishInBrowser": "ブラウザでサインインを完了してください…",
+      "finishGoogle": "ブラウザで Google サインインを完了してください…"
     },
     "automationSection": {
       "title": "オートメーション",
@@ -948,7 +962,7 @@
       "colCalls": "呼び出し",
       "colTokens": "トークン",
       "colCost": "コスト",
-      "sessionBudget": "セッション費用上限 ($)",
+      "sessionBudget": "チャットの費用上限 ($)",
       "sessionBudgetDesc": "このセッションの USD 費用が上限に達するとエージェントをソフト停止します。0 = 無制限。",
       "dailyBudget": "日次費用上限 ($)",
       "dailyBudgetDesc": "本日の端末利用が上限に達すると停止します。0 = 無制限。"
@@ -1009,7 +1023,7 @@
     "deleteAutomationConfirm": "このオートメーションを削除しますか？この操作は元に戻せません。",
     "deleteProviderConfirm": "このプロバイダーを削除しますか？紐づくモデルが動作しなくなる可能性があります。",
     "deleteModelConfirm": "このモデルを削除しますか？この操作は元に戻せません。",
-    "clearSessionConfirm": "このセッションのメッセージをすべて削除しますか？この操作は元に戻せません。"
+    "clearSessionConfirm": "このチャットのメッセージをすべて削除しますか？元に戻せません。"
   },
   "chatHeader": {
     "running": "実行中",
@@ -1036,7 +1050,7 @@
     "git": {
       "noRepo": "Gitリポジトリがありません",
       "noChanges": "変更なし",
-      "commitPlaceholder": "コミットメッセージ...",
+      "commitPlaceholder": "コミットメッセージ…",
       "history": "履歴 ({{count}})",
       "checkoutFailed": "ブランチを切り替えられませんでした",
       "noBranches": "ブランチが見つかりません",
@@ -1050,7 +1064,7 @@
       "openPr": "PR を開く",
       "openingPr": "作成中…",
       "openPrHint": "{{repo}} の GitHub PR を作成",
-      "prNeedGithub": "Settings → Connections で GitHub を接続",
+      "prNeedGithub": "設定 → サービス連携 で GitHub を接続してください",
       "prOpened": "Pull request を作成しました",
       "errCheckout": "チェックアウト失敗 ({{code}})",
       "errStage": "ステージ失敗",
@@ -1075,7 +1089,7 @@
     "addTool": "ツールを追加",
     "selectTool": "ツールを選択",
     "browser": {
-      "enterUrl": "URLを入力...",
+      "enterUrl": "URL を入力…",
       "back": "戻る",
       "forward": "進む",
       "refresh": "更新",
@@ -1095,7 +1109,10 @@
       "feedbackPlaceholder": "何を変更・確認しますか？（任意）",
       "bubbleHint": "↵ Enter 送信 · ⇧↵ 改行 · Esc キャンセル",
       "newTab": "新しいタブ",
-      "closeTab": "タブを閉じる"
+      "closeTab": "タブを閉じる",
+      "tabSwitchFailed": "タブを切り替えられませんでした: {{error}}",
+      "tabCloseFailed": "タブを閉じられませんでした: {{error}}",
+      "newTabFailed": "新しいタブを開けませんでした: {{error}}"
     },
     "diff": {
       "title": "最近の変更",
@@ -1132,15 +1149,18 @@
       "sources": {
         "automation": "オートメーション"
       }
+    },
+    "files": {
+      "noProject": "プロジェクトフォルダがありません — プロジェクトを開くとファイルを表示できます"
     }
   },
   "bottomTerminal": {
     "close": "ターミナルを閉じる"
   },
   "commandPalette": {
-    "title": "コマンドパレット",
-    "placeholder": "コマンド・セッション・プロジェクトを検索…",
-    "noResults": "一致するコマンドがありません",
+    "title": "チャットを検索",
+    "placeholder": "チャットを検索…",
+    "noResults": "一致するチャットがありません",
     "noResultsHint": "別のキーワードで試すか、検索をクリアしてください。",
     "navigate": "移動",
     "select": "実行",
@@ -1162,7 +1182,7 @@
       "recent": "最近使用"
     },
     "commands": {
-      "newSession": "新しい作業",
+      "newSession": "新しいチャット",
       "newSessionDesc": "プロジェクトなしで空のチャットを開始",
       "openAutomations": "オートメーション",
       "openAutomationsDesc": "オートメーション画面を開く",
@@ -1190,7 +1210,7 @@
     }
   },
   "fileTree": {
-    "loading": "ファイルを読み込み中...",
+    "loading": "ファイルを読み込み中…",
     "empty": "表示するファイルがありません"
   },
   "fileEditor": {
@@ -1289,7 +1309,13 @@
       "checks": "チェック実行",
       "app": "Pawn 設定",
       "terminal": "ターミナル"
-    }
+    },
+    "structure": "構造",
+    "structureHint": "構造チェックの警告",
+    "statusOk": "完了",
+    "statusError": "エラー",
+    "filesModified": "ファイルが変更されました",
+    "diffBadge": "差分"
   },
   "diffView": {
     "showAllLines": "すべての行を表示",
@@ -1337,20 +1363,21 @@
     "reverted": "{{count}} ファイルを戻しました",
     "reverted_one": "{{count}} ファイルを戻しました",
     "failed": "元に戻せませんでした",
-    "justNow": "just now",
-    "minutesAgo": "{{count}}m ago",
-    "hoursAgo": "{{count}}h ago",
-    "daysAgo": "{{count}}d ago",
-    "showMore": "+{{count}} more",
-    "showLess": "Show less",
-    "history": "History ({{count}})",
-    "undoTurnHint": "Restore files from this turn",
+    "justNow": "たった今",
+    "minutesAgo": "{{count}}分前",
+    "hoursAgo": "{{count}}時間前",
+    "daysAgo": "{{count}}日前",
+    "showMore": "他 {{count}} 件",
+    "showLess": "閉じる",
+    "history": "履歴（{{count}}）",
+    "undoTurnHint": "この回答で変わったファイルを元に戻します",
     "conflictTitle": "エージェントの編集後に変更されたファイルがあります",
     "conflictMessage": "{{count}} 件のファイルがこのターンの後に変更されました（手動編集、フォーマッタ、後続のターンなど）。元に戻すとその変更は失われます。",
     "conflictMessage_one": "{{count}} 件のファイルがこのターンの後に変更されました（手動編集、フォーマッタ、後続のターンなど）。元に戻すとその変更は失われます。",
     "revertSafeOnly": "残りだけ元に戻す",
     "overwriteAll": "それでも上書き",
-    "revertedSkipped": "{{count}} 件を元に戻し、変更済みの {{skipped}} 件は保持しました",
+    "revertedSkipped": "{{count}} 件を元に戻し、あなたが変更した {{skipped}} 件はそのままにしました",
+    "revertedSkipped_one": "{{count}} 件を元に戻し、あなたが変更した {{skipped}} 件はそのままにしました",
     "conflictReason": {
       "modified": "変更済み",
       "missing": "削除済み",
@@ -1415,8 +1442,8 @@
     "applyFail": "適用失敗",
     "discardOk": "worktree を破棄しました",
     "discardFail": "破棄失敗",
-    "inlineWorking": "ヘルパー {{count}}件 作業中…",
-    "inlineWorking_one": "ヘルパー 1件 作業中…",
+    "inlineWorking": "エージェント {{count}} 件が作業中…",
+    "inlineWorking_one": "エージェント {{count}} 件が作業中…",
     "inlineDone": "ヘルパー完了",
     "inlineDoneCount": "{{count}}件完了"
   },
@@ -1468,7 +1495,8 @@
       "unmet": "ブロック",
       "budget_limited": "予算到達",
       "stopped": "停止済み"
-    }
+    },
+    "wordmark": "ULTRA WORK"
   },
   "computer": {
     "stoppedByUser": "停止しました — Esc が2回押されました。マウスとキーボードの操作を解放しました。"

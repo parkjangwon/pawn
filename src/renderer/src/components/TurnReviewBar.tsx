@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useChangeLedger, type RevertConflict } from '../stores/changeLedger'
 import { focusDiffInPanel } from '../stores/filesPanel'
 import ConfirmDialog from './ConfirmDialog'
+import { formatMessageTimeFull } from '../utils/messageTime'
 import './TurnReviewBar.css'
 
 function relativeTime(ts: number, t: (k: string, o?: Record<string, unknown>) => string): string {
@@ -35,7 +36,7 @@ function computeChangeStats(c: { before?: string | null; after?: string; op: str
 }
 
 export default function TurnReviewBar({ sessionId }: { sessionId: string | null }): React.JSX.Element | null {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const turns = useChangeLedger((s) => s.turns)
   const turn = useChangeLedger((s) => s.latestTurn(sessionId))
   const [busy, setBusy] = useState(false)
@@ -77,7 +78,9 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
           : t('turnReview.reverted', { count: r.reverted })
       )
     } else {
-      setMsg(r.error || t('turnReview.failed'))
+      // Internal reasons are English diagnostics: show the localized message, keep the detail in the tooltip.
+      setMsg(t('turnReview.failed'))
+      if (r.error) console.warn('[undo]', r.error)
     }
   }
 
@@ -95,7 +98,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
     <div className="turn-review-bar" role="region" aria-label={t('turnReview.label')}>
       <div className="turn-review-left">
         <span className="turn-review-label">{t('turnReview.label')}</span>
-        <span className="turn-review-meta" title={new Date(turn.createdAt).toLocaleString()}>
+        <span className="turn-review-meta" title={formatMessageTimeFull(turn.createdAt, i18n.language) || ''}>
           {relativeTime(turn.createdAt, t)}
           {turn.label ? ` · ${turn.label}` : ''}
         </span>
@@ -153,7 +156,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
                     onClick={() => void undoTurn(tr.id)}
                     title={tr.label}
                   >
-                    {relativeTime(tr.createdAt, t)} · {tr.changes.filter((c) => c.status === 'applied').length}f
+                    {relativeTime(tr.createdAt, t)} · {t('turnReview.files', { count: tr.changes.filter((c) => c.status === 'applied').length })}
                   </button>
                 </li>
               ))}

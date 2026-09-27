@@ -23,7 +23,8 @@ function expandPlaceholders(command: string, projectPath?: string | null): strin
   return out
 }
 
-function runCommand(
+/** Exported for tests. */
+export function runCommand(
   command: string,
   stdinJson: string,
   opts: { cwd?: string; timeoutSec: number; env: NodeJS.ProcessEnv }
@@ -69,6 +70,12 @@ function runCommand(
     child.on('close', (code) => {
       clearTimeout(timer)
       resolve({ code, stdout, stderr, timedOut })
+    })
+    // A hook may exit without reading its input (e.g. `echo ok`); the write then
+    // fails asynchronously with EPIPE on the stream, which try/catch can't see —
+    // unhandled, it would surface as an uncaught error in the main process.
+    child.stdin?.on('error', () => {
+      /* hook didn't read stdin — fine */
     })
     try {
       child.stdin?.write(stdinJson)

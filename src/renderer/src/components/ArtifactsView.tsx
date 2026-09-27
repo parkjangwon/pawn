@@ -1,23 +1,18 @@
 import { useTranslation } from 'react-i18next'
 import { useArtifactsStore, type Artifact } from '../stores/artifacts'
 import { openFileInPanel } from '../stores/filesPanel'
+import { formatDateTime } from '../utils/messageTime'
 import './ArtifactsView.css'
 
 function kindLabel(kind: Artifact['kind'], t: (k: string) => string): string {
   return t(`rightPanel.artifacts.kinds.${kind}`)
 }
 
-function formatTime(ms: number): string {
-  try {
-    return new Date(ms).toLocaleString()
-  } catch {
-    return ''
-  }
-}
 
 export default function ArtifactsView(): React.JSX.Element {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const { items, remove, clear } = useArtifactsStore()
+  const formatTime = (ms: number): string => formatDateTime(ms, i18n.language)
 
   const openPath = (path: string): void => {
     openFileInPanel(path)

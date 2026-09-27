@@ -14,6 +14,9 @@ import { closeDb } from './db'
 import { createTray, destroyTray, trayEnabled } from './tray'
 import { forceAllowQuit, registerQuitConfirm } from './quit'
 import { closeMemoryDb } from './memory'
+import { installAppMenu } from './appMenu'
+import { setAppLanguage } from './appLanguage'
+import { loadConfig } from './config'
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err)
@@ -65,6 +68,13 @@ app.whenReady().then(() => {
     })
   })
 
+  // Native UI language before the renderer reports in: saved setting, else the OS.
+  try {
+    setAppLanguage((loadConfig() as { settings?: { language?: string } }).settings?.language || app.getLocale())
+  } catch {
+    setAppLanguage(app.getLocale())
+  }
+  installAppMenu()
   registerAllIpc()
   initKeybindings()
   registerQuitConfirm()
