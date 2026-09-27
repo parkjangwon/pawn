@@ -11,6 +11,8 @@ import { loadProjectContext, type LoadedSkill } from '../agent/skills'
 import ChatHeader from './ChatHeader'
 import WelcomeScreen from './WelcomeScreen'
 import MessageList from './MessageList'
+import { MarkdownBaseDirContext } from './LocalFileLinks'
+import { generalWorkspaceDir, generalWorkspaceDirSync } from '../utils/generalWorkspace'
 import Composer from './Composer'
 import PlanStrip from './PlanStrip'
 import TurnReviewBar from './TurnReviewBar'
@@ -80,7 +82,7 @@ export default function ChatArea({
   const [input, setInput] = useState('')
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
-  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, startNewChat, clearMessages, updateProjectName, loadedSessions, loadingSessions } = useAppStore()
+  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, removeSession, startNewChat, clearMessages, updateProjectName, loadedSessions, loadingSessions } = useAppStore()
   const { sendMessage, streamingSessionIds, stopStreaming } = useChatStore()
   /** Live tokens / thinking indicator only for the session currently on screen. */
   const sessionStreaming = !!activeSessionId && streamingSessionIds.includes(activeSessionId)
@@ -177,6 +179,13 @@ export default function ChatArea({
     projectPaths[Math.min(rootIndex, Math.max(0, projectPaths.length - 1))] ||
     projectPaths[0] ||
     ''
+  // Chats without a project folder work in the General workspace (chatLoop);
+  // relative file links in their answers resolve against it too.
+  const [generalDir, setGeneralDir] = useState<string | null>(generalWorkspaceDirSync())
+  useEffect(() => {
+    if (effectivePath || generalDir) return
+    void generalWorkspaceDir().then(setGeneralDir).catch(() => {})
+  }, [effectivePath, generalDir])
   const lastMessage = messages[messages.length - 1]
   const tailStart = Math.max(0, messages.length - DEFAULT_VISIBLE_MESSAGES)
   const effectiveStart = startIndex === null
@@ -539,6 +548,11 @@ export default function ChatArea({
   }
 
  const handleSelectProject = (projectId: string): void => {
+   // Moving an untouched chat to another project: drop the empty session so
+   // the first message starts a chat in the chosen project.
+   if (activeSession && activeProjectId && activeProjectId !== projectId && loadedSessions.has(activeSession.id) && activeSession.messages.length === 0) {
+     removeSession(activeProjectId, activeSession.id)
+   }
    setActiveProject(projectId)
    setShowProjectPicker(false)
  }
@@ -764,7 +778,8 @@ export default function ChatArea({
     sendingRef.current = true
 
     let projectId = activeProjectId
-    let sessionId = activeSessionId
+    // Never send into a session of another project (stale selection).
+    let sessionId = activeSession ? activeSessionId : null
     const ultra = parseUltraWork(input)
     if (ultra && !ultra.goal) {
       // "$ulw" alone: nothing to pursue yet.
@@ -784,7 +799,13 @@ export default function ChatArea({
     if (textareaRef.current) textareaRef.current.style.height = 'auto'
 
     try {
-    // Auto-create project + session if none active
+    // A project is selected but has no session yet: the chat belongs to it
+    // (the welcome screen says "What should we build in <project>?").
+    if (projectId && !sessionId && projects.some((p) => p.id === projectId)) {
+      const title = typedPrompt.slice(0, 40) + (typedPrompt.length > 40 ? '...' : '')
+      sessionId = addSession(projectId, title)
+    }
+    // No project at all: a General chat.
     if (!projectId || !sessionId) {
       // Find or create general project
       let general = projects.find((p) => p.id === '__general__')
@@ -1104,19 +1125,21 @@ export default function ChatArea({
           />
         ) : (
           <>
-            <MessageList
-              messages={messages}
-              isStreaming={sessionStreaming}
-              endRef={messagesEndRef}
-              startIndex={effectiveStart}
-              nearTop={nearTop}
-              onShowEarlier={() => setStartIndex(Math.max(0, effectiveStart - EARLIER_BATCH))}
-              onScroll={handleMessageScroll}
-              scrollRef={setScrollEl}
-              sessionKey={activeSessionId || ''}
-              projectId={activeProjectId}
-              sessionId={activeSessionId}
-            />
+            <MarkdownBaseDirContext.Provider value={effectivePath || generalDir}>
+              <MessageList
+                messages={messages}
+                isStreaming={sessionStreaming}
+                endRef={messagesEndRef}
+                startIndex={effectiveStart}
+                nearTop={nearTop}
+                onShowEarlier={() => setStartIndex(Math.max(0, effectiveStart - EARLIER_BATCH))}
+                onScroll={handleMessageScroll}
+                scrollRef={setScrollEl}
+                sessionKey={activeSessionId || ''}
+                projectId={activeProjectId}
+                sessionId={activeSessionId}
+              />
+            </MarkdownBaseDirContext.Provider>
             <TurnNavigator
               messages={messages}
               scrollEl={scrollEl}

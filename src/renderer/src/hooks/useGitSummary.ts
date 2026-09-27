@@ -7,6 +7,8 @@ export interface GitSummary {
   ahead: number
   behind: number
   filesChanged: number
+  /** Untracked (new) files — not in `git diff` stats. */
+  untracked: number
   insertions: number
   deletions: number
 }
@@ -18,6 +20,7 @@ const EMPTY: GitSummary = {
   ahead: 0,
   behind: 0,
   filesChanged: 0,
+  untracked: 0,
   insertions: 0,
   deletions: 0
 }
@@ -26,10 +29,11 @@ const EMPTY: GitSummary = {
 // single-digit milliseconds even in large repos.
 const POLL_MS = 8000
 
-function parseStatus(stdout: string): { branch: string | null; upstream: string | null; ahead: number; behind: number; filesChanged: number } {
+export function parseStatus(stdout: string): { branch: string | null; upstream: string | null; ahead: number; behind: number; filesChanged: number; untracked: number } {
   const lines = stdout.split('\n').filter(Boolean)
   const branchLine = lines[0]?.startsWith('##') ? lines[0] : ''
   const filesChanged = branchLine ? lines.length - 1 : lines.length
+  const untracked = lines.filter((l) => l.startsWith('?? ')).length
   const branchMatch = branchLine.match(/^## (?:No commits yet on )?([^\s.]+)/)
   const upstreamMatch = branchLine.match(/\.\.\.(\S+)/)
   const aheadMatch = branchLine.match(/ahead (\d+)/)
@@ -39,7 +43,8 @@ function parseStatus(stdout: string): { branch: string | null; upstream: string 
     upstream: upstreamMatch?.[1] || null,
     ahead: aheadMatch ? parseInt(aheadMatch[1], 10) : 0,
     behind: behindMatch ? parseInt(behindMatch[1], 10) : 0,
-    filesChanged
+    filesChanged,
+    untracked
   }
 }
 
@@ -79,9 +84,11 @@ export function useGitSummary(projectPath: string): GitSummary & { refresh: () =
     if (!pathRef.current) return
     const id = setInterval(refresh, POLL_MS)
     window.addEventListener('focus', refresh)
+    window.addEventListener('pawn:workspace-changed', refresh)
     return () => {
       clearInterval(id)
       window.removeEventListener('focus', refresh)
+      window.removeEventListener('pawn:workspace-changed', refresh)
     }
   }, [projectPath, refresh])
 

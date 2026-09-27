@@ -137,3 +137,31 @@ export function activateOnKey(e: ReactKeyboardEvent, action: () => void): void {
   e.stopPropagation()
   action()
 }
+
+/**
+ * Modal dialog behaviour in one call: focus trapped inside, focus restored on
+ * close, and Escape closes (unless a nested dialog handled it first).
+ */
+export function useModalDialog(
+  active: boolean,
+  containerRef: RefObject<HTMLElement | null>,
+  onClose: () => void,
+  opts?: { initialFocus?: string; autoFocus?: boolean }
+): void {
+  useFocusTrap(active, containerRef, opts)
+  const closeRef = useRef(onClose)
+  closeRef.current = onClose
+  useEffect(() => {
+    if (!active) return
+    const onKey = (e: globalThis.KeyboardEvent): void => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const root = containerRef.current
+      // Only the topmost dialog closes: focus must be inside this one.
+      if (root && document.activeElement && !root.contains(document.activeElement)) return
+      e.preventDefault()
+      closeRef.current()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [active, containerRef])
+}

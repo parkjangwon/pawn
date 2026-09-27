@@ -194,7 +194,10 @@
       "s": "{{n}}초"
     },
     "compacting": "컨텍스트 압축 중…",
-    "secondOpinion": "다른 모델에게 의견을 묻는 중…"
+    "secondOpinion": "다른 모델에게 의견을 묻는 중…",
+    "visionNone": "{{model}}은(는) 이미지를 볼 수 없고, 켜진 비전 모델도 없어요 — 이미지는 읽히지 않아요. 설정 → 모델에서 비전 모델을 추가하거나 켜 주세요.",
+    "visionNoneAuto": "이미지를 볼 수 있는 모델이 켜져 있지 않아요 — 이미지는 읽히지 않아요. 설정 → 모델에서 비전 모델을 켜 주세요.",
+    "visionFallbackNote": "{{model}}은(는) 이미지를 볼 수 없어서, 이 메시지는 {{fallback}}(으)로 보내요."
   },
   "automation": {
     "title": "자동화",
@@ -304,7 +307,8 @@
     "reasoningAutoDesc": "작업에 따라 자동 선택",
     "reasoningHighDesc": "깊은 사고",
     "reasoningMediumDesc": "균형",
-    "reasoningHigh": "추론 높음"
+    "reasoningHigh": "추론 높음",
+    "title": "모델"
   },
   "permission": {
     "title": "권한 요청",
@@ -343,7 +347,10 @@
       "scopeSession": "이번 세션",
       "sessionTitle": "세션 승인",
       "sessionDesc": "앱을 종료하면 초기화됩니다."
-    }
+    },
+    "previewLabel": "변경될 내용",
+    "moreLines_one": "… {{count}}줄 더 있음",
+    "moreLines_other": "… {{count}}줄 더 있음"
   },
   "statusBar": {
     "working": "작업 중...",
@@ -918,7 +925,8 @@
     "namePlaceholder": "프로젝트 이름",
     "sourceFolders": "소스 폴더",
     "addFolder": "폴더 추가",
-    "delete": "제거"
+    "delete": "제거",
+    "removeFolder": "{{path}} 폴더 제거"
   },
   "confirmDialog": {
     "confirm": "확인",
@@ -973,7 +981,10 @@
       "errUnstage": "언스테이징 실패",
       "errCommit": "커밋 실패 ({{code}})",
       "errPush": "푸시 실패 ({{code}})",
-      "errPr": "PR을 열 수 없음"
+      "errPr": "PR을 열 수 없음",
+      "newFiles": "+{{count}} 새 파일",
+      "untrackedHint_one": "git이 아직 추적하지 않는 새 파일 {{count}}개",
+      "untrackedHint_other": "git이 아직 추적하지 않는 새 파일 {{count}}개"
     },
     "openTool": "도구 열기",
     "toolDescs": {
@@ -1013,7 +1024,9 @@
     "diff": {
       "title": "최근 변경사항",
       "empty": "최근 파일 변경이 없습니다",
-      "recent": "최근 변경 ({{count}})"
+      "recent": "최근 변경 ({{count}})",
+      "noTextPreview": "텍스트 미리보기 없음 (바이너리 또는 큰 파일)",
+      "open": "열기"
     },
     "tools": {
       "terminal": "터미널",
@@ -1115,7 +1128,9 @@
     "linesUnit": "줄",
     "unsavedTitle": "저장되지 않은 변경사항",
     "unsavedConfirm": "저장하지 않은 변경사항이 있습니다. 버리고 닫을까요?",
-    "discard": "버리고 닫기"
+    "discard": "버리고 닫기",
+    "viewSource": "소스",
+    "reveal": "Finder에서 보기"
   },
   "toolMessage": {
     "showFullOutput": "전체 출력 보기",
@@ -1159,6 +1174,7 @@
     "batchDone": "{{count}}개 작업 실행 완료",
     "lineStats": "{{added}}줄 추가, {{removed}}줄 삭제",
     "filesChanged": "파일 {{count}}개",
+    "filesChanged_one": "파일 {{count}}개",
     "zoom": "확대",
     "uiSnapshot": "UI 읽기",
     "findOnScreen": "화면에서 찾기",
@@ -1225,6 +1241,7 @@
     "undoTurn": "턴 되돌리기",
     "undoing": "되돌리는 중…",
     "reverted": "{{count}}개 파일 되돌림",
+    "reverted_one": "{{count}}개 파일 되돌림",
     "failed": "되돌리기 실패",
     "justNow": "방금",
     "minutesAgo": "{{count}}분 전",
@@ -1236,6 +1253,7 @@
     "undoTurnHint": "이 턴의 파일 변경 되돌리기",
     "conflictTitle": "에이전트가 수정한 뒤 바뀐 파일이 있어요",
     "conflictMessage": "{{count}}개 파일이 이 턴 이후에 수정됐어요(직접 수정, 포매터, 이후 턴 등). 되돌리면 그 변경 사항이 사라져요.",
+    "conflictMessage_one": "{{count}}개 파일이 이 턴 이후에 수정됐어요(직접 수정, 포매터, 이후 턴 등). 되돌리면 그 변경 사항이 사라져요.",
     "revertSafeOnly": "나머지만 되돌리기",
     "overwriteAll": "그래도 덮어쓰기",
     "revertedSkipped": "{{count}}개 파일을 되돌리고, 수정된 {{skipped}}개 파일은 유지했어요",
@@ -1244,7 +1262,10 @@
       "missing": "삭제됨",
       "recreated": "다시 생성됨",
       "oversized": "너무 큼"
-    }
+    },
+    "chipHint": "클릭하면 변경 내용을 보여 줘요",
+    "byCommand": "명령으로 생성됨",
+    "files_one": "파일 {{count}}개"
   },
   "notifications": {
     "taskComplete": "작업 완료",
@@ -1308,7 +1329,11 @@
     "expandCode": "전체 {{count}}줄 펼치기",
     "collapseCode": "접기",
     "copyCode": "코드 복사",
-    "codeCopied": "클립보드에 복사됨"
+    "codeCopied": "클립보드에 복사됨",
+    "fileLinkHint": "클릭하면 Pawn에서 열려요 · ⌘/Ctrl-클릭하면 Finder에서 보여 줘요",
+    "fileNotFound": "파일을 찾을 수 없어요",
+    "imageUnavailable": "여기서는 이미지를 미리 볼 수 없어요",
+    "imageLoading": "이미지 불러오는 중"
   },
   "questions": {
     "badge": "질문",

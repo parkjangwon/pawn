@@ -9,6 +9,9 @@ interface FilesPanelState {
   token: number
   openFile: (absPath: string) => void
   consume: () => string | null
+  /** Diff tab: expand the latest change of this file. */
+  diffFocus: { path: string; token: number } | null
+  focusDiff: (absPath: string) => void
 }
 
 export const useFilesPanelStore = create<FilesPanelState>((set, get) => ({
@@ -29,8 +32,23 @@ export const useFilesPanelStore = create<FilesPanelState>((set, get) => ({
     const path = get().pendingPath
     if (path) set({ pendingPath: null })
     return path
+  },
+
+  diffFocus: null,
+  focusDiff: (absPath) => {
+    if (!absPath) return
+    set((s) => ({ diffFocus: { path: absPath, token: (s.diffFocus?.token ?? 0) + 1 } }))
+    try {
+      ;(window as unknown as { __openRightPanelTab?: (id: string) => void }).__openRightPanelTab?.('diff')
+    } catch {
+      /* panel may not be mounted */
+    }
   }
 }))
+
+export function focusDiffInPanel(absPath: string): void {
+  useFilesPanelStore.getState().focusDiff(absPath)
+}
 
 export function openFileInPanel(absPath: string): void {
   useFilesPanelStore.getState().openFile(absPath)

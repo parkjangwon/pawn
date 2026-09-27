@@ -194,7 +194,10 @@
       "s": "{{n}}秒"
     },
     "compacting": "コンテキストを圧縮中…",
-    "secondOpinion": "別のモデルに意見を求めています…"
+    "secondOpinion": "別のモデルに意見を求めています…",
+    "visionNone": "{{model}} は画像を見られず、有効なビジョンモデルもありません — 画像は読まれません。設定 → モデルでビジョンモデルを追加・有効化してください。",
+    "visionNoneAuto": "画像を見られるモデルが有効になっていません — 画像は読まれません。設定 → モデルでビジョンモデルを有効にしてください。",
+    "visionFallbackNote": "{{model}} は画像を見られないため、このメッセージは {{fallback}} に送られます。"
   },
   "automation": {
     "title": "自動化",
@@ -304,7 +307,8 @@
     "reasoningAutoDesc": "タスクに応じて自動選択",
     "reasoningHighDesc": "深い思考",
     "reasoningMediumDesc": "バランス",
-    "reasoningHigh": "推論高"
+    "reasoningHigh": "推論高",
+    "title": "モデル"
   },
   "permission": {
     "title": "権限リクエスト",
@@ -343,7 +347,10 @@
       "scopeSession": "このセッション",
       "sessionTitle": "セッション承認",
       "sessionDesc": "アプリ終了時にクリアされます。"
-    }
+    },
+    "previewLabel": "変更される内容",
+    "moreLines_one": "… さらに {{count}} 行",
+    "moreLines_other": "… さらに {{count}} 行"
   },
   "statusBar": {
     "working": "処理中...",
@@ -918,7 +925,8 @@
     "namePlaceholder": "プロジェクト名",
     "sourceFolders": "ソースフォルダ",
     "addFolder": "フォルダを追加",
-    "delete": "削除"
+    "delete": "削除",
+    "removeFolder": "フォルダ {{path}} を削除"
   },
   "confirmDialog": {
     "confirm": "確認",
@@ -973,7 +981,10 @@
       "errUnstage": "アンステージ失敗",
       "errCommit": "コミット失敗 ({{code}})",
       "errPush": "プッシュ失敗 ({{code}})",
-      "errPr": "PR を開けません"
+      "errPr": "PR を開けません",
+      "newFiles": "+{{count}} 新規",
+      "untrackedHint_one": "git がまだ追跡していない新規ファイル {{count}} 件",
+      "untrackedHint_other": "git がまだ追跡していない新規ファイル {{count}} 件"
     },
     "openTool": "ツールを開く",
     "toolDescs": {
@@ -1013,7 +1024,9 @@
     "diff": {
       "title": "最近の変更",
       "empty": "最近のファイル変更はありません",
-      "recent": "最近の変更 ({{count}})"
+      "recent": "最近の変更 ({{count}})",
+      "noTextPreview": "テキストプレビューなし（バイナリまたは大きなファイル）",
+      "open": "開く"
     },
     "tools": {
       "terminal": "ターミナル",
@@ -1115,7 +1128,9 @@
     "linesUnit": "行",
     "unsavedTitle": "未保存の変更",
     "unsavedConfirm": "未保存の変更があります。破棄して閉じますか？",
-    "discard": "破棄して閉じる"
+    "discard": "破棄して閉じる",
+    "viewSource": "ソース",
+    "reveal": "Finder で表示"
   },
   "toolMessage": {
     "showFullOutput": "完全な出力を表示",
@@ -1159,6 +1174,7 @@
     "batchDone": "{{count}}件の操作を実行完了",
     "lineStats": "{{added}} 行追加、{{removed}} 行削除",
     "filesChanged": "{{count}} ファイル",
+    "filesChanged_one": "{{count}} ファイル",
     "zoom": "拡大",
     "uiSnapshot": "UI を読む",
     "findOnScreen": "画面で探す",
@@ -1225,6 +1241,7 @@
     "undoTurn": "ターンを元に戻す",
     "undoing": "戻しています…",
     "reverted": "{{count}} ファイルを戻しました",
+    "reverted_one": "{{count}} ファイルを戻しました",
     "failed": "元に戻せませんでした",
     "justNow": "just now",
     "minutesAgo": "{{count}}m ago",
@@ -1236,6 +1253,7 @@
     "undoTurnHint": "Restore files from this turn",
     "conflictTitle": "エージェントの編集後に変更されたファイルがあります",
     "conflictMessage": "{{count}} 件のファイルがこのターンの後に変更されました（手動編集、フォーマッタ、後続のターンなど）。元に戻すとその変更は失われます。",
+    "conflictMessage_one": "{{count}} 件のファイルがこのターンの後に変更されました（手動編集、フォーマッタ、後続のターンなど）。元に戻すとその変更は失われます。",
     "revertSafeOnly": "残りだけ元に戻す",
     "overwriteAll": "それでも上書き",
     "revertedSkipped": "{{count}} 件を元に戻し、変更済みの {{skipped}} 件は保持しました",
@@ -1244,7 +1262,10 @@
       "missing": "削除済み",
       "recreated": "再作成",
       "oversized": "大きすぎる"
-    }
+    },
+    "chipHint": "クリックで差分を表示",
+    "byCommand": "コマンドで作成",
+    "files_one": "{{count}} ファイル"
   },
   "notifications": {
     "taskComplete": "タスク完了",
@@ -1308,7 +1329,11 @@
     "expandCode": "全 {{count}} 行を表示",
     "collapseCode": "折りたたむ",
     "copyCode": "コードをコピー",
-    "codeCopied": "クリップボードにコピーしました"
+    "codeCopied": "クリップボードにコピーしました",
+    "fileLinkHint": "クリックで Pawn で開く · ⌘/Ctrl クリックで Finder に表示",
+    "fileNotFound": "ファイルが見つかりません",
+    "imageUnavailable": "ここでは画像をプレビューできません",
+    "imageLoading": "画像を読み込み中"
   },
   "questions": {
     "badge": "質問",

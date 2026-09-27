@@ -65,6 +65,7 @@ const api = {
     mkdir: (path: string) => ipcRenderer.invoke('fs:mkdir', path),
     delete: (path: string) => ipcRenderer.invoke('fs:delete', path),
     exists: (path: string) => ipcRenderer.invoke('fs:exists', path),
+    readImage: (path: string) => ipcRenderer.invoke('fs:readImage', path),
     homeDir: () => ipcRenderer.invoke('fs:homeDir'),
     downloadsPath: () => ipcRenderer.invoke('fs:downloadsPath'),
     walk: (path: string) => ipcRenderer.invoke('fs:walk', path),

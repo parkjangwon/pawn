@@ -1,3 +1,4 @@
+import type { PermissionPreview } from '../agent/permissionPreview'
 import { create } from 'zustand'
 
 export type PermissionType =
@@ -20,6 +21,8 @@ interface PermissionRequest {
   type: PermissionType
   description: string
   details?: string
+  /** Readable preview (target + content) shown instead of raw details. */
+  preview?: PermissionPreview
   /** Absolute path for file tools when known */
   path?: string
   /** Shell command when known */

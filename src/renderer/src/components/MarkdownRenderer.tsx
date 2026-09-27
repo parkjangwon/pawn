@@ -1,4 +1,4 @@
-import React, { memo, useCallback, useEffect, useRef, useState, useMemo } from 'react'
+import React, { memo, useCallback, useContext, useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
@@ -9,6 +9,7 @@ import './MarkdownRenderer.css'
 import { HIGHLIGHT_LANGUAGES } from '../utils/highlightLanguages'
 import { isInlineImageSrc } from '../utils/safeUrl'
 import { REVEAL_EVENT } from '../utils/conversationFind'
+import { IMAGE_EXT, LocalFileLink, LocalImage, MarkdownBaseDirContext, PathCode, resolveLocalPath } from './LocalFileLinks'
 
 /** Code blocks longer than this fold to a preview with "Show all N lines". */
 export const CODE_FOLD_THRESHOLD_LINES = 30
@@ -31,11 +32,15 @@ interface LightboxState {
 function safeUrlTransform(url: string): string {
   if (/^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(url)) return url
   if (/^file:/i.test(url)) return url
+  // Absolute local paths (/Users/…, C:\…) are resolved by the link / image
+  // components; defaultUrlTransform would keep them anyway, but be explicit.
+  if (url.startsWith('/') || /^[A-Za-z]:[\\/]/.test(url)) return url
   return defaultUrlTransform(url)
 }
 
 function MarkdownRendererInner({ content }: Props): React.JSX.Element {
   const { t } = useTranslation()
+  const baseDir = useContext(MarkdownBaseDirContext)
   const [lightbox, setLightbox] = useState<LightboxState | null>(null)
 
   const closeLightbox = useCallback((): void => setLightbox(null), [])
@@ -64,30 +69,15 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
 
   const components = useMemo(() => ({
     a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+      // Local files (file://, absolute, or relative to the chat's folder)
+      // open inside Pawn; ⌘/Ctrl-click reveals them in Finder/Explorer.
+      const local = resolveLocalPath(href, baseDir)
+      if (local) return <LocalFileLink path={local}>{children}</LocalFileLink>
       const safe = safeHref(href)
-      if (!safe) {
+      if (!safe || safe.startsWith('file://') || !/^(https?:|mailto:)/i.test(safe)) {
         // Never render javascript:/data: links; the renderer holds
         // privileged window.api access.
         return <span>{children}</span>
-      }
-      // Local file links reveal the file in Finder/Explorer instead of
-      // navigating the renderer to a file:// URL.
-      if (safe.startsWith('file://')) {
-        const localPath = decodeFilePath(safe)
-        return (
-          <a
-            className="md-file-link"
-            href={safe}
-            title={localPath}
-            onClick={(e) => {
-              e.preventDefault()
-              e.stopPropagation()
-              void Promise.resolve(window.api?.workspace?.reveal?.(localPath)).catch(() => {})
-            }}
-          >
-            {children}
-          </a>
-        )
       }
       return <a href={safe} target="_blank" rel="noopener noreferrer">{children}</a>
     },
@@ -95,9 +85,13 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
       if (!src) return null
       const label = alt || t('chat.attachedImage')
       if (!isInlineImageSrc(src)) {
-        // Remote/file images never auto-load; show a plain link the user can choose to open.
+        // Local images load through the main process (never file:/remote fetches).
+        const local = resolveLocalPath(src, baseDir)
+        if (local && IMAGE_EXT.test(local)) return <LocalImage path={local} alt={label} onOpen={openLightbox} />
+        if (local) return <LocalFileLink path={local}>{label}</LocalFileLink>
+        // Remote images never auto-load; show a plain link the user can choose to open.
         const safe = safeHref(src)
-        if (!safe || safe.startsWith('file://')) return <span>{label}</span>
+        if (!safe || !/^https?:/i.test(safe)) return <span>{label}</span>
         return <a href={safe} target="_blank" rel="noopener noreferrer">{label}</a>
       }
       return (
@@ -123,8 +117,10 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
         />
       )
     },
+    code: ({ className, children }: { className?: string; children?: React.ReactNode }) =>
+      className ? <code className={className}>{children}</code> : <PathCode text={getNodeText(children)}>{children}</PathCode>,
     pre: ({ children }: { children?: React.ReactNode }) => <CodeBlock>{children}</CodeBlock>
-  }), [t, openLightbox])
+  }), [t, openLightbox, baseDir])
 
   return (
     <div className="markdown-body">
@@ -192,18 +188,6 @@ function safeHref(href: string | undefined): string | null {
   } catch {
     return null
   }
-}
-
-/** file:///Users/a.ts → /Users/a.ts; file:///C:/x.ts → C:/x.ts (Windows). */
-function decodeFilePath(href: string): string {
-  let p = href.slice('file://'.length)
-  if (/^\/[A-Za-z]:/.test(p)) p = p.slice(1)
-  try {
-    p = decodeURIComponent(p)
-  } catch {
-    /* keep raw */
-  }
-  return p
 }
 
 // Streaming appends content one chunk at a time; memoizing keeps earlier

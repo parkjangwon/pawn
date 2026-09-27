@@ -68,13 +68,18 @@ export function primaryTarget(args: Record<string, unknown> | undefined): string
   return undefined
 }
 
+/** Lines in a text file; a trailing newline ends the last line, it doesn't start a new one. */
+function countLines(text: string): number {
+  return text ? text.replace(/\n$/, '').split('\n').length : 0
+}
+
 export function lineDelta(oldText: string, newText: string): { added: number; removed: number } {
   if (oldText === newText) return { added: 0, removed: 0 }
-  if (!oldText) return { added: newText ? newText.split('\n').length : 0, removed: 0 }
-  if (!newText) return { added: 0, removed: oldText.split('\n').length }
+  if (!oldText) return { added: countLines(newText), removed: 0 }
+  if (!newText) return { added: 0, removed: countLines(oldText) }
   if (oldText.length + newText.length > DIFF_STATS_MAX_CHARS) {
-    const a = oldText.split('\n').length
-    const b = newText.split('\n').length
+    const a = countLines(oldText)
+    const b = countLines(newText)
     return { added: Math.max(0, b - a), removed: Math.max(0, a - b) }
   }
   const d = computeDiff(oldText, newText)

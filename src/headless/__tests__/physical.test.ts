@@ -417,3 +417,23 @@ describe('code intelligence + repo profile', () => {
     expect(profile?.commands.test).toMatchObject({ command: 'npm run test', verified: true })
   }, 90_000)
 })
+
+describe('General chat workspace', () => {
+  it('writes relative paths into Downloads/pawn-artifacts, never the app process cwd', async () => {
+    const home = await mkdtemp(join(tmpdir(), 'pawn-home-'))
+    try {
+      script = (r) => {
+        const n = r.toolResults.length
+        if (n === 0) return { tools: [{ name: 'write_file', args: { path: 'notes/todo.md', content: '- ship it\n' } }] }
+        return { text: 'done' }
+      }
+      await runHeadlessTurn({ prompt: 'write a todo note', cwd: dir, config: config(), permission: 'yolo', timeoutMs: 60_000, modelId: 'fake:main', noProject: true, homeDir: home })
+      expect(requests[0].text).toContain(`${join(home, 'Downloads', 'pawn-artifacts')}`)
+      expect(requests[0].text).toContain('No project folder is open')
+      expect(await readFile(join(home, 'Downloads', 'pawn-artifacts', 'notes', 'todo.md'), 'utf8')).toBe('- ship it\n')
+      await expect(readFile(join(process.cwd(), 'notes', 'todo.md'), 'utf8')).rejects.toThrow()
+    } finally {
+      await rm(home, { recursive: true, force: true })
+    }
+  }, 60_000)
+})

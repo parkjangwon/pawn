@@ -1,3 +1,4 @@
+import { homedir } from 'os'
 import { handleTrusted } from './trust'
 import { spawn, type ChildProcess } from 'child_process'
 import { planExecFile, planShellSpawn, type SandboxOptions } from '../shellSandbox'
@@ -348,7 +349,8 @@ export function registerShellIpc(): void {
       try {
         return await runShellCommand(
           command,
-          typeof cwd === 'string' ? cwd : undefined,
+          // Never the app process's own cwd (bundle / `/` / the repo in dev).
+          typeof cwd === 'string' && cwd ? cwd : homedir(),
           clampTimeout(timeoutMs),
           parseSandboxOpts(sandboxOpts),
           sessionIdFromOpts(sandboxOpts)
@@ -399,7 +401,7 @@ export function registerShellIpc(): void {
       try {
         const started = startBackgroundJob(
           command,
-          typeof cwd === 'string' ? cwd : undefined,
+          typeof cwd === 'string' && cwd ? cwd : homedir(),
           parseSandboxOpts(sandboxOpts),
           sessionIdFromOpts(sandboxOpts)
         )

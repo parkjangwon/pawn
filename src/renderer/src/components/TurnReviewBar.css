@@ -180,3 +180,9 @@
 .turn-review-diff:hover {
   border-color: var(--accent);
 }
+
+.turn-review-by-cmd {
+  flex-shrink: 0;
+  opacity: 0.6;
+  margin-left: -2px;
+}

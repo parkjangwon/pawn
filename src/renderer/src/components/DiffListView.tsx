@@ -1,9 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import DiffView from './DiffView'
 import { DIFF_MARKER, parseDiffMarker } from '../utils/diffMarker'
+import { openFileInPanel, useFilesPanelStore } from '../stores/filesPanel'
+import { useChangeLedger } from '../stores/changeLedger'
 
 export default function DiffListView(): React.JSX.Element {
   const { t } = useTranslation()
@@ -16,8 +18,40 @@ export default function DiffListView(): React.JSX.Element {
   const projectPath = getEffectiveProjectPath(activeProject, activeSessionId)
 
   const diffMessages = messages.filter((m) => m.role === 'system' && m.content.includes(DIFF_MARKER))
+  const listRef = useRef<HTMLDivElement>(null)
 
-  if (diffMessages.length === 0) {
+  const resolvePath = (filename?: string, path?: string): string | undefined => {
+    if (path) return path
+    if (!filename) return undefined
+    if (filename.startsWith('/') || /^[A-Za-z]:[\\/]/.test(filename)) return filename
+    if (projectPath) return projectPath.replace(/\/$/, '') + '/' + filename
+    return undefined
+  }
+
+  // "Agent changes" chip → expand that file's latest diff (or the ledger entry
+  // for files a command created, which have no tool diff message).
+  const diffFocus = useFilesPanelStore((s) => s.diffFocus)
+  const [ledgerFocus, setLedgerFocus] = useState<{ path: string; before: string; after: string; binary?: boolean } | null>(null)
+  useEffect(() => {
+    if (!diffFocus) return
+    const hit = [...diffMessages].reverse().find((m) => {
+      const d = parseDiffMarker(m.content)
+      return d && resolvePath(d.filename, d.path) === diffFocus.path
+    })
+    if (hit) {
+      setLedgerFocus(null)
+      setExpandedId(hit.id)
+      requestAnimationFrame(() => listRef.current?.querySelector(`[data-diff-id="${hit.id}"]`)?.scrollIntoView({ block: 'start' }))
+      return
+    }
+    const turn = useChangeLedger.getState().latestTurn(activeSessionId)
+    const c = turn?.changes.find((x) => x.path === diffFocus.path && x.status === 'applied')
+    setExpandedId(null)
+    setLedgerFocus(c ? { path: c.path, before: c.before ?? '', after: c.after ?? '', binary: c.after === undefined && c.op !== 'delete' } : null)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [diffFocus?.token])
+
+  if (diffMessages.length === 0 && !ledgerFocus) {
     return (
       <div className="rp-diff">
         <div className="rp-diff-header">
@@ -30,27 +64,40 @@ export default function DiffListView(): React.JSX.Element {
     )
   }
 
-  const resolvePath = (filename?: string, path?: string): string | undefined => {
-    if (path) return path
-    if (!filename) return undefined
-    if (filename.startsWith('/') || /^[A-Za-z]:[\\/]/.test(filename)) return filename
-    if (projectPath) return projectPath.replace(/\/$/, '') + '/' + filename
-    return undefined
-  }
-
   return (
     <div className="rp-diff">
       <div className="rp-diff-header">
-        {`${t('rightPanel.diff.title')} (${diffMessages.length})`}
+        {`${t('rightPanel.diff.title')} (${diffMessages.length + (ledgerFocus ? 1 : 0)})`}
       </div>
-      <div className="rp-diff-list">
+      <div className="rp-diff-list" ref={listRef}>
+        {ledgerFocus && (
+          <div className="rp-diff-expanded" data-diff-id="ledger">
+            {ledgerFocus.binary ? (
+              <div className="rp-diff-binary">
+                <span className="rp-diff-binary-name">{ledgerFocus.path.split('/').pop()}</span>
+                <span>{t('rightPanel.diff.noTextPreview')}</span>
+                <button type="button" className="rp-diff-binary-open" onClick={() => openFileInPanel(ledgerFocus.path)}>
+                  {t('rightPanel.diff.open')}
+                </button>
+              </div>
+            ) : (
+            <DiffView
+              oldText={ledgerFocus.before}
+              newText={ledgerFocus.after}
+              filename={ledgerFocus.path.split('/').pop()}
+              path={ledgerFocus.path}
+              maxLines={80}
+            />
+            )}
+          </div>
+        )}
         {[...diffMessages].reverse().map((msg) => {
           const diff = parseDiffMarker(msg.content)
           if (!diff) return null
           const isExpanded = expandedId === msg.id
           const abs = resolvePath(diff.filename, diff.path)
           return (
-            <div key={msg.id}>
+            <div key={msg.id} data-diff-id={msg.id}>
               <div
                 className="rp-diff-item"
                 onClick={() => setExpandedId(isExpanded ? null : msg.id)}

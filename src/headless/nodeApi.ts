@@ -12,7 +12,7 @@ import { spawn, type ChildProcess } from 'child_process'
 import { existsSync } from 'fs'
 import { mkdir, readdir, readFile, rm, rmdir, stat, unlink, writeFile, cp } from 'fs/promises'
 import { homedir } from 'os'
-import { dirname, join, resolve } from 'path'
+import { dirname, isAbsolute, join, resolve } from 'path'
 import { planExecFile, planShellSpawn, type SandboxOptions } from '../main/shellSandbox'
 import { contentSearch } from '../main/contentSearch'
 import { isProtectedRemovePath, isSecretDotFile } from '../main/fsGuards'
@@ -189,6 +189,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
         })
       ),
     writeFile: async (p: string, content: string) => {
+      if (!isAbsolute(p)) return { error: 'Invalid path (an absolute path is required)' }
       try {
         await mkdir(dirname(p), { recursive: true })
         await writeFile(p, content, 'utf8')
@@ -214,6 +215,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       }
     },
     mkdir: async (p: string) => {
+      if (!isAbsolute(p)) return { error: 'Invalid path (an absolute path is required)' }
       try {
         await mkdir(p, { recursive: true })
         return { ok: true }
@@ -222,6 +224,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       }
     },
     delete: async (p: string) => {
+      if (!isAbsolute(p)) return { error: 'Invalid path (an absolute path is required)' }
       try {
         const s = await stat(p)
         if (s.isDirectory()) await rmdir(p)
@@ -232,6 +235,17 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       }
     },
     exists: async (p: string) => existsSync(p),
+    readImage: async (p: string) => {
+      const mime: Record<string, string> = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', svg: 'image/svg+xml' }
+      const m = mime[(/\.([A-Za-z0-9]+)$/.exec(p)?.[1] || '').toLowerCase()]
+      if (!isAbsolute(p) || !m) return { error: 'Not an image file' }
+      try {
+        const buf = await readFile(p)
+        return { dataUrl: `data:${m};base64,${buf.toString('base64')}`, size: buf.length, mtime: Date.now() }
+      } catch {
+        return { error: 'File not found' }
+      }
+    },
     homeDir: async () => opts.homeDir ?? homedir(),
     downloadsPath: async () => join(opts.homeDir ?? homedir(), 'Downloads'),
     walk: async (p: string) => walkTree(p),

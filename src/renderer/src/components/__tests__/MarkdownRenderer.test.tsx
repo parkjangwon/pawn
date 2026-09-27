@@ -36,14 +36,59 @@ describe('MarkdownRenderer', () => {
     expect(screen.getByRole('link')).toHaveAttribute('href', 'mailto:hi@example.com')
   })
 
-  it('renders file:// links as local reveal shortcuts', () => {
+  it('opens file:// links inside Pawn, reveals on ⌘-click, and reports missing files', async () => {
+    const { useFilesPanelStore } = await import('../../stores/filesPanel')
     const reveal = vi.fn(async () => ({ ok: true }))
-    ;(window as any).api = { workspace: { reveal } }
-    render(<MarkdownRenderer content="[app.ts](file:///tmp/project/src/app.ts)" />)
-    const link = screen.getByRole('link') as HTMLAnchorElement
+    const files: Record<string, boolean> = { '/tmp/project/src/app.ts': true }
+    const toasts: string[] = []
+    const onToast = (e: Event): void => void toasts.push((e as CustomEvent).detail.message)
+    window.addEventListener('pawn:toast', onToast)
+    ;(window as any).api = {
+      workspace: { reveal },
+      fs: { stat: vi.fn(async (p: string) => (files[p] ? { isFile: true, isDirectory: false, size: 1, mtime: 0 } : { error: 'ENOENT' })) }
+    }
+    render(<MarkdownRenderer content="[app.ts](file:///tmp/project/src/app.ts) and [gone](file:///tmp/project/gone.ts)" />)
+    const [link, gone] = screen.getAllByRole('link') as HTMLAnchorElement[]
     expect(link).toHaveAttribute('href', 'file:///tmp/project/src/app.ts')
     fireEvent.click(link)
-    expect(reveal).toHaveBeenCalledWith('/tmp/project/src/app.ts')
+    await vi.waitFor(() => expect(useFilesPanelStore.getState().pendingPath).toBe('/tmp/project/src/app.ts'))
+    expect(reveal).not.toHaveBeenCalled()
+    fireEvent.click(link, { metaKey: true })
+    await vi.waitFor(() => expect(reveal).toHaveBeenCalledWith('/tmp/project/src/app.ts'))
+    fireEvent.click(gone)
+    await vi.waitFor(() => expect(toasts[0]).toBe('markdown.fileNotFound: /tmp/project/gone.ts'))
+    window.removeEventListener('pawn:toast', onToast)
+  })
+
+  it('resolves relative links against the chat folder and links existing inline-code paths', async () => {
+    const { MarkdownBaseDirContext } = await import('../LocalFileLinks')
+    ;(window as any).api = {
+      fs: { stat: vi.fn(async (p: string) => (p === '/proj/charts/sales.svg' ? { isFile: true, isDirectory: false, size: 1, mtime: 0 } : { error: 'ENOENT' })) }
+    }
+    render(
+      <MarkdownBaseDirContext.Provider value="/proj">
+        <MarkdownRenderer content={'[readme](./README.md#L3) · `charts/sales.svg` · `charts/missing.svg` · `npm test`'} />
+      </MarkdownBaseDirContext.Provider>
+    )
+    expect(screen.getByRole('link', { name: 'readme' })).toHaveAttribute('href', 'file:///proj/README.md')
+    await vi.waitFor(() => expect(screen.getByRole('link', { name: 'charts/sales.svg' })).toHaveAttribute('href', 'file:///proj/charts/sales.svg'))
+    expect(screen.queryByRole('link', { name: 'charts/missing.svg' })).not.toBeInTheDocument()
+    expect(screen.getByText('npm test').tagName).toBe('CODE')
+  })
+
+  it('shows local images inline through the main process (never a file: fetch)', async () => {
+    const readImage = vi.fn(async (p: string) =>
+      p.endsWith('chart.png') ? { dataUrl: 'data:image/png;base64,iVBORw0KGgo=', size: 8, mtime: 1 } : { error: 'File not found' }
+    )
+    ;(window as any).api = { fs: { readImage, stat: vi.fn(async () => ({ isFile: true, isDirectory: false, size: 1, mtime: 0 })) } }
+    render(<MarkdownRenderer content={'![Sales chart](file:///p/charts/chart.png)\n\n![Lost](/p/lost.png)'} />)
+    const img = await screen.findByRole('button', { name: 'Sales chart' })
+    expect(img).toHaveAttribute('src', 'data:image/png;base64,iVBORw0KGgo=')
+    expect(readImage).toHaveBeenCalledWith('/p/charts/chart.png')
+    expect(await screen.findByText(/Lost — markdown.fileNotFound/)).toBeInTheDocument()
+    // Remote images still never auto-load.
+    render(<MarkdownRenderer content="![remote](https://evil.example/x.png)" />)
+    expect(screen.getByRole('link', { name: 'remote' })).toHaveAttribute('href', 'https://evil.example/x.png')
   })
 
   it('renders data:image markdown attachments (not broken placeholders)', () => {

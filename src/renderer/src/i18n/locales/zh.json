@@ -194,7 +194,10 @@
       "s": "{{n}} 秒"
     },
     "compacting": "正在压缩上下文…",
-    "secondOpinion": "正在请另一个模型给出意见…"
+    "secondOpinion": "正在请另一个模型给出意见…",
+    "visionNone": "{{model}} 无法查看图片，且没有启用的视觉模型 — 图片不会被读取。请在 设置 → 模型 中添加或启用视觉模型。",
+    "visionNoneAuto": "没有启用能查看图片的模型 — 图片不会被读取。请在 设置 → 模型 中启用视觉模型。",
+    "visionFallbackNote": "{{model}} 无法查看图片，此消息将改由 {{fallback}} 处理。"
   },
   "automation": {
     "title": "自动化",
@@ -304,7 +307,8 @@
     "reasoningAutoDesc": "根据任务自动选择",
     "reasoningHighDesc": "深度思考",
     "reasoningMediumDesc": "均衡",
-    "reasoningHigh": "推理高"
+    "reasoningHigh": "推理高",
+    "title": "模型"
   },
   "permission": {
     "title": "权限请求",
@@ -343,7 +347,10 @@
       "scopeSession": "本次会话",
       "sessionTitle": "会话批准",
       "sessionDesc": "退出应用后清除。"
-    }
+    },
+    "previewLabel": "将要更改的内容",
+    "moreLines_one": "… 还有 {{count}} 行",
+    "moreLines_other": "… 还有 {{count}} 行"
   },
   "statusBar": {
     "working": "工作中...",
@@ -918,7 +925,8 @@
     "namePlaceholder": "项目名称",
     "sourceFolders": "源文件夹",
     "addFolder": "添加文件夹",
-    "delete": "移除"
+    "delete": "移除",
+    "removeFolder": "移除文件夹 {{path}}"
   },
   "confirmDialog": {
     "confirm": "确认",
@@ -973,7 +981,10 @@
       "errUnstage": "取消暂存失败",
       "errCommit": "提交失败 ({{code}})",
       "errPush": "推送失败 ({{code}})",
-      "errPr": "无法打开 PR"
+      "errPr": "无法打开 PR",
+      "newFiles": "+{{count}} 新文件",
+      "untrackedHint_one": "{{count}} 个尚未被 git 跟踪的新文件",
+      "untrackedHint_other": "{{count}} 个尚未被 git 跟踪的新文件"
     },
     "openTool": "打开工具",
     "toolDescs": {
@@ -1013,7 +1024,9 @@
     "diff": {
       "title": "最近更改",
       "empty": "没有最近的文件更改",
-      "recent": "最近更改 ({{count}})"
+      "recent": "最近更改 ({{count}})",
+      "noTextPreview": "无文本预览（二进制或大文件）",
+      "open": "打开"
     },
     "tools": {
       "terminal": "终端",
@@ -1115,7 +1128,9 @@
     "linesUnit": "行",
     "unsavedTitle": "未保存的更改",
     "unsavedConfirm": "有未保存的更改。放弃并关闭？",
-    "discard": "放弃并关闭"
+    "discard": "放弃并关闭",
+    "viewSource": "源码",
+    "reveal": "在访达中显示"
   },
   "toolMessage": {
     "showFullOutput": "显示完整输出",
@@ -1159,6 +1174,7 @@
     "batchDone": "已执行 {{count}} 项操作",
     "lineStats": "新增 {{added}} 行，删除 {{removed}} 行",
     "filesChanged": "{{count}} 个文件",
+    "filesChanged_one": "{{count}} 个文件",
     "zoom": "放大",
     "uiSnapshot": "读取界面",
     "findOnScreen": "在屏幕上查找",
@@ -1225,6 +1241,7 @@
     "undoTurn": "撤销本轮",
     "undoing": "正在撤销…",
     "reverted": "已撤销 {{count}} 个文件",
+    "reverted_one": "已撤销 {{count}} 个文件",
     "failed": "撤销失败",
     "justNow": "刚刚",
     "minutesAgo": "{{count}} 分钟前",
@@ -1236,6 +1253,7 @@
     "undoTurnHint": "撤销本轮文件更改",
     "conflictTitle": "部分文件在代理修改后又被更改",
     "conflictMessage": "有 {{count}} 个文件在此轮之后被修改（手动编辑、格式化工具或后续轮次）。撤销将丢弃这些更改。",
+    "conflictMessage_one": "有 {{count}} 个文件在此轮之后被修改（手动编辑、格式化工具或后续轮次）。撤销将丢弃这些更改。",
     "revertSafeOnly": "仅撤销其余文件",
     "overwriteAll": "仍然覆盖",
     "revertedSkipped": "已撤销 {{count}} 个文件，保留了 {{skipped}} 个已修改的文件",
@@ -1244,7 +1262,10 @@
       "missing": "已删除",
       "recreated": "已重新创建",
       "oversized": "过大"
-    }
+    },
+    "chipHint": "点击查看差异",
+    "byCommand": "由命令创建",
+    "files_one": "{{count}} 个文件"
   },
   "notifications": {
     "taskComplete": "任务完成",
@@ -1308,7 +1329,11 @@
     "expandCode": "展开全部 {{count}} 行",
     "collapseCode": "收起",
     "copyCode": "复制代码",
-    "codeCopied": "已复制到剪贴板"
+    "codeCopied": "已复制到剪贴板",
+    "fileLinkHint": "点击在 Pawn 中打开 · ⌘/Ctrl 点击在访达中显示",
+    "fileNotFound": "找不到文件",
+    "imageUnavailable": "此处无法预览图片",
+    "imageLoading": "正在加载图片"
   },
   "questions": {
     "badge": "提问",

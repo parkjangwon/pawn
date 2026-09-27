@@ -1,6 +1,6 @@
 import { app, ipcMain } from 'electron'
 import { handleTrusted } from './trust'
-import { join, relative } from 'path'
+import { isAbsolute, join, relative } from 'path'
 import { readFile, writeFile, readdir, stat, mkdir, unlink, rmdir, access } from 'fs/promises'
 import { cp, rm } from 'fs/promises'
 import { readSpreadsheet } from '../spreadsheet'
@@ -82,8 +82,14 @@ const walkCache = new Map<string, { at: number; result: Array<{ name: string; pa
 const MAX_WRITE_CHARS = 32 * 1024 * 1024
 
 /** Reject null bytes / non-strings before any fs call. */
-function safePath(p: unknown): string | null {
+/**
+ * Only absolute paths: a relative path would resolve against the app
+ * process's working directory (the app bundle, `/`, or in development the
+ * Pawn repository), never the user's project.
+ */
+export function safePath(p: unknown): string | null {
   if (typeof p !== 'string' || !p || p.includes('\0')) return null
+  if (!isAbsolute(p)) return null
   return p
 }
 
@@ -262,10 +268,23 @@ async function walkTreeCached(rootPath: string): Promise<Array<{ name: string; p
   return result
 }
 
+const IMAGE_MIME: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  jpeg: 'image/jpeg',
+  gif: 'image/gif',
+  webp: 'image/webp',
+  svg: 'image/svg+xml',
+  bmp: 'image/bmp',
+  ico: 'image/x-icon',
+  avif: 'image/avif'
+}
+const MAX_IMAGE_BYTES = 15 * 1024 * 1024
+
 export function registerFsIpc(): void {
   handleTrusted('fs:readFile', async (_, filePath: string) => {
     const path = safePath(filePath)
-    if (!path) return { error: 'Invalid path' }
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
     try {
       const s = await stat(path)
       if (s.size > MAX_READ_BYTES) {
@@ -307,7 +326,7 @@ export function registerFsIpc(): void {
 
   handleTrusted('fs:writeFile', async (_, filePath: string, content: string) => {
     const path = safePath(filePath)
-    if (!path) return { error: 'Invalid path' }
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
     if (typeof content !== 'string') return { error: 'Invalid content' }
     if (content.length > MAX_WRITE_CHARS) {
       return { error: `Content too large to write safely (${content.length} chars, max ${MAX_WRITE_CHARS})` }
@@ -326,7 +345,7 @@ export function registerFsIpc(): void {
 
   handleTrusted('fs:listDir', async (_, dirPath: string) => {
     const path = safePath(dirPath)
-    if (!path) return { error: 'Invalid path' }
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
     try {
       const entries = await readdir(path, { withFileTypes: true })
       return entries.map((e) => ({
@@ -341,7 +360,7 @@ export function registerFsIpc(): void {
 
   handleTrusted('fs:walk', async (_, rootPath: string) => {
     const path = safePath(rootPath)
-    if (!path) return { error: 'Invalid path' }
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
     try {
       return await walkTreeCached(path)
     } catch (err) {
@@ -351,7 +370,7 @@ export function registerFsIpc(): void {
 
   handleTrusted('fs:stat', async (_, filePath: string) => {
     const path = safePath(filePath)
-    if (!path) return { error: 'Invalid path' }
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
     try {
       const s = await stat(path)
       return { size: s.size, isFile: s.isFile(), isDirectory: s.isDirectory(), mtime: s.mtimeMs }
@@ -362,7 +381,7 @@ export function registerFsIpc(): void {
 
   handleTrusted('fs:mkdir', async (_, dirPath: string) => {
     const path = safePath(dirPath)
-    if (!path) return { error: 'Invalid path' }
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
     try {
       await mkdir(path, { recursive: true })
       walkCache.clear()
@@ -376,7 +395,7 @@ export function registerFsIpc(): void {
   // fs:removeDir (skill installer) or shell_exec with an explicit rm -rf.
   handleTrusted('fs:delete', async (_, filePath: string) => {
     const path = safePath(filePath)
-    if (!path) return { error: 'Invalid path' }
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
     try {
       const s = await stat(path)
       if (s.isDirectory()) {
@@ -394,6 +413,27 @@ export function registerFsIpc(): void {
       return { ok: true }
     } catch (err) {
       return { error: String(err) }
+    }
+  })
+
+  // Local images shown inline in chat (markdown `![](…)`, file viewer).
+  // Image types only, size-capped; returned as a data URL so the renderer's
+  // CSP (no file: / remote img-src) stays closed.
+  handleTrusted('fs:readImage', async (_, filePath: string) => {
+    const path = safePath(filePath)
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
+    const ext = (/\.([A-Za-z0-9]+)$/.exec(path)?.[1] || '').toLowerCase()
+    const mime = IMAGE_MIME[ext]
+    if (!mime) return { error: 'Not an image file' }
+    try {
+      const s = await stat(path)
+      if (!s.isFile()) return { error: 'Not a file' }
+      if (s.size > MAX_IMAGE_BYTES) return { error: `Image too large to preview (${Math.round(s.size / 1048576)} MB)` }
+      const buf = await readFile(path)
+      return { dataUrl: `data:${mime};base64,${buf.toString('base64')}`, size: s.size, mtime: s.mtimeMs }
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code
+      return { error: code === 'ENOENT' ? 'File not found' : String(err), ...(code ? { code } : {}) }
     }
   })
 
@@ -442,7 +482,7 @@ export function registerFsIpc(): void {
 
   handleTrusted('fs:removeDir', async (_, dirPath: string) => {
     const path = safePath(dirPath)
-    if (!path) return { error: 'Invalid path' }
+    if (!path) return { error: 'Invalid path (an absolute path is required)' }
     if (isProtectedRemovePath(path)) {
       return { error: `Refused to remove protected path: ${path}` }
     }

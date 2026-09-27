@@ -1,10 +1,11 @@
 import { ultraWorkTriggerLength } from '../agent/ultraWork'
 import './UltraWork.css'
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
 import GitSummaryChip from './GitSummaryChip'
 import { useProviderStore } from '../stores/provider'
+import { previewVisionTarget } from '../agent/router'
 import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
 import { compactSessionNow } from '../stores/chat'
 import type { Project } from '../stores/app'
@@ -76,6 +77,19 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const [compacting, setCompacting] = useState(false)
   const currentModel = models.find((m) => m.id === activeModelId) || models.find((m) => m.enabled)
   const currentModelLabel = currentModel?.label || currentModel?.modelId || t('modelPicker.noModel')
+
+  // Images attached for a model that cannot see them: say where they go.
+  const visionNote = useMemo(() => {
+    if (!props.attachments.some((a) => a.kind === 'image')) return null
+    const target = routingMode === 'auto' ? undefined : currentModel
+    const { sees, fallback } = previewVisionTarget(target)
+    if (sees) return null
+    if (routingMode === 'auto') return fallback ? null : t('chat.visionNoneAuto')
+    const name = currentModel?.label || currentModel?.modelId || ''
+    return fallback
+      ? t('chat.visionFallbackNote', { model: name, fallback: fallback.label || fallback.modelId })
+      : t('chat.visionNone', { model: name })
+  }, [props.attachments, routingMode, currentModel, t])
   const permLabels: Record<string, string> = { ask: t('permission.ask'), auto: t('permission.auto'), yolo: t('permission.yolo') }
   const permDescs: Record<string, string> = { ask: t('permission.askDesc'), auto: t('permission.autoDesc'), yolo: t('permission.yoloDesc') }
   const reasoningLabels: Record<string, string> = {
@@ -235,6 +249,12 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                 <span className="ulw-hint-text">{t('ultraWork.armedHint')}</span>
               </div>
             )}
+            {visionNote && (
+              <div className="attachment-vision-note" role="status">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                <span>{visionNote}</span>
+              </div>
+            )}
             {attachments.length > 0 && (
               <div className="attachment-bar">
                 {attachments.map((a) => (
@@ -298,7 +318,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         <path d="M12 19V5M5 12l7-7 7 7" />
                       )}
                     </svg>
-                    <span>{agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}</span>
+                    <span className="agent-label">{agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}</span>
                   </button>
                   <span className="mode-segment-sep" aria-hidden="true" />
                   <button
@@ -311,7 +331,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     aria-label={permLabels[permissionMode]}
                   >
                     <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
-                    <span>{permLabels[permissionMode]}</span>
+                    <span className="perm-label">{permLabels[permissionMode]}</span>
                   </button>
                   {showPermPicker && (
                     <div className="project-picker perm-picker">
@@ -452,7 +472,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     aria-expanded={showModelPicker}
                     onClick={() => { setShowModelPicker(!showModelPicker); setShowProjectPicker(false); setShowPermPicker(false); setShowUsagePopover(false) }}
                     title={routingMode === 'auto' ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel')) : currentModelLabel}
-                    aria-label={t('modelPicker.autoLabel')}
+                    aria-label={`${t('modelPicker.title')}: ${routingMode === 'auto' ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel')) : currentModelLabel}`}
                   >
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
                     <span>{routingMode === 'auto'

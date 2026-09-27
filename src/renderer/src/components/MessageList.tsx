@@ -173,7 +173,9 @@ const MessageRow = memo(function MessageRow({
   isStreamingTail,
   projectId,
   sessionId,
-  canAct
+  canAct,
+  continuation,
+  intermediate
 }: {
   msg: Message
   animateIn?: boolean
@@ -181,6 +183,10 @@ const MessageRow = memo(function MessageRow({
   projectId?: string | null
   sessionId?: string | null
   canAct?: boolean
+  /** Not the first assistant block of its turn: no role label. */
+  continuation?: boolean
+  /** A later assistant block follows in the same turn: no action row. */
+  intermediate?: boolean
 }): React.JSX.Element {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
@@ -217,12 +223,14 @@ const MessageRow = memo(function MessageRow({
 
   return (
     <div
-      className={`message ${msg.role}${enterClass}${isStreamingTail || isLive ? ' message-live' : ''}`}
+      className={`message ${msg.role}${enterClass}${isStreamingTail || isLive ? ' message-live' : ''}${continuation ? ' message-continuation' : ''}${intermediate ? ' message-intermediate' : ''}`}
       data-message-id={msg.id}
     >
-      <div className="message-role">
-        {msg.role === 'user' ? t('chat.you') : t('chat.assistant')}
-      </div>
+      {!continuation && (
+        <div className="message-role">
+          {msg.role === 'user' ? t('chat.you') : t('chat.assistant')}
+        </div>
+      )}
       <div className="message-body">
         {msg.role === 'assistant' && thinking ? (
           <ThinkingBlock text={thinking} live={Boolean(liveThinking)} />
@@ -266,6 +274,7 @@ const MessageRow = memo(function MessageRow({
             <MarkdownRenderer content={content} />
           </div>
         )}
+        {!intermediate && (
         <div className="message-actions">
           <button
             className={`message-copy ${copied ? 'copied' : ''}`}
@@ -326,6 +335,7 @@ const MessageRow = memo(function MessageRow({
           )}
           {!isLive && <MessageTime createdAt={msg.createdAt} />}
         </div>
+        )}
       </div>
       {msg.role === 'assistant' && !isLive && (msg.modelLabel || msg.durationMs) ? (
         <div className="message-meta">
@@ -361,10 +371,39 @@ export default function MessageList({
     typeof msg.createdAt === 'number' && now - msg.createdAt < 900
   const lastId = messages[messages.length - 1]?.id
   const lastRole = messages[messages.length - 1]?.role
+  const lastUserIdx = messages.map((m) => m.role).lastIndexOf('user')
+  const turnHasAssistant = messages.slice(lastUserIdx + 1).some((m) => m.role === 'assistant')
 
   type RenderItem =
     | { kind: 'message'; msg: Message }
     | { kind: 'tool-batch'; id: string; messages: Message[] }
+
+  // One turn reads as one answer: consecutive assistant blocks between two
+  // user messages share a single "Assistant" label, and only the last one
+  // carries Copy / Regenerate / time.
+  const turnShape = new Map<string, { continuation: boolean; intermediate: boolean }>()
+  {
+    let seenAssistant = false
+    let lastAssistantId: string | null = null
+    const flush = (): void => {
+      if (lastAssistantId) {
+        const cur = turnShape.get(lastAssistantId)
+        if (cur) cur.intermediate = false
+      }
+    }
+    for (const m of messages) {
+      if (m.role === 'user') {
+        flush()
+        seenAssistant = false
+        lastAssistantId = null
+      } else if (m.role === 'assistant') {
+        turnShape.set(m.id, { continuation: seenAssistant, intermediate: true })
+        seenAssistant = true
+        lastAssistantId = m.id
+      }
+    }
+    flush()
+  }
 
   const renderItems: RenderItem[] = []
   for (const msg of visible) {
@@ -397,6 +436,8 @@ export default function MessageList({
               projectId={projectId}
               sessionId={sessionId}
               canAct={!busy && Boolean(projectId && sessionId)}
+              continuation={turnShape.get(item.msg.id)?.continuation}
+              intermediate={turnShape.get(item.msg.id)?.intermediate}
             />
           ) : (
             <ToolBatch
@@ -407,8 +448,8 @@ export default function MessageList({
         </MessageErrorBoundary>
       ))}
       {busy && lastRole !== 'assistant' && (
-        <div className="message assistant message-enter">
-          <div className="message-role">{t('chat.assistant')}</div>
+        <div className={`message assistant message-enter${turnHasAssistant ? ' message-continuation' : ''}`}>
+          {!turnHasAssistant && <div className="message-role">{t('chat.assistant')}</div>}
           <div className="message-content streaming">
             <span className="cursor-blink">▍</span>
           </div>

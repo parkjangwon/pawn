@@ -194,7 +194,10 @@
       "s": "{{n}}s"
     },
     "compacting": "Compacting context…",
-    "secondOpinion": "Asking another model for a second opinion…"
+    "secondOpinion": "Asking another model for a second opinion…",
+    "visionNone": "{{model}} can't see images, and no vision model is enabled — the image won't be read. Add or enable a vision model in Settings → Models.",
+    "visionNoneAuto": "No enabled model can see images — the image won't be read. Enable a vision model in Settings → Models.",
+    "visionFallbackNote": "{{model}} can't see images — this message goes to {{fallback}} instead."
   },
   "automation": {
     "title": "Automations",
@@ -304,7 +307,8 @@
     "reasoningAutoDesc": "Pick automatically based on the task",
     "reasoningHighDesc": "Deeper thinking",
     "reasoningMediumDesc": "Balanced",
-    "reasoningHigh": "Reasoning high"
+    "reasoningHigh": "Reasoning high",
+    "title": "Model"
   },
   "permission": {
     "title": "Permission Request",
@@ -343,7 +347,10 @@
       "scopeSession": "This session",
       "sessionTitle": "Session approvals",
       "sessionDesc": "Cleared when you quit the app."
-    }
+    },
+    "previewLabel": "What will change",
+    "moreLines_one": "… {{count}} more line",
+    "moreLines_other": "… {{count}} more lines"
   },
   "statusBar": {
     "working": "Working...",
@@ -918,7 +925,8 @@
     "namePlaceholder": "Project name",
     "sourceFolders": "Source Folders",
     "addFolder": "Add Folder",
-    "delete": "Remove"
+    "delete": "Remove",
+    "removeFolder": "Remove folder {{path}}"
   },
   "confirmDialog": {
     "confirm": "Confirm",
@@ -973,7 +981,10 @@
       "errUnstage": "Unstage failed",
       "errCommit": "Commit failed ({{code}})",
       "errPush": "Push failed ({{code}})",
-      "errPr": "Could not open PR"
+      "errPr": "Could not open PR",
+      "newFiles": "+{{count}} new",
+      "untrackedHint_one": "{{count}} new file not tracked by git yet",
+      "untrackedHint_other": "{{count}} new files not tracked by git yet"
     },
     "openTool": "Open a tool",
     "toolDescs": {
@@ -1013,7 +1024,9 @@
     "diff": {
       "title": "Recent Changes",
       "empty": "No recent file changes",
-      "recent": "Recent Changes ({{count}})"
+      "recent": "Recent Changes ({{count}})",
+      "noTextPreview": "No text preview (binary or large file)",
+      "open": "Open"
     },
     "tools": {
       "terminal": "Terminal",
@@ -1115,7 +1128,9 @@
     "linesUnit": "lines",
     "unsavedTitle": "Unsaved changes",
     "unsavedConfirm": "You have unsaved changes. Discard them and close?",
-    "discard": "Discard & Close"
+    "discard": "Discard & Close",
+    "viewSource": "Source",
+    "reveal": "Reveal"
   },
   "toolMessage": {
     "showFullOutput": "Show full output",
@@ -1158,7 +1173,8 @@
     "batchRunning": "Running {{count}} tools…",
     "batchDone": "Executed {{count}} operations",
     "lineStats": "{{added}} lines added, {{removed}} removed",
-    "filesChanged": "{{count}} file(s)",
+    "filesChanged": "{{count}} files",
+    "filesChanged_one": "{{count}} file",
     "zoom": "Zoom",
     "uiSnapshot": "Read UI",
     "findOnScreen": "Find on screen",
@@ -1224,7 +1240,8 @@
     "openDiff": "Diff panel",
     "undoTurn": "Undo turn",
     "undoing": "Reverting…",
-    "reverted": "Reverted {{count}} file(s)",
+    "reverted": "Reverted {{count}} files",
+    "reverted_one": "Reverted {{count}} file",
     "failed": "Revert failed",
     "justNow": "just now",
     "minutesAgo": "{{count}}m ago",
@@ -1235,7 +1252,8 @@
     "history": "History ({{count}})",
     "undoTurnHint": "Restore files from this turn",
     "conflictTitle": "Some files changed since the agent edited them",
-    "conflictMessage": "{{count}} file(s) were modified after this turn (by you, a formatter, or a later turn). Reverting them would discard those changes.",
+    "conflictMessage": "{{count}} files were modified after this turn (by you, a formatter, or a later turn). Reverting them would discard those changes.",
+    "conflictMessage_one": "{{count}} file was modified after this turn (by you, a formatter, or a later turn). Reverting it would discard those changes.",
     "revertSafeOnly": "Revert the rest",
     "overwriteAll": "Overwrite anyway",
     "revertedSkipped": "Reverted {{count}} file(s), kept {{skipped}} modified file(s)",
@@ -1244,7 +1262,10 @@
       "missing": "deleted",
       "recreated": "recreated",
       "oversized": "too large"
-    }
+    },
+    "files_one": "{{count}} file",
+    "chipHint": "Click to view the diff",
+    "byCommand": "Created by a command"
   },
   "notifications": {
     "taskComplete": "Task complete",
@@ -1308,7 +1329,11 @@
     "expandCode": "Show all {{count}} lines",
     "collapseCode": "Collapse",
     "copyCode": "Copy code",
-    "codeCopied": "Copied to clipboard"
+    "codeCopied": "Copied to clipboard",
+    "fileLinkHint": "Click to open in Pawn · ⌘/Ctrl-click to reveal in Finder",
+    "fileNotFound": "File not found",
+    "imageUnavailable": "Image preview is unavailable here",
+    "imageLoading": "Loading image"
   },
   "questions": {
     "badge": "Question",

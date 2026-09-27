@@ -173,3 +173,33 @@ describe('MessageList', () => {
     expect(times[0].getAttribute('datetime')).toBe(new Date(now).toISOString())
   })
 })
+
+describe('MessageList turn grouping', () => {
+  it('shows one Assistant label per turn and actions only on its last block', () => {
+    renderList({
+      messages: [
+        msg('u1', 'user', 'make a chart'),
+        msg('a1', 'assistant', 'Let me check tools.'),
+        msg('s1', 'system', '[Tool: shell_exec] OK\nrsvg-convert'),
+        msg('a2', 'assistant', 'rsvg-convert is available.'),
+        msg('s2', 'system', '[Tool: write_file] OK\nwritten'),
+        msg('a3', 'assistant', 'Here is the chart.'),
+        msg('u2', 'user', 'thanks'),
+        msg('a4', 'assistant', 'You are welcome.')
+      ]
+    })
+    // Two turns → two Assistant labels (not four) + two You labels.
+    expect(screen.getAllByText('chat.assistant')).toHaveLength(2)
+    expect(screen.getAllByText('chat.you')).toHaveLength(2)
+    // Copy on each user message + the last block of each turn only.
+    expect(screen.getAllByRole('button', { name: 'chat.copy' })).toHaveLength(4)
+    const a1 = document.querySelector('[data-message-id="a1"]')!
+    const a2 = document.querySelector('[data-message-id="a2"]')!
+    const a3 = document.querySelector('[data-message-id="a3"]')!
+    expect(a1.className).toContain('message-intermediate')
+    expect(a1.className).not.toContain('message-continuation')
+    expect(a2.className).toContain('message-continuation')
+    expect(a3.className).toContain('message-continuation')
+    expect(a3.className).not.toContain('message-intermediate')
+  })
+})

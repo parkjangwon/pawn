@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
+import { generalWorkspaceDirSync } from '../utils/generalWorkspace'
 import { useKeybinding, useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import FilesView from './FilesView'
 import GitView from './GitView'
@@ -424,7 +425,8 @@ export default function RightPanel(): React.JSX.Element | null {
     }
 
     switch (activeTab) {
-      case 'files': return <FilesView projectPath={projectPath} />
+      // General chats browse their workspace folder.
+      case 'files': return <FilesView projectPath={projectPath || generalWorkspaceDirSync() || ''} />
       case 'git': return <GitView projectPath={projectPath} />
       case 'browser': return <BrowserView />
       case 'diff': return <DiffListView />

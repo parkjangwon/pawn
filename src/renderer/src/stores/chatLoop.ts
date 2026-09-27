@@ -27,6 +27,8 @@ import { noteFileSeen, snapshotScope } from '../agent/fileSnapshots'
 import { formatProfileBlock, learnFromCommand, loadProfile } from '../agent/repoProfile'
 import { detectCorrection, takeRecentRevert } from '../agent/correctionLearning'
 import { learnFromCorrection } from '../agent/learning'
+import { generalWorkspaceDir } from '../utils/generalWorkspace'
+import { recordCommandCreatedFiles, takeFileBaseline } from '../agent/commandFiles'
 import { runProjectChecks } from '../agent/runChecks'
 import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
 import {
@@ -297,9 +299,13 @@ export async function agentLoop(
     const projectPaths = (project?.paths || []).filter(Boolean)
     const session = project?.sessions.find((s) => s.id === sessionId)
     // Selected multi-root path (session.path) wins over primary paths[0].
-    const projectPath =
+    let projectPath =
       (session?.path && projectPaths.includes(session.path) ? session.path : null) ||
       projectPaths[0]
+    // No project folder (General chat): work in the shared artifacts folder,
+    // never in the app process's own working directory.
+    const generalWorkspace = !projectPath ? await generalWorkspaceDir().catch(() => null) : null
+    if (generalWorkspace) projectPath = generalWorkspace
     const cwd = session?.path || projectPath || ''
 
     // System prompt as ordered layers. Caching is a prefix match, so the most
@@ -312,6 +318,10 @@ export async function agentLoop(
     let projectPreamble = ''
     if (cwd) {
       projectPreamble += `--- Working Directory ---\n${cwd}\nResolve relative paths against this directory unless told otherwise.`
+      if (generalWorkspace) {
+        projectPreamble +=
+          '\nNo project folder is open: this is the shared Pawn workspace (Downloads/pawn-artifacts). Put files you create here unless the user names another location, and link them with absolute file:// paths.'
+      }
     }
     if (projectPaths.length > 1) {
       projectPreamble +=
@@ -398,7 +408,7 @@ export async function agentLoop(
     }
     // Repo onboarding profile (learned commands, conventions, gotchas). Frozen
     // for the session so the preamble — and the prompt cache — stays stable.
-    if (projectPath) {
+    if (projectPath && !generalWorkspace) {
       let block = profileBlockBySession.get(sessionId)
       if (block === undefined) {
         const profile = await loadProfile(projectPath).catch(() => null)
@@ -548,6 +558,8 @@ export async function agentLoop(
     const toolHistory: Array<{ call: string; result: string; isError?: boolean }> = []
     const turnToolCwd = cwd || projectPath
     let turnUsedBrowser = false
+    // Files shell commands create are detected against this (Agent changes / undo).
+    const fileBaseline = turnToolCwd ? takeFileBaseline(turnToolCwd).catch(() => null) : Promise.resolve(null)
     // Account-backed tool groups are hidden while disconnected (bounded wait).
     await refreshConnectedProviders()
 
@@ -1104,6 +1116,14 @@ export async function agentLoop(
       }
 
       consecutiveToolErrors = roundErrors > 0 ? consecutiveToolErrors + 1 : 0
+
+      // Commands may have created files the ledger never saw.
+      const ranCommands = result.toolCalls.some((tc) => effectiveToolName(tc) === 'shell_exec' && resultsById.get(tc.id)?.isError !== true)
+      if (ranCommands && !signal.aborted) {
+        const created = await recordCommandCreatedFiles(await fileBaseline).catch(() => [])
+        if (created.length) turnHadCodeEdits = true
+      }
+      if (ranCommands || turnHadCodeEdits) window.dispatchEvent(new CustomEvent('pawn:workspace-changed'))
 
       // Runtime perception: new errors from background jobs / the browser page.
       if (!signal.aborted) {

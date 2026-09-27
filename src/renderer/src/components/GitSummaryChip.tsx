@@ -101,8 +101,17 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
         )}
         {dirty && (
           <span className="git-chip-stat">
-            <span className="git-stat-ins">+{summary.insertions}</span>
-            <span className="git-stat-del">-{summary.deletions}</span>
+            {(summary.insertions > 0 || summary.deletions > 0 || summary.untracked === 0) && (
+              <>
+                <span className="git-stat-ins">+{summary.insertions}</span>
+                <span className="git-stat-del">-{summary.deletions}</span>
+              </>
+            )}
+            {summary.untracked > 0 && (
+              <span className="git-stat-new" title={t('rightPanel.git.untrackedHint', { count: summary.untracked })}>
+                {t('rightPanel.git.newFiles', { count: summary.untracked })}
+              </span>
+            )}
           </span>
         )}
       </button>

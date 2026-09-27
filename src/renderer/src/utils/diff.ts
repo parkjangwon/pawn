@@ -16,10 +16,20 @@ export interface DiffResult {
  * Replaces the previous O(NM) LCS 2D matrix approach that could allocate
  * hundreds of millions of array elements on large files.
  */
+/**
+ * Lines of a text, with a trailing newline treated as a terminator (not an
+ * extra empty line) and '' as zero lines — otherwise a new file diffs as
+ * "one unchanged empty line + N added".
+ */
+export function splitLines(text: string): string[] {
+  if (text === '') return []
+  return (text.endsWith('\n') ? text.slice(0, -1) : text).split('\n')
+}
+
 export function computeDiff(oldText: string, newText: string): DiffResult {
   if (oldText === '' && newText === '') return { lines: [], added: 0, removed: 0 }
-  const a = oldText.split('\n')
-  const b = newText.split('\n')
+  const a = splitLines(oldText)
+  const b = splitLines(newText)
   const editScript = myersDiff(a, b)
   return buildDiffResult(a, b, editScript)
 }

@@ -82,7 +82,36 @@ export default function PermissionDialog(): React.JSX.Element | null {
         )}
         <div className="permission-type">{typeLabels[current.type] || current.type}</div>
         <p className="permission-desc">{current.description}</p>
-        {current.details && <pre className="permission-details">{current.details}</pre>}
+        {current.preview ? (
+          <div className={`permission-preview kind-${current.preview.kind}`}>
+            {(current.preview.target || current.preview.summary) && (
+              <div className="permission-preview-head">
+                {current.preview.target && (
+                  <code className="permission-preview-target" title={current.preview.target}>
+                    {current.preview.target}
+                  </code>
+                )}
+                {current.preview.summary && <span className="permission-preview-summary">{current.preview.summary}</span>}
+              </div>
+            )}
+            {current.preview.lines.length > 0 && (
+              <pre className="permission-details" aria-label={t('permission.previewLabel')}>
+                {current.preview.lines.map((l, i) => (
+                  <span key={i} className={`pp-line${l.mark === '+' ? ' add' : l.mark === '-' ? ' del' : ''}`}>
+                    {current.preview!.kind === 'edit' && l.mark ? `${l.mark} ` : ''}
+                    {l.text || ' '}
+                    {'\n'}
+                  </span>
+                ))}
+                {current.preview.truncated ? (
+                  <span className="pp-more">{t('permission.moreLines', { count: current.preview.truncated })}</span>
+                ) : null}
+              </pre>
+            )}
+          </div>
+        ) : (
+          current.details && <pre className="permission-details">{current.details}</pre>
+        )}
 
         <div className="permission-actions">
           <div className="permission-actions-secondary">

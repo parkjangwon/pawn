@@ -12,7 +12,9 @@ interface FileEditorProps {
 // Cap reads so a multi-megabyte minified bundle can't freeze the panel.
 const MAX_BYTES = 1_000_000
 
-type Status = 'loading' | 'ready' | 'binary' | 'tooLarge' | 'error'
+type Status = 'loading' | 'ready' | 'image' | 'binary' | 'tooLarge' | 'error'
+
+const IMAGE_FILE = /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i
 
 function isProbablyBinary(str: string): boolean {
   if (str.includes('\u0000')) return true
@@ -43,6 +45,9 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
   const [savedFlash, setSavedFlash] = useState(false)
   const [wrap, setWrap] = useState(false)
   const [confirmClose, setConfirmClose] = useState(false)
+  const [imageSrc, setImageSrc] = useState<string | null>(null)
+  /** SVG: show the markup instead of the rendered image. */
+  const [showSource, setShowSource] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const gutterRef = useRef<HTMLDivElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
@@ -76,6 +81,16 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
         return
       }
       setFileSize(stat.size)
+      // Images preview instead of showing "binary file".
+      if (IMAGE_FILE.test(filePath) && !showSource && window.api.fs.readImage) {
+        const img = await window.api.fs.readImage(filePath)
+        if (cancelled) return
+        if ('dataUrl' in img) {
+          setImageSrc(img.dataUrl)
+          setStatus('image')
+          return
+        }
+      }
       if (stat.size > MAX_BYTES) {
         setStatus('tooLarge')
         return
@@ -98,7 +113,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
     return () => {
       cancelled = true
     }
-  }, [filePath])
+  }, [filePath, showSource])
 
   const save = useCallback(async (): Promise<void> => {
     if (!dirty || saving) return
@@ -158,6 +173,32 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
       <polyline points="15 18 9 12 15 6" />
     </svg>
   )
+
+  if (status === 'image' && imageSrc) {
+    return (
+      <div className="rp-file-editor">
+        <div className="rp-fe-header">
+          <button className="rp-fe-btn" onClick={requestClose} title={t('fileEditor.back')} aria-label={t('fileEditor.back')}>
+            {chevron}
+          </button>
+          <span className="rp-fe-name" title={filePath}>{fileName}</span>
+          <div className="rp-fe-spacer" />
+          <span className="rp-fe-meta">{humanSize(fileSize)}</span>
+          {/\.svg$/i.test(filePath) && (
+            <button className="rp-fe-btn rp-fe-text-btn" onClick={() => setShowSource(true)}>
+              {t('fileEditor.viewSource')}
+            </button>
+          )}
+          <button className="rp-fe-btn rp-fe-text-btn" onClick={() => void window.api?.workspace?.reveal?.(filePath)}>
+            {t('fileEditor.reveal')}
+          </button>
+        </div>
+        <div className="rp-fe-image">
+          <img src={imageSrc} alt={fileName} />
+        </div>
+      </div>
+    )
+  }
 
   if (status !== 'ready') {
     return (

@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRoutineStore } from '../stores/routine'
 import { useAppStore } from '../stores/app'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
-import { activateOnKey } from '../utils/focusTrap'
+import { activateOnKey, useFocusTrap } from '../utils/focusTrap'
 import ConfirmDialog from './ConfirmDialog'
 import NavControls from './NavControls'
 import Tooltip from './Tooltip'
@@ -43,6 +43,8 @@ export default function AutomationView({
   const { routines, add, update, toggle, remove, runNow, runningIds, refresh } = useRoutineStore()
   const { projects, activeProjectId } = useAppStore()
   const [showEditor, setShowEditor] = useState(false)
+  const automationDialogRef = useRef<HTMLDivElement>(null)
+  useFocusTrap(showEditor, automationDialogRef)
   /** null = create mode; string id = edit mode */
   const [editingId, setEditingId] = useState<string | null>(null)
   const [confirmDeleteRoutine, setConfirmDeleteRoutine] = useState<{ id: string; name: string } | null>(null)
@@ -438,10 +440,17 @@ export default function AutomationView({
 
       {showEditor && (
         <div className="automation-modal-backdrop" onClick={closeEditor}>
-          <div className="automation-modal" onClick={(e) => e.stopPropagation()}>
+          <div
+            ref={automationDialogRef}
+            className="automation-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="automation-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="automation-modal-head">
-              <h3>{editingId ? t('automation.editTitle') : t('automation.new')}</h3>
-              <button type="button" className="automation-close" onClick={closeEditor}>
+              <h3 id="automation-modal-title">{editingId ? t('automation.editTitle') : t('automation.new')}</h3>
+              <button type="button" className="automation-close" onClick={closeEditor} aria-label={t('common.close')} title={t('common.close')}>
                 ×
               </button>
             </div>

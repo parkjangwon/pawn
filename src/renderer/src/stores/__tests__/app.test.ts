@@ -238,3 +238,19 @@ describe('message actions', () => {
     expect(dbMock.clearMessages).toHaveBeenCalledWith(sessionId)
   })
 })
+
+describe('selecting a project', () => {
+  it('drops a session from another project so the next send starts a chat in the selected one', () => {
+    const s = useAppStore.getState()
+    s.addProject('demo', ['/proj'], 'demo')
+    const general = s.startNewChat()
+    expect(useAppStore.getState()).toMatchObject({ activeProjectId: '__general__', activeSessionId: general })
+    useAppStore.getState().setActiveProject('demo')
+    expect(useAppStore.getState()).toMatchObject({ activeProjectId: 'demo', activeSessionId: null })
+    // Selecting a session inside the project keeps it (sidebar: session then project).
+    const inDemo = useAppStore.getState().addSession('demo', 'x')
+    useAppStore.getState().setActiveSession(inDemo)
+    useAppStore.getState().setActiveProject('demo')
+    expect(useAppStore.getState().activeSessionId).toBe(inDemo)
+  })
+})

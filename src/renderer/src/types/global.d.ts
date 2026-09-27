@@ -193,6 +193,7 @@ declare global {
         writeFile: (path: string, content: string) => Promise<{ ok?: boolean; error?: string }>
         listDir: (path: string) => Promise<Array<{ name: string; isDirectory: boolean; path: string }> | { error: string }>
         stat: (path: string) => Promise<{ size: number; isFile: boolean; isDirectory: boolean; mtime: number } | { error: string }>
+        readImage?: (path: string) => Promise<{ dataUrl: string; size: number; mtime: number } | { error: string; code?: string }>
         mkdir: (path: string) => Promise<{ ok?: boolean; error?: string }>
         delete: (path: string) => Promise<{ ok?: boolean; error?: string }>
         exists: (path: string) => Promise<boolean>

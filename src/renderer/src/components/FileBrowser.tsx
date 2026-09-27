@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { useTranslation } from 'react-i18next'
+import { useModalDialog } from '../utils/focusTrap'
 import './FileBrowser.css'
 
 interface FileEntry {
@@ -20,6 +21,8 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useModalDialog(true, dialogRef, onClose)
 
   const loadDir = useCallback(async (path: string, fallback = true) => {
     setLoading(true)
@@ -75,10 +78,10 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
 
   return (
     <div className="file-browser-overlay" onClick={onClose}>
-      <div className="file-browser" onClick={(e) => e.stopPropagation()}>
+      <div ref={dialogRef} className="file-browser" role="dialog" aria-modal="true" aria-labelledby="fb-title" onClick={(e) => e.stopPropagation()}>
         <div className="fb-header">
-          <h3>{t("fileBrowser.title")}</h3>
-          <button className="fb-close" onClick={onClose}>
+          <h3 id="fb-title">{t("fileBrowser.title")}</h3>
+          <button type="button" className="fb-close" onClick={onClose} aria-label={t('common.close')} title={t('common.close')}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
           </button>
         </div>

@@ -168,3 +168,52 @@
   background: var(--accent);
   color: var(--on-accent, #1c1c1e);
 }
+
+.permission-preview {
+  margin: 0 0 var(--space-lg);
+}
+.permission-preview .permission-details {
+  margin: 0;
+  color: var(--text-primary);
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  white-space: pre;
+  word-break: normal;
+}
+.permission-preview.kind-command .permission-details {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.permission-preview-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 6px;
+  min-width: 0;
+}
+.permission-preview-target {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.permission-preview-summary {
+  flex-shrink: 0;
+  font-size: var(--font-xs, 11px);
+  color: var(--text-secondary);
+}
+.pp-line.add {
+  color: var(--success, #34d399);
+  background: color-mix(in srgb, var(--success, #34d399) 10%, transparent);
+}
+.pp-line.del {
+  color: var(--danger, #f87171);
+  background: color-mix(in srgb, var(--danger, #f87171) 10%, transparent);
+}
+.pp-more {
+  display: block;
+  margin-top: 4px;
+  color: var(--text-muted);
+  font-style: italic;
+}

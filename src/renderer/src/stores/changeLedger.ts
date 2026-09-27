@@ -14,6 +14,8 @@ export interface FileChange {
   before: string | null
   after?: string
   op: FileChangeOp
+  /** Created by a shell command (detected afterwards), not by a file tool. */
+  byCommand?: boolean
   toolCallId?: string
   status: 'applied' | 'reverted'
   oversized?: boolean
@@ -363,6 +365,8 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
     // The user undid the agent's work: their next message likely says why
     // (correction learning pairs the two).
     if (reverted > 0) noteRevert(turn.sessionId, applied.map((c) => c.path))
+    // Git chip / file tree refresh.
+    if (reverted > 0 && typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('pawn:workspace-changed'))
     return {
       ok: reverted > 0,
       reverted,

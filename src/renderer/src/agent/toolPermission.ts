@@ -3,6 +3,7 @@ import { usePermissionStore, type PermissionType } from '../stores/permission'
 import { resolveToolPath } from './pathUtils'
 import { fireHook } from './hooksClient'
 import { isToolAllowedInAgentMode } from './agentMode'
+import { buildPermissionPreview } from './permissionPreview'
 
 export type SafetyLevel = 'safe' | 'risky'
 
@@ -513,6 +514,7 @@ export async function checkPermission(
       type,
       description,
       details: JSON.stringify(args, null, 2).slice(0, 500),
+      preview: buildPermissionPreview(callName, args, { path: pathArg }),
       path: pathArg,
       command,
       sessionId: opts?.sessionId

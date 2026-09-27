@@ -1,10 +1,11 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { useEffectiveTheme } from '../stores/theme'
 import FileBrowser from './FileBrowser'
 import ConfirmDialog from './ConfirmDialog'
+import { useModalDialog } from '../utils/focusTrap'
 import './ProjectEditDialog.css'
 
 interface ProjectEditDialogProps {
@@ -22,6 +23,8 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
   const [paths, setPaths] = useState<string[]>(existing?.paths || [])
   const [showFileBrowser, setShowFileBrowser] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const dialogRef = useRef<HTMLDivElement>(null)
+  useModalDialog(!showFileBrowser && !showDeleteConfirm, dialogRef, onClose, { initialFocus: '.ped-name-input' })
 
   const handleSave = (): void => {
     if (!name.trim()) return
@@ -64,10 +67,17 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
     // class keeps the dialog opaque (the CSS variables live on .app.light/.dark).
     <div className={`app ${theme}`}>
       <div className="ped-overlay" onClick={onClose}>
-        <div className="ped-dialog" onClick={(e) => e.stopPropagation()}>
+        <div
+          ref={dialogRef}
+          className="ped-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="ped-title"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="ped-header">
-            <h3>{existing ? t("projectEdit.edit") : t("projectEdit.create")}</h3>
-            <button className="ped-close" onClick={onClose}>
+            <h3 id="ped-title">{existing ? t("projectEdit.edit") : t("projectEdit.create")}</h3>
+            <button type="button" className="ped-close" onClick={onClose} aria-label={t('common.close')} title={t('common.close')}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
             </button>
           </div>
@@ -91,7 +101,7 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
                     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
                     <span className="ped-path-text">{p.split('/').pop() || p}</span>
                     <span className="ped-path-full">{p}</span>
-                    <button className="ped-path-remove" onClick={() => handleRemovePath(i)}>
+                    <button type="button" className="ped-path-remove" onClick={() => handleRemovePath(i)} aria-label={t('projectEdit.removeFolder', { path: p })} title={t('projectEdit.removeFolder', { path: p })}>
                       <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     </button>
                   </div>

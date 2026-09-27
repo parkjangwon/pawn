@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useChangeLedger, type RevertConflict } from '../stores/changeLedger'
-import { openFileInPanel } from '../stores/filesPanel'
+import { focusDiffInPanel } from '../stores/filesPanel'
 import ConfirmDialog from './ConfirmDialog'
 import './TurnReviewBar.css'
 
@@ -19,7 +19,8 @@ function computeChangeStats(c: { before?: string | null; after?: string; op: str
     return { label: `-${lines}`, kind: 'del' }
   }
   if (c.op === 'write' && c.before == null) {
-    const lines = c.after ? c.after.split('\n').length : 0
+    if (c.after == null) return { label: '+', kind: 'add' } // binary / large file a command created
+    const lines = c.after ? c.after.replace(/\n$/, '').split('\n').length : 0
     return { label: `+${lines}`, kind: 'add' }
   }
   if (c.before != null && c.after != null) {
@@ -99,18 +100,18 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
                 key={c.path}
                 type="button"
                 className="turn-review-chip"
-                title={`${c.path} (Click to inspect diff)`}
-                onClick={() => {
-                  openFileInPanel(c.path)
-                  try {
-                    ;(window as unknown as { __openRightPanelTab?: (id: string) => void }).__openRightPanelTab?.('diff')
-                  } catch { /* ignore */ }
-                }}
+                title={`${c.path}\n${c.byCommand ? t('turnReview.byCommand') : t('turnReview.chipHint')}`}
+                onClick={() => focusDiffInPanel(c.path)}
               >
                 <span className="turn-review-op" data-op={c.op}>
                   {c.op === 'delete' ? '−' : c.op === 'write' && c.before == null ? '+' : '~'}
                 </span>
                 <span className="turn-review-fname">{(c.rel || c.path).split('/').pop()}</span>
+                {c.byCommand && (
+                  <svg className="turn-review-by-cmd" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" role="img" aria-label={t('turnReview.byCommand')}>
+                    <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
+                  </svg>
+                )}
                 {stats && (
                   <span className={`turn-review-stat stat-${stats.kind}`}>
                     {stats.label}

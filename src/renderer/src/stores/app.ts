@@ -146,7 +146,14 @@ export const useAppStore = create<AppState>((set, get) => ({
     window.api.db.removeProject(id).catch(() => {})
   },
 
-  setActiveProject: (id) => set({ activeProjectId: id }),
+  // A session belongs to exactly one project: switching project drops a
+  // session from another one, so the next send starts a chat *in* the selected
+  // project instead of appending to the stale (e.g. General) session.
+  setActiveProject: (id) =>
+    set((s) => {
+      const keep = !!id && !!s.activeSessionId && !!s.projects.find((p) => p.id === id)?.sessions.some((ss) => ss.id === s.activeSessionId)
+      return { activeProjectId: id, activeSessionId: keep ? s.activeSessionId : null }
+    }),
 
   updateProjectName: (projectId, name) => {
     set((s) => ({

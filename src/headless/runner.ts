@@ -27,6 +27,8 @@ export interface HeadlessTurnOptions {
   homeDir?: string
   /** Give the agent real desktop control (macOS native helper). */
   computer?: boolean
+  /** Run as a General chat (no project folder) — tests the shared workspace. */
+  noProject?: boolean
   /** Run as an Ultra Work goal loop (prompt = goal). */
   ultraWork?: { maxIterations?: number }
   onLog?: (line: string) => void
@@ -168,7 +170,7 @@ export async function runHeadlessTurn(opts: HeadlessTurnOptions): Promise<Headle
   usePrefsStore.setState({ taskNotificationsEnabled: false })
 
   const projectId = `headless-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`
-  useAppStore.getState().addProject('headless', [opts.cwd], projectId)
+  useAppStore.getState().addProject('headless', opts.noProject ? [] : [opts.cwd], projectId)
   const sessionId = useAppStore.getState().addSession(projectId, opts.prompt.slice(0, 40))
   useAppStore.setState((s) => ({ loadedSessions: new Set([...s.loadedSessions, sessionId]) }))
 

@@ -683,6 +683,21 @@ function applyVisionPolicy(req: RouteRequest, base: RouteDecision): RouteDecisio
 }
 
 /** Human-readable reason when no vision route exists (for chat errors). */
+/**
+ * Where an image turn will go: the model itself when it can see, else the
+ * vision fallback the router would pick (preferred vision model, then any
+ * vision-capable model). For the composer's "this model can't see images"
+ * note — a preview, not a routing decision.
+ */
+export function previewVisionTarget(model: ModelEntry | undefined): { sees: boolean; fallback: ModelEntry | null } {
+  if (model && canAttemptVision(model) && model.supportsVision !== false) return { sees: true, fallback: null }
+  const all = candidates()
+  const { visionModelId } = useProviderStore.getState()
+  const preferred = visionModelId ? all.find((c) => c.model.id === visionModelId && canAttemptVision(c.model)) : undefined
+  const any = all.find((c) => c.model.supportsVision === true && c.model.id !== model?.id)
+  return { sees: false, fallback: (preferred ?? any)?.model ?? null }
+}
+
 export function describeVisionRouteFailure(): string {
   const all = candidates()
   const visionMarked = all.filter((c) => c.model.supportsVision === true)

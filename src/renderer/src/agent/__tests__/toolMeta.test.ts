@@ -59,6 +59,9 @@ describe('helpers', () => {
     expect(lineDelta('', 'a\nb')).toEqual({ added: 2, removed: 0 })
     expect(lineDelta('a\nb\nc', '')).toEqual({ added: 0, removed: 3 })
     expect(lineDelta('same', 'same')).toEqual({ added: 0, removed: 0 })
+    // A trailing newline ends the last line; it is not an extra line.
+    expect(lineDelta('', 'a\nb\nc\n')).toEqual({ added: 3, removed: 0 })
+    expect(lineDelta('a\nb\n', '')).toEqual({ added: 0, removed: 2 })
   })
 
   it('shortens paths for display but leaves commands alone', () => {
