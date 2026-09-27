@@ -8,6 +8,16 @@ declare global {
     | { type: 'cron'; expr: string }
     | { type: 'file_watch'; path: string; debounceMinutes?: number }
 
+  /** One skill from the public registry (skills.sh). */
+  interface RegistrySkill {
+    /** owner/repo/skill */
+    id: string
+    name: string
+    /** owner/repo */
+    source: string
+    installs: number
+  }
+
   interface Routine {
     id: string
     name: string
@@ -812,6 +822,13 @@ declare global {
           projectPath: string | undefined,
           id: string
         ) => Promise<{ ok: boolean; error?: string }>
+      }
+      skills?: {
+        search: (query: string) => Promise<{ skills: RegistrySkill[]; error?: string }>
+        details: (id: string) => Promise<{ description: string; firstSeen?: string } | { error: string }>
+        install: (id: string) => Promise<{ ok: true; name: string; path: string } | { ok: false; error: string }>
+        remove: (name: string) => Promise<{ ok: boolean; error?: string }>
+        installed: () => Promise<string[]>
       }
       research: {
         fetch: (

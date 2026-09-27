@@ -9,6 +9,7 @@ import HooksSettingsPanel from './HooksSettingsPanel'
 import AgentsSettingsPanel from './AgentsSettingsPanel'
 import UsageSettingsPanel from './UsageSettingsPanel'
 import PluginsSettingsPanel from './PluginsSettingsPanel'
+import SkillStorePanel from './SkillStorePanel'
 import McpSettingsPanel from './McpSettingsPanel'
 import ConnectionsSettingsPanel from './ConnectionsSettingsPanel'
 import SystemSettingsPanel from './SystemSettingsPanel'
@@ -216,6 +217,7 @@ export default function Settings({
           </div>
         )}
         {activeSection === 'plugins' && <PluginsSettingsPanel state={state} />}
+        {activeSection === 'skillStore' && <SkillStorePanel t={state.t} />}
         {activeSection === 'mcp' && <McpSettingsPanel state={state} />}
         {activeSection === 'connections' && <ConnectionsSettingsPanel state={state} />}
         {activeSection === 'system' && <SystemSettingsPanel state={state} />}

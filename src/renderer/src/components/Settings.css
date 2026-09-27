@@ -1530,3 +1530,116 @@ body.resizing-sidebar .settings-resizer::after {
 .kiro-note {
   opacity: 0.75;
 }
+
+/* ── Skill store ─────────────────────────────────────────── */
+.skill-store-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 6px;
+}
+.skill-store-search {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.skill-store-status {
+  font-size: var(--font-sm, 12px);
+  color: var(--text-muted);
+  margin-bottom: 10px;
+  min-height: 18px;
+}
+.skill-store-notice {
+  color: var(--text-secondary);
+}
+.skill-store-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 10px;
+}
+.skill-store-card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: 10px;
+  background: var(--bg-secondary);
+  min-width: 0;
+}
+.skill-store-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-width: 0;
+}
+.skill-store-name {
+  margin: 0;
+  font-size: var(--font-md, 14px);
+  font-weight: 600;
+  color: var(--text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+.skill-store-installed {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.skill-store-desc {
+  margin: 0;
+  font-size: var(--font-sm, 12px);
+  line-height: 1.45;
+  color: var(--text-secondary);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: calc(1.45em * 3);
+}
+.skill-store-muted {
+  color: var(--text-muted);
+}
+.skill-store-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  font-size: 11px;
+  color: var(--text-muted);
+  font-family: var(--font-mono, monospace);
+}
+.skill-store-source {
+  color: var(--text-muted);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.skill-store-source:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+.skill-store-actions {
+  margin-top: auto;
+  display: flex;
+  justify-content: flex-end;
+}
+.skill-store-btn {
+  padding: 4px 12px;
+  font-size: 12px;
+}
+.skill-store-pager {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 14px;
+  font-size: var(--font-sm, 12px);
+  color: var(--text-secondary);
+}
+.skill-store-foot {
+  margin-top: 10px;
+}

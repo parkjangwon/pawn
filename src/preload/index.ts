@@ -528,6 +528,15 @@ const api = {
       ipcRenderer.invoke('mcp:removeServer', scope, projectPath, id)
   },
 
+  /** Public skill registry (skills.sh): search, details, install / remove in ~/.agents/skills. */
+  skills: {
+    search: (query: string) => ipcRenderer.invoke('skills:search', query),
+    details: (id: string) => ipcRenderer.invoke('skills:details', id),
+    install: (id: string) => ipcRenderer.invoke('skills:install', id),
+    remove: (name: string) => ipcRenderer.invoke('skills:remove', name),
+    installed: () => ipcRenderer.invoke('skills:installed')
+  },
+
   /** Built-in public-web research (insane-search port) — not browser automation. */
   research: {
     fetch: (
