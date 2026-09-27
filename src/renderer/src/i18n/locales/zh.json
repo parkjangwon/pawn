@@ -419,7 +419,27 @@
       "syncFail": "同步失败：{{error}}",
       "syncSeedOnly": "保留种子模型（实时同步失败：{{error}}）",
       "manualOnly": "仅限手动添加",
-      "openRouterManualOnly": "OpenRouter 包含数百个模型，为避免生成过多无用模型，仅支持手动注册模型。"
+      "openRouterManualOnly": "OpenRouter 包含数百个模型，为避免生成过多无用模型，仅支持手动注册模型。",
+      "kiro": {
+        "hint": "使用 AWS Builder ID 或 IAM Identity Center 登录，粘贴 Kiro API 密钥（ksk_…），或直接使用 Kiro CLI / IDE 的登录。用量从你的 Kiro 额度中扣除。",
+        "desktopOnly": "Kiro 登录仅在桌面应用中可用。",
+        "signedOut": "尚未登录 Kiro。",
+        "signedIn": "已通过 {{via}} 登录 Kiro（{{region}}）",
+        "credits": "已用额度 {{used}} / {{limit}}",
+        "viaApiKey": "API 密钥",
+        "viaImport": "{{source}} 登录 {{provider}}",
+        "builderId": "使用 AWS Builder ID 登录",
+        "idc": "IAM Identity Center…",
+        "import": "使用 Kiro CLI / IDE 登录",
+        "apiKey": "API 密钥…",
+        "region": "区域",
+        "continue": "继续",
+        "signOut": "退出登录",
+        "enterCode": "请在浏览器中确认此代码：",
+        "openPage": "打开登录页面",
+        "failed": "Kiro 登录失败",
+        "note": "Kiro 没有面向第三方应用的官方模型 API，Pawn 直接与 Kiro 的服务协议通信，可能随时变化，请自行承担风险。Kiro CLI / IDE 的登录仅以只读方式使用，Pawn 不会刷新它。"
+      }
     },
     "modelSection": {
       "title": "模型",

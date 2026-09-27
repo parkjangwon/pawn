@@ -181,7 +181,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   )
 
   const handleAddFromPreset = async (preset: ProviderPreset, apiKey: string): Promise<void> => {
-    if (!preset.localNoKey && !apiKey.trim()) return
+    if (!preset.localNoKey && !preset.signIn && !apiKey.trim()) return
     const before = useProviderStore.getState().providers.length
     addProvider({
       id: '',
@@ -195,17 +195,19 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     const created: Provider | undefined = after.length > before ? after[after.length - 1] : undefined
     if (created) {
       for (const m of preset.models) {
-        const guess = guessPricing(m.modelId)
+        // Kiro bills subscription credits — no per-token prices.
+        const guess = preset.apiFormat === 'kiro' ? null : guessPricing(m.modelId)
         useProviderStore.getState().addModel({
           id: '', providerId: created.id, modelId: m.modelId, label: m.label, tier: m.tier, enabled: true,
           pricing: guess ? { input: guess.input, output: guess.output, cacheRead: guess.cacheRead, cacheWrite: guess.cacheWrite } : undefined,
           contextWindow: guess?.contextWindow,
-          supportsVision: guessSupportsVision(m.modelId)
+          supportsVision: preset.apiFormat === 'kiro' ? /^claude-|^auto$/.test(m.modelId) || undefined : guessSupportsVision(m.modelId)
         })
       }
       // Best-effort live catalog sync so seeds are not the long-term source of truth.
       // OpenRouter is excluded to avoid pulling hundreds of models.
-      if (preset.id !== 'openrouter' && !isOpenRouterProvider(preset)) {
+      // Sign-in presets sync after the sign-in completes (KiroAuthPanel).
+      if (preset.id !== 'openrouter' && !isOpenRouterProvider(preset) && !preset.signIn) {
         setSyncingId(created.id)
         try {
           const r = await syncModelsFromProvider(created.id)
@@ -350,6 +352,11 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     setTestingId(providerId)
     setTestResult((r) => ({ ...r, [providerId]: '' }))
     try {
+      if (p.apiFormat === 'kiro') {
+        const r = await window.api?.kiro?.models()
+        setTestResult((res) => ({ ...res, [providerId]: r?.ok ? 'OK' : `FAIL: ${(r?.error || 'Kiro unavailable').slice(0, 120)}` }))
+        return
+      }
       const modelId = pickTestModelId(providerId, models, p.apiFormat)
       if (!modelId) {
         setTestResult((r) => ({ ...r, [providerId]: 'FAIL: no model' }))

@@ -1,4 +1,5 @@
-export type ApiFormat = 'openai' | 'claude'
+/** 'kiro' = Kiro (AWS) — auth and transport live in the main process. */
+export type ApiFormat = 'openai' | 'claude' | 'kiro'
 export type ModelTier = 'low' | 'mid' | 'high'
 
 export interface Provider {

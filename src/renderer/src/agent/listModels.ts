@@ -15,6 +15,8 @@ export interface RemoteModel {
   label: string
   contextWindow?: number
   ownedBy?: string
+  /** Authoritative vision support from the provider (else guessed from the id). */
+  supportsVision?: boolean
 }
 
 export interface ListModelsResult {
@@ -233,7 +235,8 @@ function tierFor(modelId: string): ModelTier {
 export function mergeRemoteModels(
   existing: ModelEntry[],
   providerId: string,
-  remote: RemoteModel[]
+  remote: RemoteModel[],
+  opts: { noPricing?: boolean } = {}
 ): MergeModelsResult {
   const others = existing.filter((m) => m.providerId !== providerId)
   const mine = existing.filter((m) => m.providerId === providerId)
@@ -247,7 +250,7 @@ export function mergeRemoteModels(
     const prev = byId.get(r.id)
     if (prev) {
       byId.delete(r.id)
-      const guess = !prev.pricing ? guessPricing(r.id) : null
+      const guess = !prev.pricing && !opts.noPricing ? guessPricing(r.id) : null
       const patch: ModelEntry = {
         ...prev,
         // Prefer live display name when ours still looks auto-generated.
@@ -270,7 +273,7 @@ export function mergeRemoteModels(
       }
       nextMine.push(patch)
     } else {
-      const guess = guessPricing(r.id)
+      const guess = opts.noPricing ? null : guessPricing(r.id)
       nextMine.push({
         id: uid(),
         providerId,
@@ -282,7 +285,7 @@ export function mergeRemoteModels(
           ? { input: guess.input, output: guess.output, cacheRead: guess.cacheRead, cacheWrite: guess.cacheWrite }
           : undefined,
         contextWindow: r.contextWindow || guess?.contextWindow,
-        supportsVision: guessSupportsVision(r.id)
+        supportsVision: r.supportsVision ?? guessSupportsVision(r.id)
       })
       added += 1
     }
@@ -310,3 +313,19 @@ export function mergeRemoteModels(
 
 /** @deprecated type alias for callers that only need format */
 export type ListModelsApiFormat = ApiFormat
+
+/** Kiro catalog (ListAvailableModels through the main-process bridge). */
+export async function fetchKiroModels(): Promise<ListModelsResult> {
+  const api = typeof window !== 'undefined' ? window.api?.kiro : undefined
+  if (!api?.models) throw new Error('Kiro is only available in the desktop app.')
+  const res = await api.models()
+  if (!res.ok || !res.models) throw new Error(res.error || 'Kiro model list failed')
+  const models: RemoteModel[] = res.models.map((m) => ({
+    id: m.modelId,
+    label: `${m.modelName || humanizeModelId(m.modelId)}${typeof m.rateMultiplier === 'number' ? ` · ${m.rateMultiplier}x` : ''}`,
+    ...(m.maxInputTokens ? { contextWindow: m.maxInputTokens } : {}),
+    ...(typeof m.supportsImages === 'boolean' ? { supportsVision: m.supportsImages } : {}),
+    ownedBy: 'kiro'
+  }))
+  return { models, rawCount: models.length }
+}

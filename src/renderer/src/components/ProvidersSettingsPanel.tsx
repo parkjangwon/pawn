@@ -2,6 +2,7 @@ import { PROVIDER_PRESETS } from '../agent/providerPresets'
 import { isOpenRouterProvider } from '../agent/listModels'
 import type { ApiFormat } from '../types/provider'
 import type { SettingsState } from './settingsState'
+import KiroAuthPanel from './KiroAuthPanel'
 
 export default function ProvidersSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -46,6 +47,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                     {syncResult[p.id]}
                   </span>
                 )}
+                {p.apiFormat === 'kiro' && <KiroAuthPanel onSignedIn={() => void handleSyncModels(p.id)} />}
               </div>
               <div className="settings-row-actions">
                 {!isOpenRouter ? (
@@ -120,7 +122,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             <div className="settings-row-desc">
               {presetPicking.keyHintKey ? t(presetPicking.keyHintKey) : presetPicking.keyHint}
             </div>
-            {!presetPicking.localNoKey && (
+            {!presetPicking.localNoKey && !presetPicking.signIn && (
               <input
                 type="password"
                 placeholder={t('settings.providerSection.pasteApiKey')}
@@ -133,7 +135,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               <button
                 className="btn-primary"
                 onClick={() => handleAddFromPreset(presetPicking, presetKey)}
-                disabled={!presetPicking.localNoKey && !presetKey.trim()}
+                disabled={!presetPicking.localNoKey && !presetPicking.signIn && !presetKey.trim()}
               >
                 {t('settings.providerSection.addWithModels', { count: presetPicking.models.length })}
               </button>
@@ -149,6 +151,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
           <select value={form.apiFormat} onChange={(e) => setForm({ ...form, apiFormat: e.target.value as ApiFormat })}>
             <option value="openai">{t('settings.providerSection.openai')}</option>
             <option value="claude">{t('settings.providerSection.claude')}</option>
+            <option value="kiro">Kiro</option>
           </select>
           <input placeholder={t('settings.providerSection.baseUrlPlaceholder')} value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} />
           <input type="password" placeholder={t('settings.providerSection.apiKeyPlaceholder')} value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />

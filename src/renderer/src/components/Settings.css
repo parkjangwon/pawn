@@ -1496,3 +1496,37 @@ body.resizing-sidebar .settings-resizer::after {
     overflow-y: visible;
   }
 }
+
+/* Kiro sign-in (provider row) */
+.kiro-auth {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+.kiro-actions {
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-start;
+}
+.kiro-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px;
+}
+.kiro-form input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+.kiro-code {
+  font-family: var(--font-mono, ui-monospace, monospace);
+  letter-spacing: 0.08em;
+  user-select: all;
+}
+.kiro-error {
+  color: var(--danger, #d64545);
+}
+.kiro-note {
+  opacity: 0.75;
+}

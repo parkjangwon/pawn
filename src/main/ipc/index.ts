@@ -17,6 +17,7 @@ import { registerHooksIpc } from './hooks'
 import { registerWorktreeIpc } from './worktree'
 import { registerLspIpc } from './lsp'
 import { registerAgentRuntimeIpc } from './agentRuntime'
+import { registerKiroIpc } from './kiro'
 
 /** Register every main-process IPC handler in one place. */
 export function registerAllIpc(): void {
@@ -39,4 +40,5 @@ export function registerAllIpc(): void {
   registerWorktreeIpc()
   registerLspIpc()
   registerAgentRuntimeIpc()
+  registerKiroIpc()
 }

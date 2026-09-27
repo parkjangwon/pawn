@@ -3,6 +3,7 @@ import { is } from '@electron-toolkit/utils'
 import { registerAllIpc } from './ipc'
 import { disposeLsp } from './ipc/lsp'
 import { disposeAgentRuntime } from './ipc/agentRuntime'
+import { disposeKiro } from './ipc/kiro'
 import { disposeComputer } from './computer/service'
 import { createMainWindow, getMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
@@ -77,6 +78,7 @@ app.whenReady().then(() => {
     killAllMcpServers()
     void disposeLsp().catch(() => {})
     void disposeAgentRuntime()
+    disposeKiro()
     disposeComputer()
     stopRoutineServices()
     destroyTray()

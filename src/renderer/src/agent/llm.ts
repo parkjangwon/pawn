@@ -9,6 +9,8 @@ import { toolsToClaude, toolsToOpenAI, getMcpToolDefinitions, type ToolCall } fr
 import { NATIVE_DUPLICATES, claudeComputerVersion, planNativeComputer } from './computerToolset'
 import { noteComputerModel, shotPolicyFor } from './toolHandlers/computer'
 import { planApplyPatch, planClaudeNativeTools } from './nativeTools'
+import { buildKiroRequest, kiroConversationId, type KiroRequestBuild } from './kiroWire'
+import { estimateCharsAsTokens } from './transcript'
 import type { CallUsage } from '../stores/usage'
 import type { RouteDecision } from './router'
 import {
@@ -190,7 +192,24 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   )
   const dsUser = deepSeekHost ? deepSeekUserId(projectId, sessionId) : undefined
 
-  if (provider.apiFormat === 'claude' || deepSeekAnthropic) {
+  let kiroBuild: KiroRequestBuild | null = null
+  if (provider.apiFormat === 'kiro') {
+    // Kiro (CodeWhisperer protocol): the main process holds the credentials
+    // and streams normalized events back; here we only build the request.
+    const openAITools = openAIToolsWithPatch(toolsToOpenAI(mcpTools, toolListOpts), model.modelId)
+    kiroBuild = buildKiroRequest({
+      entries: sendable,
+      systemText: [...systemLayers, joinPreamble(projectPreamble, openAITools.note)].filter(Boolean).join('\n\n'),
+      tools: openAITools.tools.map((t) => {
+        const f = t.function as { name: string; description?: string; parameters?: Record<string, unknown> }
+        return { name: f.name, description: f.description || '', parameters: f.parameters || { type: 'object', properties: {} } }
+      }),
+      modelId: model.modelId,
+      conversationId: kiroConversationId(sessionId)
+    })
+    url = 'kiro:generateAssistantResponse'
+    body = kiroBuild.body
+  } else if (provider.apiFormat === 'claude' || deepSeekAnthropic) {
     const budget = claudeThinkingBudget(userEffort, harnessMode)
     const claudeTools = await claudeToolsWithNative(toolsToClaude(mcpTools, toolListOpts), provider, model.modelId, headers)
 
@@ -277,20 +296,6 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       ]
     }
   }
-
-  armIdleTimer()
-  let response: Response
-  try {
-    response = await fetchWithRetry(url, headers, body, isBrowser, combinedSignal)
-  } catch (err) {
-    if (timeoutController.signal.aborted) {
-      throw markTransient(new Error('Provider request timed out (no response within 90s)'), true)
-    }
-    throw err
-  }
-
-  const reader = response.body?.getReader()
-  if (!reader) throw new Error('No response body')
 
   const decoder = new TextDecoder()
   let buffer = ''
@@ -395,6 +400,74 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     useAppStore.getState().updateMessageContent(projectId, sessionId, assistantMsgId, finalText, true)
     useStreamingStore.getState().clear(assistantMsgId)
   }
+
+  if (kiroBuild) {
+    const build = kiroBuild
+    let contextPct = 0
+    let meteredOut = 0
+    armIdleTimer()
+    try {
+      for await (const ev of kiroEvents(build.body, combinedSignal, armIdleTimer)) {
+        if (ev.type === 'text') {
+          fullText += ev.text
+          flushText()
+        } else if (ev.type === 'reasoning') {
+          reasoningText += ev.text
+          flushText()
+        } else if (ev.type === 'toolUse') {
+          const call: ToolCall = {
+            id: ev.id,
+            name: build.toolNames.get(ev.name) ?? ev.name,
+            arguments: ev.parseError ? { __parse_error: true, __raw: '', __message: `Kiro tool input was not valid JSON: ${ev.parseError}` } : ev.input
+          }
+          toolCalls.push(call)
+          emitToolCall(call)
+        } else if (ev.type === 'usage') {
+          if (typeof ev.contextUsagePercentage === 'number') contextPct = ev.contextUsagePercentage
+          if (typeof ev.inputTokens === 'number') usage.inputTokens = ev.inputTokens
+          if (typeof ev.outputTokens === 'number') meteredOut = ev.outputTokens
+        } else if (ev.type === 'error') {
+          throw markTransient(new Error(ev.message), ev.transient)
+        }
+      }
+    } catch (err) {
+      if (timeoutController.signal.aborted && !signal.aborted) {
+        throw markTransient(new Error('Kiro stream timed out (no data received for 90s)'), true)
+      }
+      throw err
+    } finally {
+      if (idleTimer) clearTimeout(idleTimer)
+      try {
+        flushNow()
+      } catch {
+        /* store optional in tests */
+      }
+    }
+    // Kiro reports context use as a percentage, not tokens.
+    if (!usage.inputTokens && contextPct > 0) usage.inputTokens = Math.round((contextPct / 100) * (model.contextWindow || 200_000))
+    usage.outputTokens =
+      meteredOut || estimateCharsAsTokens(fullText + reasoningText + toolCalls.map((tc) => JSON.stringify(tc.arguments)).join(''))
+    return {
+      text: fullText,
+      toolCalls,
+      thinking,
+      usage
+    }
+  }
+
+  armIdleTimer()
+  let response: Response
+  try {
+    response = await fetchWithRetry(url, headers, body, isBrowser, combinedSignal)
+  } catch (err) {
+    if (timeoutController.signal.aborted) {
+      throw markTransient(new Error('Provider request timed out (no response within 90s)'), true)
+    }
+    throw err
+  }
+
+  const reader = response.body?.getReader()
+  if (!reader) throw new Error('No response body')
 
   try {
     for (;;) {
@@ -600,6 +673,56 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     thinking,
     ...(reasoningText ? { reasoningContent: reasoningText } : {}),
     usage
+  }
+}
+
+/**
+ * Kiro stream over the main-process bridge: start the request, then yield the
+ * normalized events for this request id until done / error / abort.
+ */
+async function* kiroEvents(body: Record<string, unknown>, signal: AbortSignal, onActivity: () => void): AsyncGenerator<KiroEventDto> {
+  const api = window.api?.kiro
+  if (!api?.chatStart) throw markTransient(new Error('Kiro is only available in the desktop app (or pawn-headless).'), false)
+  const requestId = `kiro-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
+  const queue: KiroEventDto[] = []
+  let finished = false
+  let wake: (() => void) | null = null
+  const off = api.onEvent(({ requestId: id, event }) => {
+    if (id !== requestId) return
+    queue.push(event)
+    if (event.type === 'done' || event.type === 'error') finished = true
+    const w = wake
+    wake = null
+    w?.()
+  })
+  const onAbort = (): void => {
+    void api.chatAbort(requestId).catch(() => {})
+    const w = wake
+    wake = null
+    w?.()
+  }
+  signal.addEventListener('abort', onAbort, { once: true })
+  try {
+    const started = await api.chatStart(requestId, body)
+    if (!started.ok) throw markTransient(new Error(started.error || 'Kiro request failed'), false)
+    for (;;) {
+      if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
+      const ev = queue.shift()
+      if (!ev) {
+        if (finished) return
+        await new Promise<void>((r) => {
+          wake = r
+        })
+        continue
+      }
+      onActivity()
+      if (ev.type === 'done') return
+      yield ev
+    }
+  } finally {
+    off()
+    signal.removeEventListener('abort', onAbort)
+    if (!finished) void api.chatAbort(requestId).catch(() => {})
   }
 }
 

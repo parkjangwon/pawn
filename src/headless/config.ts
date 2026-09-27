@@ -40,7 +40,8 @@ export function applyEnvKeys(cfg: HeadlessConfig, env: Record<string, string | u
     const byHost = HOST_ENV.find(([re]) => re.test(base))?.[1]
     key = byId || key || (byHost ? env[byHost] || '' : '')
     const local = /localhost|127\.0\.0\.1|0\.0\.0\.0/.test(base)
-    const usable = !!key || local
+    // Kiro signs in through its own service (KIRO_API_KEY or the Kiro CLI login).
+    const usable = !!key || local || p.apiFormat === 'kiro'
     if (p.enabled !== false && !usable) missing.push(`${p.name || id} (${envKeyName(id)}${byHost ? ` or ${byHost}` : ''})`)
     return { ...p, apiKey: key, enabled: p.enabled !== false && usable }
   })

@@ -408,6 +408,29 @@ const api = {
     applyCodeAction: (root: string, path: string, index: number) =>
       ipcRenderer.invoke('lsp:applyCodeAction', root, path, index)
   },
+  /** Kiro model provider (AWS Builder ID / IAM Identity Center / API key / Kiro CLI import). */
+  kiro: {
+    status: () => ipcRenderer.invoke('kiro:status'),
+    startLogin: (opts: { mode: 'builder-id' | 'idc'; startUrl?: string; region?: string }) => ipcRenderer.invoke('kiro:startLogin', opts),
+    cancelLogin: () => ipcRenderer.invoke('kiro:cancelLogin'),
+    signOut: () => ipcRenderer.invoke('kiro:signOut'),
+    setApiKey: (key: string, region?: string) => ipcRenderer.invoke('kiro:setApiKey', key, region),
+    importLogin: (source?: 'auto' | 'kiro-cli' | 'kiro-ide') => ipcRenderer.invoke('kiro:import', source || 'auto'),
+    models: () => ipcRenderer.invoke('kiro:models'),
+    usage: () => ipcRenderer.invoke('kiro:usage'),
+    chatStart: (requestId: string, body: Record<string, unknown>) => ipcRenderer.invoke('kiro:chatStart', requestId, body),
+    chatAbort: (requestId: string) => ipcRenderer.invoke('kiro:chatAbort', requestId),
+    onEvent: (callback: (data: { requestId: string; event: Record<string, unknown> }) => void) => {
+      const handler = (_: unknown, data: { requestId: string; event: Record<string, unknown> }): void => callback(data)
+      ipcRenderer.on('kiro:event', handler)
+      return () => ipcRenderer.removeListener('kiro:event', handler)
+    },
+    onLoginDone: (callback: (data: { ok: boolean; status?: Record<string, unknown>; error?: string }) => void) => {
+      const handler = (_: unknown, data: { ok: boolean; status?: Record<string, unknown>; error?: string }): void => callback(data)
+      ipcRenderer.on('kiro:loginDone', handler)
+      return () => ipcRenderer.removeListener('kiro:loginDone', handler)
+    }
+  },
   /** Persistent bash sessions (Claude's bash tool). */
   bash: {
     run: (key: string, command: string, opts: { cwd: string; timeoutMs?: number; sandbox?: Record<string, unknown> }) =>

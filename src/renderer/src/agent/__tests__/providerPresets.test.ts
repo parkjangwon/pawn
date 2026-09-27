@@ -11,7 +11,9 @@ describe('PROVIDER_PRESETS', () => {
 
   it('defines valid providers with non-empty model lists', () => {
     for (const preset of PROVIDER_PRESETS) {
-      expect(['openai', 'claude']).toContain(preset.apiFormat)
+      expect(['openai', 'claude', 'kiro']).toContain(preset.apiFormat)
+      // Only sign-in providers (Kiro) may skip a pasted key.
+      if (preset.apiFormat === 'kiro') expect(preset.signIn).toBe(true)
       expect(preset.baseUrl).toMatch(/^https?:\/\//)
       expect(preset.keyHint.length).toBeGreaterThan(0)
       expect(preset.models.length).toBeGreaterThan(0)

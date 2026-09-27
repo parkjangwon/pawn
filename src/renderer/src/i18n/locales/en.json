@@ -419,7 +419,27 @@
       "syncFail": "Sync failed: {{error}}",
       "syncSeedOnly": "Seed models kept (live sync failed: {{error}})",
       "manualOnly": "Manual Add Only",
-      "openRouterManualOnly": "OpenRouter offers hundreds of models; please register specific models manually to prevent clutter."
+      "openRouterManualOnly": "OpenRouter offers hundreds of models; please register specific models manually to prevent clutter.",
+      "kiro": {
+        "hint": "Sign in with AWS Builder ID or IAM Identity Center, paste a Kiro API key (ksk_…), or use your Kiro CLI / IDE login. Usage counts against your Kiro credits.",
+        "desktopOnly": "Kiro sign-in is available in the desktop app.",
+        "signedOut": "Not signed in to Kiro.",
+        "signedIn": "Signed in to Kiro via {{via}} ({{region}})",
+        "credits": "{{used}} / {{limit}} credits used",
+        "viaApiKey": "API key",
+        "viaImport": "{{source}} login {{provider}}",
+        "builderId": "Sign in with AWS Builder ID",
+        "idc": "IAM Identity Center…",
+        "import": "Use Kiro CLI / IDE login",
+        "apiKey": "API key…",
+        "region": "Region",
+        "continue": "Continue",
+        "signOut": "Sign out",
+        "enterCode": "Confirm this code in your browser:",
+        "openPage": "Open sign-in page",
+        "failed": "Kiro sign-in failed",
+        "note": "Kiro has no official public model API for third-party apps; Pawn talks to Kiro's service protocol directly. It may change without notice — use at your own risk. The Kiro CLI / IDE login is used read-only and never refreshed by Pawn."
+      }
     },
     "modelSection": {
       "title": "Models",

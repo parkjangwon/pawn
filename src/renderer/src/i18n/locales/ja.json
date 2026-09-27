@@ -419,7 +419,27 @@
       "syncFail": "同期失敗: {{error}}",
       "syncSeedOnly": "シードモデルを維持（ライブ同期失敗: {{error}}）",
       "manualOnly": "手動登録のみ",
-      "openRouterManualOnly": "OpenRouterは提供モデル数が非常に多いため、不要なモデルの大量追加を防ぐため手動登録のみに対応しています。"
+      "openRouterManualOnly": "OpenRouterは提供モデル数が非常に多いため、不要なモデルの大量追加を防ぐため手動登録のみに対応しています。",
+      "kiro": {
+        "hint": "AWS Builder ID または IAM Identity Center でサインイン、Kiro API キー（ksk_…）を貼り付け、または Kiro CLI / IDE のログインを利用できます。利用分は Kiro クレジットから差し引かれます。",
+        "desktopOnly": "Kiro のサインインはデスクトップアプリで行えます。",
+        "signedOut": "Kiro にサインインしていません。",
+        "signedIn": "{{via}} で Kiro にサインイン済み（{{region}}）",
+        "credits": "クレジット {{used}} / {{limit}} 使用",
+        "viaApiKey": "API キー",
+        "viaImport": "{{source}} ログイン {{provider}}",
+        "builderId": "AWS Builder ID でサインイン",
+        "idc": "IAM Identity Center…",
+        "import": "Kiro CLI / IDE のログインを使う",
+        "apiKey": "API キー…",
+        "region": "リージョン",
+        "continue": "続行",
+        "signOut": "サインアウト",
+        "enterCode": "ブラウザでこのコードを確認してください:",
+        "openPage": "サインインページを開く",
+        "failed": "Kiro のサインインに失敗しました",
+        "note": "Kiro にはサードパーティアプリ向けの公式モデル API がないため、Pawn は Kiro のサービスプロトコルと直接通信します。予告なく変わる可能性があるため自己責任でご利用ください。Kiro CLI / IDE のログインは読み取り専用で使い、Pawn が更新することはありません。"
+      }
     },
     "modelSection": {
       "title": "モデル",

@@ -33,6 +33,8 @@ export interface ProviderPreset {
   keyHintKey?: string
   /** True for a local server with no real key requirement (Ollama, LM Studio). */
   localNoKey?: boolean
+  /** Signs in inside Pawn instead of taking a pasted key (Kiro). */
+  signIn?: boolean
   models: PresetModel[]
 }
 
@@ -42,6 +44,21 @@ function model(modelId: string, label?: string, tierOverride?: ModelTier): Prese
 }
 
 export const PROVIDER_PRESETS: ProviderPreset[] = [
+  {
+    id: 'kiro',
+    name: 'Kiro',
+    apiFormat: 'kiro',
+    baseUrl: 'https://q.us-east-1.amazonaws.com',
+    keyHint: 'Sign in with AWS Builder ID or IAM Identity Center, paste a Kiro API key, or use your Kiro CLI / IDE login',
+    keyHintKey: 'settings.providerSection.kiro.hint',
+    signIn: true,
+    models: [
+      model('auto', 'Auto (Kiro)', 'mid'),
+      model('claude-sonnet-5', 'Claude Sonnet 5', 'mid'),
+      model('claude-opus-5.5', 'Claude Opus 5.5', 'high'),
+      model('claude-haiku-4.5', 'Claude Haiku 4.5', 'low')
+    ]
+  },
   {
     id: 'openai',
     name: 'OpenAI',

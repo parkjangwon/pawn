@@ -20,6 +20,9 @@ import { CuaHelper, findHelper, helperCandidates } from '../main/computer/cuaHel
 import { ComputerEngine } from '../main/computer/engine'
 import { createAgentRuntime, validProjectRoot } from '../main/agentRuntime'
 import { LspManager } from '../main/lsp/manager'
+import { createKiroService, type KiroStreamEvent } from '../main/kiro/service'
+import { readKiroCliLogin, readKiroIdeLogin, type KiroCredentials, type SqliteOpen } from '../main/kiro/auth'
+import { createRequire } from 'module'
 
 export interface HeadlessConfig {
   settings?: Record<string, unknown>
@@ -444,9 +447,60 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       }
     : undefined
 
+  // Kiro: KIRO_API_KEY from the environment, else the Kiro CLI / IDE login
+  // (read-only). Credentials stay in memory.
+  const kiroListeners = new Set<(d: { requestId: string; event: KiroStreamEvent }) => void>()
+  let sqliteOpen: SqliteOpen | null = null
+  try {
+    const Database = createRequire(import.meta.url)('better-sqlite3') as new (p: string, o: Record<string, unknown>) => ReturnType<SqliteOpen>
+    sqliteOpen = (p) => new Database(p, { readonly: true, fileMustExist: true, timeout: 2000 })
+  } catch {
+    sqliteOpen = null
+  }
+  let kiroMem: KiroCredentials | null | undefined
+  const kiro = createKiroService({
+    store: {
+      load: async () => {
+        if (kiroMem !== undefined) return kiroMem
+        const key = process.env.KIRO_API_KEY?.trim()
+        kiroMem = key
+          ? { mode: 'api-key', apiKey: key, region: process.env.KIRO_REGION || 'us-east-1' }
+          : readKiroCliLogin(sqliteOpen) ?? readKiroIdeLogin()
+        return kiroMem
+      },
+      save: async (c) => {
+        kiroMem = c
+      }
+    },
+    // The real home: `homeDir` hides personal context (skills, CLAUDE.md),
+    // not credentials.
+    sqlite: sqliteOpen,
+    version: 'headless',
+    emit: (requestId, event) => {
+      for (const l of Array.from(kiroListeners)) l({ requestId, event })
+    }
+  })
+
   const api: Record<string, any> = {
     platform: 'headless',
     ...(lsp ? { lsp } : {}),
+    kiro: {
+      status: () => kiro.status(),
+      startLogin: (o: unknown) => kiro.startLogin(o),
+      cancelLogin: async () => kiro.cancelLogin(),
+      signOut: () => kiro.signOut(),
+      setApiKey: (k: string, r?: string) => kiro.setApiKey(k, r),
+      importLogin: (src?: string) => kiro.importLogin(src),
+      models: () => kiro.models(),
+      usage: () => kiro.usage(),
+      chatStart: async (id: string, body: unknown) => kiro.chatStart(id, body),
+      chatAbort: async (id: string) => kiro.chatAbort(id),
+      onEvent: (cb: (d: { requestId: string; event: KiroStreamEvent }) => void) => {
+        kiroListeners.add(cb)
+        return () => kiroListeners.delete(cb)
+      },
+      onLoginDone: () => () => {}
+    },
     bash: {
       run: (key: string, command: string, o: unknown) => rt.bash.run(key, command, o),
       restart: (key: string, cwd: string, sandbox?: unknown) => rt.bash.restart(key, cwd, sandbox),
@@ -509,6 +563,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       cua?.dispose()
       void rt.dispose()
       void lspManager?.disposeAll().catch(() => {})
+      kiro.dispose()
     }
   }
 }

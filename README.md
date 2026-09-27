@@ -67,6 +67,7 @@ Pawn never ships vendor keys. You bring your own (BYOK).
 | Preset | Notes |
 |--------|--------|
 | OpenAI, Anthropic, OpenRouter, Google Gemini, xAI, Groq, … | Standard OpenAI- or Claude-compatible endpoints |
+| **Kiro** | Sign in with AWS Builder ID / IAM Identity Center, a Kiro API key (`ksk_…`), or your Kiro CLI / IDE login (read-only); models synced live (Claude, GPT-5.6, open-weight), credits shown in Settings. Unofficial protocol integration — use at your own risk |
 | DeepSeek | V4 Flash/Pro; disk cache + thinking (`reasoning_content` echo on tool loops) |
 | **OpenCode Go** | Subscription gateway for open coding models — [docs](https://opencode.ai/docs/ko/go/) · base `https://opencode.ai/zen/go/v1` |
 | **Command Code** | Multi-model Provider API — [docs](https://commandcode.ai/docs/provider) · base `https://api.commandcode.ai/provider/v1` |

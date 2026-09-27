@@ -67,6 +67,7 @@ Pawn은 벤더 키를 내장하지 않습니다. 본인 API 키(BYOK)를 사용�
 | 프리셋 | 설명 |
 |--------|------|
 | OpenAI, Anthropic, OpenRouter, Google Gemini, xAI, Groq, … | 표준 OpenAI/Claude 호환 엔드포인트 |
+| **Kiro** | AWS Builder ID / IAM Identity Center 로그인, Kiro API 키(`ksk_…`), 또는 Kiro CLI / IDE 로그인(읽기 전용) · 모델 목록 실시간 동기화(Claude, GPT-5.6, 오픈 모델) · 설정에서 크레딧 확인. 비공식 프로토콜 연동이라 본인 책임하에 사용 |
 | DeepSeek | V4 Flash/Pro · 디스크 캐시 + thinking (`reasoning_content` 툴 루프 에코) |
 | **OpenCode Go** | 오픈 코딩 모델 구독 게이트웨이 — [문서](https://opencode.ai/docs/ko/go/) · base `https://opencode.ai/zen/go/v1` |
 | **Command Code** | 멀티 모델 Provider API — [문서](https://commandcode.ai/docs/provider) · base `https://api.commandcode.ai/provider/v1` |

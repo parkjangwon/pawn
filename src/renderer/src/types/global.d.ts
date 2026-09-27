@@ -35,6 +35,35 @@ declare global {
     | { id: string; source: McpServerSource; status: 'connected'; tools: McpToolInfo[] }
     | { id: string; source: McpServerSource; status: 'error'; error: string }
 
+  interface KiroStatusDto {
+    signedIn: boolean
+    mode?: 'builder-id' | 'idc' | 'api-key' | 'import'
+    region?: string
+    provider?: string
+    importSource?: string
+    expiresAt?: number
+    profileArn?: string
+    error?: string
+  }
+
+  interface KiroModelDto {
+    modelId: string
+    modelName?: string
+    description?: string
+    maxInputTokens?: number
+    maxOutputTokens?: number
+    supportsImages?: boolean
+    rateMultiplier?: number
+  }
+
+  type KiroEventDto =
+    | { type: 'text'; text: string }
+    | { type: 'reasoning'; text: string }
+    | { type: 'toolUse'; id: string; name: string; input: Record<string, unknown>; parseError?: string }
+    | { type: 'usage'; contextUsagePercentage?: number; inputTokens?: number; outputTokens?: number; credits?: number }
+    | { type: 'error'; message: string; status?: number; transient: boolean; code?: string }
+    | { type: 'done' }
+
   interface LspWorkspaceEditDto {
     files: Array<{ path: string; edits: Array<{ startLine: number; startColumn: number; endLine: number; endColumn: number; newText: string }> }>
     creates: string[]
@@ -940,6 +969,22 @@ declare global {
           path: string,
           index: number
         ) => Promise<{ ok: boolean; error?: string; title?: string; edit?: LspWorkspaceEditDto }>
+      }
+      kiro?: {
+        status: () => Promise<KiroStatusDto>
+        startLogin: (opts: { mode: 'builder-id' | 'idc'; startUrl?: string; region?: string }) => Promise<
+          { ok: true; verificationUri: string; verificationUriComplete: string; userCode: string; expiresIn: number } | { ok: false; error: string; code?: string }
+        >
+        cancelLogin: () => Promise<{ ok: boolean }>
+        signOut: () => Promise<{ ok: boolean }>
+        setApiKey: (key: string, region?: string) => Promise<{ ok: boolean; error?: string; status?: KiroStatusDto }>
+        importLogin: (source?: 'auto' | 'kiro-cli' | 'kiro-ide') => Promise<{ ok: boolean; error?: string; status?: KiroStatusDto }>
+        models: () => Promise<{ ok: boolean; error?: string; models?: KiroModelDto[] }>
+        usage: () => Promise<{ ok: boolean; error?: string; usage?: { used?: number; limit?: number; resetAt?: string } | null }>
+        chatStart: (requestId: string, body: Record<string, unknown>) => Promise<{ ok: boolean; error?: string }>
+        chatAbort: (requestId: string) => Promise<{ ok: boolean }>
+        onEvent: (callback: (data: { requestId: string; event: KiroEventDto }) => void) => () => void
+        onLoginDone: (callback: (data: { ok: boolean; status?: KiroStatusDto; error?: string }) => void) => () => void
       }
       bash?: {
         run: (

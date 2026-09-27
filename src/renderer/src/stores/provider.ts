@@ -6,7 +6,7 @@ import { guessPricing, guessSupportsVision } from '../types/provider'
 import type { Provider, ModelEntry, RoutingMode } from '../types/provider'
 import { parseAgentMode, parseDoneGate, type AgentMode, type DoneGate } from '../agent/agentMode'
 import { parseHarnessMode, type HarnessMode } from '../agent/harnessMode'
-import { fetchProviderModels, mergeRemoteModels, isOpenRouterProvider } from '../agent/listModels'
+import { fetchKiroModels, fetchProviderModels, mergeRemoteModels, isOpenRouterProvider } from '../agent/listModels'
 
 interface ProviderState {
   providers: Provider[]
@@ -110,9 +110,10 @@ export function parseMaxParallelSubagents(raw: unknown): number {
   return Math.min(6, Math.max(1, n))
 }
 
-function hydrateModel(m: ModelEntry): ModelEntry {
+function hydrateModel(m: ModelEntry, kiroProviders?: Set<string>): ModelEntry {
   let next = m
-  if (!m.pricing) {
+  // Kiro bills subscription credits: never attach per-token list prices.
+  if (!m.pricing && !kiroProviders?.has(m.providerId)) {
     const guess = guessPricing(m.modelId)
     if (guess) {
       next = {
@@ -192,7 +193,8 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     try {
       const rawConfig = await window.api.config.load() as Record<string, any>
       const settings = rawConfig.settings || {}
-      const models = ((rawConfig.models || []) as ModelEntry[]).map(hydrateModel)
+      const kiroIds = new Set(((rawConfig.providers || []) as Provider[]).filter((p) => p.apiFormat === 'kiro').map((p) => p.id))
+      const models = ((rawConfig.models || []) as ModelEntry[]).map((m) => hydrateModel(m, kiroIds))
       let visionModelId = (settings.visionModelId as string) || null
       // Drop a stale vision pin if the model was removed.
       if (visionModelId && !models.some((m) => m.id === visionModelId && m.enabled)) {
@@ -296,11 +298,13 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
     if (isOpenRouterProvider(provider)) {
       throw new Error('OpenRouter has hundreds of models; please register specific models manually.')
     }
-    const { models: remote } = await fetchProviderModels(provider)
+    const kiro = provider.apiFormat === 'kiro'
+    const { models: remote } = kiro ? await fetchKiroModels() : await fetchProviderModels(provider)
     if (remote.length === 0) {
       throw new Error('Provider returned an empty model list')
     }
-    const merged = mergeRemoteModels(get().models, providerId, remote)
+    // Kiro bills subscription credits, not per-token prices.
+    const merged = mergeRemoteModels(get().models, providerId, remote, { noPricing: kiro })
     set((s) => {
       const next = { ...s, models: merged.models }
       saveToBackend(next)
