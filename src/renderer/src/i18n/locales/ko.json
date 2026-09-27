@@ -1376,5 +1376,11 @@
   },
   "computer": {
     "stoppedByUser": "중지됨 — Esc를 두 번 눌렀어요. 마우스와 키보드 제어를 해제했어요."
+  },
+  "gambits": {
+    "title": "갬빗 · 키워드 모드",
+    "noResults": "일치하는 갬빗이 없어요",
+    "ulwDesc": "목표가 검증될 때까지 계속 작업해요 (빌드 + 맥싱, --max N 반복)",
+    "goalArg": "<목표>"
   }
 }

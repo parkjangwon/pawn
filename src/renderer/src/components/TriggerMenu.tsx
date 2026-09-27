@@ -13,7 +13,7 @@ export interface TriggerItem {
 
 interface TriggerMenuProps {
   open: boolean
-  trigger: '/' | '@' | null
+  trigger: '/' | '@' | '$' | null
   items: TriggerItem[]
   selectedIndex: number
   loading?: boolean

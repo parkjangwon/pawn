@@ -1376,5 +1376,11 @@
   },
   "computer": {
     "stoppedByUser": "Stopped — you pressed Esc twice. Pawn released the mouse and keyboard."
+  },
+  "gambits": {
+    "title": "Gambits · keyword modes",
+    "noResults": "No matching gambits",
+    "ulwDesc": "keeps working until the goal is verified done (Build + Maxing, --max N iterations)",
+    "goalArg": "<goal>"
   }
 }

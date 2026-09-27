@@ -1376,5 +1376,11 @@
   },
   "computer": {
     "stoppedByUser": "已停止 — 你按了两次 Esc。Pawn 已释放鼠标和键盘。"
+  },
+  "gambits": {
+    "title": "弃兵 · 关键词模式",
+    "noResults": "没有匹配的弃兵",
+    "ulwDesc": "持续工作直到目标被验证完成（构建 + 极限，--max N 次迭代）",
+    "goalArg": "<目标>"
   }
 }

@@ -12,6 +12,7 @@ import ChatHeader from './ChatHeader'
 import WelcomeScreen from './WelcomeScreen'
 import MessageList from './MessageList'
 import { MarkdownBaseDirContext } from './LocalFileLinks'
+import { gambitTrigger, matchGambits } from '../agent/gambits'
 import { generalWorkspaceDir, generalWorkspaceDirSync } from '../utils/generalWorkspace'
 import Composer from './Composer'
 import PlanStrip from './PlanStrip'
@@ -116,7 +117,7 @@ export default function ChatArea({
   const usageRef = useRef<HTMLDivElement>(null)
   const [showProjectPicker, setShowProjectPicker] = useState(false)
   const [gitBranch, setGitBranch] = useState<string | null>(null)
-  const [trigger, setTrigger] = useState<{ type: '/' | '@'; start: number; query: string } | null>(null)
+  const [trigger, setTrigger] = useState<{ type: '/' | '@' | '$'; start: number; query: string } | null>(null)
   const [menuIndex, setMenuIndex] = useState(0)
   const [fileIndex, setFileIndex] = useState<Array<{ name: string; path: string; rel: string; isDirectory?: boolean }>>([])
   const [filesLoading, setFilesLoading] = useState(false)
@@ -610,7 +611,7 @@ export default function ChatArea({
         id: 'ultra-work',
         label: t('ultraWork.slashLabel'),
         description: t('ultraWork.slashDesc'),
-        hint: 'ulw',
+        hint: '$ulw',
         icon: ic(<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
         insert: '/ultra-work '
       },
@@ -702,8 +703,24 @@ export default function ChatArea({
     }
   }
 
+  const gambitIcon = (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  )
+  const gambitItems = (query: string): TriggerItem[] =>
+    matchGambits(query).map((g) => ({
+      id: `gambit:${g.keyword}`,
+      label: `$${g.keyword}${g.argKey ? ` ${t(g.argKey)}` : ''}`,
+      description: `${t(g.labelKey)} · ${t(g.descKey)}`,
+      hint: g.aliases.map((a) => `$${a}`).join(' ') || undefined,
+      icon: gambitIcon,
+      insert: `$${g.keyword} `
+    }))
+
   const getItems = (): TriggerItem[] => {
     if (!trigger) return []
+    if (trigger.type === '$') return gambitItems(trigger.query)
     const q = trigger.query.toLowerCase()
     const base = trigger.type === '/' ? buildSlash() : mentionItems
     if (!q) return base
@@ -723,7 +740,7 @@ export default function ChatArea({
     if (!trigger) return
     const value = input
     const cursor = textareaRef.current?.selectionStart ?? value.length
-    if (trigger.type === '/') {
+    if (trigger.type === '/' || trigger.type === '$') {
       if (item.insert) {
         setInput(value.slice(0, trigger.start) + item.insert + value.slice(cursor))
         pendingCursor.current = trigger.start + item.insert.length
@@ -953,6 +970,14 @@ export default function ChatArea({
     }
     const cursor = e.target.selectionStart ?? value.length
     const before = value.slice(0, cursor)
+    // `$keyword` opening the message → Gambits menu (only when something matches,
+    // so "$5" or "$HOME" never pops a menu).
+    const gambit = gambitTrigger(before)
+    if (gambit && matchGambits(gambit.query).length > 0) {
+      setTrigger({ type: '$', ...gambit })
+      setMenuIndex(0)
+      return
+    }
     const m = before.match(/(^|\s)([/@])([^\s]*)$/)
     if (m) {
       const type = m[2] as '/' | '@'

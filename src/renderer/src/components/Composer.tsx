@@ -22,7 +22,7 @@ interface ComposerProps {
   onKeyDown: (e: React.KeyboardEvent) => void
   onSend: () => void
   textareaRef: React.RefObject<HTMLTextAreaElement | null>
-  trigger: { type: '/' | '@'; start: number; query: string } | null
+  trigger: { type: '/' | '@' | '$'; start: number; query: string } | null
   triggerItems: TriggerItem[]
   menuIndex: number
   onMenuIndexChange: (i: number) => void
@@ -181,8 +181,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
             items={triggerItems}
             selectedIndex={Math.min(menuIndex, Math.max(triggerItems.length - 1, 0))}
             loading={trigger?.type === '@' && filesLoading}
-            emptyText={trigger?.type === '@' ? t('chat.mention.noResults') : t('chat.slash.noResults')}
-            title={trigger?.type === '@' ? t('chat.mention.title') : t('chat.slash.title')}
+            emptyText={trigger?.type === '@' ? t('chat.mention.noResults') : trigger?.type === '$' ? t('gambits.noResults') : t('chat.slash.noResults')}
+            title={trigger?.type === '@' ? t('chat.mention.title') : trigger?.type === '$' ? t('gambits.title') : t('chat.slash.title')}
             onSelect={onSelect}
             onHover={onMenuIndexChange}
           />
