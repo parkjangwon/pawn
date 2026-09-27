@@ -125,7 +125,7 @@ export default function CommandPalette({
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const setActiveProject = useAppStore((s) => s.setActiveProject)
   const setActiveSession = useAppStore((s) => s.setActiveSession)
-  const startNewChat = useAppStore((s) => s.startNewChat)
+  const openNewChat = useAppStore((s) => s.openNewChat)
   const stopStreaming = useChatStore((s) => s.stopStreaming)
   const isStreaming = useChatStore((s) => s.isStreaming)
   const theme = useThemeStore((s) => s.theme)
@@ -169,7 +169,7 @@ export default function CommandPalette({
         icon: <Icon d={<><path d="M12 5v14" /><path d="M5 12h14" /></>} />,
         action: () => run(() => {
           onMainViewChange?.('chat')
-          startNewChat()
+          openNewChat()
         })
       },
       ...(hasChat
@@ -342,7 +342,7 @@ export default function CommandPalette({
 
     return [...sessions, ...actions, ...projectCmds, ...navigation]
   }, [
-    projects, keybindings, t, run, onMainViewChange, onOpenSettings, startNewChat,
+    projects, keybindings, t, run, onMainViewChange, onOpenSettings, openNewChat,
     stopStreaming, isStreaming, theme, toggleTheme, setTheme, setActiveProject, setActiveSession,
     hasChat
   ])

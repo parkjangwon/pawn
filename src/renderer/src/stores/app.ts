@@ -57,6 +57,13 @@ interface AppState {
    * (sessions under `__general__`). Project-scoped sessions use addSession(projectId).
    */
   startNewChat: (title?: string) => string
+  /**
+   * "New chat" from the UI (sidebar, ⌘N, /new, palette): a blank composer in
+   * the project the user is looking at (General when none). No session is
+   * created until the first message, so abandoned new chats leave no empty
+   * "New Session" entries and the session is titled from the prompt.
+   */
+  openNewChat: () => void
   removeSession: (projectId: string, sessionId: string) => void
   setActiveSession: (id: string | null) => void
   loadMessages: (projectId: string, sessionId: string) => Promise<void>
@@ -198,6 +205,15 @@ export const useAppStore = create<AppState>((set, get) => ({
   startNewChat: (title) => {
     const projectId = get().ensureGeneralProject()
     return get().addSession(projectId, title)
+  },
+
+  openNewChat: () => {
+    const current = get().activeProjectId
+    const inProject = !!current && current !== '__general__' && get().projects.some((p) => p.id === current)
+    const projectId = inProject ? current : get().ensureGeneralProject()
+    set({ activeProjectId: projectId, activeSessionId: null })
+    // Ready to type: the composer is the only thing on a blank chat.
+    if (typeof window !== 'undefined') window.dispatchEvent(new CustomEvent('pawn:focus-composer'))
   },
 
   removeSession: (projectId, sessionId) => {

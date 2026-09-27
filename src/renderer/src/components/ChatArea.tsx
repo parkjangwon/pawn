@@ -83,7 +83,7 @@ export default function ChatArea({
   const [input, setInput] = useState('')
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
-  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, removeSession, startNewChat, clearMessages, updateProjectName, loadedSessions, loadingSessions } = useAppStore()
+  const { projects, activeProjectId, activeSessionId, setActiveProject, addProject, addSession, removeSession, openNewChat, ensureGeneralProject, clearMessages, updateProjectName, loadedSessions, loadingSessions } = useAppStore()
   const { sendMessage, streamingSessionIds, stopStreaming } = useChatStore()
   /** Live tokens / thinking indicator only for the session currently on screen. */
   const sessionStreaming = !!activeSessionId && streamingSessionIds.includes(activeSessionId)
@@ -389,6 +389,13 @@ export default function ChatArea({
     setFindNonce((n) => n + 1)
   }, [])
 
+  // "New chat" (sidebar / ⌘N / palette) → cursor in the composer.
+  useEffect(() => {
+    const onFocus = (): void => { requestAnimationFrame(() => textareaRef.current?.focus()) }
+    window.addEventListener('pawn:focus-composer', onFocus)
+    return () => window.removeEventListener('pawn:focus-composer', onFocus)
+  }, [])
+
   const closeFind = useCallback((): void => {
     setFindOpen(false)
     setFindSeed('')
@@ -549,6 +556,7 @@ export default function ChatArea({
   }
 
  const handleSelectProject = (projectId: string): void => {
+   if (projectId === '__general__') ensureGeneralProject()
    // Moving an untouched chat to another project: drop the empty session so
    // the first message starts a chat in the chosen project.
    if (activeSession && activeProjectId && activeProjectId !== projectId && loadedSessions.has(activeSession.id) && activeSession.messages.length === 0) {
@@ -568,8 +576,8 @@ export default function ChatArea({
         id: 'new', label: t('chat.slash.new'), description: t('chat.slash.newDesc'),
         icon: ic(<><path d="M12 5v14" /><path d="M5 12h14" /></>),
         action: () => {
-          // Same as sidebar "New chat": never inherit the currently selected project.
-          startNewChat()
+          // Same as sidebar "New chat": blank chat in the project on screen.
+          openNewChat()
         }
       },
       {
@@ -1143,7 +1151,9 @@ export default function ChatArea({
           </div>
         ) : !activeSession || messages.length === 0 ? (
           <WelcomeScreen
-            activeProject={activeProject}
+            // General is "no project" to the user: generic welcome, and it
+            // doesn't tick "Open or create a project folder".
+            activeProject={activeProject?.id === '__general__' ? undefined : activeProject}
             suggestions={suggestions}
             onPick={(text) => { setInput(text); setTrigger(null) }}
             onOpenSettings={onOpenSettings}

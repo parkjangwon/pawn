@@ -38,7 +38,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
     removeProject,
     setActiveProject,
     addSession,
-    startNewChat,
+    openNewChat,
     removeSession,
     setActiveSession,
     updateSessionTitle,
@@ -88,12 +88,12 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
   }, [initialized])
   const [confirmDelete, setConfirmDelete] = useState<{ type: 'project' | 'session'; id: string; projectId?: string; name: string } | null>(null)
 
-  // Always start a blank chat with no real project selected — even if a project
-  // is currently active. Project-scoped sessions are created via the + button
-  // on that project row.
+  // New chat stays in the project on screen (General when none) — the composer
+  // chip switches project or "Work without project" before the first send.
+  // The + on a project row starts a chat in that specific project.
   const handleNewSession = (): void => {
     onMainViewChange('chat')
-    startNewChat()
+    openNewChat()
   }
 
   const toggleProject = (id: string): void => {

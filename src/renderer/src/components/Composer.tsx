@@ -186,8 +186,9 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
             onSelect={onSelect}
             onHover={onMenuIndexChange}
           />
-          {/* Context chips bar */}
-          {activeSession && (
+          {/* Context chips bar — also on a blank new chat (when there are projects)
+              so the user can pick where the chat goes before the first send. */}
+          {(activeSession || projects.some((p) => p.id !== '__general__')) && (
             <div className="context-bar">
               <div className="context-chip-wrapper" ref={projectPickerRef}>
                 <button

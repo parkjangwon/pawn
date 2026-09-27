@@ -254,3 +254,22 @@ describe('selecting a project', () => {
     expect(useAppStore.getState().activeSessionId).toBe(inDemo)
   })
 })
+
+describe('New chat (openNewChat)', () => {
+  it('opens a blank chat in the project on screen, or General when none, without empty sessions', () => {
+    const s = useAppStore.getState()
+    s.addProject('demo', ['/proj'], 'demo')
+    const inDemo = useAppStore.getState().addSession('demo', 'old chat')
+    // Viewing a demo chat → New chat stays in demo, no session until the first send.
+    useAppStore.getState().openNewChat()
+    expect(useAppStore.getState()).toMatchObject({ activeProjectId: 'demo', activeSessionId: null })
+    expect(useAppStore.getState().projects.find((p) => p.id === 'demo')!.sessions.map((x) => x.id)).toEqual([inDemo])
+    // Nothing on screen → General.
+    useAppStore.setState({ activeProjectId: null, activeSessionId: null })
+    useAppStore.getState().openNewChat()
+    expect(useAppStore.getState()).toMatchObject({ activeProjectId: '__general__', activeSessionId: null })
+    // Repeated New chat never piles up empty sessions.
+    useAppStore.getState().openNewChat()
+    expect(useAppStore.getState().projects.find((p) => p.id === '__general__')!.sessions).toEqual([])
+  })
+})

@@ -134,7 +134,7 @@ export default function App(): React.JSX.Element {
 
   const activeProjectId = useAppStore((s) => s.activeProjectId)
   const activeSessionId = useAppStore((s) => s.activeSessionId)
-  const startNewChat = useAppStore((s) => s.startNewChat)
+  const openNewChat = useAppStore((s) => s.openNewChat)
 
   // Browser-style back/forward history over the app's top-level "location":
   // which view is showing, which project/session is focused, and whether
@@ -204,9 +204,9 @@ export default function App(): React.JSX.Element {
     if (isBrowserMode) {
       setShowSettings(false)
       setMainView('chat')
-      startNewChat()
+      openNewChat()
     }
-  }, [isBrowserMode, startNewChat]))
+  }, [isBrowserMode, openNewChat]))
   useKeybinding('toggle-sidebar', useCallback(() => { if (isBrowserMode) toggleActiveSidebar() }, [isBrowserMode, toggleActiveSidebar]))
 
   /**
@@ -271,12 +271,12 @@ export default function App(): React.JSX.Element {
       else if (id === 'new-session') {
         setShowSettings(false)
         setMainView('chat')
-        startNewChat()
+        openNewChat()
       } else if (id === 'close-layer') {
         handleCloseLayer()
       }
     })
-  }, [toggleActiveSidebar, startNewChat, handleCloseLayer])
+  }, [toggleActiveSidebar, openNewChat, handleCloseLayer])
 
   useKeybinding('close-layer', useCallback(() => {
     if (isBrowserMode) handleCloseLayer()
