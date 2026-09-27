@@ -161,7 +161,8 @@ export async function runHeadlessTurn(opts: HeadlessTurnOptions): Promise<Headle
     harnessMode: opts.harnessMode ?? provider.harnessMode,
     agentMode: opts.agentMode ?? 'build',
     sessionAgentModes: {},
-    lspDiagnostics: false,
+    // Same default as the desktop app (post-edit diagnostics from language servers).
+    lspDiagnostics: typeof api.lsp?.diagnostics === 'function',
     ...(opts.modelId ? { routingMode: 'manual' as const, activeModelId: opts.modelId } : {})
   })
   usePrefsStore.setState({ taskNotificationsEnabled: false })

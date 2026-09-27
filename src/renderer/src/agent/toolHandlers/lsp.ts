@@ -232,20 +232,77 @@ export async function applyWorkspaceEdit(
   return { ok: true, summary, notes: res.notes, diffData: res.diffData }
 }
 
+/** Identifier at a 1-based position, and whether it is a member (method / property). */
+export function identifierAt(text: string, line: number, column: number): { name: string; member: boolean } | null {
+  const l = text.split('\n')[line - 1]
+  if (l === undefined) return null
+  const isWord = (ch: string | undefined): boolean => !!ch && /[A-Za-z0-9_$]/.test(ch)
+  let i = Math.min(Math.max(0, column - 1), l.length - 1)
+  if (!isWord(l[i]) && isWord(l[i - 1])) i--
+  if (!isWord(l[i])) return null
+  let a = i
+  let b = i
+  while (a > 0 && isWord(l[a - 1])) a--
+  while (b < l.length - 1 && isWord(l[b + 1])) b++
+  const name = l.slice(a, b + 1)
+  if (/^\d/.test(name)) return null
+  const member =
+    l[a - 1] === '.' ||
+    new RegExp(`^\\s*(?:(?:public|private|protected|static|async|override|readonly|get|set)\\s+)*${name.replace(/\$/g, '\\$')}\\s*[(<=:?]`).test(l)
+  return { name, member }
+}
+
+/**
+ * Textual references the language server did not rename (untyped JS, dynamic
+ * access, other languages). Some may be unrelated — the agent verifies.
+ */
+async function renameLeftovers(
+  api: typeof window.api,
+  projectPath: string,
+  old: { name: string; member: boolean }
+): Promise<string> {
+  const search = api.fs?.contentSearch
+  if (typeof search !== 'function') return ''
+  try {
+    const esc = old.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+    const res = await search(projectPath, {
+      query: old.member ? `\\.${esc}\\b` : `\\b${esc}\\b`,
+      fixedString: false,
+      caseInsensitive: false,
+      maxMatches: 40,
+      contextLines: 0,
+      timeoutMs: 8_000
+    })
+    const hits = (res.matches || []).filter((m) => !/(^|\/)(node_modules|dist|build|out|\.git)\//.test(m.path))
+    if (!hits.length) return ''
+    const shown = hits.slice(0, 25).map((m) => `  ${rel(m.path, projectPath)}:${m.line}: ${String(m.text).trim().slice(0, 160)}`)
+    return (
+      `\nThe language server did not change these textual ${old.member ? `member accesses \`.${old.name}\`` : `occurrences of \`${old.name}\``} ` +
+      `(it cannot resolve untyped or dynamic usages). Check each — rename the ones that refer to the same symbol, leave unrelated ones:\n${shown.join('\n')}` +
+      (hits.length > 25 ? `\n  …${hits.length - 25} more` : '')
+    )
+  } catch {
+    return ''
+  }
+}
+
 const lsp_rename: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
   if (!api.lsp?.rename || !projectPath) return lspUnavailable(call.id)
   const pos = positionArgs(call)
   const file = fileArg(call, projectPath)
   const newName = typeof call.arguments.new_name === 'string' ? call.arguments.new_name.trim() : ''
   if (!pos || !file || !newName) return { toolCallId: call.id, content: 'path, line, column and new_name are required', isError: true }
+  const original = await api.fs.readFile(file).catch(() => null)
+  const oldIdent = typeof original === 'string' ? identifierAt(original, pos.line, pos.column) : null
   const res = await api.lsp.rename(projectPath, file, pos.line, pos.column, newName)
   if (!res.ok || !res.edit) return { toolCallId: call.id, content: `Rename failed: ${res.error || 'no edits returned'}`, isError: true }
   const applied = await applyWorkspaceEdit(res.edit, { projectPath, ctx, toolCallId: call.id, api })
   if (!applied.ok) return { toolCallId: call.id, content: `Rename failed: ${applied.error}`, isError: true }
   if (!applied.summary.length) return { toolCallId: call.id, content: 'The language server returned no changes for this rename.' }
+  const leftovers = oldIdent && oldIdent.name !== newName ? await renameLeftovers(api, projectPath, oldIdent) : ''
   return {
     toolCallId: call.id,
-    content: `Renamed to ${newName}:\n${applied.summary.join('\n')}${applied.notes}`,
+    content: `Renamed ${oldIdent ? `\`${oldIdent.name}\` ` : ''}to ${newName}:\n${applied.summary.join('\n')}${applied.notes}${leftovers}`,
     diffData: applied.diffData
   }
 }

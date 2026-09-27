@@ -6,7 +6,7 @@ import { tmpdir } from 'os'
 import { join } from 'path'
 import { runHeadlessTurn } from '../runner'
 import { formatEvalReport, runEvalSuite, summarize } from '../evalHarness'
-import { BUILTIN_TASKS, selectTasks } from '../evalTasks'
+import { BUILTIN_TASKS, HARD_TASKS, selectTasks } from '../evalTasks'
 import { applyEnvKeys, envKeyName } from '../config'
 import { evalConfigs, parseArgs } from '../cli'
 import type { HeadlessConfig } from '../nodeApi'
@@ -198,6 +198,45 @@ describe('eval harness', () => {
     for (const r of report.results) expect(r.pass, r.taskId).toBe(false)
   }, 120_000)
 
+  it('hard tasks pass with their reference solutions (the checks measure the fix)', async () => {
+    const { materializeTask } = await import('../evalHarness')
+    const { spawn } = await import('child_process')
+    const { readFile, rm, writeFile } = await import('fs/promises')
+    const { join } = await import('path')
+    for (const task of HARD_TASKS) {
+      expect(task.reference, task.id).toBeDefined()
+      const dir = await materializeTask(task)
+      try {
+        for (const [rel, content] of Object.entries(task.reference!)) {
+          expect(content, `${task.id}:${rel} reference differs from the fixture`).not.toBe(task.files[rel])
+          await writeFile(join(dir, rel), content)
+        }
+        const run = (command: string, timeoutMs = 60_000) =>
+          new Promise<{ exitCode: number; stdout: string; stderr: string }>((res) => {
+            const c = spawn('/bin/sh', ['-c', command], { cwd: dir })
+            let stdout = ''
+            let stderr = ''
+            c.stdout.on('data', (d) => (stdout += d))
+            c.stderr.on('data', (d) => (stderr += d))
+            const t = setTimeout(() => c.kill('SIGKILL'), timeoutMs)
+            c.on('close', (code) => {
+              clearTimeout(t)
+              res({ exitCode: code ?? 1, stdout, stderr })
+            })
+          })
+        const verdict = await task.check({
+          dir,
+          finalText: '',
+          run,
+          read: async (rel) => readFile(join(dir, rel), 'utf8').catch(() => null)
+        })
+        expect(verdict, task.id).toEqual({ pass: true })
+      } finally {
+        await rm(dir, { recursive: true, force: true })
+      }
+    }
+  }, 180_000)
+
   it('summarizes pass rate and cost per pass', () => {
     const base = { attempt: 1, outcome: 'completed' as const, durationMs: 1000, toolCalls: 2, toolErrors: 0, assistantMessages: 1, inputTokens: 100, outputTokens: 10, cacheReadTokens: 0, models: [] }
     const s = summarize([
@@ -231,7 +270,8 @@ describe('headless config + cli args', () => {
     const a = parseArgs(['eval', '--tasks', 'bugfix,rename-symbol', '--modes=eco,maxing', '--models', 'm1', '--keep'])
     expect(a).toEqual({ command: 'eval', positional: [], flags: { tasks: 'bugfix,rename-symbol', modes: 'eco,maxing', models: 'm1', keep: true } })
     expect(evalConfigs(a.flags).map((c) => c.label)).toEqual(['eco·m1', 'maxing·m1'])
-    expect(selectTasks(['bugfix']).map((t) => t.id)).toEqual(['fix-off-by-one', 'fix-async-bug'])
+    expect(selectTasks(['bugfix']).map((t) => t.id)).toEqual(['fix-off-by-one', 'fix-async-bug', 'server-500', 'golden-mismatch', 'concept-search', 'lru-eviction'])
+    expect(selectTasks(['hard']).map((t) => t.id)).toEqual(['server-500', 'golden-mismatch', 'concept-search', 'lru-eviction', 'rename-method'])
     expect(parseArgs(['--help']).command).toBe('help')
     expect(parseArgs([]).command).toBe('help')
   })

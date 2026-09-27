@@ -65,7 +65,26 @@ describe('activeToolGroups', () => {
   })
 
   it('keeps a plain coding task on core tools only', () => {
-    expect(activeToolGroups([user('refactor the router module and add unit tests for onClick handlers')]).size).toBe(0)
+    expect(activeToolGroups([user('fix the router module and add unit tests for onClick handlers')]).size).toBe(0)
+  })
+
+  it('loads refactoring and long-task tools only when the task calls for them', () => {
+    expect(Array.from(activeToolGroups([user('refactor the router module')]))).toEqual(['refactor'])
+    expect(activeToolGroups([user('이 함수 호출하는 곳 전부 찾아줘')]).has('refactor')).toBe(true)
+    expect(activeToolGroups([user('migrate the whole codebase to ESM')]).has('workspace')).toBe(true)
+    expect(groupOfTool('lsp_code_actions')?.id).toBe('refactor')
+    expect(groupOfTool('lsp_rename')).toBeNull()
+    expect(groupOfTool('working_notes')?.id).toBe('workspace')
+    expect(groupOfTool('read_output')).toBeNull()
+    // Compaction / clearing already rebuild the prompt cache: long-task tools join for free.
+    expect(activeToolGroups([user('fix it'), { role: 'summary', content: 'earlier…' }]).has('workspace')).toBe(true)
+    expect(
+      activeToolGroups([
+        user('fix it'),
+        { role: 'assistant', content: '', toolCalls: [{ id: 't', name: 'read_file', arguments: {} }] },
+        { role: 'tool', toolCallId: 't', name: 'read_file', content: '[cleared to save context: read_file a.ts returned 9,000 chars]' }
+      ]).has('workspace')
+    ).toBe(true)
   })
 })
 

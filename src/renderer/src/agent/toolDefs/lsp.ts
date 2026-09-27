@@ -51,7 +51,7 @@ export const LSP_TOOLS: ToolDefinition[] = [
   },
   {
     name: 'lsp_hover',
-    description: 'Type signature and docs of the symbol at path:line:column from the language server (inferred types, overloads, JSDoc/docstrings).',
+    description: 'Type and docs of the symbol at path:line:column (language server).',
     parameters: {
       type: 'object',
       properties: {
@@ -92,7 +92,7 @@ export const LSP_TOOLS: ToolDefinition[] = [
   {
     name: 'lsp_rename',
     description:
-      'Rename the symbol at path:line:column everywhere it is used (semantic, across files, including imports) and apply the edits. Safer than search-and-replace.',
+      'Rename the symbol at path:line:column everywhere (semantic, across files and imports) and apply the edits. Reports textual leftovers the server could not resolve (e.g. untyped JS).',
     parameters: {
       type: 'object',
       properties: {

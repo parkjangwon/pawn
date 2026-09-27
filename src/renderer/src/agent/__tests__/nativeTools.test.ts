@@ -282,3 +282,37 @@ describe('LSP text edits', () => {
     expect(applyTextEdits('x', [{ startLine: 1, startColumn: 2, endLine: 1, endColumn: 2, newText: '\nimport y' }])).toEqual({ ok: true, text: 'x\nimport y' })
   })
 })
+
+describe('lsp_rename leftovers', () => {
+  it('finds the identifier and whether it is a member', async () => {
+    const { identifierAt } = await import('../toolHandlers/lsp')
+    const src = 'export class Cart {\n  total() {\n    return 1\n  }\n}\nconst x = cart.total()\nfunction getUserName(u) {}\n'
+    expect(identifierAt(src, 2, 3)).toEqual({ name: 'total', member: true })
+    expect(identifierAt(src, 6, 17)).toEqual({ name: 'total', member: true })
+    expect(identifierAt(src, 7, 12)).toEqual({ name: 'getUserName', member: false })
+    expect(identifierAt(src, 3, 5)).toEqual({ name: 'return', member: false })
+    expect(identifierAt(src, 99, 1)).toBeNull()
+  })
+
+  it('reports textual member accesses the language server did not rename', async () => {
+    files.set(`${ROOT}/src/cart.js`, 'export class Cart {\n  total() {\n    return 1\n  }\n}\n')
+    const contentSearch = vi.fn(async (_root: string, o: { query: string }) => ({
+      engine: 'rg',
+      matches: new RegExp(o.query).test('cart.total()') ? [{ path: `${ROOT}/src/checkout.js`, line: 3, text: '  const total = cart.total() + SHIPPING' }] : []
+    }))
+    ;(window as any).api.fs.contentSearch = contentSearch
+    ;(window as any).api.lsp = {
+      rename: vi.fn(async () => ({
+        ok: true,
+        edit: { files: [{ path: `${ROOT}/src/cart.js`, edits: [{ startLine: 2, startColumn: 3, endLine: 2, endColumn: 8, newText: 'subtotal' }] }], creates: [], renames: [], deletes: [] }
+      }))
+    }
+    const r = await executeTool(call('lsp_rename', { path: 'src/cart.js', line: 2, column: 4, new_name: 'subtotal' }), ROOT, undefined, ctx)
+    expect(r.isError).toBeFalsy()
+    expect(files.get(`${ROOT}/src/cart.js`)).toContain('  subtotal() {')
+    expect(contentSearch.mock.calls[0][1].query).toBe('\\.total\\b')
+    expect(r.content).toContain('Renamed `total` to subtotal')
+    expect(r.content).toContain('member accesses `.total`')
+    expect(r.content).toContain('src/checkout.js:3:')
+  })
+})

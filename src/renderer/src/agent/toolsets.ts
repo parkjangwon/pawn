@@ -15,14 +15,16 @@
 
 import type { TranscriptEntry } from './transcript'
 
-export type ToolGroupId = 'browser' | 'computer' | 'debug' | 'github' | 'gitlab' | 'google' | 'codecommit' | 'app'
+export type ToolGroupId = 'browser' | 'computer' | 'debug' | 'refactor' | 'workspace' | 'github' | 'gitlab' | 'google' | 'codecommit' | 'app'
 export type ConnectionProvider = 'github' | 'gitlab' | 'google' | 'codecommit'
 export type ToolLoadingMode = 'smart' | 'all'
 
 interface ToolGroup {
   id: ToolGroupId
-  /** Tool-name prefix owning the group. */
+  /** Tool-name prefix owning the group ('' = members only). */
   prefix: string
+  /** Explicit members (tools whose prefix belongs to core, e.g. lsp_*). */
+  members?: string[]
   /** Names with the prefix that stay always-on (core). */
   keepCore?: string[]
   connection?: ConnectionProvider
@@ -52,6 +54,22 @@ export const TOOL_GROUPS: ToolGroup[] = [
     keywords:
       /\bdebug(ger|ging)?\b|\bbreakpoints?\b|\bstep (through|into|over)\b|\bstack ?trace\b|\bsegfault\b|\bcore dump\b|\bcrash(es|ing)?\b|\bhangs?\b|\binfinite loop\b|\bwrong (value|result|output)\b|\brace condition\b|디버그|디버깅|브레이크 ?포인트|중단점|크래시|デバッグ|ブレークポイント|调试|断点/i,
     summary: 'debugger: breakpoints, step, inspect variables (Node, Python, Go, C/C++/Rust)'
+  },
+  {
+    id: 'refactor',
+    prefix: '',
+    members: ['lsp_code_actions', 'lsp_apply_code_action', 'lsp_call_hierarchy', 'lsp_symbols'],
+    keywords:
+      /\brefactor|\bextract (a |the )?(function|method|constant|variable|component)|\binline\b|organi[sz]e imports|quick ?fix|\bcallers?\b|call (graph|hierarchy|sites?)|who calls|\boutline\b|restructur|리팩|추출|호출하는|호출 ?(계층|관계)|정리해|リファクタ|抽出|呼び出し元|重构|提取|调用(者|关系|层级)/i,
+    summary: 'language-server refactoring: code actions / quick fixes, call hierarchy, symbol outline'
+  },
+  {
+    id: 'workspace',
+    prefix: '',
+    members: ['working_notes', 'checkpoint_mark', 'checkpoint_restore', 'project_profile'],
+    keywords:
+      /\bmigrat|\bport (it |this |the )?(to|from)\b|\boverhaul|\brewrite\b|\bentire (code ?base|repo|project)|\bwhole (code ?base|repo|project)|\ball (the )?files\b|\bacross the (code ?base|repo)|\bmulti-?step|\blong[- ]running|\bstep by step\b|\bremember\b|\bgotchas?\b|\bcheckpoints?\b|\bulw\b|마이그레|전체 (코드|프로젝트|저장소)|모든 파일|대규모|단계별|기억해|체크포인트|移行|全体|すべてのファイル|迁移|整个(项目|代码)|所有文件/i,
+    summary: 'long tasks: working notes, checkpoints (mark / restore), repo profile notes'
   },
   {
     id: 'github',
@@ -104,10 +122,19 @@ export function isToolGroupId(v: unknown): v is ToolGroupId {
 /** Group owning `toolName`, or null for core tools. */
 export function groupOfTool(toolName: string): ToolGroup | null {
   for (const g of TOOL_GROUPS) {
-    if (toolName.startsWith(g.prefix)) return g.keepCore?.includes(toolName) ? null : g
+    if (g.members?.includes(toolName)) return g
+  }
+  for (const g of TOOL_GROUPS) {
+    if (g.prefix && toolName.startsWith(g.prefix)) return g.keepCore?.includes(toolName) ? null : g
   }
   return null
 }
+
+/**
+ * Transcript events after which the prompt cache is already being rebuilt
+ * (compaction, tool-result clearing) — adding the long-task tools then is free.
+ */
+const LONG_TASK_MARK = /^\[cleared to save context|<working_notes>/
 
 function groupsFromArg(raw: unknown): ToolGroupId[] {
   const list = Array.isArray(raw) ? raw : typeof raw === 'string' ? raw.split(/[\s,]+/) : []
@@ -131,12 +158,15 @@ export function activeToolGroups(entries: TranscriptEntry[]): Set<ToolGroupId> {
         const g = groupOfTool(tc.name)
         if (g) active.add(g.id)
       }
+    } else if (e.role === 'tool') {
+      if (!active.has('workspace') && typeof e.content === 'string' && LONG_TASK_MARK.test(e.content)) active.add('workspace')
     } else if (e.role === 'user' || e.role === 'summary') {
+      if (e.role === 'summary') active.add('workspace')
       const text = e.content || ''
       for (const g of TOOL_GROUPS) {
         if (active.has(g.id)) continue
         // Summaries list "Tools used: browser_click×3" — count those too.
-        if (g.keywords.test(text) || text.includes(g.prefix)) active.add(g.id)
+        if (g.keywords.test(text) || (g.prefix && text.includes(g.prefix)) || g.members?.some((m) => text.includes(m))) active.add(g.id)
       }
     }
   }

@@ -18,7 +18,8 @@ import { contentSearch } from '../main/contentSearch'
 import { isProtectedRemovePath, isSecretDotFile } from '../main/fsGuards'
 import { CuaHelper, findHelper, helperCandidates } from '../main/computer/cuaHelper'
 import { ComputerEngine } from '../main/computer/engine'
-import { createAgentRuntime } from '../main/agentRuntime'
+import { createAgentRuntime, validProjectRoot } from '../main/agentRuntime'
+import { LspManager } from '../main/lsp/manager'
 
 export interface HeadlessConfig {
   settings?: Record<string, unknown>
@@ -37,6 +38,8 @@ export interface NodeApiOptions {
   homeDir?: string
   /** Real desktop control through the native helper (macOS; off by default). */
   computer?: boolean
+  /** Language servers like the desktop app (default true). */
+  lsp?: boolean
 }
 
 const WALK_IGNORE = new Set([
@@ -397,8 +400,53 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
   // stay in memory (nothing is written under ~/.pawn).
   const rt = createAgentRuntime({ pawnDir: null })
 
+  // Language servers (same manager as the desktop main process).
+  const lspManager = opts.lsp === false ? null : new LspManager()
+  const lspWrap = async <T extends object>(fn: () => Promise<T & { error?: string }>): Promise<Record<string, unknown>> => {
+    try {
+      const r = await fn()
+      return { ...r, ok: !r.error }
+    } catch (err) {
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  }
+  const lsp = lspManager
+    ? {
+        setEnabled: async (v: boolean) => (lspManager.setEnabled(v), { ok: true }),
+        status: async (root: string) => lspManager.status(validProjectRoot(root) ?? undefined),
+        diagnostics: async (root: string, paths: string[], o?: { waitMs?: number; content?: Record<string, string> }) => {
+          const r = validProjectRoot(root)
+          if (!r) return { ok: false, error: 'Invalid project root', files: [] }
+          const res = await lspManager.diagnostics(r, paths || [], o || {})
+          return { ok: res.files.length > 0 || res.errors.length === 0, ...(res.errors.length ? { error: res.errors.join('; ') } : {}), files: res.files, unsupported: res.unsupported }
+        },
+        definition: (root: string, path: string, line: number, col: number) =>
+          lspWrap(() => lspManager.locations('textDocument/definition', validProjectRoot(root) || '/nonexistent', path, line, col)),
+        references: (root: string, path: string, line: number, col: number) =>
+          lspWrap(() => lspManager.locations('textDocument/references', validProjectRoot(root) || '/nonexistent', path, line, col)),
+        hover: (root: string, path: string, line: number, col: number) => lspWrap(() => lspManager.hover(validProjectRoot(root) || '/nonexistent', path, line, col)),
+        rename: (root: string, path: string, line: number, col: number, name: string) =>
+          lspWrap(() => lspManager.rename(validProjectRoot(root) || '/nonexistent', path, line, col, name)),
+        symbols: (root: string, path: string, query?: string) =>
+          lspWrap(() => (query ? lspManager.workspaceSymbols(validProjectRoot(root) || '/nonexistent', query, path) : lspManager.documentSymbols(validProjectRoot(root) || '/nonexistent', path))),
+        callHierarchy: (root: string, path: string, line: number, col: number, dir: 'incoming' | 'outgoing') =>
+          lspWrap(() => lspManager.callHierarchy(validProjectRoot(root) || '/nonexistent', path, line, col, dir)),
+        codeActions: (root: string, path: string, range: { startLine: number; startColumn?: number; endLine?: number; endColumn?: number }, only?: string[]) =>
+          lspWrap(() =>
+            lspManager.codeActions(
+              validProjectRoot(root) || '/nonexistent',
+              path,
+              { startLine: range.startLine, startColumn: range.startColumn ?? 1, endLine: range.endLine ?? range.startLine, endColumn: range.endColumn ?? 1 },
+              only
+            )
+          ),
+        applyCodeAction: (root: string, path: string, index: number) => lspWrap(() => lspManager.applyCodeAction(validProjectRoot(root) || '/nonexistent', path, index))
+      }
+    : undefined
+
   const api: Record<string, any> = {
     platform: 'headless',
+    ...(lsp ? { lsp } : {}),
     bash: {
       run: (key: string, command: string, o: unknown) => rt.bash.run(key, command, o),
       restart: (key: string, cwd: string, sandbox?: unknown) => rt.bash.restart(key, cwd, sandbox),
@@ -460,6 +508,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       live.clear()
       cua?.dispose()
       void rt.dispose()
+      void lspManager?.disposeAll().catch(() => {})
     }
   }
 }
