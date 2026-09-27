@@ -54,6 +54,42 @@
   line-height: 1.5;
 }
 
+/* Decision-model risk rating (Settings → Decision models → shell risk check). */
+.permission-risk {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  border-left: 3px solid var(--border-color);
+  padding: 4px 0 4px 10px;
+  margin: 0 0 var(--space-md);
+  line-height: 1.45;
+}
+.permission-risk.pending {
+  opacity: 0.7;
+}
+.permission-risk.level-read_only {
+  border-left-color: var(--success);
+}
+.permission-risk.level-reversible {
+  border-left-color: var(--warning);
+}
+.permission-risk.level-destructive {
+  border-left-color: var(--danger);
+}
+.permission-risk.level-destructive .permission-risk-label {
+  color: var(--danger);
+  font-weight: 600;
+}
+.permission-risk.escalated {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+.permission-risk-note {
+  color: var(--text-secondary);
+}
+
 .permission-details {
   background: var(--control-bg, var(--bg-secondary));
   border: 1px solid var(--control-border, var(--border-color));

@@ -1,0 +1,391 @@
+/* Record & Replay strip above the composer. */
+.rec-slot {
+  flex-shrink: 0;
+  width: calc(100% - 2 * var(--space-xl));
+  max-width: var(--chat-content-max, 720px);
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.rec-slot:empty {
+  display: none;
+}
+.rec-slot:not(:empty) {
+  margin-bottom: 10px;
+}
+
+.rec-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated, var(--bg-primary));
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  animation: riseIn var(--dur-med) var(--ease-spring) both;
+  box-shadow: 0 6px 24px -12px rgba(0, 0, 0, 0.35);
+}
+.rec-live {
+  border-color: color-mix(in srgb, var(--danger) 55%, var(--border-color));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--danger) 12%, transparent), 0 6px 24px -12px rgba(0, 0, 0, 0.35);
+}
+.rec-failed {
+  border-color: color-mix(in srgb, var(--warning) 50%, var(--border-color));
+}
+
+.rec-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex-wrap: wrap;
+  font-size: var(--font-sm);
+}
+.rec-head strong {
+  font-size: var(--font-md);
+  color: var(--text-primary);
+}
+.rec-sub {
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+}
+.rec-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--danger);
+}
+.rec-spacer {
+  flex: 1;
+}
+.rec-sources-label {
+  white-space: nowrap;
+}
+
+.rec-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--danger);
+  flex-shrink: 0;
+}
+.rec-dot.live {
+  animation: recPulse 1.4s ease-in-out infinite;
+}
+@keyframes recPulse {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--danger) 55%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 5px color-mix(in srgb, var(--danger) 0%, transparent);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rec-dot.live,
+  .rec-spinner {
+    animation: none;
+  }
+}
+.rec-square {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  background: currentColor;
+  display: inline-block;
+}
+.rec-spinner {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 2px solid var(--border-color);
+  border-top-color: var(--accent);
+  animation: recSpin 0.9s linear infinite;
+}
+@keyframes recSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.rec-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+.rec-field em {
+  font-style: normal;
+  color: var(--text-muted);
+}
+.rec-field textarea,
+.rec-field input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 7px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-sm);
+  resize: vertical;
+  outline: none;
+}
+.rec-field textarea:focus,
+.rec-field input:focus {
+  border-color: var(--accent);
+}
+
+.rec-sources {
+  border: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+.rec-sources legend {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  margin-bottom: 4px;
+}
+.rec-check {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-secondary);
+  cursor: pointer;
+}
+.rec-check.disabled {
+  cursor: default;
+  opacity: 0.75;
+}
+.rec-check span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.rec-check strong {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+.rec-check small {
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+.rec-perm-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+}
+.rec-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent);
+  font-size: var(--font-sm);
+  cursor: pointer;
+}
+.rec-link:hover,
+.rec-link:focus-visible {
+  text-decoration: underline;
+}
+
+.rec-tips {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 11px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+.rec-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+/* Own button styles: the chat must not depend on Settings.css being loaded. */
+.rec-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.4;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft),
+    opacity var(--dur-fast) var(--ease-out-soft);
+}
+.rec-btn:hover:not(:disabled) {
+  background: var(--bg-hover);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border-color));
+}
+.rec-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--on-accent, #fff);
+  font-weight: 600;
+}
+.rec-btn.primary:hover:not(:disabled) {
+  background: var(--accent);
+  opacity: 0.92;
+}
+.rec-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.rec-btn:active:not(:disabled) {
+  transform: scale(var(--press-scale, 0.97));
+}
+.rec-start,
+.rec-stop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.rec-start .rec-dot {
+  background: #fff;
+}
+.rec-btn.primary.rec-stop {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #fff;
+}
+
+.rec-goal {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+.rec-last {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rec-note {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+.rec-error {
+  font-size: var(--font-sm);
+  color: var(--danger);
+}
+
+/* Skill draft card inside an assistant message. */
+.skill-card {
+  margin: 10px 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
+  border-radius: var(--radius-lg);
+  background: color-mix(in srgb, var(--accent) 4%, var(--bg-secondary));
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.skill-card-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.skill-card-head code {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  background: none;
+  padding: 0;
+}
+.skill-card-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+.skill-card-badge.saved {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+.skill-card-desc {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+.skill-card-inputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 11px;
+}
+.skill-card-inputs code {
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+}
+.skill-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+.skill-card-actions .rec-spacer {
+  min-width: 8px;
+}
+.skill-card-path {
+  font-size: 11px;
+  color: var(--text-muted);
+  word-break: break-all;
+}
+.skill-card-preview {
+  max-height: 360px;
+  overflow: auto;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  font-size: 12px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.skill-run-form {
+  display: grid;
+  grid-template-columns: minmax(90px, max-content) 1fr;
+  gap: 6px 10px;
+  align-items: center;
+  font-size: var(--font-sm);
+}
+.skill-run-form label {
+  color: var(--text-secondary);
+}
+.skill-run-form input {
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: var(--font-sm);
+  outline: none;
+}
+.skill-run-form input:focus {
+  border-color: var(--accent);
+}

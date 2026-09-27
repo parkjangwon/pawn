@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useChatStore } from '../stores/chat'
+import { useRecordingStore } from '../stores/recording'
 import { useThemeStore } from '../stores/theme'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { useFocusTrap } from '../utils/focusTrap'
@@ -185,6 +186,21 @@ export default function CommandPalette({
               onMainViewChange?.('chat')
               // After the palette's focus-restore frame, or it steals focus back.
               window.setTimeout(() => window.dispatchEvent(new Event('pawn:open-find')), 80)
+            })
+          }]
+        : []),
+      ...(useRecordingStore.getState().supported
+        ? [{
+            id: 'record-workflow',
+            label: useRecordingStore.getState().status.state === 'recording' ? t('record.button.stop') : t('record.palette.label'),
+            description: t('record.palette.desc'),
+            group: 'actions' as const,
+            keywords: 'record replay skill demo macro workflow 녹화 스킬',
+            icon: <Icon d={<><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3.5" /></>} />,
+            action: () => run(() => {
+              const rec = useRecordingStore.getState()
+              if (rec.status.state === 'recording') void rec.stop()
+              else window.setTimeout(() => rec.openSetup(), 80)
             })
           }]
         : []),

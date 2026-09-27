@@ -87,7 +87,8 @@
       "compactedSmart": "모델이 작성한 요약으로 컨텍스트를 압축했어요 — 캐시 프리픽스를 다시 채우는 중이에요.",
       "lessonLearned": "교정 내용을 학습했어요: {{rule}}",
       "toolResultsCleared": "컨텍스트를 가볍게 유지하려고 오래된 도구 결과 {{count}}개(약 {{tokens}}k 토큰)를 정리했어요 — 원문은 에이전트가 다시 볼 수 있어요",
-      "stuckRecovery": "에이전트가 막힌 것 같아요 (단계 {{level}}, {{action}}): {{detail}}"
+      "stuckRecovery": "에이전트가 막힌 것 같아요 (단계 {{level}}, {{action}}): {{detail}}",
+      "decisionComplexity": "결정 모델이 이 요청을 {{to}}(으)로 판단했어요 ({{pct}}%, {{model}}). 휴리스틱: {{from}}"
     },
     "errors": {
       "noProvider": "프로바이더나 모델이 설정되지 않았어요. 설정 → 프로바이더, 설정 → 모델에서 추가하세요.",
@@ -391,7 +392,18 @@
     "moreLines_one": "… {{count}}줄 더 있음",
     "moreLines_other": "… {{count}}줄 더 있음",
     "queueFull": "권한 요청이 너무 많이 쌓여서 이번 요청은 거절했어요",
-    "timedOut": "권한 요청에 답이 없어서 거절했어요"
+    "timedOut": "권한 요청에 답이 없어서 거절했어요",
+    "risk": {
+      "rating": "결정 모델 판단: {{level}} ({{pct}}%)",
+      "levels": {
+        "read_only": "읽기 전용",
+        "reversible": "되돌릴 수 있음",
+        "destructive": "파괴적"
+      },
+      "sendsData": "로컬 데이터를 원격 서버로 보낼 수 있어요.",
+      "escalated": "원래 묻지 않고 실행될 명령이에요. 결정 모델이 위험하다고 판단해서 확인을 요청해요.",
+      "checking": "위험도 확인 중…"
+    }
   },
   "statusBar": {
     "working": "작업 중…",
@@ -1006,6 +1018,69 @@
       "pageOf": "{{page}} / {{pages}} 페이지",
       "foot": "한 페이지에 {{size}}개. 스킬은 에이전트가 따르는 지침이에요 — 믿을 수 있는 것만 설치하세요.",
       "unavailable": "스킬 스토어는 데스크톱 앱에서만 쓸 수 있어요."
+    },
+    "decisionModels": "결정 모델",
+    "decisionSection": {
+      "title": "결정 모델",
+      "desc": "선택 사항이에요. 결정 모델은 글을 쓰지 않고, 정해진 질문(하나 고르기, 점수, 예/아니요)에 보정된 확률로 몇 밀리초 만에 답해요. 없어도 Pawn은 똑같이 동작하고, 있으면 에이전트가 더 빠르고 저렴하게 판단해요.",
+      "desktopOnly": "결정 모델은 데스크톱 앱에서 쓸 수 있어요.",
+      "empty": "아직 결정 모델이 없어요. 호스팅 Jev를 쓰려면 TypeSafe를, 이 컴퓨터에서 공개 모델을 돌리려면 Ollaya를 추가하세요.",
+      "addDesc": "프로바이더 추가",
+      "presets": {
+        "typesafe": "공식 결정 모델 Jev를 호스팅으로 써요. API 키가 필요해요.",
+        "ollaya": "Laya, Winnow 같은 공개 모델을 이 컴퓨터에서 돌려요. 데이터가 밖으로 나가지 않아요.",
+        "custom": "TypeSafe API를 지원하는 서버라면 무엇이든 쓸 수 있어요."
+      },
+      "customName": "직접 입력",
+      "recommended": "추천",
+      "local": "로컬",
+      "hosted": "호스팅",
+      "active": "사용 중",
+      "activeHint": "이 프로바이더를 써요. 결정 모델은 한 번에 하나만 켤 수 있어요.",
+      "useProvider": "{{name}} 사용",
+      "test": "테스트",
+      "testing": "테스트 중…",
+      "testOk": "정상 · {{model}} · {{ms}}ms 만에 응답",
+      "edit": "편집",
+      "remove": "{{name}} 삭제",
+      "removeConfirm": "이 결정 모델을 삭제할까요? 저장된 API 키도 이 기기에서 지워져요.",
+      "addTitle": "{{name}} 추가",
+      "editTitle": "{{name}} 편집",
+      "addAndTest": "추가하고 테스트",
+      "getKey": "API 키 받기",
+      "getOllaya": "Ollaya 다운로드",
+      "hints": {
+        "typesafe": "TypeSafe 콘솔에서 발급한 API 키를 붙여넣으세요. Jev 요금은 TypeSafe가 입력 토큰 기준으로 청구해요.",
+        "ollaya": "Ollaya 앱을 열거나 `ollaya serve`를 실행한 뒤 `ollaya pull laya`(또는 다른 모델)로 모델을 받으세요. 서버에 OLLAYA_API_KEY를 설정하지 않았다면 키는 필요 없어요.",
+        "custom": "TypeSafe 호환 서버의 API 주소를 입력하세요. Pawn은 그 서버의 /v1/systemone을 호출해요."
+      },
+      "fields": {
+        "name": "이름",
+        "namePlaceholder": "내 결정 서버",
+        "baseUrl": "기본 URL",
+        "apiKey": "API 키",
+        "optional": "(선택)",
+        "apiKeyPlaceholder": "API 키를 붙여넣으세요",
+        "apiKeyKeep": "저장됨 — 비워 두면 그대로 유지해요",
+        "apiKeyLocal": "로컬 서버에는 필요 없어요",
+        "clearKey": "저장된 키 지우기",
+        "model": "모델",
+        "loadModels": "모델 불러오기"
+      },
+      "privacyLocal": "판단은 이 컴퓨터나 내 네트워크 안에서 이뤄져요. 클라우드 서비스로는 아무것도 보내지 않아요.",
+      "privacyHosted": "결정 요청은 이 프로바이더로 전송돼요. API 키나 토큰 같은 비밀 값은 Pawn이 먼저 가려요.",
+      "privacyActiveHosted": "결정 요청은 {{name}}(으)로 전송돼요. API 키나 토큰 같은 비밀 값은 Pawn이 먼저 가리고, 키는 이 기기에 암호화해 보관해요.",
+      "harnessTitle": "에이전트가 쓰는 곳",
+      "harnessDesc": "Pawn은 아래 기능에서 {{name}} ({{model}}) 모델을 써요. 모델이 느리거나 연결되지 않으면 각 기능은 원래대로 동작해요.",
+      "harnessInactive": "위에서 결정 모델을 켜면 쓸 수 있어요.",
+      "features": {
+        "agentTool": "에이전트가 직접 물어보기",
+        "agentToolDesc": "decide 도구를 추가해요. 로그 50줄 분류나 출처와 주장 대조처럼 빠른 선별, 순위 매기기, 확인에 써요",
+        "shellRiskGuard": "명령 실행 전 위험도 확인",
+        "shellRiskGuardDesc": "셸 명령마다 위험도를 매겨요. 묻지 않고 실행될 명령이 파괴적으로 보이면 먼저 물어봐요. 확인을 늘리기만 하고 건너뛰지는 않아요.",
+        "routerAssist": "요청 난이도 판단 (자동 라우팅용)",
+        "routerAssistDesc": "모델 선택이 자동일 때, 새 요청이 얼마나 어려운지 결정 모델이 판단해서 답할 채팅 모델의 등급(저가·중간·고성능)을 정해요. 등급이 다른 모델이 두 개 이상 있어야 효과가 있고, 답변 전에 잠깐 기다릴 수 있어요."
+      }
     }
   },
   "projectEdit": {
@@ -1506,5 +1581,92 @@
     "noResults": "일치하는 갬빗이 없어요",
     "ulwDesc": "목표가 검증될 때까지 계속 작업해요 (빌드 + 맥싱, --max N 반복)",
     "goalArg": "<목표>"
+  },
+  "record": {
+    "chat": {
+      "recorded": "🎬 워크플로를 녹화했어요: {{goal}} · {{steps}}단계 · {{duration}}",
+      "noGoal": "목표 미입력",
+      "newChatTitle": "녹화한 워크플로"
+    },
+    "errors": {
+      "emptyDraft": "모델이 빈 초안을 돌려줬어요.",
+      "cancelled": "스킬 작성을 멈췄어요.",
+      "draftFailed": "스킬을 작성하지 못했어요.",
+      "noSkillBlock": "답변에 SKILL.md가 없어요. 에이전트에게 스킬로 다시 써 달라고 해 보세요.",
+      "nothingRecorded": "녹화된 동작이 없어요. 녹화 중에 작업을 한 뒤 멈춰 주세요."
+    },
+    "setup": {
+      "title": "워크플로 녹화",
+      "subtitle": "한 번 보여 주면 재사용할 수 있는 스킬이 돼요",
+      "goal": "무엇을 보여 줄 건가요?",
+      "goalPlaceholder": "예: 이번 달 통신비를 Expensify에 경비로 제출하기",
+      "inputs": "매번 달라지는 건 뭔가요?",
+      "optional": "(선택)",
+      "inputsPlaceholder": "예: 금액, 영수증 파일, 월",
+      "sources": "녹화할 곳",
+      "browser": "Pawn 브라우저",
+      "browserDesc": "Pawn 브라우저 안의 클릭·입력·페이지 이동을 요소 이름으로 기록해요",
+      "desktop": "Mac 앱",
+      "desktopDesc": "다른 앱의 클릭·단축키·입력·앱 전환을 스크린샷과 함께 기록해요",
+      "desktopUnsupported": "지금은 쓸 수 없어요",
+      "needAccessibility": "손쉬운 사용 권한이 필요해요",
+      "noScreenRecording": "화면 기록 권한이 꺼져 있어 스크린샷 없이 기록해요",
+      "openAccessibility": "손쉬운 사용 설정 열기",
+      "openScreenRecording": "화면 기록 설정 열기",
+      "tipShort": "짧게 해 주세요. 처음부터 끝까지 한 번 한 뒤 멈추면 돼요.",
+      "tipSecrets": "비밀번호와 인증 코드는 기록하지 않아요. 원본 녹화는 스킬을 작성한 뒤 삭제돼요.",
+      "tipStop": "여기, 메뉴 막대에서 멈추거나 Esc를 두 번 누르세요.",
+      "starting": "시작하는 중…",
+      "start": "녹화 시작"
+    },
+    "live": {
+      "title": "녹화 중",
+      "steps_one": "{{count}}단계",
+      "steps_other": "{{count}}단계",
+      "discard": "버리기",
+      "stopping": "멈추는 중…",
+      "stop": "멈추고 스킬 만들기",
+      "last": "마지막: {{step}}",
+      "waiting": "작업을 시작하세요. 동작이 여기에 표시돼요."
+    },
+    "draft": {
+      "writing": "녹화로 스킬을 작성하는 중…",
+      "fromSteps_one": "{{count}}단계",
+      "fromSteps_other": "{{count}}단계",
+      "failed": "스킬을 작성하지 못했어요",
+      "discard": "녹화 버리기",
+      "retry": "다시 시도",
+      "memoryOnly": "녹화는 스킬을 작성할 때까지만 메모리에 있고, 앱을 종료하면 사라져요."
+    },
+    "card": {
+      "label": "스킬 {{name}}",
+      "saved": "저장됨",
+      "changed": "저장된 스킬과 달라요",
+      "draft": "초안",
+      "inputs": "입력값",
+      "save": "스킬 저장",
+      "update": "저장된 스킬 업데이트",
+      "run": "실행하기",
+      "putInComposer": "입력창에 넣기",
+      "automate": "자동화",
+      "edit": "다듬기",
+      "editPrompt": "{{name}} 스킬을 이렇게 고쳐줘: ",
+      "show": "SKILL.md 보기",
+      "hide": "SKILL.md 숨기기",
+      "replaceTitle": "{{name}}을(를) 바꿀까요?",
+      "replaceMessage": "같은 이름의 스킬이 이미 저장돼 있어요. 이 버전으로 바꿀까요?"
+    },
+    "slash": {
+      "label": "record",
+      "desc": "워크플로를 한 번 보여 주고 스킬로 만들어요"
+    },
+    "button": {
+      "start": "워크플로 녹화",
+      "stop": "녹화 중지"
+    },
+    "palette": {
+      "label": "워크플로 녹화",
+      "desc": "작업을 한 번 시연하면 Pawn이 재사용할 수 있는 스킬을 써요"
+    }
   }
 }

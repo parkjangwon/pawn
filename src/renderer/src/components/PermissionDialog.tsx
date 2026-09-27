@@ -81,6 +81,27 @@ export default function PermissionDialog(): React.JSX.Element | null {
           </div>
         )}
         <div className="permission-type">{typeLabels[current.type] || current.type}</div>
+        {current.risk ? (
+          <div
+            className={`permission-risk level-${current.risk.level}${current.risk.escalated ? ' escalated' : ''}`}
+            role={current.risk.escalated ? 'alert' : undefined}
+          >
+            <span className="permission-risk-label">
+              {t('permission.risk.rating', {
+                level: t(`permission.risk.levels.${current.risk.level}`),
+                pct: Math.round(current.risk.probability * 100)
+              })}
+            </span>
+            {current.risk.sendsData >= 0.5 && (
+              <span className="permission-risk-note">{t('permission.risk.sendsData')}</span>
+            )}
+            {current.risk.escalated && <span className="permission-risk-note">{t('permission.risk.escalated')}</span>}
+          </div>
+        ) : current.riskPending ? (
+          <div className="permission-risk pending" aria-live="polite">
+            {t('permission.risk.checking')}
+          </div>
+        ) : null}
         {/* Plain-language purpose (from the agent) replaces the tool label. */}
         {current.preview?.purpose ? (
           <p className="permission-purpose">{current.preview.purpose}</p>

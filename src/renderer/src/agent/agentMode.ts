@@ -54,7 +54,8 @@ const MUTATING_EXACT = new Set([
   'google_gmail_send',
   'google_sheets_write',
   'google_calendar_create',
-  'memory_consolidate'
+  'memory_consolidate',
+  'save_skill'
 ])
 
 /** Explicitly allowed mutators that are actually planning (none currently). */

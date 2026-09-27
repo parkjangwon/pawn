@@ -87,7 +87,8 @@
       "compactedSmart": "モデルが書いた要約でコンテキストを圧縮しました — キャッシュのプレフィックスを再構築しています。",
       "lessonLearned": "修正内容を学習しました: {{rule}}",
       "toolResultsCleared": "コンテキストを保つため古いツール結果 {{count}} 件（約 {{tokens}}k トークン）を整理しました — 全文はエージェントが再取得できます",
-      "stuckRecovery": "エージェントが行き詰まっているようです（段階 {{level}}、{{action}}）: {{detail}}"
+      "stuckRecovery": "エージェントが行き詰まっているようです（段階 {{level}}、{{action}}）: {{detail}}",
+      "decisionComplexity": "意思決定モデルはこのリクエストを {{to}} と判定しました（{{pct}}%、{{model}}）。ヒューリスティック: {{from}}"
     },
     "errors": {
       "noProvider": "プロバイダーまたはモデルが設定されていません。設定 → プロバイダー、設定 → モデルで追加してください。",
@@ -391,7 +392,18 @@
     "moreLines_one": "… さらに {{count}} 行",
     "moreLines_other": "… さらに {{count}} 行",
     "queueFull": "権限リクエストが多すぎるため、このリクエストは拒否されました",
-    "timedOut": "権限リクエストに応答がなかったため拒否されました"
+    "timedOut": "権限リクエストに応答がなかったため拒否されました",
+    "risk": {
+      "rating": "意思決定モデルの判定: {{level}}（{{pct}}%）",
+      "levels": {
+        "read_only": "読み取りのみ",
+        "reversible": "元に戻せる",
+        "destructive": "破壊的"
+      },
+      "sendsData": "ローカルのデータをリモートサーバーに送る可能性があります。",
+      "escalated": "本来は確認なしで実行されるコマンドです。意思決定モデルが危険と判断したため、確認しています。",
+      "checking": "危険度を確認中…"
+    }
   },
   "statusBar": {
     "working": "処理中…",
@@ -1006,6 +1018,69 @@
       "pageOf": "{{page}} / {{pages}} ページ",
       "foot": "1 ページ {{size}} 件。スキルはエージェントが従う指示です — 信頼できるものだけをインストールしてください。",
       "unavailable": "スキルストアはデスクトップアプリで利用できます。"
+    },
+    "decisionModels": "意思決定モデル",
+    "decisionSection": {
+      "title": "意思決定モデル",
+      "desc": "任意です。意思決定モデルは文章を書かず、型付きの質問（ひとつ選ぶ・スコア・はい/いいえ）に補正済みの確率で数ミリ秒で答えます。なくても Pawn は同じように動き、あればエージェントがより速く安く判断できます。",
+      "desktopOnly": "意思決定モデルはデスクトップアプリで使えます。",
+      "empty": "意思決定モデルはまだありません。ホスト型の Jev なら TypeSafe を、このマシンで公開モデルを動かすなら Ollaya を追加してください。",
+      "addDesc": "プロバイダーを追加",
+      "presets": {
+        "typesafe": "公式の意思決定モデル Jev をホスト型で使います。APIキーが必要です。",
+        "ollaya": "Laya や Winnow などの公開モデルをこのマシンで動かします。データは外に出ません。",
+        "custom": "TypeSafe API に対応したサーバーならどれでも使えます。"
+      },
+      "customName": "カスタム",
+      "recommended": "おすすめ",
+      "local": "ローカル",
+      "hosted": "ホスト型",
+      "active": "使用中",
+      "activeHint": "このプロバイダーを使います。同時に使える意思決定モデルはひとつだけです。",
+      "useProvider": "{{name}} を使う",
+      "test": "テスト",
+      "testing": "テスト中…",
+      "testOk": "正常 · {{model}} · {{ms}} ms で応答",
+      "edit": "編集",
+      "remove": "{{name}} を削除",
+      "removeConfirm": "この意思決定モデルを削除しますか？保存したAPIキーもこの端末から消去されます。",
+      "addTitle": "{{name}} を追加",
+      "editTitle": "{{name}} を編集",
+      "addAndTest": "追加してテスト",
+      "getKey": "APIキーを取得",
+      "getOllaya": "Ollaya をダウンロード",
+      "hints": {
+        "typesafe": "TypeSafe コンソールで発行したAPIキーを貼り付けてください。Jev の料金は入力トークン単位で TypeSafe から請求されます。",
+        "ollaya": "Ollaya アプリを開くか `ollaya serve` を実行し、`ollaya pull laya`（または別のモデル）でモデルを取得してください。サーバーで OLLAYA_API_KEY を設定していなければキーは不要です。",
+        "custom": "TypeSafe 互換サーバーのAPIルートを入力してください。Pawn はそのサーバーの /v1/systemone を呼び出します。"
+      },
+      "fields": {
+        "name": "名前",
+        "namePlaceholder": "自分の判定サーバー",
+        "baseUrl": "ベースURL",
+        "apiKey": "APIキー",
+        "optional": "（任意）",
+        "apiKeyPlaceholder": "APIキーを貼り付け",
+        "apiKeyKeep": "保存済み — 空欄のままなら変更しません",
+        "apiKeyLocal": "ローカルサーバーでは不要です",
+        "clearKey": "保存したキーを削除",
+        "model": "モデル",
+        "loadModels": "モデルを読み込む"
+      },
+      "privacyLocal": "判定はこのマシンか自分のネットワーク内で行われます。クラウドサービスには何も送りません。",
+      "privacyHosted": "判定リクエストはこのプロバイダーに送信されます。APIキーやトークンなどの秘密情報は Pawn が先に伏せます。",
+      "privacyActiveHosted": "判定リクエストは {{name}} に送信されます。APIキーやトークンなどの秘密情報は Pawn が先に伏せ、キーはこの端末に暗号化して保存します。",
+      "harnessTitle": "エージェントでの使い方",
+      "harnessDesc": "Pawn は次の場面で {{name}}（{{model}}）を使います。モデルが遅いか接続できないときは、それぞれ通常の動作に戻ります。",
+      "harnessInactive": "上で意思決定モデルをオンにすると使えます。",
+      "features": {
+        "agentTool": "エージェントから問い合わせる",
+        "agentToolDesc": "decide ツールを追加します。ログ50行の分類や、出典と主張の照合など、素早い仕分け・順位付け・確認に使います",
+        "shellRiskGuard": "実行前にコマンドを確認",
+        "shellRiskGuardDesc": "シェルコマンドごとに危険度を判定します。確認なしで実行されるはずのコマンドが破壊的に見えたら、先に確認します。確認を増やすだけで、省くことはありません。",
+        "routerAssist": "リクエストの難易度判定（自動ルーティング用）",
+        "routerAssistDesc": "モデル選択が自動のとき、新しいリクエストの難しさを意思決定モデルが判定し、回答するチャットモデルの等級（低・中・高）を決めます。等級の異なるモデルが2つ以上必要で、応答前に少し待つことがあります。"
+      }
     }
   },
   "projectEdit": {
@@ -1506,5 +1581,92 @@
     "noResults": "一致するギャンビットがありません",
     "ulwDesc": "目標の達成が検証されるまで作業を続けます（ビルド + マキシング、--max N 回）",
     "goalArg": "<目標>"
+  },
+  "record": {
+    "chat": {
+      "recorded": "🎬 ワークフローを録画しました: {{goal}} · {{steps}}ステップ · {{duration}}",
+      "noGoal": "目的の指定なし",
+      "newChatTitle": "録画したワークフロー"
+    },
+    "errors": {
+      "emptyDraft": "モデルが空の下書きを返しました。",
+      "cancelled": "スキルの作成を停止しました。",
+      "draftFailed": "スキルを作成できませんでした。",
+      "noSkillBlock": "回答に SKILL.md がありません。エージェントにスキルとして書き直すよう頼んでください。",
+      "nothingRecorded": "何も録画されていません。録画中に作業をしてから停止してください。"
+    },
+    "setup": {
+      "title": "ワークフローを録画",
+      "subtitle": "一度見せるだけで再利用できるスキルになります",
+      "goal": "何を見せますか？",
+      "goalPlaceholder": "例: 今月の携帯料金を Expensify に経費として申請する",
+      "inputs": "毎回変わるものは？",
+      "optional": "（任意）",
+      "inputsPlaceholder": "例: 金額、領収書ファイル、月",
+      "sources": "録画対象",
+      "browser": "Pawn ブラウザ",
+      "browserDesc": "Pawn ブラウザ内のクリック・入力・ページ移動を要素名で記録します",
+      "desktop": "Mac アプリ",
+      "desktopDesc": "ほかのアプリのクリック・ショートカット・入力・アプリ切り替えをスクリーンショット付きで記録します",
+      "desktopUnsupported": "現在は利用できません",
+      "needAccessibility": "アクセシビリティの権限が必要です",
+      "noScreenRecording": "画面収録がオフのため、スクリーンショットなしで記録します",
+      "openAccessibility": "アクセシビリティ設定を開く",
+      "openScreenRecording": "画面収録の設定を開く",
+      "tipShort": "短くまとめましょう。最初から最後まで一度だけ行って停止します。",
+      "tipSecrets": "パスワードやワンタイムコードは記録しません。元の録画はスキル作成後に削除されます。",
+      "tipStop": "ここ、メニューバー、または Esc を2回押して停止します。",
+      "starting": "開始しています…",
+      "start": "録画を開始"
+    },
+    "live": {
+      "title": "録画中",
+      "steps_one": "{{count}}ステップ",
+      "steps_other": "{{count}}ステップ",
+      "discard": "破棄",
+      "stopping": "停止しています…",
+      "stop": "停止してスキルを作成",
+      "last": "直近: {{step}}",
+      "waiting": "作業を始めてください。操作がここに表示されます。"
+    },
+    "draft": {
+      "writing": "録画からスキルを作成しています…",
+      "fromSteps_one": "{{count}}ステップ",
+      "fromSteps_other": "{{count}}ステップ",
+      "failed": "スキルを作成できませんでした",
+      "discard": "録画を破棄",
+      "retry": "再試行",
+      "memoryOnly": "録画はスキルを作成するまでメモリ上にだけ保持され、終了すると消えます。"
+    },
+    "card": {
+      "label": "スキル {{name}}",
+      "saved": "保存済み",
+      "changed": "保存済みのスキルと異なります",
+      "draft": "下書き",
+      "inputs": "入力",
+      "save": "スキルを保存",
+      "update": "保存済みのスキルを更新",
+      "run": "実行する",
+      "putInComposer": "入力欄に入れる",
+      "automate": "自動化",
+      "edit": "調整する",
+      "editPrompt": "{{name}} スキルをこう変えて: ",
+      "show": "SKILL.md を表示",
+      "hide": "SKILL.md を隠す",
+      "replaceTitle": "{{name}} を置き換えますか？",
+      "replaceMessage": "同じ名前のスキルがすでに保存されています。このバージョンに置き換えますか？"
+    },
+    "slash": {
+      "label": "record",
+      "desc": "ワークフローを一度見せてスキルにします"
+    },
+    "button": {
+      "start": "ワークフローを録画",
+      "stop": "録画を停止"
+    },
+    "palette": {
+      "label": "ワークフローを録画",
+      "desc": "作業を一度実演すると、Pawn が再利用できるスキルを書きます"
+    }
   }
 }

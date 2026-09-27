@@ -56,6 +56,7 @@ import { COMPUTER_HALT_TEXT, endsWithObservation, isComputerCall, isNativeComput
 import { decideAfterTurn, evaluateGoal, useUltraWorkStore } from './ultraWork'
 import { ultraWorkPreamble } from '../agent/ultraWork'
 import { getConnectedProviders, hiddenToolNames, refreshConnectedProviders } from '../agent/toolsets'
+import { classifyComplexity, refreshDecisionStatus } from '../agent/decision'
 import { TOOLS } from '../agent/toolDefinitions'
 import i18n from '../i18n'
 
@@ -289,7 +290,7 @@ export async function agentLoop(
   let consecutiveToolErrors = resumeFrom?.consecutiveToolErrors ?? 0
   let emptyResponses = resumeFrom?.emptyResponses ?? 0
   let round = resumeFrom?.round ?? 0
-  const complexity: Complexity = resumeFrom?.complexity ?? estimateComplexity(userContent)
+  let complexity: Complexity = resumeFrom?.complexity ?? estimateComplexity(userContent)
   let userMessageAppended = resumeFrom?.userMessageAppended ?? false
   /** completed | aborted | failed — failed leaves checkpoint for cold resume. */
   let turnEnd: 'completed' | 'aborted' | 'failed' = 'completed'
@@ -562,6 +563,27 @@ export async function agentLoop(
     const fileBaseline = turnToolCwd ? takeFileBaseline(turnToolCwd).catch(() => null) : Promise.resolve(null)
     // Account-backed tool groups are hidden while disconnected (bounded wait).
     await refreshConnectedProviders()
+    // Decision models (optional): the decide tool's visibility and the
+    // routing assist both read this cached status.
+    await refreshDecisionStatus()
+    if (!resumeFrom?.complexity && useProviderStore.getState().routingMode === 'auto') {
+      const judged = await classifyComplexity(userContent).catch(() => null)
+      if (judged) {
+        if (judged.complexity !== complexity) {
+          useUsageStore.getState().noteDiagnostic(
+            sessionId,
+            'info',
+            i18n.t('chat.diagnostics.decisionComplexity', {
+              from: complexity,
+              to: judged.complexity,
+              pct: Math.round(judged.probability * 100),
+              model: judged.model
+            })
+          )
+        }
+        complexity = judged.complexity
+      }
+    }
 
     // Persist immediately so a crash mid-first-LLM-call can still resume.
     checkpointSnapshot({

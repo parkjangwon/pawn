@@ -1,6 +1,8 @@
-import React, { memo, useEffect, useState } from 'react'
+import React, { memo, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import MarkdownRenderer from './MarkdownRenderer'
+import SkillDraftCard from './SkillDraftCard'
+import { splitSkillAnswer } from '../agent/recordReplay'
 import ToolMessage from './ToolMessage'
 import ToolBatch from './ToolBatch'
 import SubagentActivity from './SubagentActivity'
@@ -202,6 +204,11 @@ const MessageRow = memo(function MessageRow({
   const content = live ?? msg.content
   const thinking = liveThinking ?? msg.thinking
   const isLive = live !== undefined
+  // A SKILL.md draft (Record & Replay / agent revision) renders as a card.
+  const skillSplit = useMemo(
+    () => (msg.role === 'assistant' && !isLive && content.includes('skill') ? splitSkillAnswer(content) : null),
+    [msg.role, isLive, content]
+  )
   const copyText = msg.role === 'user' ? stripDisplayImages(msg.content) : msg.content
   const enterClass = animateIn ? ' message-enter' : ''
   const editAndResend = useChatStore((s) => s.editAndResend)
@@ -275,7 +282,15 @@ const MessageRow = memo(function MessageRow({
           <StreamingMarkdown text={content} />
         ) : (
           <div className={`message-content${isStreamingTail ? ' streaming' : ''}`}>
-            <MarkdownRenderer content={content} />
+            {skillSplit ? (
+              <>
+                {skillSplit.before && <MarkdownRenderer content={skillSplit.before} />}
+                <SkillDraftCard draft={skillSplit.draft} projectId={projectId} />
+                {skillSplit.after && <MarkdownRenderer content={skillSplit.after} />}
+              </>
+            ) : (
+              <MarkdownRenderer content={content} />
+            )}
           </div>
         )}
         {!intermediate && (

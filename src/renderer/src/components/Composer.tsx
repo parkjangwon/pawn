@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
 import GitSummaryChip from './GitSummaryChip'
 import { useProviderStore } from '../stores/provider'
+import { useRecordingStore } from '../stores/recording'
 import { previewVisionTarget } from '../agent/router'
 import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
 import { compactSessionNow } from '../stores/chat'
@@ -171,6 +172,9 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
 
   // `$ulw` / `/ultra-work` at the start of the draft arms Ultra Work.
   const ulwArmed = ultraWorkTriggerLength(input) > 0
+  const recordSupported = useRecordingStore((s) => s.supported)
+  const recording = useRecordingStore((s) => s.status.state === 'recording')
+  const recordSetupOpen = useRecordingStore((s) => s.setupOpen)
 
   return (
       <div className="chat-input-wrapper">
@@ -292,6 +296,25 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
                   </svg>
                 </button>
+                {recordSupported && (
+                  <button
+                    type="button"
+                    className={`attach-btn record-btn${recording ? ' recording' : ''}${recordSetupOpen ? ' active' : ''}`}
+                    onClick={() => {
+                      const rec = useRecordingStore.getState()
+                      if (recording) void rec.stop()
+                      else if (recordSetupOpen) rec.closeSetup()
+                      else rec.openSetup({ projectId: activeProjectId ?? undefined, sessionId: props.activeSessionId ?? undefined })
+                    }}
+                    title={recording ? t('record.button.stop') : t('record.button.start')}
+                    aria-label={recording ? t('record.button.stop') : t('record.button.start')}
+                    aria-pressed={recording || recordSetupOpen}
+                  >
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
+                      {recording ? <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none" /> : <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" /></>}
+                    </svg>
+                  </button>
+                )}
                 <input
                   ref={fileInputRef}
                   type="file"

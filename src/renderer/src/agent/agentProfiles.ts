@@ -98,6 +98,7 @@ const EXPLORE_TOOLS = [
   'browser_tab_close',
   'memory_search',
   'memory_list',
+  'decide',
   'load_skill',
   'run_checks',
   'list_artifacts',
@@ -180,7 +181,8 @@ const REVIEW_TOOLS = [
   'git_log',
   'git_pr_ready',
   'run_checks',
-  'load_skill'
+  'load_skill',
+  'decide'
 ]
 
 /**

@@ -7,7 +7,7 @@ import { useThemeStore } from '../stores/theme'
 import { useStreamingStore } from '../stores/streaming'
 import type { TriggerItem } from './TriggerMenu'
 import ProjectEditDialog from './ProjectEditDialog'
-import { loadProjectContext, type LoadedSkill } from '../agent/skills'
+import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import ChatHeader from './ChatHeader'
 import WelcomeScreen from './WelcomeScreen'
 import MessageList from './MessageList'
@@ -23,6 +23,8 @@ import TurnNavigator from './TurnNavigator'
 import SelectionActions from './SelectionActions'
 import QuestionCard from './QuestionCard'
 import UltraWorkBanner from './UltraWorkBanner'
+import RecordingBar from './RecordingBar'
+import { useRecordingStore } from '../stores/recording'
 import { parseUltraWork } from '../agent/ultraWork'
 import { useUltraWorkStore } from '../stores/ultraWork'
 import { appendQuoteToDraft, formatQuote } from '../utils/turnNavigator'
@@ -396,6 +398,28 @@ export default function ChatArea({
     return () => window.removeEventListener('pawn:focus-composer', onFocus)
   }, [])
 
+  // Skill cards (Record & Replay): put a prompt in the composer for review.
+  useEffect(() => {
+    const onPrefill = (e: Event): void => {
+      const text = (e as CustomEvent<{ text?: string }>).detail?.text
+      if (typeof text !== 'string' || !text) return
+      setInput(text)
+      setTrigger(null)
+      requestAnimationFrame(() => {
+        const ta = textareaRef.current
+        if (!ta) return
+        ta.focus()
+        try {
+          ta.setSelectionRange(text.length, text.length)
+        } catch {
+          /* ignore */
+        }
+      })
+    }
+    window.addEventListener('pawn:composer-prefill', onPrefill)
+    return () => window.removeEventListener('pawn:composer-prefill', onPrefill)
+  }, [])
+
   const closeFind = useCallback((): void => {
     setFindOpen(false)
     setFindSeed('')
@@ -623,6 +647,17 @@ export default function ChatArea({
         icon: ic(<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
         insert: '/ultra-work '
       },
+      ...(useRecordingStore.getState().supported
+        ? [
+            {
+              id: 'record',
+              label: t('record.slash.label'),
+              description: t('record.slash.desc'),
+              icon: ic(<><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" fill="currentColor" /></>),
+              action: () => useRecordingStore.getState().openSetup({ projectId: activeProjectId ?? undefined, sessionId: activeSessionId ?? undefined })
+            }
+          ]
+        : []),
       {
         id: 'issue-pr',
         label: t('chat.slash.issuePr'),
@@ -631,9 +666,10 @@ export default function ChatArea({
         insert: '/issue-pr '
       },
       ...skills
-        .filter((s) => !['new', 'clear', 'model', 'theme', 'settings', 'export', 'plan', 'build', 'issue-pr', 'ultra-work', 'ulw'].includes(s.name.toLowerCase()))
+        .filter((s) => !['new', 'clear', 'model', 'theme', 'settings', 'export', 'plan', 'build', 'issue-pr', 'ultra-work', 'ulw', 'record'].includes(s.name.toLowerCase()))
         .map((s) => {
-        const firstLine = (s.content.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('---') && !l.startsWith('#')) || s.source.split('/').pop() || '').slice(0, 60)
+        // Front-matter description first (SKILL.md), else the first prose line.
+        const firstLine = (skillSummary(s) || s.content.split('\n').map((l) => l.trim()).find((l) => l && !l.startsWith('---') && !l.startsWith('#')) || s.source.split('/').pop() || '').slice(0, 60)
         return {
           id: `skill:${s.name}`,
           label: s.name,
@@ -741,7 +777,13 @@ export default function ChatArea({
 
   useEffect(() => {
     // User-level (~/.claude) skills and commands load even without a project.
-    loadProjectContext(effectivePath || undefined).then((c) => setSkills(filterEnabledSkills(c.skills))).catch(() => setSkills([]))
+    const load = (): void => {
+      loadProjectContext(effectivePath || undefined).then((c) => setSkills(filterEnabledSkills(c.skills))).catch(() => setSkills([]))
+    }
+    load()
+    // A skill was saved (Record & Replay, save_skill): refresh the / list.
+    window.addEventListener('pawn:skills-changed', load)
+    return () => window.removeEventListener('pawn:skills-changed', load)
   }, [effectivePath])
 
   function handleSelect(item: TriggerItem): void {
@@ -1225,6 +1267,7 @@ export default function ChatArea({
           </>
         )}
       </div>
+      <RecordingBar sessionId={activeSessionId} />
       <UltraWorkBanner sessionId={activeSessionId} />
       <PlanStrip sessionId={activeSessionId} />
       <div className="question-card-slot">

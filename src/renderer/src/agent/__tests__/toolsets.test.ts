@@ -113,7 +113,16 @@ describe('hiddenToolNames', () => {
   })
 
   it('hides nothing in "all" mode', () => {
-    expect(hiddenToolNames({ entries: [], allToolNames: ALL, connected: new Set(), mode: 'all' })).toEqual([])
+    expect(hiddenToolNames({ entries: [], allToolNames: ALL, connected: new Set(), mode: 'all', decisionTool: true })).toEqual([])
+  })
+
+  it('hides the decide tool until a decision model is active, in every mode', () => {
+    for (const mode of ['smart', 'all'] as const) {
+      expect(hiddenToolNames({ entries: [], allToolNames: ALL, connected: new Set(), mode, decisionTool: false })).toContain('decide')
+      expect(hiddenToolNames({ entries: [], allToolNames: ALL, connected: new Set(), mode, decisionTool: true })).not.toContain('decide')
+    }
+    // Default reads the (empty) decision store: hidden.
+    expect(hiddenToolNames({ entries: [], allToolNames: ALL, connected: new Set(), mode: 'all' })).toEqual(['decide'])
   })
 
   it('never hides MCP tools', () => {

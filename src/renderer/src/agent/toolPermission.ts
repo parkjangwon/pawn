@@ -1,9 +1,10 @@
 import { useProviderStore } from '../stores/provider'
-import { usePermissionStore, type PermissionType } from '../stores/permission'
+import { usePermissionStore, type PermissionRisk, type PermissionType } from '../stores/permission'
 import { resolveToolPath } from './pathUtils'
 import { fireHook } from './hooksClient'
 import { isToolAllowedInAgentMode } from './agentMode'
 import { buildPermissionPreview } from './permissionPreview'
+import { assessShellRisk, decisionFeatureOn, type ShellRisk } from './decision'
 
 export type SafetyLevel = 'safe' | 'risky'
 
@@ -90,6 +91,10 @@ export const TOOL_SAFETY: Record<string, SafetyLevel> = {
   memory_search: 'safe',
   memory_list: 'safe',
   memory_save: 'safe',
+  // Typed judgment by the user-configured decision provider (fixed endpoint,
+  // secrets redacted in main); no local side effects.
+  decide: 'safe',
+  save_skill: 'risky',
   memory_forget: 'risky',
   memory_update: 'risky',
   update_plan: 'safe',
@@ -285,6 +290,8 @@ function permissionTypeFor(callName: string): PermissionType {
     web_research: 'network',
     memory_search: 'file_read',
     memory_list: 'file_read',
+    decide: 'file_read',
+    save_skill: 'file_write',
     memory_save: 'file_write',
     memory_forget: 'file_write',
     memory_update: 'file_write',
@@ -388,18 +395,43 @@ export async function checkPermission(
     if (hookRes.decision === 'allow') return true
   }
 
-  if (mode === 'yolo') return true
-
   const hidden = typeof document !== 'undefined' && document.hidden === true
-  if (autoApproves(callName, mode, hidden)) return true
-  // Hidden window in ask mode cannot show a dialog; refuse anything not auto-approvable.
-  if (hidden && mode === 'ask') return false
 
-  if (usePermissionStore.getState().isAllowedByRules(type, { path: pathArg, command })) {
+  // Optional decision-model risk check for shell commands. It can only turn
+  // an automatic approval into a prompt — never skip one — and it is skipped
+  // when no dialog can be shown (hidden window: behaviour stays as before).
+  const riskEligible = type === 'shell_exec' && !!command?.trim() && !hidden && decisionFeatureOn('shellRiskGuard')
+  let riskPromise: Promise<ShellRisk | null> | null = null
+  const rateCommand = (): Promise<ShellRisk | null> => {
+    if (!riskPromise) riskPromise = assessShellRisk(command!, opts?.cwd || projectPath).catch(() => null)
+    return riskPromise
+  }
+  let escalated: ShellRisk | null = null
+  const wouldAutoApprove = async (): Promise<boolean> => {
+    if (!riskEligible) return true
+    const risk = await rateCommand()
+    if (signal?.aborted) return false
+    if (risk?.escalate) {
+      escalated = risk
+      return false
+    }
     return true
   }
 
-  if (mode === 'ask' && usePermissionStore.getState().sessionApproved.has(type)) return true
+  if (mode === 'yolo' && (await wouldAutoApprove())) return true
+  if (signal?.aborted) return false
+
+  if (!escalated) {
+    if (autoApproves(callName, mode, hidden)) return true
+    // Hidden window in ask mode cannot show a dialog; refuse anything not auto-approvable.
+    if (hidden && mode === 'ask') return false
+
+    const ruleOk =
+      usePermissionStore.getState().isAllowedByRules(type, { path: pathArg, command }) ||
+      (mode === 'ask' && usePermissionStore.getState().sessionApproved.has(type))
+    if (ruleOk && (await wouldAutoApprove())) return true
+    if (signal?.aborted) return false
+  }
 
   const typeLabels: Record<string, string> = {
     read_file: 'Read File',
@@ -451,6 +483,8 @@ export async function checkPermission(
     memory_save: 'Save Memory',
     memory_forget: 'Forget Memory',
     memory_update: 'Update Memory',
+    decide: 'Ask Decision Model',
+    save_skill: 'Save Skill',
     update_plan: 'Update Plan',
     computer_screenshot: 'Take Screenshot',
     computer_zoom: 'Zoom Screen',
@@ -509,6 +543,14 @@ export async function checkPermission(
   const mcpMatch = callName.startsWith('mcp__') ? callName.slice(5).match(/^(.+?)__(.+)$/) : null
   const description = mcpMatch ? `${mcpMatch[1]}: ${mcpMatch[2]}` : (typeLabels[callName] || callName)
 
+  // Show the rating on the prompt: immediately when already known, otherwise
+  // the dialog opens right away and the rating lands when it arrives.
+  const escalatedRisk = escalated as ShellRisk | null
+  const riskKey = riskEligible ? `risk-${Date.now()}-${Math.random().toString(36).slice(2, 8)}` : undefined
+  if (riskKey && !escalatedRisk) {
+    void rateCommand().then((r) => usePermissionStore.getState().annotateRisk(riskKey, r ? toPermissionRisk(r, false) : null))
+  }
+
   const approved = await usePermissionStore.getState().request(
     {
       type,
@@ -517,9 +559,15 @@ export async function checkPermission(
       preview: buildPermissionPreview(callName, args, { path: pathArg }),
       path: pathArg,
       command,
-      sessionId: opts?.sessionId
+      sessionId: opts?.sessionId,
+      ...(escalatedRisk ? { risk: toPermissionRisk(escalatedRisk, true) } : {}),
+      ...(riskKey && !escalatedRisk ? { riskKey, riskPending: true } : {})
     },
     signal
   )
   return approved
+}
+
+function toPermissionRisk(r: ShellRisk, escalated: boolean): PermissionRisk {
+  return { level: r.level, probability: r.probabilities[r.level] ?? 0, sendsData: r.sendsData, escalated, model: r.model }
 }

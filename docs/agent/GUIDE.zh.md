@@ -127,6 +127,18 @@ Google/GitHub 的 OAuth 构建见 [.github/OAUTH_SECRETS.md](../../.github/OAUTH
 
 `app_open_tab` `app_close_tab` · `app_set_model` 等 · `load_skill` `install_skill` · 自动化相关 `app_*_automation`
 
+### 录制与回放（macOS）
+
+- 从输入框录制按钮、`/record`、命令面板或菜单栏开始 → 填写目标、会变的值、录制范围（Pawn 浏览器 / Mac 应用）→ 演示任务 → 停止（也可按两次 Esc）
+- 聊天模型用 ````skill 代码块写出 `SKILL.md` 草稿 → 卡片：**保存技能**（`~/.agents/skills`）、**运行**（填写输入 → `/技能名`）、**自动化**、**完善**（`save_skill`）
+- 密码、验证码、卡号和 macOS 安全输入框从不记录。原始录制（步骤＋最多 8 张截图）只在内存中，草稿写好后删除，不写入磁盘
+- 录制 Mac 应用需要原生助手 `pawn-cua` 1.1.0 和辅助功能权限（截图需屏幕录制权限）。详见英文 GUIDE §5.8
+
+### 决策模型（可选）
+
+- 设置 → 决策模型：**TypeSafe**（Jev，API 密钥，官方 `@typesafe-ai/sdk`）/ **Ollaya**（`http://localhost:11435`，无需密钥）/ TypeSafe 兼容服务器。同一时间只启用一个。配置在 `~/.pawn/decision.json`（密钥加密）
+- 编排：`decide` 工具（默认开）、shell 命令风险检查（默认开 — 原本会自动运行的命令若具有破坏性则退回确认，只会增加确认）、判断请求难度（用于自动路由，默认关）。失败时均恢复默认行为。详见英文 GUIDE §7.1
+
 ---
 
 ## 6. MCP

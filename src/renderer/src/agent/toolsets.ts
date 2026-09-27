@@ -14,8 +14,9 @@
  */
 
 import type { TranscriptEntry } from './transcript'
+import { decisionFeatureOn } from './decision'
 
-export type ToolGroupId = 'browser' | 'computer' | 'debug' | 'refactor' | 'workspace' | 'github' | 'gitlab' | 'google' | 'codecommit' | 'app'
+export type ToolGroupId = 'browser' | 'computer' | 'debug' | 'refactor' | 'workspace' | 'github' | 'gitlab' | 'google' | 'codecommit' | 'app' | 'skills'
 export type ConnectionProvider = 'github' | 'gitlab' | 'google' | 'codecommit'
 export type ToolLoadingMode = 'smart' | 'all'
 
@@ -99,6 +100,14 @@ export const TOOL_GROUPS: ToolGroup[] = [
     connection: 'codecommit',
     keywords: /codecommit|\baws\b/i,
     summary: 'AWS CodeCommit repos, branches, commits, files'
+  },
+  {
+    id: 'skills',
+    prefix: '',
+    members: ['save_skill'],
+    // Record & Replay drafts mention SKILL.md, so the tool is there to refine them.
+    keywords: /\bskills?\b|SKILL\.md|스킬|スキル|技能/i,
+    summary: 'save or update reusable skills (SKILL.md in ~/.agents/skills)'
   },
   {
     id: 'app',
@@ -217,18 +226,23 @@ export function isGroupAvailable(group: ToolGroupId, connected: Set<ConnectionPr
 
 /**
  * Names of tools to hide from the model this round. `allToolNames` is the
- * static catalog; MCP tools are never hidden here.
+ * static catalog; MCP tools are never hidden here. Provider-backed tools
+ * (`decide`) are hidden while their provider is not configured, in every mode.
  */
 export function hiddenToolNames(opts: {
   entries: TranscriptEntry[]
   allToolNames: string[]
   connected: Set<ConnectionProvider> | null
   mode?: ToolLoadingMode
+  /** Decision model active + agent tool on. Default: read from the decision store. */
+  decisionTool?: boolean
 }): string[] {
   const mode = opts.mode ?? 'smart'
-  if (mode === 'all') return []
+  const decisionTool = opts.decisionTool ?? decisionFeatureOn('agentTool')
+  const provider = decisionTool ? [] : opts.allToolNames.filter((n) => PROVIDER_TOOLS.has(n))
+  if (mode === 'all') return provider
   const active = activeToolGroups(opts.entries)
-  const hidden: string[] = []
+  const hidden: string[] = [...provider]
   for (const name of opts.allToolNames) {
     const g = groupOfTool(name)
     if (!g) continue
@@ -237,6 +251,9 @@ export function hiddenToolNames(opts: {
   }
   return hidden
 }
+
+/** Tools that only work with an optional provider configured in Settings. */
+const PROVIDER_TOOLS = new Set(['decide'])
 
 export function describeToolGroup(id: ToolGroupId): string {
   return GROUP_BY_ID.get(id)?.summary || id

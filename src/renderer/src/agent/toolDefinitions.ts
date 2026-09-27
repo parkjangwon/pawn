@@ -14,6 +14,8 @@ import { AGENT_TOOLS } from './toolDefs/agent'
 import { LSP_TOOLS } from './toolDefs/lsp'
 import { BROWSER_RUNTIME_TOOLS, CODE_INTEL_TOOLS, RUNTIME_TOOLS } from './toolDefs/runtime'
 import { DEBUG_TOOLS } from './toolDefs/debug'
+import { DECISION_TOOLS } from './toolDefs/decision'
+import { SKILL_TOOLS } from './toolDefs/skills'
 
 /** Tool definitions sent to the LLM (concatenated by domain modules). */
 export const TOOLS: ToolDefinition[] = [
@@ -31,5 +33,7 @@ export const TOOLS: ToolDefinition[] = [
   ...MEMORY_TOOLS,
   ...APP_TOOLS,
   ...CONNECTIONS_TOOLS,
-  ...AGENT_TOOLS
+  ...AGENT_TOOLS,
+  ...DECISION_TOOLS,
+  ...SKILL_TOOLS
 ]

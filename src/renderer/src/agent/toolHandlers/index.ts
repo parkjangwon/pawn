@@ -13,6 +13,8 @@ import { lspHandlers } from './lsp'
 import { nativeHandlers } from './native'
 import { runtimeHandlers } from './runtime'
 import { debugHandlers } from './debug'
+import { decisionHandlers } from './decision'
+import { skillHandlers } from './skills'
 
 export type { ToolExecContext, ToolHandler } from './types'
 
@@ -30,5 +32,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   ...lspHandlers,
   ...nativeHandlers,
   ...runtimeHandlers,
-  ...debugHandlers
+  ...debugHandlers,
+  ...decisionHandlers,
+  ...skillHandlers
 }

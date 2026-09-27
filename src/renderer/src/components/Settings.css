@@ -1643,3 +1643,119 @@ body.resizing-sidebar .settings-resizer::after {
 .skill-store-foot {
   margin-top: 10px;
 }
+
+/* Decision models (Settings → Decision models) */
+.decision-provider-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+.decision-active-badge {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+.decision-test-result.ok {
+  color: var(--success);
+}
+.decision-test-result.fail,
+.decision-error {
+  color: var(--danger);
+}
+.decision-error {
+  font-size: var(--font-sm);
+  padding: 8px 16px;
+}
+.decision-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: var(--space-sm);
+}
+.decision-preset {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 10px);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-out-soft), background-color var(--dur-fast) var(--ease-out-soft);
+}
+.decision-preset:hover,
+.decision-preset:focus-visible {
+  border-color: var(--accent);
+}
+.decision-preset.recommended {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--accent) 6%, var(--bg-secondary));
+}
+.decision-preset-name {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 600;
+  font-size: var(--font-md);
+}
+.decision-preset-tag {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+}
+.decision-preset-tag.local {
+  background: color-mix(in srgb, var(--success) 14%, transparent);
+  color: var(--success);
+}
+.decision-preset-desc {
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+.decision-form {
+  margin-top: var(--space-md);
+}
+.decision-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+.decision-optional {
+  font-style: normal;
+  color: var(--text-muted);
+}
+.decision-model-row {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+.decision-model-row input {
+  flex: 1;
+  min-width: 0;
+}
+.decision-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+.decision-subtitle {
+  margin: var(--space-xl) 0 var(--space-xs, 4px);
+  font-size: var(--font-lg);
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.decision-disabled {
+  opacity: 0.6;
+}
+.decision-privacy {
+  margin-top: var(--space-sm);
+}

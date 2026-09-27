@@ -87,7 +87,8 @@
       "compactedSmart": "已用模型撰写的摘要压缩上下文 — 正在重新预热缓存前缀。",
       "lessonLearned": "已从你的纠正中学习：{{rule}}",
       "toolResultsCleared": "为保持上下文精简，已清理 {{count}} 条旧工具结果（约 {{tokens}}k tokens）— 代理仍可取回全文",
-      "stuckRecovery": "代理似乎卡住了（第 {{level}} 级，{{action}}）：{{detail}}"
+      "stuckRecovery": "代理似乎卡住了（第 {{level}} 级，{{action}}）：{{detail}}",
+      "decisionComplexity": "决策模型判断此请求为 {{to}}（{{pct}}%，{{model}}），启发式判断为 {{from}}"
     },
     "errors": {
       "noProvider": "未配置提供商或模型。请打开设置 → 提供商，然后设置 → 模型。",
@@ -391,7 +392,18 @@
     "moreLines_one": "… 还有 {{count}} 行",
     "moreLines_other": "… 还有 {{count}} 行",
     "queueFull": "权限请求过多，此请求已被拒绝",
-    "timedOut": "权限请求未得到回应，已被拒绝"
+    "timedOut": "权限请求未得到回应，已被拒绝",
+    "risk": {
+      "rating": "决策模型判断：{{level}}（{{pct}}%）",
+      "levels": {
+        "read_only": "只读",
+        "reversible": "可撤销",
+        "destructive": "破坏性"
+      },
+      "sendsData": "可能会把本地数据发送到远程服务器。",
+      "escalated": "这条命令原本会自动运行。决策模型认为它有风险，所以先向你确认。",
+      "checking": "正在评估风险…"
+    }
   },
   "statusBar": {
     "working": "工作中…",
@@ -1006,6 +1018,69 @@
       "pageOf": "第 {{page}} / {{pages}} 页",
       "foot": "每页 {{size}} 个。技能是代理遵循的指令 — 只安装你信任的技能。",
       "unavailable": "技能商店需要桌面应用。"
+    },
+    "decisionModels": "决策模型",
+    "decisionSection": {
+      "title": "决策模型",
+      "desc": "可选。决策模型不写文字，而是用校准过的概率在几毫秒内回答类型化问题（选一个、打分、是/否）。没有它 Pawn 照常工作；有了它，代理的判断更快、更省钱。",
+      "desktopOnly": "决策模型仅在桌面应用中可用。",
+      "empty": "还没有决策模型。想用托管的 Jev 请添加 TypeSafe，想在本机运行开源模型请添加 Ollaya。",
+      "addDesc": "添加提供商",
+      "presets": {
+        "typesafe": "托管的官方决策模型 Jev，需要 API 密钥。",
+        "ollaya": "在本机运行 Laya、Winnow 等开源模型，数据不会离开本机。",
+        "custom": "任何支持 TypeSafe API 的服务器。"
+      },
+      "customName": "自定义",
+      "recommended": "推荐",
+      "local": "本地",
+      "hosted": "托管",
+      "active": "使用中",
+      "activeHint": "使用此提供商。同一时间只能启用一个决策模型。",
+      "useProvider": "使用 {{name}}",
+      "test": "测试",
+      "testing": "测试中…",
+      "testOk": "正常 · {{model}} · {{ms}} ms 响应",
+      "edit": "编辑",
+      "remove": "删除 {{name}}",
+      "removeConfirm": "删除这个决策模型？保存的 API 密钥也会从本设备删除。",
+      "addTitle": "添加 {{name}}",
+      "editTitle": "编辑 {{name}}",
+      "addAndTest": "添加并测试",
+      "getKey": "获取 API 密钥",
+      "getOllaya": "下载 Ollaya",
+      "hints": {
+        "typesafe": "粘贴在 TypeSafe 控制台创建的 API 密钥。Jev 由 TypeSafe 按输入 token 计费。",
+        "ollaya": "打开 Ollaya 应用或运行 `ollaya serve`，再用 `ollaya pull laya`（或其他模型）下载模型。除非服务器设置了 OLLAYA_API_KEY，否则无需密钥。",
+        "custom": "输入 TypeSafe 兼容服务器的 API 根地址。Pawn 会调用该服务器的 /v1/systemone。"
+      },
+      "fields": {
+        "name": "名称",
+        "namePlaceholder": "我的决策服务器",
+        "baseUrl": "基础 URL",
+        "apiKey": "API 密钥",
+        "optional": "（可选）",
+        "apiKeyPlaceholder": "粘贴 API 密钥",
+        "apiKeyKeep": "已保存 — 留空则保持不变",
+        "apiKeyLocal": "本地服务器无需密钥",
+        "clearKey": "删除已保存的密钥",
+        "model": "模型",
+        "loadModels": "加载模型"
+      },
+      "privacyLocal": "判断在本机或你的网络内完成，不会发送到任何云服务。",
+      "privacyHosted": "决策请求会发送到此提供商。Pawn 会先隐去 API 密钥、令牌等机密。",
+      "privacyActiveHosted": "决策请求会发送到 {{name}}。Pawn 会先隐去 API 密钥、令牌等机密，密钥加密保存在本设备。",
+      "harnessTitle": "代理如何使用",
+      "harnessDesc": "Pawn 会在以下场景使用 {{name}}（{{model}}）。模型响应慢或无法连接时，各功能会恢复默认行为。",
+      "harnessInactive": "在上方启用一个决策模型后即可使用。",
+      "features": {
+        "agentTool": "让代理直接提问",
+        "agentToolDesc": "添加 decide 工具，用于快速分拣、排序和核查，比如给 50 行日志分类或核对来源是否支持某个结论",
+        "shellRiskGuard": "运行前检查命令",
+        "shellRiskGuardDesc": "为每条 shell 命令评估风险。原本会自动运行的命令若看起来具有破坏性，会先询问你。它只会增加确认，不会跳过确认。",
+        "routerAssist": "判断请求难度（用于自动路由）",
+        "routerAssistDesc": "模型选择为自动时，由决策模型判断每个新请求的难度，并据此决定由哪个等级（低、中、高）的聊天模型回答。需要至少两个不同等级的模型，回复前可能会稍等片刻。"
+      }
     }
   },
   "projectEdit": {
@@ -1506,5 +1581,92 @@
     "noResults": "没有匹配的弃兵",
     "ulwDesc": "持续工作直到目标被验证完成（构建 + 极限，--max N 次迭代）",
     "goalArg": "<目标>"
+  },
+  "record": {
+    "chat": {
+      "recorded": "🎬 已录制工作流：{{goal}} · {{steps}} 步 · {{duration}}",
+      "noGoal": "未填写目标",
+      "newChatTitle": "录制的工作流"
+    },
+    "errors": {
+      "emptyDraft": "模型返回了空草稿。",
+      "cancelled": "已停止编写技能。",
+      "draftFailed": "无法编写技能。",
+      "noSkillBlock": "回答里没有 SKILL.md。请让代理把它写成技能。",
+      "nothingRecorded": "没有录到任何操作。请在录制时完成任务，然后停止。"
+    },
+    "setup": {
+      "title": "录制工作流",
+      "subtitle": "演示一次，得到可复用的技能",
+      "goal": "你要演示什么？",
+      "goalPlaceholder": "例如：把本月话费作为报销提交到 Expensify",
+      "inputs": "每次会变的是什么？",
+      "optional": "（可选）",
+      "inputsPlaceholder": "例如：金额、收据文件、月份",
+      "sources": "录制范围",
+      "browser": "Pawn 浏览器",
+      "browserDesc": "按元素名称记录 Pawn 浏览器里的点击、输入和页面跳转",
+      "desktop": "Mac 应用",
+      "desktopDesc": "记录其他应用里的点击、快捷键、输入和应用切换，并附截图",
+      "desktopUnsupported": "暂时不可用",
+      "needAccessibility": "需要辅助功能权限",
+      "noScreenRecording": "屏幕录制权限已关闭，将不带截图记录",
+      "openAccessibility": "打开辅助功能设置",
+      "openScreenRecording": "打开屏幕录制设置",
+      "tipShort": "尽量简短：从头到尾做一遍，然后停止。",
+      "tipSecrets": "密码和验证码永远不会被记录。技能写好后，原始录制会被删除。",
+      "tipStop": "在这里、菜单栏中停止，或按两次 Esc。",
+      "starting": "正在开始…",
+      "start": "开始录制"
+    },
+    "live": {
+      "title": "录制中",
+      "steps_one": "{{count}} 步",
+      "steps_other": "{{count}} 步",
+      "discard": "丢弃",
+      "stopping": "正在停止…",
+      "stop": "停止并编写技能",
+      "last": "最近：{{step}}",
+      "waiting": "开始操作吧，你的步骤会显示在这里。"
+    },
+    "draft": {
+      "writing": "正在根据录制编写技能…",
+      "fromSteps_one": "{{count}} 步",
+      "fromSteps_other": "{{count}} 步",
+      "failed": "无法编写技能",
+      "discard": "丢弃录制",
+      "retry": "重试",
+      "memoryOnly": "录制只保存在内存中，直到技能写好；退出应用后即消失。"
+    },
+    "card": {
+      "label": "技能 {{name}}",
+      "saved": "已保存",
+      "changed": "与已保存的技能不同",
+      "draft": "草稿",
+      "inputs": "输入",
+      "save": "保存技能",
+      "update": "更新已保存的技能",
+      "run": "运行",
+      "putInComposer": "放入输入框",
+      "automate": "自动化",
+      "edit": "完善",
+      "editPrompt": "把 {{name}} 技能改成这样：",
+      "show": "查看 SKILL.md",
+      "hide": "隐藏 SKILL.md",
+      "replaceTitle": "替换 {{name}}？",
+      "replaceMessage": "已保存同名技能。要用这个版本替换吗？"
+    },
+    "slash": {
+      "label": "record",
+      "desc": "演示一次工作流并把它变成技能"
+    },
+    "button": {
+      "start": "录制工作流",
+      "stop": "停止录制"
+    },
+    "palette": {
+      "label": "录制工作流",
+      "desc": "演示一次任务，Pawn 就会写出可复用的技能"
+    }
   }
 }

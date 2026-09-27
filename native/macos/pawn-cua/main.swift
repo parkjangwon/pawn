@@ -9,7 +9,7 @@ import AppKit
 import ApplicationServices
 import CoreGraphics
 
-let VERSION = "1.0.0"
+let VERSION = "1.1.0"
 let work = DispatchQueue(label: "pawn.cua.work", qos: .userInitiated)
 
 // MARK: Helpers
@@ -175,7 +175,7 @@ func handle(_ method: String, _ p: JSON) throws -> Any {
                         "scroll", "key", "key_down", "key_up", "hold_key", "type", "ui_snapshot", "ui_action", "ui_find",
                         "ui_element_at", "ui_focused", "apps", "launch", "activate", "hide", "quit", "windows",
                         "window_action", "menu_list", "menu_select", "open", "clipboard", "ocr", "find_text",
-                        "permissions", "overlay", "release_all", "wait"]
+                        "permissions", "overlay", "release_all", "wait", "record_start", "record_stop"]
         ]
 
     case "permissions":
@@ -420,6 +420,12 @@ func handle(_ method: String, _ p: JSON) throws -> Any {
         Overlay.setEnabled(p.bool("enabled") ?? true, pill: p.string("text"))
         return ["ok": true]
 
+    case "record_start":
+        return try Recorder.start(p)
+
+    case "record_stop":
+        return Recorder.stop()
+
     case "release_all":
         Input.releaseAllHeld()
         return ["ok": true]
@@ -445,7 +451,7 @@ func debugLog(_ s: @autoclosure () -> String) {
 /// Read-only methods that don't touch input or the AX element store: served
 /// concurrently so a long action never blocks them.
 let immediate: Set<String> = ["ping", "overlay", "release_all", "permissions", "cursor", "displays", "apps",
-                              "windows", "capabilities"]
+                              "windows", "capabilities", "record_start", "record_stop"]
 /// OCR is CPU-heavy but independent of input ordering: its own queue.
 let visionQueue = DispatchQueue(label: "pawn.cua.vision", qos: .userInitiated)
 let visionMethods: Set<String> = ["ocr", "find_text"]

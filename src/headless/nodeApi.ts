@@ -22,12 +22,16 @@ import { createAgentRuntime, validProjectRoot } from '../main/agentRuntime'
 import { LspManager } from '../main/lsp/manager'
 import { createKiroService, type KiroStreamEvent } from '../main/kiro/service'
 import { readKiroCliLogin, readKiroIdeLogin, type KiroCredentials, type SqliteOpen } from '../main/kiro/auth'
+import { createDecisionService } from '../main/decision/service'
+import { emptyDecisionConfig, type DecisionConfig } from '../main/decision/types'
 import { createRequire } from 'module'
 
 export interface HeadlessConfig {
   settings?: Record<string, unknown>
   providers?: Array<Record<string, unknown>>
   models?: Array<Record<string, unknown>>
+  /** Decision-model config (same shape as ~/.pawn/decision.json, plaintext keys). */
+  decision?: Record<string, unknown>
 }
 
 export interface NodeApiOptions {
@@ -495,9 +499,33 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
     }
   })
 
+  // Decision models: same service as the desktop app; config stays in memory.
+  let decisionCfg: DecisionConfig = opts.config?.decision
+    ? (JSON.parse(JSON.stringify(opts.config.decision)) as DecisionConfig)
+    : emptyDecisionConfig()
+  const decision = createDecisionService({
+    store: {
+      load: () => decisionCfg,
+      save: (c) => {
+        decisionCfg = JSON.parse(JSON.stringify(c)) as DecisionConfig
+      }
+    }
+  })
+
   const api: Record<string, any> = {
     platform: 'headless',
     ...(lsp ? { lsp } : {}),
+    decision: {
+      status: async () => decision.status(),
+      saveProvider: async (input: unknown) => decision.saveProvider(input),
+      removeProvider: async (id: string) => decision.removeProvider(id),
+      setEnabled: async (id: string, enabled: boolean) => decision.setEnabled(id, enabled),
+      setFeatures: async (partial: unknown) => decision.setFeatures(partial),
+      models: (id: string) => decision.listModels(id),
+      test: (id: string) => decision.test(id),
+      decide: (input: unknown, o?: { purpose?: 'tool' | 'shell_risk' | 'routing'; timeoutMs?: number; maxRetries?: number }) =>
+        decision.decide(input, o || {})
+    },
     kiro: {
       status: () => kiro.status(),
       startLogin: (o: unknown) => kiro.startLogin(o),

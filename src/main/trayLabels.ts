@@ -25,3 +25,21 @@ export function menuLabels(lang: string, isWin: boolean): TrayLabels {
     quit: quit[lang] || quit.en
   }
 }
+
+export interface RecordLabels {
+  record: string
+  stop: string
+  /** On-screen pill while a recording runs (native overlay). */
+  pill: string
+}
+
+/** Record & Replay tray items + the on-screen recording pill. */
+export function recordLabels(lang: string): RecordLabels {
+  const t: Record<string, RecordLabels> = {
+    ko: { record: '워크플로 녹화…', stop: '녹화 중지', pill: 'Pawn이 녹화 중이에요 — Esc를 두 번 누르면 멈춰요' },
+    en: { record: 'Record a workflow…', stop: 'Stop recording', pill: 'Pawn is recording — press Esc twice to stop' },
+    ja: { record: 'ワークフローを録画…', stop: '録画を停止', pill: 'Pawn が録画中 — Esc を2回押すと停止' },
+    zh: { record: '录制工作流…', stop: '停止录制', pill: 'Pawn 正在录制 — 按两次 Esc 停止' }
+  }
+  return t[lang] || t.en
+}

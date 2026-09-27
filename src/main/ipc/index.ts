@@ -19,6 +19,8 @@ import { registerLspIpc } from './lsp'
 import { registerAgentRuntimeIpc } from './agentRuntime'
 import { registerKiroIpc } from './kiro'
 import { registerSkillsIpc } from './skills'
+import { registerDecisionIpc } from './decision'
+import { registerRecorderIpc } from './recorder'
 
 /** Register every main-process IPC handler in one place. */
 export function registerAllIpc(): void {
@@ -43,4 +45,6 @@ export function registerAllIpc(): void {
   registerAgentRuntimeIpc()
   registerKiroIpc()
   registerSkillsIpc()
+  registerDecisionIpc()
+  registerRecorderIpc()
 }

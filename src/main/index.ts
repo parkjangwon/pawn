@@ -5,6 +5,7 @@ import { disposeLsp } from './ipc/lsp'
 import { disposeAgentRuntime } from './ipc/agentRuntime'
 import { disposeKiro } from './ipc/kiro'
 import { disposeComputer } from './computer/service'
+import { disposeRecorder } from './ipc/recorder'
 import { createMainWindow, getMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
 import { killAllMcpServers } from './mcpManager'
@@ -100,7 +101,11 @@ app.whenReady().then(() => {
     const win = createMainWindow()
     // A closed window leaves no UI for its PTYs; kill them so no orphan shell
     // keeps running until the app quits.
-    win.on('closed', () => killAllTerminals())
+    win.on('closed', () => {
+      killAllTerminals()
+      // Nobody is left to draft the recording: drop it.
+      disposeRecorder()
+    })
   }
 
   createWindow()

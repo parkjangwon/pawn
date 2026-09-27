@@ -174,7 +174,8 @@ export const AGENT_TOOLS: ToolDefinition[] = [
       'refactor (language-server code actions / quick fixes, call hierarchy, symbol outline), ' +
       'workspace (long tasks: working notes, checkpoints, repo profile notes), ' +
       'github, gitlab, google (Gmail/Drive/Calendar/Tasks/Sheets/Docs/Slides), codecommit, ' +
-      'app (switch model/permission mode/reasoning/theme, open panels, automations). ' +
+      'app (switch model/permission mode/reasoning/theme, open panels, automations), ' +
+      'skills (save or update reusable SKILL.md skills, e.g. refining a recorded workflow). ' +
       'Account groups need the account connected in Settings → Connections.',
     parameters: {
       type: 'object',

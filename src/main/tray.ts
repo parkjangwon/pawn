@@ -2,7 +2,7 @@ import { Tray, Menu, nativeImage, app } from 'electron'
 import { join } from 'path'
 import { getMainWindow, createMainWindow } from './window'
 import { loadConfig, saveConfig } from './config'
-import { menuLabels } from './trayLabels'
+import { menuLabels, recordLabels } from './trayLabels'
 import { appLanguage, setAppLanguage } from './appLanguage'
 
 // Fallback only: 18x18 monochrome pawn silhouette (template image adapts to
@@ -42,12 +42,34 @@ export function setTrayEnabled(enabled: boolean): void {
   else destroyTray()
 }
 
+/** Record & Replay hooks, set by the recorder IPC (macOS only). */
+let recordActions: { recording: () => boolean; start: () => void; stop: () => void } | null = null
+
+export function setTrayRecordActions(actions: typeof recordActions): void {
+  recordActions = actions
+  refreshTrayMenu()
+}
+
+export function refreshTrayMenu(): void {
+  if (tray) tray.setContextMenu(buildMenu())
+}
+
 function buildMenu(): Menu {
   const l = labels()
+  const rec = process.platform === 'darwin' && recordActions ? recordActions : null
+  const r = recordLabels(appLanguage())
+  const recording = rec?.recording() === true
   return Menu.buildFromTemplate([
     { label: l.show, type: 'checkbox', checked: true, click: (item) => setTrayEnabled(item.checked) },
     { type: 'separator' },
     { label: l.open, click: () => openWindow() },
+    ...(rec
+      ? [
+          recording
+            ? { label: `● ${r.stop}`, click: () => rec.stop() }
+            : { label: r.record, click: () => rec.start() }
+        ]
+      : []),
     { label: l.quit, click: () => app.quit() }
   ])
 }

@@ -17,6 +17,18 @@ export type AllowRule =
   | { id: string; kind: 'path_prefix'; prefix: string; scope: 'session' | 'always' }
   | { id: string; kind: 'shell_prefix'; prefix: string; scope: 'session' | 'always' }
 
+/** Decision-model rating of a shell command (Settings → Decision models). */
+export interface PermissionRisk {
+  level: 'read_only' | 'reversible' | 'destructive'
+  /** Probability of `level`. */
+  probability: number
+  /** Probability the command sends local data to a remote host. */
+  sendsData: number
+  /** Would have run without a prompt; the decision model asked to check. */
+  escalated: boolean
+  model: string
+}
+
 interface PermissionRequest {
   id: string
   type: PermissionType
@@ -30,6 +42,12 @@ interface PermissionRequest {
   command?: string
   /** Owning chat session (multi-session isolation). */
   sessionId?: string
+  /** Decision-model risk rating, when available. */
+  risk?: PermissionRisk
+  /** Rating still in flight (the dialog shows a quiet "checking" line). */
+  riskPending?: boolean
+  /** Correlates a late rating with this prompt. */
+  riskKey?: string
 }
 
 interface PermissionState {
@@ -55,6 +73,8 @@ interface PermissionState {
   ) => void
   removeRule: (id: string) => void
   isAllowedByRules: (type: PermissionType, opts?: { path?: string; command?: string }) => boolean
+  /** Attach a late decision-model rating to the prompt(s) with this key. */
+  annotateRisk: (riskKey: string, risk: PermissionRisk | null) => void
 }
 
 const MAX_PENDING = 24
@@ -272,6 +292,18 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
       }
     }
     return false
+  },
+
+  annotateRisk: (riskKey, risk) => {
+    set((s) =>
+      s.pending.some((p) => p.riskKey === riskKey)
+        ? {
+            pending: s.pending.map((p) =>
+              p.riskKey === riskKey ? { ...p, riskPending: false, risk: risk ?? p.risk } : p
+            )
+          }
+        : s
+    )
   }
 }))
 

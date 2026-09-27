@@ -87,7 +87,8 @@
       "compactedSmart": "Context compacted with a model-written summary — the cache prefix is being re-primed.",
       "lessonLearned": "Learned from your correction: {{rule}}",
       "toolResultsCleared": "Cleared {{count}} old tool results (~{{tokens}}k tokens) to keep the context focused — full text stays available to the agent",
-      "stuckRecovery": "Agent looked stuck (level {{level}}, {{action}}): {{detail}}"
+      "stuckRecovery": "Agent looked stuck (level {{level}}, {{action}}): {{detail}}",
+      "decisionComplexity": "Decision model rated this request {{to}} ({{pct}}%, {{model}}); the heuristic said {{from}}"
     },
     "errors": {
       "noProvider": "No provider or model configured. Open Settings → Providers, then Settings → Models.",
@@ -391,7 +392,18 @@
     "moreLines_one": "… {{count}} more line",
     "moreLines_other": "… {{count}} more lines",
     "queueFull": "Too many permission requests at once — this one was denied",
-    "timedOut": "No answer to the permission request — it was denied"
+    "timedOut": "No answer to the permission request — it was denied",
+    "risk": {
+      "rating": "Decision model: {{level}} ({{pct}}%)",
+      "levels": {
+        "read_only": "read-only",
+        "reversible": "reversible",
+        "destructive": "destructive"
+      },
+      "sendsData": "It may send local data to a remote server.",
+      "escalated": "This would have run without asking. The decision model flagged it, so Pawn is checking with you.",
+      "checking": "Checking the risk…"
+    }
   },
   "statusBar": {
     "working": "Working…",
@@ -1006,6 +1018,69 @@
       "pageOf": "Page {{page}} of {{pages}}",
       "foot": "{{size}} per page. Skills are instructions the agent follows — only install ones you trust.",
       "unavailable": "The skill store needs the desktop app."
+    },
+    "decisionModels": "Decision models",
+    "decisionSection": {
+      "title": "Decision models",
+      "desc": "Optional. A decision model answers typed questions (pick one, score, yes or no) with calibrated probabilities in milliseconds instead of writing text. Pawn works the same without one; with one, the agent makes faster, cheaper judgments.",
+      "desktopOnly": "Decision models are available in the desktop app.",
+      "empty": "No decision model yet. Add TypeSafe for hosted Jev, or Ollaya to run open models on this machine.",
+      "addDesc": "Add a provider",
+      "presets": {
+        "typesafe": "Hosted Jev, the first-party decision model. Needs an API key.",
+        "ollaya": "Open models such as Laya and Winnow on your machine. Data never leaves it.",
+        "custom": "Any server that speaks the TypeSafe API."
+      },
+      "customName": "Custom",
+      "recommended": "Recommended",
+      "local": "Local",
+      "hosted": "Hosted",
+      "active": "In use",
+      "activeHint": "Use this provider. Only one decision model is active at a time.",
+      "useProvider": "Use {{name}}",
+      "test": "Test",
+      "testing": "Testing…",
+      "testOk": "Works · {{model}} · answered in {{ms}} ms",
+      "edit": "Edit",
+      "remove": "Remove {{name}}",
+      "removeConfirm": "Remove this decision model? Its saved API key is deleted from this device.",
+      "addTitle": "Add {{name}}",
+      "editTitle": "Edit {{name}}",
+      "addAndTest": "Add and test",
+      "getKey": "Get an API key",
+      "getOllaya": "Download Ollaya",
+      "hints": {
+        "typesafe": "Paste an API key from the TypeSafe console. TypeSafe bills Jev per input token.",
+        "ollaya": "Open the Ollaya app or run `ollaya serve`, then `ollaya pull laya` (or another model). No key needed unless the server sets OLLAYA_API_KEY.",
+        "custom": "Enter the API root of a TypeSafe-compatible server. Pawn calls /v1/systemone on it."
+      },
+      "fields": {
+        "name": "Name",
+        "namePlaceholder": "My decision server",
+        "baseUrl": "Base URL",
+        "apiKey": "API key",
+        "optional": "(optional)",
+        "apiKeyPlaceholder": "Paste your API key",
+        "apiKeyKeep": "Saved — leave empty to keep it",
+        "apiKeyLocal": "Not needed for a local server",
+        "clearKey": "Remove the saved key",
+        "model": "Model",
+        "loadModels": "Load models"
+      },
+      "privacyLocal": "Decisions run on this machine or your network. Nothing goes to a cloud service.",
+      "privacyHosted": "Decision requests go to this provider. Pawn redacts secrets such as API keys and tokens first.",
+      "privacyActiveHosted": "Decision requests go to {{name}}. Pawn redacts secrets such as API keys and tokens first, and keeps the key encrypted on this device.",
+      "harnessTitle": "How the agent uses it",
+      "harnessDesc": "Pawn uses {{name}} ({{model}}) in the places below. Each one falls back to normal behavior when the model is slow or unreachable.",
+      "harnessInactive": "Turn on a decision model above to use these.",
+      "features": {
+        "agentTool": "Let the agent ask it",
+        "agentToolDesc": "Adds a decide tool for fast triage, ranking and checks, like sorting 50 log lines or checking a claim against a source",
+        "shellRiskGuard": "Check commands before they run",
+        "shellRiskGuardDesc": "Rates each shell command. When one that would run without asking looks destructive, Pawn asks you first. It only adds prompts, never skips one.",
+        "routerAssist": "Judge request difficulty (for auto routing)",
+        "routerAssistDesc": "When the model picker is on Auto, the decision model judges how hard each new request is. That sets the tier of chat model that answers (low, mid or high). Needs models in at least two tiers. Adds a short wait before each reply."
+      }
     }
   },
   "projectEdit": {
@@ -1506,5 +1581,92 @@
     "noResults": "No matching gambits",
     "ulwDesc": "keeps working until the goal is verified done (Build + Maxing, --max N iterations)",
     "goalArg": "<goal>"
+  },
+  "record": {
+    "chat": {
+      "recorded": "🎬 Recorded a workflow: {{goal}} · {{steps}} steps · {{duration}}",
+      "noGoal": "no goal given",
+      "newChatTitle": "Recorded workflow"
+    },
+    "errors": {
+      "emptyDraft": "The model returned an empty draft.",
+      "cancelled": "Drafting was stopped.",
+      "draftFailed": "Could not write the skill.",
+      "noSkillBlock": "The answer has no SKILL.md block. Ask the agent to write it as a skill.",
+      "nothingRecorded": "Nothing was recorded. Do the task while recording, then stop."
+    },
+    "setup": {
+      "title": "Record a workflow",
+      "subtitle": "Show Pawn once, get a reusable skill",
+      "goal": "What will you show?",
+      "goalPlaceholder": "e.g. File this month’s phone bill as an expense in Expensify",
+      "inputs": "What changes each time?",
+      "optional": "(optional)",
+      "inputsPlaceholder": "e.g. the amount, the receipt file, the month",
+      "sources": "Record",
+      "browser": "Pawn browser",
+      "browserDesc": "Clicks, typing and pages in Pawn’s browser, by element name",
+      "desktop": "Mac apps",
+      "desktopDesc": "Clicks, shortcuts, typing and app switches in other apps, with screenshots",
+      "desktopUnsupported": "Not available right now",
+      "needAccessibility": "Needs the Accessibility permission",
+      "noScreenRecording": "Works without screenshots: Screen Recording is off",
+      "openAccessibility": "Open Accessibility settings",
+      "openScreenRecording": "Open Screen Recording settings",
+      "tipShort": "Keep it short: do the task once from start to finish, then stop.",
+      "tipSecrets": "Passwords and one-time codes are never recorded. The raw recording is deleted once the skill is written.",
+      "tipStop": "Stop here, from the menu bar, or press Esc twice.",
+      "starting": "Starting…",
+      "start": "Start recording"
+    },
+    "live": {
+      "title": "Recording",
+      "steps_one": "{{count}} step",
+      "steps_other": "{{count}} steps",
+      "discard": "Discard",
+      "stopping": "Stopping…",
+      "stop": "Stop and write skill",
+      "last": "Last: {{step}}",
+      "waiting": "Go ahead and do the task. Your steps show up here."
+    },
+    "draft": {
+      "writing": "Writing the skill from your recording…",
+      "fromSteps_one": "{{count}} step",
+      "fromSteps_other": "{{count}} steps",
+      "failed": "Could not write the skill",
+      "discard": "Discard recording",
+      "retry": "Try again",
+      "memoryOnly": "The recording is kept in memory until the skill is written, and is gone if you quit."
+    },
+    "card": {
+      "label": "Skill {{name}}",
+      "saved": "Saved",
+      "changed": "Differs from saved skill",
+      "draft": "Draft",
+      "inputs": "Inputs",
+      "save": "Save skill",
+      "update": "Update saved skill",
+      "run": "Run it",
+      "putInComposer": "Put in the message box",
+      "automate": "Automate",
+      "edit": "Refine",
+      "editPrompt": "Change the {{name}} skill: ",
+      "show": "Show SKILL.md",
+      "hide": "Hide SKILL.md",
+      "replaceTitle": "Replace {{name}}?",
+      "replaceMessage": "A skill with this name is already saved. Replace it with this version?"
+    },
+    "slash": {
+      "label": "record",
+      "desc": "Show a workflow once and turn it into a skill"
+    },
+    "button": {
+      "start": "Record a workflow",
+      "stop": "Stop recording"
+    },
+    "palette": {
+      "label": "Record a workflow",
+      "desc": "Demonstrate a task once; Pawn writes a reusable skill"
+    }
   }
 }

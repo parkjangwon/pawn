@@ -1328,6 +1328,21 @@
   color: var(--text-primary);
 }
 
+/* Record & Replay button (macOS). */
+.record-btn.active {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
+}
+.record-btn.recording {
+  color: #fff;
+  background: var(--danger);
+  animation: recPulse 1.4s ease-in-out infinite;
+}
+.record-btn.recording:hover {
+  background: color-mix(in srgb, var(--danger) 85%, #000);
+  color: #fff;
+}
+
 .input-actions-left {
   display: flex;
   align-items: center;

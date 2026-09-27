@@ -8,6 +8,7 @@ export type SettingsSection =
   | 'appearance'
   | 'providers'
   | 'models'
+  | 'decisionModels'
   | 'agent'
   | 'memory'
   | 'hooks'
@@ -52,6 +53,8 @@ export const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string
   { id: 'appearance', labelKey: 'settings.appearance', groupKey: 'settings.groups.general', icon: 'M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z' },
   { id: 'providers', labelKey: 'settings.providers', groupKey: 'settings.groups.general', icon: 'M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z' },
   { id: 'models', labelKey: 'settings.models', groupKey: 'settings.groups.general', icon: 'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z' },
+  // Optional decision models (TypeSafe Jev / Ollaya): split-path icon.
+  { id: 'decisionModels', labelKey: 'settings.decisionModels', groupKey: 'settings.groups.general', icon: 'M6 3v12M18 9a3 3 0 100-6 3 3 0 000 6zM6 21a3 3 0 100-6 3 3 0 000 6zM18 9a9 9 0 01-9 9' },
   // Coding: split former mega “Agent” page into focused sections
   { id: 'agent', labelKey: 'settings.agent', groupKey: 'settings.groups.coding', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
   { id: 'memory', labelKey: 'settings.memory', groupKey: 'settings.groups.coding', icon: 'M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7zm-1 18h2v2h-2v-2z' },

@@ -69,9 +69,14 @@ final class OverlayView: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    func setPill(_ text: String?) {
+    func setPill(_ text: String?, recording: Bool = false) {
         CATransaction.begin()
         CATransaction.setAnimationDuration(0.25)
+        let accent = NSColor(calibratedRed: 0.49, green: 0.42, blue: 1.0, alpha: 1).cgColor
+        pill.borderColor = recording ? NSColor.systemRed.cgColor : accent
+        pill.backgroundColor = recording
+            ? NSColor(calibratedRed: 0.35, green: 0.04, blue: 0.06, alpha: 0.9).cgColor
+            : NSColor(calibratedWhite: 0.08, alpha: 0.86).cgColor
         if let t = text {
             pillText.string = t
             let w = min(bounds.width - 40, max(260, CGFloat(t.count) * 7.2 + 36))
@@ -195,6 +200,27 @@ enum Overlay {
         }
     }
 
+    /// While recording (Record & Replay) this pill stays up on every screen.
+    static var recordingText: String?
+
+    /// Idle state of the pill: the recording notice, or nothing.
+    static func restingPill(_ v: OverlayView) {
+        if let r = recordingText { v.setPill("● " + r, recording: true) } else { v.setPill(nil) }
+    }
+
+    static func setRecording(_ text: String?) {
+        let apply = {
+            recordingText = text
+            ensureWindows()
+            idleTimer?.invalidate()
+            for (_, v, _) in windows {
+                restingPill(v)
+                if text == nil { v.hideCursor() }
+            }
+        }
+        if Thread.isMainThread { apply() } else { DispatchQueue.main.async(execute: apply) }
+    }
+
     static func touch() {
         guard enabled else { return }
         ensureWindows()
@@ -202,7 +228,7 @@ enum Overlay {
         idleTimer?.invalidate()
         idleTimer = Timer.scheduledTimer(withTimeInterval: 4.0, repeats: false) { _ in
             for (_, v, _) in windows {
-                v.setPill(nil)
+                restingPill(v)
                 v.hideCursor()
             }
         }
@@ -242,7 +268,7 @@ enum Overlay {
             if let p = pill, !p.isEmpty { pillText = p }
             if !on {
                 for (_, v, _) in windows {
-                    v.setPill(nil)
+                    restingPill(v)
                     v.hideCursor()
                 }
             }
@@ -260,11 +286,16 @@ enum Overlay {
                 escTimes = escTimes.filter { now.timeIntervalSince($0) < 0.8 } + [now]
                 if escTimes.count >= 2 {
                     escTimes.removeAll()
+                    // While recording, Esc×2 ends the recording, not an agent run.
+                    if Recorder.active {
+                        Output.shared.send(["event": "record_stop_request", "reason": "Esc pressed twice"])
+                        return
+                    }
                     onAbort?()
                     for (_, v, _) in windows { v.setPill("Stopped — Pawn released the mouse and keyboard") }
                     idleTimer?.invalidate()
                     idleTimer = Timer.scheduledTimer(withTimeInterval: 2.5, repeats: false) { _ in
-                        for (_, v, _) in windows { v.setPill(nil); v.hideCursor() }
+                        for (_, v, _) in windows { restingPill(v); v.hideCursor() }
                     }
                 }
             }

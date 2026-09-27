@@ -3,6 +3,7 @@ import ConfirmDialog from './ConfirmDialog'
 import AppearanceSettingsPanel from './AppearanceSettingsPanel'
 import ProvidersSettingsPanel from './ProvidersSettingsPanel'
 import ModelsSettingsPanel from './ModelsSettingsPanel'
+import DecisionModelsSettingsPanel from './DecisionModelsSettingsPanel'
 import AgentSettingsPanel from './AgentSettingsPanel'
 import MemorySettingsPanel from './MemorySettingsPanel'
 import HooksSettingsPanel from './HooksSettingsPanel'
@@ -157,6 +158,7 @@ export default function Settings({
         {activeSection === 'appearance' && <AppearanceSettingsPanel state={state} />}
         {activeSection === 'providers' && <ProvidersSettingsPanel state={state} />}
         {activeSection === 'models' && <ModelsSettingsPanel state={state} />}
+        {activeSection === 'decisionModels' && <DecisionModelsSettingsPanel />}
         {activeSection === 'agent' && <AgentSettingsPanel state={state} />}
         {activeSection === 'memory' && (
           <div className="settings-section">

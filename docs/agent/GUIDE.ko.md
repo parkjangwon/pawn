@@ -127,6 +127,18 @@ Google·GitHub OAuth 빌드: [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECR
 
 `app_open_tab` / `app_close_tab` · `app_set_model` / `app_set_permission_mode` / `app_set_reasoning` / `app_toggle_theme` · `app_list_automations` / `app_create_automation` · `load_skill` / `install_skill`
 
+### 녹화 & 재생 (macOS)
+
+- 입력창 녹화 버튼 · `/record` · 명령 팔레트 · 메뉴 막대에서 시작 → 목표·바뀌는 값·녹화 대상(Pawn 브라우저 / Mac 앱) 입력 → 작업 시연 → 멈춤(Esc 두 번 가능)
+- 채팅 모델이 ````skill 블록으로 `SKILL.md` 초안 작성 → 카드: **스킬 저장**(`~/.agents/skills`), **실행하기**(입력값 → `/스킬이름`), **자동화**, **다듬기**(`save_skill`)
+- 비밀번호·인증 코드·카드·macOS 보안 입력칸은 기록 안 함. 원본 녹화(단계 + 스크린샷 최대 8장)는 메모리에만 있고 초안 작성 후 삭제, 디스크에 쓰지 않음
+- Mac 앱 녹화는 네이티브 헬퍼 `pawn-cua` 1.1.0 + 손쉬운 사용 권한 필요(스크린샷은 화면 기록 권한). 자세한 내용은 영문 GUIDE §5.8
+
+### 결정 모델 (선택)
+
+- 설정 → 결정 모델: **TypeSafe**(Jev, API 키, 공식 `@typesafe-ai/sdk`) / **Ollaya**(`http://localhost:11435`, 키 불필요) / TypeSafe 호환 서버. 한 번에 하나만 활성. 설정은 `~/.pawn/decision.json`(키 암호화)
+- 하네스: `decide` 도구(기본 켬), 셸 명령 위험도 확인(기본 켬 — 묻지 않고 실행될 명령이 파괴적이면 다시 확인, 확인을 늘리기만 함), 요청 난이도 판단(자동 라우팅용, 기본 끔). 실패 시 모두 원래 동작. 자세한 내용은 영문 GUIDE §7.1
+
 ---
 
 ## 6. MCP

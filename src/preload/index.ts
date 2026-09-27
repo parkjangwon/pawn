@@ -537,6 +537,43 @@ const api = {
     installed: () => ipcRenderer.invoke('skills:installed')
   },
 
+  /** Record & Replay (macOS): demo a workflow once, draft a reusable skill. */
+  recorder: {
+    status: () => ipcRenderer.invoke('recorder:status'),
+    readiness: () => ipcRenderer.invoke('recorder:readiness'),
+    start: (req: { goal?: string; inputsHint?: string; sources?: Array<'browser' | 'desktop'>; context?: { projectId?: string; sessionId?: string } }) =>
+      ipcRenderer.invoke('recorder:start', req),
+    stop: () => ipcRenderer.invoke('recorder:stop'),
+    cancel: () => ipcRenderer.invoke('recorder:cancel'),
+    openPermissions: (which: 'accessibility' | 'screen') => ipcRenderer.invoke('recorder:openPermissions', which),
+    onEvent: (callback: (event: Record<string, unknown>) => void) => {
+      const handler = (_: unknown, ev: Record<string, unknown>): void => callback(ev)
+      ipcRenderer.on('recorder:event', handler)
+      return () => ipcRenderer.removeListener('recorder:event', handler)
+    }
+  },
+
+  /** Skills Pawn writes to ~/.agents/skills (recorded workflows, agent refinements). */
+  localSkills: {
+    save: (name: string, content: string, opts?: { overwrite?: boolean }) => ipcRenderer.invoke('skills:saveLocal', name, content, opts || {}),
+    read: (name: string) => ipcRenderer.invoke('skills:readLocal', name)
+  },
+
+  /** Decision models (TypeSafe Jev, Ollaya, …). Keys stay in the main process. */
+  decision: {
+    status: () => ipcRenderer.invoke('decision:status'),
+    saveProvider: (input: Record<string, unknown>) => ipcRenderer.invoke('decision:saveProvider', input),
+    removeProvider: (id: string) => ipcRenderer.invoke('decision:removeProvider', id),
+    setEnabled: (id: string, enabled: boolean) => ipcRenderer.invoke('decision:setEnabled', id, enabled),
+    setFeatures: (partial: Record<string, boolean>) => ipcRenderer.invoke('decision:setFeatures', partial),
+    models: (id: string) => ipcRenderer.invoke('decision:models', id),
+    test: (id: string) => ipcRenderer.invoke('decision:test', id),
+    decide: (
+      input: { state: unknown; questions: Record<string, unknown>; model?: string },
+      opts?: { purpose?: 'tool' | 'shell_risk' | 'routing'; timeoutMs?: number; maxRetries?: number }
+    ) => ipcRenderer.invoke('decision:decide', input, opts || {})
+  },
+
   /** Built-in public-web research (insane-search port) — not browser automation. */
   research: {
     fetch: (

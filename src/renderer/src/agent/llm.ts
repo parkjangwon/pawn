@@ -132,6 +132,8 @@ export interface LlmRequest {
   toolAllowlist?: string[]
   /** When set, these tools are removed from the exposed list (subagent worker). */
   toolDenylist?: string[]
+  /** Plain completion: no tools at all (e.g. drafting a skill from a recording). */
+  noTools?: boolean
   /** Harness mode override (subagents pass the parent session's mode). */
   harnessMode?: HarnessMode
   /**
@@ -143,6 +145,7 @@ export interface LlmRequest {
 
 /** No data for this long means the provider connection is dead; bail out. */
 const STREAM_IDLE_TIMEOUT_MS = 90_000
+const NO_TOOLS_SENTINEL = '__pawn_no_tools__'
 
 export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const {
@@ -151,7 +154,8 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   } = req
   const toolListOpts = {
     mode: useProviderStore.getState().agentModeFor(sessionId),
-    allowlist: toolAllowlist,
+    // No real tool is named this: an allowlist of it exposes nothing.
+    allowlist: req.noTools ? [NO_TOOLS_SENTINEL] : toolAllowlist,
     denylist: toolDenylist
   }
   const { provider, model } = decision
@@ -167,7 +171,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   // Drop pre-turn screenshots so old computer-use frames do not force vision
   // tokens or bloated prompts on later text turns.
   const sendable = stripStaleVisionPayloads(sanitizeForSend(req.entries))
-  const mcpTools = projectPath ? await getMcpToolDefinitions(projectPath) : []
+  const mcpTools = projectPath && !req.noTools ? await getMcpToolDefinitions(projectPath) : []
 
   let url: string
   let body: Record<string, unknown>
@@ -295,6 +299,11 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
         })
       ]
     }
+  }
+
+  // OpenAI rejects `tools: []`; an empty list means "no tools" everywhere.
+  if (body && Array.isArray((body as { tools?: unknown }).tools) && (body as { tools: unknown[] }).tools.length === 0) {
+    delete (body as { tools?: unknown }).tools
   }
 
   const decoder = new TextDecoder()

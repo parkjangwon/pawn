@@ -72,6 +72,7 @@ Also loaded: `CLAUDE.md` / `CLAUDE.local.md`, `.claude/rules/*.md`, Codex `.agen
 | `~/.pawn/hooks-settings.json` | Hooks master switch / source toggles |
 | `~/.pawn/config.toml` | App settings (incl. quit confirmation) |
 | `~/.pawn/mcp.json` | Pawn-managed MCP servers |
+| `~/.pawn/decision.json` | Decision-model providers + harness switches (keys sealed with safeStorage, file 0600) |
 | `~/.pawn/reports/` | Automation deliverables |
 | `~/.pawn/installers/` | Cached install packages |
 
@@ -211,6 +212,17 @@ Maintainers: inject Desktop OAuth client IDs (Google/GitHub) at release via Acti
 | `app_set_model` / `app_set_permission_mode` / `app_set_reasoning` / `app_toggle_theme` | Session UI |
 | `app_list_automations` / `app_create_automation` | Automations from chat |
 | `load_skill` / `install_skill` | Skill catalog / git install |
+| `save_skill` | Write / update `~/.agents/skills/<name>/SKILL.md` (group `skills`; prompts; blocked in Plan) |
+
+### 5.8 Record & Replay (macOS)
+
+The user demonstrates a workflow once; Pawn drafts a reusable `SKILL.md`; the agent replays it later with its own tools (`browser_*`, `computer_*`, MCP). It is not a macro: steps are described by intent and visible labels, never coordinates.
+
+- **Start:** record button in the composer, `/record`, the command palette, or the menu-bar item. The setup asks for the goal, what changes between runs, and what to record: **Pawn browser** (isolated-world script, element name / role / label, `isTrusted` events only) and/or **Mac apps** (native helper `pawn-cua` ≥ 1.1.0: global click / shortcut / typing / scroll monitors + app switches, resolved to accessibility elements; needs Accessibility, screenshots need Screen Recording)
+- **Stop:** the recording bar, the menu bar, or Esc twice (a red "Pawn is recording" pill stays on every screen). Limits: 30 min / 3000 events
+- **Privacy:** password / one-time-code / card fields and macOS secure text fields are never read (recorded as "secret value, not recorded"); secrets in values and URLs are redacted; Pawn's own windows and the agent's synthetic input are ignored. The raw recording (events + up to 8 screenshots) lives only in memory: it is sent once to the chat model to draft the skill, then dropped. Nothing is written to disk; the chat keeps a one-line note plus the draft
+- **Draft:** a no-tools call to a vision model (falls back to steps only) answers with a ````skill block → shown as a card: **Save skill** (`~/.agents/skills`, asks before replacing), **Run it** (asks for the `## Inputs`, puts `/<name>` + values in the composer), **Automate** (automation draft that `load_skill`s it), **Refine** (the agent revises and calls `save_skill`). If drafting fails, the recording stays in memory for **Try again** until discarded or the app quits
+- Code: `src/main/recorder/*` (timeline, browser script, service, desktop source), `src/main/ipc/recorder.ts`, `native/macos/pawn-cua/Recorder.swift`, `src/renderer/src/{stores/recording.ts,agent/recordReplay.ts,agent/skillDrafting.ts,components/RecordingBar.tsx,components/SkillDraftCard.tsx}`
 
 ---
 
@@ -236,6 +248,18 @@ Project-scoped overrides user on id collision. UI: **Settings → MCP** (id, com
 - **Xiaomi MiMo:** same `reasoning_content` echo on thinking tool loops; dual auth headers (`Authorization` + `api-key`) for official hosts
 - **Kiro (`apiFormat: kiro`):** auth + transport in the main process (`src/main/kiro/*`): AWS Builder ID / IAM Identity Center device flow with Pawn's own OIDC client registration, Kiro API key (`ksk_`, `tokentype: API_KEY`), or read-only import of the Kiro CLI (`data.sqlite3`) / IDE (`~/.aws/sso/cache/kiro-auth-token.json`) login — never refreshed by Pawn. Credentials encrypted in `~/.pawn/kiro.json` (safeStorage). Chat = `GenerateAssistantResponse` (AWS event-stream), models = `ListAvailableModels`, credits = `getUsageLimits`. Headless: `KIRO_API_KEY` or the Kiro CLI login; live test `PAWN_KIRO_E2E=1`. Unofficial protocol — may change without notice
 - **Router:** complexity `simple|medium|complex`; cache-aware stickiness; escalate after tool failures; provider cooldown 5s–120s; vision fallback when images present
+
+### 7.1 Decision models (optional)
+
+Settings → **Decision models**. A decision model ("System One") returns typed, calibrated answers (choice / score / yes-no) in one forward pass instead of text. Nothing changes when none is configured.
+
+- **Providers:** **TypeSafe** (hosted Jev, first-party, `https://api.typesafe.ai`, key required, default model `jev-latest`), **Ollaya** (local open models such as Laya / Winnow, `http://localhost:11435`, no key unless the server sets `OLLAYA_API_KEY`), or any TypeSafe-compatible server. One provider is active at a time
+- **Transport:** main process only, through the official `@typesafe-ai/sdk` (`POST /v1/systemone`, `GET /v1/models`; `src/main/decision/*`). The renderer never sees keys. Secrets are redacted from every request; plain http only for local / private hosts; SDK logging is off
+- **Harness switches** (each fails open to normal behaviour):
+  - `decide` tool (default on): the agent asks typed questions (`state` or `items`, up to 32 questions). Hidden from the model while no provider is active
+  - Shell risk check (default on): rates each `shell_exec` command (`read_only` / `reversible` / `destructive`, plus "sends data"). A command that would auto-run (Full auto, always-allow rule, allow-until-quit) is sent back to the user when `destructive ≥ 0.5` or `sends_data ≥ 0.8`. It only adds prompts; trivially read-only commands skip the call; not used when the window is hidden
+  - Request difficulty for auto routing (default off; config key `routerAssist`): in auto routing, classifies each new turn's complexity (`simple|medium|complex`, kept only when p ≥ 0.5); otherwise the local heuristic stands
+- **Headless:** reads `~/.pawn/decision.json` (or `decision` in `--config`); keys from `TYPESAFE_API_KEY` / `OLLAYA_API_KEY` / `PAWN_DECISION_API_KEY`
 
 ---
 
@@ -314,6 +338,8 @@ Electron, React 19, TypeScript, electron-vite, Zustand, i18next, better-sqlite3,
 | Add hooks | Edit `~/.pawn/hooks.json` or Claude `settings.json` `hooks`; merge rules apply |
 | Memory on/off / export | Settings → Agent → Memory; DB at `~/.pawn/memory.db` |
 | Connect services (Google/GitHub/GitLab/CodeCommit) | Settings → Connections; OAuth or PAT/IAM, tokens in `~/.pawn` only |
+| Turn a demonstrated workflow into a skill (macOS) | Composer record button or `/record` → do the task → Stop → review the card → Save skill; later `/<skill-name>` or **Automate** |
+| Add a decision model (Jev / Ollaya) | Settings → Decision models → TypeSafe (API key) or Ollaya (`ollaya serve` + `ollaya pull laya`) → Test; the harness switches are on the same page |
 | Build from source | Node version + `npm install` + `npm run dev` / `npm run check` |
 | Debug tool deny | Check permission mode, Hooks PreToolUse deny, MCP server status |
 

@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { useEffectiveTheme, useThemeStore } from './stores/theme'
 import { useAppStore } from './stores/app'
 import { useProviderStore } from './stores/provider'
+import { useDecisionStore } from './stores/decision'
+import { useRecordingStore } from './stores/recording'
 import { applyChatFontSize, usePrefsStore } from './stores/prefs'
 import { useRoutineStore } from './stores/routine'
 import { useMcpStore } from './stores/mcp'
@@ -86,6 +88,8 @@ export default function App(): React.JSX.Element {
     useThemeStore.getState().init()
     useAppStore.getState().init()
     useProviderStore.getState().init()
+    void useDecisionStore.getState().refresh()
+    useRecordingStore.getState().init()
     void usePrefsStore.getState().init().then(() => {
       // Quiet update check once per launch (desktop only).
       if (!usePrefsStore.getState().checkUpdatesOnLaunch) return

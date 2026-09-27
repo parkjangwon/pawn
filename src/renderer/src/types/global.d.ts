@@ -74,6 +74,102 @@ declare global {
     | { type: 'error'; message: string; status?: number; transient: boolean; code?: string }
     | { type: 'done' }
 
+  /** Record & Replay (mirrors src/main/recorder/types.ts). */
+  type RecordingSourceDto = 'browser' | 'desktop'
+
+  interface RecStepDto {
+    index: number
+    t: number
+    source: RecordingSourceDto
+    kind: string
+    context: string
+    text: string
+  }
+
+  interface RecordingStatusDto {
+    state: 'idle' | 'recording'
+    id?: string
+    context?: { projectId?: string; sessionId?: string }
+    goal?: string
+    sources?: RecordingSourceDto[]
+    startedAt?: number
+    elapsedMs?: number
+    steps?: number
+    lastStep?: string
+    notes?: string[]
+  }
+
+  interface RecordingBundleDto {
+    id: string
+    context: { projectId?: string; sessionId?: string }
+    goal: string
+    inputsHint: string
+    startedAt: number
+    durationMs: number
+    sources: RecordingSourceDto[]
+    steps: RecStepDto[]
+    stepsText: string
+    frames: Array<{ t: number; source: RecordingSourceDto; dataUrl: string; width: number; height: number; step: number }>
+    stats: { events: number; steps: number; framesCaptured: number; truncated: boolean; stopReason: string }
+    notes: string[]
+  }
+
+  type RecorderEventDto =
+    | { type: 'started'; status: RecordingStatusDto }
+    | { type: 'progress'; status: RecordingStatusDto }
+    | { type: 'finished'; bundle: RecordingBundleDto }
+    | { type: 'cancelled'; reason?: string }
+    | { type: 'error'; error: string }
+    | { type: 'open-setup' }
+
+  interface RecorderReadinessDto {
+    platform: string
+    desktop: { supported: boolean; accessibility: boolean; screenRecording: boolean; error?: string }
+  }
+
+  /** Decision models (mirrors src/main/decision/types.ts). */
+  type DecisionProviderKindDto = 'typesafe' | 'ollaya' | 'custom'
+
+  interface DecisionFeaturesDto {
+    agentTool: boolean
+    shellRiskGuard: boolean
+    routerAssist: boolean
+  }
+
+  interface DecisionProviderDto {
+    id: string
+    kind: DecisionProviderKindDto
+    name: string
+    baseUrl: string
+    model: string
+    enabled: boolean
+    hasKey: boolean
+    keyHint?: string
+    local: boolean
+  }
+
+  interface DecisionStatusDto {
+    providers: DecisionProviderDto[]
+    features: DecisionFeaturesDto
+    active: DecisionProviderDto | null
+  }
+
+  type DecisionAnswerDto =
+    | { type: 'noul'; noul: number }
+    | { type: 'choice'; choice: string; confidence: number; probabilities: Record<string, number> }
+    | { type: 'score'; score: number; confidence: number; legend: Record<string, unknown>; probabilities: Record<string, number> }
+
+  type DecisionResultDto =
+    | {
+        ok: true
+        model: string
+        answers: Record<string, DecisionAnswerDto>
+        usage?: { input_tokens?: number; output_tokens?: number }
+        latencyMs: number
+        provider: { id: string; name: string; kind: DecisionProviderKindDto; local: boolean }
+      }
+    | { ok: false; error: string; code?: string; status?: number }
+
   interface LspWorkspaceEditDto {
     files: Array<{ path: string; edits: Array<{ startLine: number; startColumn: number; endLine: number; endColumn: number; newText: string }> }>
     creates: string[]
@@ -829,6 +925,55 @@ declare global {
         install: (id: string) => Promise<{ ok: true; name: string; path: string } | { ok: false; error: string }>
         remove: (name: string) => Promise<{ ok: boolean; error?: string }>
         installed: () => Promise<string[]>
+      }
+      /** Record & Replay (macOS). */
+      recorder?: {
+        status: () => Promise<RecordingStatusDto>
+        readiness: () => Promise<RecorderReadinessDto>
+        start: (req: {
+          goal?: string
+          inputsHint?: string
+          sources?: RecordingSourceDto[]
+          context?: { projectId?: string; sessionId?: string }
+        }) => Promise<{ ok: true; status: RecordingStatusDto } | { ok: false; error: string }>
+        stop: () => Promise<{ ok: boolean; error?: string; steps?: number }>
+        cancel: () => Promise<{ ok: boolean }>
+        openPermissions: (which: 'accessibility' | 'screen') => Promise<{ ok: boolean }>
+        onEvent: (callback: (event: RecorderEventDto) => void) => () => void
+      }
+      /** Skills Pawn writes to ~/.agents/skills. */
+      localSkills?: {
+        save: (
+          name: string,
+          content: string,
+          opts?: { overwrite?: boolean }
+        ) => Promise<{ ok: true; path: string; created: boolean } | { ok: false; error: string; exists?: boolean }>
+        read: (name: string) => Promise<{ ok: true; path: string; content: string } | { ok: false; error: string }>
+      }
+      /** Decision models (TypeSafe Jev, Ollaya, …). Keys never reach the renderer. */
+      decision?: {
+        status: () => Promise<DecisionStatusDto>
+        saveProvider: (input: {
+          id?: string
+          kind?: DecisionProviderKindDto
+          name?: string
+          baseUrl?: string
+          /** undefined keeps the stored key, '' clears it. */
+          apiKey?: string
+          model?: string
+        }) => Promise<{ ok: true; id: string; status: DecisionStatusDto } | { ok: false; error: string }>
+        removeProvider: (id: string) => Promise<{ ok: boolean; error?: string; status?: DecisionStatusDto }>
+        setEnabled: (id: string, enabled: boolean) => Promise<{ ok: boolean; error?: string; status?: DecisionStatusDto }>
+        setFeatures: (partial: Partial<DecisionFeaturesDto>) => Promise<{ ok: boolean; status: DecisionStatusDto }>
+        models: (id: string) => Promise<
+          | { ok: true; models: Array<{ name: string; description?: string; releaseDate?: string }> }
+          | { ok: false; error: string; code?: string }
+        >
+        test: (id: string) => Promise<DecisionResultDto>
+        decide: (
+          input: { state: unknown; questions: Record<string, unknown>; model?: string },
+          opts?: { purpose?: 'tool' | 'shell_risk' | 'routing'; timeoutMs?: number; maxRetries?: number }
+        ) => Promise<DecisionResultDto>
       }
       research: {
         fetch: (

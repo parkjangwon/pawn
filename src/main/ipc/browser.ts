@@ -1,10 +1,17 @@
-import { ipcMain, session, WebContentsView } from 'electron'
+import { ipcMain, session, WebContentsView, type WebContents } from 'electron'
 import { handleTrusted } from './trust'
 import { getMainWindow } from '../window'
 import { injectAICursor, cursorShow, cursorHide } from '../browserCursor'
 import { injectPicker, stopPicker, getPickerState } from '../browserPicker'
 import { BrowserTabManager, type BrowserTabInfo } from '../browserTabs'
 import { formatRuntimeEvents, parseConsoleMessage, RuntimeEventLog, type RuntimeEventKind, type RuntimeLevel } from '../browserRuntime'
+import {
+  RECORDER_WORLD_ID,
+  buildBrowserRecorderScript,
+  buildBrowserRecorderStopScript,
+  isRecorderMessage,
+  parseRecorderMessage
+} from '../recorder/browserScript'
 
 // The embedded browser runs in its own session partition. The app's own CSP is
 // installed on `session.defaultSession`; sharing it would apply `default-src
@@ -88,6 +95,30 @@ let browserVisible = false
 let pickerActive = false
 /** Last bounds from the UI panel — applied to whichever tab becomes active. */
 let lastBounds: { x: number; y: number; width: number; height: number } | null = null
+
+// --- Record & Replay --------------------------------------------------------
+// While a recording runs, every user-facing tab carries the isolated-world
+// recorder (re-armed after each page load). Subagent tabs are never recorded.
+let recording: { nonce: string; onEvent: (raw: unknown) => void } | null = null
+
+function recordableTab(id: string): boolean {
+  const owner = tabManager.getById(id)?.owner
+  return !owner || !owner.startsWith('subagent:')
+}
+
+function armRecorder(wc: WebContents, id: string): void {
+  const rec = recording
+  if (!rec || wc.isDestroyed() || !recordableTab(id) || !wc.getURL()) return
+  void wc
+    .executeJavaScriptInIsolatedWorld(RECORDER_WORLD_ID, [{ code: buildBrowserRecorderScript(rec.nonce) }])
+    .catch(() => {})
+}
+
+function recordNav(id: string, raw: Record<string, unknown>): void {
+  const rec = recording
+  if (!rec || !recordableTab(id) || tabManager.activeId !== id) return
+  rec.onEvent(raw)
+}
 
 // Parallel browsing: every tab is bound to an owner key (see BrowserTabInfo).
 // Owner-less calls (UI panel / legacy) drive the visible tab; `session:` owners
@@ -179,6 +210,8 @@ function activateTab(id: string): boolean {
     else parkView(view)
   })
   emitBrowserEvent({ type: 'tab:activated', tabId: id, ...browserState() })
+  const wc = getView(id)?.webContents
+  if (wc && recording && recordableTab(id) && wc.getURL()) recording.onEvent({ kind: 'tab', url: wc.getURL(), title: wc.getTitle() })
   return true
 }
 
@@ -234,6 +267,13 @@ function createTabView(initialUrl?: string, owner?: string | null): { tab?: Brow
   // Electron 35+ passes one details object; older versions positional args.
   ;(wc as unknown as { on(ev: string, cb: (...args: unknown[]) => void): void }).on('console-message', (...args: unknown[]) => {
     const m = parseConsoleMessage(args)
+    // Recorder lines are a private channel, never page console output.
+    if (isRecorderMessage(m.message)) {
+      const rec = recording
+      const ev = rec && recordableTab(tab.id) ? parseRecorderMessage(m.message, rec.nonce) : null
+      if (rec && ev) rec.onEvent({ ...ev, url: wc.getURL(), title: wc.getTitle() })
+      return
+    }
     const logs = tabLogs(tab.id)
     logs.push(`[${m.level}] ${m.message}${m.source ? ` (${m.source})` : ''}`)
     if (logs.length > 300) logs.splice(0, logs.length - 300)
@@ -263,14 +303,20 @@ function createTabView(initialUrl?: string, owner?: string | null): { tab?: Brow
     tabLogs(tab.id).length = 0
     tabManager.patch(tab.id, { url: wc.getURL(), title: wc.getTitle() })
     emitBrowserEvent({ type: 'navigated', tabId: tab.id, ...browserState() })
+    recordNav(tab.id, { kind: 'navigate', url: wc.getURL(), title: wc.getTitle() })
   })
-  wc.on('did-navigate-in-page', () => emitBrowserEvent({ type: 'navigated', tabId: tab.id, ...browserState() }))
+  wc.on('did-navigate-in-page', (_e, url, isMainFrame) => {
+    emitBrowserEvent({ type: 'navigated', tabId: tab.id, ...browserState() })
+    if (isMainFrame !== false) recordNav(tab.id, { kind: 'navigate', url: String(url || wc.getURL()), title: wc.getTitle() })
+  })
   wc.on('did-finish-load', () => {
     injectAICursor(wc)
     if (pickerActive && tabManager.activeId === tab.id) injectPicker(wc)
+    armRecorder(wc, tab.id)
   })
   wc.on('page-title-updated', () => {
     tabManager.patch(tab.id, { title: wc.getTitle() })
+    recordNav(tab.id, { kind: 'title', url: wc.getURL(), title: wc.getTitle() })
     emitBrowserEvent({ type: 'title', tabId: tab.id, ...browserState() })
   })
   wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
@@ -993,3 +1039,61 @@ export function registerBrowserIpc(): void {
     }
   )
 }
+
+// --- Record & Replay adapter (used by the recorder service) -----------------
+
+/** Start recording the user's actions in every user-facing tab. */
+export function startBrowserRecording(nonce: string, onEvent: (raw: unknown) => void): { ok: boolean; error?: string; notes?: string[] } {
+  if (!/^[A-Za-z0-9]{16,}$/.test(nonce)) return { ok: false, error: 'Invalid recorder nonce' }
+  recording = { nonce, onEvent }
+  const notes: string[] = []
+  let armed = 0
+  views.forEach((view, id) => {
+    const wc = view.webContents
+    if (wc.isDestroyed() || !recordableTab(id)) return
+    if (wc.getURL()) armed++
+    armRecorder(wc, id)
+  })
+  if (armed === 0) notes.push('The Pawn browser had no page open when recording started.')
+  // The page on screen right now is where the demo starts.
+  const active = activeView()?.webContents
+  if (active && !active.isDestroyed() && active.getURL() && tabManager.activeId && recordableTab(tabManager.activeId)) {
+    onEvent({ kind: 'navigate', url: active.getURL(), title: active.getTitle() })
+  }
+  return { ok: true, notes }
+}
+
+export async function stopBrowserRecording(): Promise<void> {
+  if (!recording) return
+  const code = buildBrowserRecorderStopScript()
+  // Stopping flushes text typed a moment ago; keep the channel open until then.
+  await Promise.all(
+    Array.from(views.values()).map(async (view) => {
+      const wc = view.webContents
+      if (wc.isDestroyed() || !wc.getURL()) return
+      await Promise.race([
+        wc.executeJavaScriptInIsolatedWorld(RECORDER_WORLD_ID, [{ code }]).catch(() => {}),
+        new Promise((r) => setTimeout(r, 800))
+      ])
+    })
+  )
+  recording = null
+}
+
+/** JPEG of the visible browser tab (max 1280 px wide), or null. */
+export async function captureBrowserFrame(): Promise<{ dataUrl: string; width: number; height: number } | null> {
+  const view = activeView()
+  const id = tabManager.activeId
+  if (!view || !id || view.webContents.isDestroyed() || !view.webContents.getURL() || !recordableTab(id)) return null
+  try {
+    let img = await view.webContents.capturePage()
+    if (img.isEmpty()) return null
+    const size = img.getSize()
+    if (size.width > 1280) img = img.resize({ width: 1280, quality: 'good' })
+    const out = img.getSize()
+    return { dataUrl: `data:image/jpeg;base64,${img.toJPEG(62).toString('base64')}`, width: out.width, height: out.height }
+  } catch {
+    return null
+  }
+}
+

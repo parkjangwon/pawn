@@ -4,7 +4,8 @@
  * cannot be decrypted outside Electron, so they must come from env vars.
  */
 
-import { readFileSync } from 'fs'
+import { existsSync, readFileSync } from 'fs'
+import { join } from 'path'
 import type { HeadlessConfig } from './nodeApi'
 
 const HOST_ENV: Array<[RegExp, string]> = [
@@ -53,8 +54,45 @@ export async function loadHeadlessConfig(path?: string): Promise<{ config: Headl
   if (path) {
     raw = JSON.parse(readFileSync(path, 'utf8')) as HeadlessConfig
   } else {
-    const { loadConfig } = await import('../main/config')
+    const { loadConfig, getPawnDir } = await import('../main/config')
     raw = loadConfig() as unknown as HeadlessConfig
+    const decisionPath = join(getPawnDir(), 'decision.json')
+    if (existsSync(decisionPath)) {
+      try {
+        raw.decision = JSON.parse(readFileSync(decisionPath, 'utf8')) as Record<string, unknown>
+      } catch {
+        /* unreadable: run without decision models */
+      }
+    }
   }
-  return applyEnvKeys(raw)
+  const out = applyEnvKeys(raw)
+  if (out.config.decision) out.config.decision = applyDecisionEnvKeys(out.config.decision)
+  return out
+}
+
+const DECISION_KEY_ENV: Record<string, string> = {
+  typesafe: 'TYPESAFE_API_KEY',
+  ollaya: 'OLLAYA_API_KEY',
+  custom: 'PAWN_DECISION_API_KEY'
+}
+
+/**
+ * Decision-provider keys sealed by the desktop app can't be opened outside
+ * Electron: take them from TYPESAFE_API_KEY / OLLAYA_API_KEY /
+ * PAWN_DECISION_API_KEY. A hosted provider left without a key is disabled.
+ */
+export function applyDecisionEnvKeys(
+  decision: Record<string, unknown>,
+  env: Record<string, string | undefined> = process.env
+): Record<string, unknown> {
+  const providers = (Array.isArray(decision.providers) ? decision.providers : []).map((p: Record<string, unknown>) => {
+    let key = typeof p.apiKey === 'string' ? p.apiKey : ''
+    if (key.startsWith('enc:')) key = ''
+    const kind = typeof p.kind === 'string' ? p.kind : 'custom'
+    key = key || env[DECISION_KEY_ENV[kind] || 'PAWN_DECISION_API_KEY'] || ''
+    const local = /localhost|127\.0\.0\.1|0\.0\.0\.0|\[::1\]/.test(String(p.baseUrl || ''))
+    const usable = !!key || local || kind !== 'typesafe'
+    return { ...p, apiKey: key || undefined, enabled: p.enabled === true && usable }
+  })
+  return { ...decision, providers }
 }
