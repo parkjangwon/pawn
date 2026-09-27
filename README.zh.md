@@ -19,6 +19,8 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 - **浏览器** — 内嵌 Chromium（`browser_*`）操作真实网页与登录会话。**多标签**：代理、UI 面板与每个子代理各占一个标签（按所有者隔离），并行浏览而不打扰你的画面
 - **检索** — 无需额外 API 的公开网页搜索/阅读（`web_search` / `web_fetch` / `web_research`），另有 **`research_report`**：并行检索子代理（各占标签）收集并去重，综合为附引用的报告产物
 - **电脑操作** — 像 Codex / Claude computer use 一样操作任何 Mac 应用：原生助手支持辅助功能树元素操作、应用/窗口/菜单控制、高清截图与放大、本地 OCR、输入法安全输入、多显示器、Claude 原生电脑工具；按两次 Esc 停止（`computer_*`；Windows/Linux 为基础鼠标键盘）
+- **录制与回放** — 在 Pawn 浏览器或任意 Mac 应用里演示一次任务，Pawn 就会写出可复用的技能，代理可用新输入或定时再次执行（macOS）
+- **决策模型** — 可选。用托管的 TypeSafe Jev 或本地 Ollaya 以校准概率快速判断是/否、单选和打分：`decide` 工具、shell 命令风险检查、辅助自动路由
 - **记忆** — 本地长期 Memory（`~/.pawn/memory.db`），随使用个性化
 - **Hooks** — 兼容 Claude/Codex 的生命周期钩子（Claude + Pawn 配置合并去重）
 - **连接** — 设置 → 连接 中可选 Google / GitHub（OAuth）与 GitLab / AWS CodeCommit（PAT）工具（令牌仅本地）
@@ -34,29 +36,15 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 
 界面：ChatGPT 风格布局，终端 / 文件 / Git / Diff / 浏览器面板，明暗主题。语言：英 / 韩 / 日 / 中。
 
-### 最新 — v0.11.1
+### 最新 — v0.15.0
 
-**安全加固＋子代理 UX＋稳定性**
-- **项目钩子加门（安全）** — 所打开仓库的 `.claude/settings.json` / `.pawn/hooks.json` 钩子默认不再运行：这些文件随不可信仓库而来，可能执行任意 shell 命令。可在 Settings → Hooks 中显式启用；用户级钩子（~/.claude、Pawn 目录）始终运行。`npm audit` 干净（已知漏洞 0）
-- **子代理实时状态内联显示** — 在聊天中以可折叠条（“N 个代理工作中…”）显示，展开可查看每个运行。右侧 Agents 标签保留用于历史，任务开始时不再强制打开面板
-- **子代理浏览器面板** — 所有子代理浏览结束后关闭侧边面板（仅当由子代理打开时——您打开或正在查看的面板绝不会被触碰）；带防抖以避免顺序流水线闪烁
-- **稳定性** — 子代理运行即使在意外崩溃时也总会进入终止状态（不再有幽灵“running”条目）；数据库不可用时侧边栏会话搜索回退到内存列表
-- **UI** — 计划/代理/审查组件对齐聊天列宽
+**录制与回放 ＋ 决策模型**
+- **录制与回放（macOS）** — 演示一次工作流，就得到可复用的技能。点输入框旁的录制按钮（或 `/record`），在 Pawn 浏览器和/或 Mac 应用里完成任务后停止（也可按两次 Esc），Pawn 会写出 `SKILL.md`：每次会变的输入、按界面标签（而非坐标）描述的步骤、检查步骤，以及提交前确认规则。可保存到 `~/.agents/skills`，用新输入再次运行（`/技能名`），在对话中完善，或设为定时自动化
+- **注重隐私** — 密码、验证码、卡号字段和 macOS 安全输入框从不记录，忽略 Pawn 自己的窗口和代理自己的输入，录制时屏幕上会显示红色提示。原始录制只保存在内存中，技能写好后即消失
+- **决策模型（可选）** — 设置 → 决策模型可在聊天模型旁加一个快速判断模型（"System One"）：**TypeSafe Jev**（托管、官方 SDK）或 **Ollaya**（在你的 Mac 上运行 Laya、Winnow 等开源模型）。代理会获得用于分拣、排序和核查的 `decide` 工具；原本会自动运行的 shell 命令若看起来具有破坏性或会外发数据，会退回给你确认；自动路由可用它判断请求难度。模型响应慢或关闭时一切恢复默认行为
+- **其他** — `save_skill` 工具、菜单栏“录制工作流…”、原生助手 1.1.0
 
-### v0.11.0 — 队列/转向简化＋会话搜索＋覆盖层加固
-- **队列/转向简化** — 移除输入框切换按钮；发送遵循设置中选择的模式，队列模式下运行时停止按钮旁会出现小的**转向**按钮，可立即发送当前草稿
-- **会话搜索** — 侧边栏通过数据库搜索所有会话的标题与**消息内容**，即使从未打开过的会话也会出现在结果中
-- **覆盖层加固** — 打开设置时隐藏内嵌浏览器（渲染层 z-index 无法覆盖的原生视图），关闭时恢复；浏览器页面与标签保持存活
-
----
-
-### v0.10.0 — 多标签浏览器＋子代理并行浏览＋`research_report`
-
-- **多标签浏览器** — 浏览器面板标签栏，`browser_tab_new / list / switch / close` 工具，弹窗在新标签页中打开
-- **子代理并行浏览** — 按所有者分标签（`session:` / `subagent:` / UI），后台 parked 标签绝不打扰当前页面，运行结束时自动回收
-- **`research_report`** — 规划者 → 并行检索工人（各占标签，混用 `web_search` / `web_research` / `web_fetch` 与 `browser_*`）→ 去重资料卷 → 附引用验证的报告（产物写入 `<project>/artifacts/`，未打开项目时写入 `~/Downloads/pawn-artifacts/`）
-- **稳定性加固** — 所有 fire-and-forget IPC 调用均处理拒绝，修复可选链短路 bug，检索管道失败时返回清晰的工具错误
-- 另：Agents 面板布局加固、README/CONTRIBUTING 更新
+更早的发布说明：[GitHub Releases](https://github.com/parkjangwon/pawn/releases)。
 
 ---
 
@@ -73,6 +61,16 @@ Pawn 不内置厂商密钥，请自备 API Key（BYOK）。
 | **Xiaomi MiMo** | OpenAI + Anthropic 路径 — [文档](https://mimo.mi.com/docs/en-US/quick-start/summary/first-api-call) · `https://api.xiaomimimo.com/v1` |
 
 添加提供商后用 **同步模型**（预设添加时也会尝试）对齐 API 列表。**Test** 使用该提供商已挂载的模型探测（不再固定 `gpt-4o-mini`）。
+
+### 决策模型（可选）
+
+| 提供商 | 说明 |
+|--------|------|
+| **TypeSafe**（Jev） | 托管、官方。使用 [TypeSafe 控制台](https://console.typesafe.ai)的 API 密钥，经官方 `@typesafe-ai/sdk` 调用，由 TypeSafe 按输入 token 计费 |
+| **Ollaya** | 在你的 Mac 上以 `http://localhost:11435` 运行开源决策模型（Laya、Winnow、decider 等）— [下载](https://ollaya.dev/download)后执行 `ollaya pull laya`。无需密钥，数据不出本机 |
+| 自定义 | 任何 TypeSafe 兼容服务器（`/v1/systemone`） |
+
+密钥加密保存在 `~/.pawn/decision.json`，所有请求都会先隐去机密信息。
 
 ---
 

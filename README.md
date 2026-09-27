@@ -19,6 +19,8 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 - **Browse** — Embedded Chromium (`browser_*`) for real web UIs and logged-in sessions. **Multi-tab**: the agent, the UI panel, and every subagent get their own tab (per-owner isolation) and browse in parallel without ever yanking your view
 - **Research** — Public web search/fetch without extra API keys (`web_search`, `web_fetch`, `web_research`), plus **`research_report`**: parallel research subagents (each in its own tab) whose findings are deduplicated and synthesized into a citation-checked report artifact
 - **Computer use** — Operate any Mac app like Codex / Claude computer use: native helper with accessibility-tree element actions, app/window/menu control, high-res screenshots + zoom, on-device OCR, IME-safe typing, multi-monitor, Claude's native computer tool; Esc×2 stops (`computer_*`; Windows/Linux: basic mouse/keyboard)
+- **Record & Replay** — Show Pawn a task once in its browser or any Mac app; it writes a reusable skill the agent replays with new inputs or on a schedule (macOS)
+- **Decisions** — Optional decision models (hosted TypeSafe Jev, or local Ollaya) for fast, calibrated yes/no, pick-one and score judgments: a `decide` tool, a risk check on shell commands, and help for auto routing
 - **Remember** — Local long-term Memory (`~/.pawn/memory.db`) that personalizes the agent over time
 - **Hooks** — Claude/Codex-compatible lifecycle hooks (Claude + Pawn configs merge with dedupe)
 - **Connect** — Optional Google & GitHub OAuth + GitLab & AWS CodeCommit (PAT) tools via Settings → Connections (tokens stay local)
@@ -34,29 +36,15 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
 
-### Latest — v0.11.1
+### Latest — v0.15.0
 
-**Security hardening + subagent UX + stability**
-- **Project hooks gated (security)** — hooks from the opened repo's `.claude/settings.json` / `.pawn/hooks.json` no longer run by default: those files ship with untrusted repos and can execute arbitrary shell commands. Enable them per user choice in Settings → Hooks; user-scope hooks (~/.claude, Pawn dir) always work. `npm audit` is clean (0 known vulnerabilities)
-- **Subagent live status inline** — helpers show as a collapsible bar in the chat (“N agents working…”) you can expand to watch each run; the right-panel Agents tab stays for history and no longer force-opens when work starts
-- **Subagent browser panel** — the side panel closes once all subagent browsing is done (only when a subagent opened it — a panel you opened or are viewing is never touched), debounced so multi-phase research pipelines don’t flicker
-- **Stability** — subagent runs always reach a terminal state, even on unexpected crashes (no phantom “running” entries); sidebar session search falls back to the in-memory list when the database is unavailable
-- **UI** — plan / agent / review widgets now align to the chat column width; the Korean UI uses “에이전트” instead of “도우미”
+**Record & Replay + decision models**
+- **Record & Replay (macOS)** — Show Pawn a workflow once, get a reusable skill. Press the record button in the composer (or `/record`), do the task in Pawn's browser and/or any Mac app, then stop (Esc twice works too). Pawn writes a `SKILL.md` with the inputs that change per run, steps by visible label (not coordinates), checks, and a confirm-before-submit rule. Save it to `~/.agents/skills`, run it again with new inputs (`/skill-name`), refine it in chat, or schedule it as an automation
+- **Private by design** — passwords, one-time codes, card fields and macOS secure fields are never recorded, Pawn's own windows and the agent's own input are ignored, and a red on-screen pill shows while recording. The raw recording lives in memory only and is gone once the skill is written
+- **Decision models (optional)** — Settings → Decision models adds a fast "System One" judge next to your chat model: **TypeSafe Jev** (hosted, first-party, official SDK) or **Ollaya** (Laya, Winnow and other open models on your Mac). The agent gets a `decide` tool for triage, ranking and checks; shell commands that would run without asking are re-checked and sent back to you when they look destructive or would send data out; auto routing can use it to judge how hard a request is. Everything falls back to normal behavior when the model is slow or off
+- **Also** — `save_skill` tool, "Record a workflow…" in the menu bar, native helper 1.1.0
 
-### v0.11.0 — queue/steer simplification + session search + overlay hardening
-- **Queue/steer simplified** — the composer toggle is gone; sends follow the send mode set in Settings, and while the agent is running in queue mode a small **Steer** button appears next to Stop to send the draft immediately
-- **Session search** — the sidebar now searches every session's title **and message contents** through the database, so even sessions you've never opened show up in results
-- **Overlay hardening** — opening Settings hides the embedded browser (a native view that renderer z-index can't cover) and restores it on close; the browser page and tabs stay alive
-
----
-
-### v0.10.0 — multi-tab browser + subagent parallel browsing + `research_report`
-
-- **Multi-tab browser** — tab bar in the browser panel, `browser_tab_new / list / switch / close` tools, popups open new tabs
-- **Subagent parallel browsing** — per-owner tabs (`session:` / `subagent:` / UI), parked background tabs that never disturb the visible page, reclaimed automatically when a run ends
-- **`research_report`** — planner → parallel research workers (each in its own tab, mixing `web_search` / `web_research` / `web_fetch` with `browser_*`) → deduplicated dossier → citation-checked report artifact (`<project>/artifacts/`, or `~/Downloads/pawn-artifacts/` with no project open)
-- **Stability hardening** — every fire-and-forget IPC call now catches rejections; optional-chain short-circuit bug fixed; the research pipeline fails with a clean tool error
-- Plus: Agents-panel layout hardening, refreshed README/CONTRIBUTING
+Earlier release notes: [GitHub Releases](https://github.com/parkjangwon/pawn/releases).
 
 ---
 
@@ -74,6 +62,16 @@ Pawn never ships vendor keys. You bring your own (BYOK).
 | **Xiaomi MiMo** | OpenAI + Anthropic paths — [docs](https://mimo.mi.com/docs/en-US/quick-start/summary/first-api-call) · `https://api.xiaomimimo.com/v1` |
 
 After adding a provider, use **Sync models** (or rely on the auto-sync on preset add) so the model list comes from the provider API instead of a stale hardcoded catalog. **Test** probes with a model already attached to that provider (not a generic `gpt-4o-mini`).
+
+### Decision models (optional)
+
+| Provider | Notes |
+|----------|-------|
+| **TypeSafe** (Jev) | Hosted, first-party. API key from the [TypeSafe console](https://console.typesafe.ai); called through the official `@typesafe-ai/sdk`. Billed per input token by TypeSafe |
+| **Ollaya** | Open decision models (Laya, Winnow, decider, …) on your Mac at `http://localhost:11435` — [download](https://ollaya.dev/download), then `ollaya pull laya`. No key, nothing leaves your machine |
+| Custom | Any TypeSafe-compatible server (`/v1/systemone`) |
+
+Keys are encrypted in `~/.pawn/decision.json`, and secrets are redacted from every request.
 
 ---
 
