@@ -147,7 +147,10 @@ export type ToolKind = 'edit' | 'create' | 'delete' | 'read' | 'search' | 'shell
 
 export function toolKind(name: string, meta?: Pick<ToolMeta, 'added' | 'removed'>): ToolKind {
   if (name === 'write_file') return meta && meta.removed === 0 && (meta.added ?? 0) > 0 ? 'create' : 'edit'
-  if (name === 'edit_file') return 'edit'
+  if (name === 'edit_file' || name === 'apply_patch' || name === 'lsp_rename' || name === 'lsp_apply_code_action' || name === 'checkpoint_restore') return 'edit'
+  if (name === 'str_replace_based_edit_tool') return meta && (meta.added || meta.removed) ? 'edit' : 'read'
+  if (name === 'bash' || name === 'shell_wait' || name.startsWith('debug_')) return 'shell'
+  if (name === 'semantic_search' || name === 'affected_tests' || name === 'read_output') return 'search'
   if (name === 'delete_file') return 'delete'
   if (name === 'read_file' || name === 'read_spreadsheet' || name === 'list_dir' || name === 'terminal_read') return 'read'
   if (/^(grep_search|search_files|codebase_search|repo_map|memory_search|lsp_)/.test(name)) return 'search'

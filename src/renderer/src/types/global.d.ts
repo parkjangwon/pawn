@@ -35,6 +35,44 @@ declare global {
     | { id: string; source: McpServerSource; status: 'connected'; tools: McpToolInfo[] }
     | { id: string; source: McpServerSource; status: 'error'; error: string }
 
+  interface LspWorkspaceEditDto {
+    files: Array<{ path: string; edits: Array<{ startLine: number; startColumn: number; endLine: number; endColumn: number; newText: string }> }>
+    creates: string[]
+    renames: Array<{ from: string; to: string }>
+    deletes: string[]
+  }
+
+  interface LspSymbolDto {
+    name: string
+    kind: string
+    path: string
+    line: number
+    column: number
+    endLine?: number
+    detail?: string
+    container?: string
+    depth?: number
+  }
+
+  interface DebugResultDto {
+    ok: boolean
+    error?: string
+    text?: string
+    state?: { status: 'starting' | 'running' | 'stopped' | 'terminated'; reason?: string; location?: { path?: string; line: number } }
+  }
+
+  interface BrowserRuntimeEventDto {
+    seq: number
+    at: number
+    kind: 'console' | 'exception' | 'network' | 'crash' | 'load'
+    level: 'error' | 'warn' | 'info' | 'debug'
+    text: string
+    source?: string
+    url?: string
+    status?: number
+    method?: string
+  }
+
   interface McpServerInput {
     command?: string
     args?: string[]
@@ -450,6 +488,10 @@ declare global {
         tabClose: (id: string, owner?: string) => Promise<{ ok?: boolean; error?: string }>
         releaseOwner: (owner: string) => Promise<{ ok?: boolean; error?: string }>
         logs: () => Promise<string[]>
+        runtime?: (
+          owner?: string,
+          opts?: { since?: number; kinds?: string[]; minLevel?: string; limit?: number; clear?: boolean }
+        ) => Promise<{ ok: boolean; error?: string; events: BrowserRuntimeEventDto[]; latestSeq: number; text?: string; url?: string }>
         navigate: (url: string, owner?: string) => Promise<{ url?: string; title?: string; error?: string }>
         back: (owner?: string) => Promise<{ url?: string; error?: string }>
         reload: (owner?: string) => Promise<{ ok?: boolean; error?: string }>
@@ -868,6 +910,79 @@ declare global {
           line: number,
           character: number
         ) => Promise<{ ok: boolean; error?: string; text?: string }>
+        rename?: (
+          root: string,
+          path: string,
+          line: number,
+          character: number,
+          newName: string
+        ) => Promise<{ ok: boolean; error?: string; edit?: LspWorkspaceEditDto }>
+        symbols?: (root: string, path: string, query?: string) => Promise<{ ok: boolean; error?: string; symbols?: LspSymbolDto[] }>
+        callHierarchy?: (
+          root: string,
+          path: string,
+          line: number,
+          character: number,
+          direction: 'incoming' | 'outgoing'
+        ) => Promise<{ ok: boolean; error?: string; item?: LspSymbolDto; calls?: Array<LspSymbolDto & { callLines: number[] }> }>
+        codeActions?: (
+          root: string,
+          path: string,
+          range: { startLine: number; startColumn?: number; endLine?: number; endColumn?: number },
+          only?: string[]
+        ) => Promise<{
+          ok: boolean
+          error?: string
+          actions?: Array<{ index: number; title: string; kind?: string; isPreferred?: boolean; hasEdit: boolean; hasCommand: boolean; disabled?: string }>
+        }>
+        applyCodeAction?: (
+          root: string,
+          path: string,
+          index: number
+        ) => Promise<{ ok: boolean; error?: string; title?: string; edit?: LspWorkspaceEditDto }>
+      }
+      bash?: {
+        run: (
+          key: string,
+          command: string,
+          opts: { cwd: string; timeoutMs?: number; sandbox?: Record<string, unknown> }
+        ) => Promise<{ ok: boolean; error?: string; text?: string; exitCode?: number | null; cwd?: string; timedOut?: boolean; restarted?: boolean }>
+        restart: (key: string, cwd: string, sandbox?: Record<string, unknown>) => Promise<{ ok: boolean; error?: string; text?: string }>
+        kill: (key: string) => Promise<{ ok: boolean }>
+      }
+      debug?: {
+        start: (opts: Record<string, unknown>) => Promise<DebugResultDto>
+        setBreakpoints: (key: string, path: string, lines: Array<number | { line: number; condition?: string }>) => Promise<DebugResultDto>
+        control: (key: string, action: 'continue' | 'over' | 'into' | 'out' | 'pause' | 'state', timeoutMs?: number) => Promise<DebugResultDto>
+        evaluate: (key: string, expression: string, frameId?: number) => Promise<{ ok: boolean; error?: string; result?: string; type?: string }>
+        stop: (key: string) => Promise<{ ok: boolean; error?: string }>
+        list: () => Promise<Array<{ sessionKey: string; language: string; status: string }>>
+      }
+      codeIndex?: {
+        search: (
+          root: string,
+          queries: string[],
+          opts?: { limit?: number; pathPrefix?: string }
+        ) => Promise<{ ok: boolean; error?: string; text?: string; chunks?: number; hits?: Array<{ path: string; startLine: number; endLine: number; symbol?: string; score: number }> }>
+        update: (root: string) => Promise<{ ok: boolean; error?: string; files?: number; chunks?: number; ms?: number }>
+      }
+      tests?: {
+        affected: (
+          root: string,
+          files: string[],
+          opts?: { maxDepth?: number; limit?: number }
+        ) => Promise<{ ok: boolean; error?: string; text?: string; tests?: string[]; commands?: Array<{ runner: string; command: string }> }>
+      }
+      net?: {
+        probePort: (port: number, host?: string) => Promise<{ ok: boolean; open: boolean }>
+      }
+      outputs?: {
+        save: (sessionId: string, content: string) => Promise<{ ok: boolean; error?: string; id?: string; chars?: number; lines?: number }>
+        read: (id: string, opts?: Record<string, unknown>) => Promise<{ ok: boolean; error?: string; text?: string }>
+      }
+      profile?: {
+        get: (root: string) => Promise<{ ok: boolean; error?: string; json: string | null }>
+        save: (root: string, json: string) => Promise<{ ok: boolean; error?: string }>
       }
       /** Long-term local Memory (self-learning knowledge cards). */
       memory?: {

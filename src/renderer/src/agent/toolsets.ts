@@ -15,7 +15,7 @@
 
 import type { TranscriptEntry } from './transcript'
 
-export type ToolGroupId = 'browser' | 'computer' | 'github' | 'gitlab' | 'google' | 'codecommit' | 'app'
+export type ToolGroupId = 'browser' | 'computer' | 'debug' | 'github' | 'gitlab' | 'google' | 'codecommit' | 'app'
 export type ConnectionProvider = 'github' | 'gitlab' | 'google' | 'codecommit'
 export type ToolLoadingMode = 'smart' | 'all'
 
@@ -45,6 +45,13 @@ export const TOOL_GROUPS: ToolGroup[] = [
     keywords:
       /\bscreen(shot)?\b|\bdesktop\b|\bmouse\b|\bkeyboard\b|\bcomputer\b|\bfinder\b|\bdock\b|\bmenu ?bar\b|\b(open|launch|quit) (the )?[a-z][\w.]* app\b|\bmac ?os\b|\bsystem settings\b|\bulw\b|화면|스크린샷|마우스|키보드|데스크톱|바탕화면|컴퓨터|맥에서|앱을? (열|실행)|画面|スクリーンショット|マウス|デスクトップ|コンピュータ|屏幕|截图|鼠标|桌面|电脑/i,
     summary: 'desktop control: screenshot, mouse, keyboard, clipboard'
+  },
+  {
+    id: 'debug',
+    prefix: 'debug_',
+    keywords:
+      /\bdebug(ger|ging)?\b|\bbreakpoints?\b|\bstep (through|into|over)\b|\bstack ?trace\b|\bsegfault\b|\bcore dump\b|\bcrash(es|ing)?\b|\bhangs?\b|\binfinite loop\b|\bwrong (value|result|output)\b|\brace condition\b|디버그|디버깅|브레이크 ?포인트|중단점|크래시|デバッグ|ブレークポイント|调试|断点/i,
+    summary: 'debugger: breakpoints, step, inspect variables (Node, Python, Go, C/C++/Rust)'
   },
   {
     id: 'github',

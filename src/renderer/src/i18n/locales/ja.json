@@ -83,7 +83,10 @@
       "sessionBudget": "セッション予算到達 (${{cost}} / ${{cap}})",
       "dailyBudget": "日次予算到達 (${{cost}} / ${{cap}})",
       "compactedManual": "コンテキストを手動で圧縮しました",
-      "compactedSmart": "モデルが書いた要約でコンテキストを圧縮しました — キャッシュのプレフィックスを再構築しています。"
+      "compactedSmart": "モデルが書いた要約でコンテキストを圧縮しました — キャッシュのプレフィックスを再構築しています。",
+      "lessonLearned": "修正内容を学習しました: {{rule}}",
+      "toolResultsCleared": "コンテキストを保つため古いツール結果 {{count}} 件（約 {{tokens}}k トークン）を整理しました — 全文はエージェントが再取得できます",
+      "stuckRecovery": "エージェントが行き詰まっているようです（段階 {{level}}、{{action}}）: {{detail}}"
     },
     "errors": {
       "noProvider": "プロバイダーまたはモデルが設定されていません。設定 → プロバイダー、設定 → モデルで追加してください。",
@@ -98,7 +101,8 @@
       "emptyResponse": "モデルが空の応答を返しました。再試行するか、より強いモデルに切り替えてください。（メール送信は非対応 — Google 連携は読み取り専用です。）",
       "hookBlocked": "フックによりブロックされました (UserPromptSubmit)",
       "sessionBudgetHit": "停止: セッション費用 ${{cost}}（上限 ${{cap}}）。Settings → Usage で上限を上げるか、新しいセッションを開始してください。",
-      "dailyBudgetHit": "停止: 本日の費用 ${{cost}}（上限 ${{cap}}）。Settings → Usage で上限を上げてください。"
+      "dailyBudgetHit": "停止: 本日の費用 ${{cost}}（上限 ${{cap}}）。Settings → Usage で上限を上げてください。",
+      "stuckAskUser": "エージェントが行き詰まりを繰り返したため停止しました（{{detail}}）。試したことは上にまとめています — 進め方を指示してください。"
     },
     "showEarlier": "以前のメッセージを表示 ({{count}}件)",
     "suggestions": {
@@ -189,7 +193,8 @@
       "m": "{{n}}分",
       "s": "{{n}}秒"
     },
-    "compacting": "コンテキストを圧縮中…"
+    "compacting": "コンテキストを圧縮中…",
+    "secondOpinion": "別のモデルに意見を求めています…"
   },
   "automation": {
     "title": "自動化",
@@ -493,7 +498,9 @@
       "computerReady": "準備完了 — {{backend}} ヘルパー {{version}}",
       "computerUnavailable": "コンピューター操作はデスクトップアプリでのみ使えます。",
       "nativeComputerTool": "Claude ネイティブのコンピューターツール",
-      "nativeComputerToolDesc": "Anthropic API で Claude に学習済みの専用コンピューターツールを使わせます（まとめて実行、最も正確なクリック）。Pawn のアクセシビリティ・OCR・アプリ・メニューツールも引き続き使えます。"
+      "nativeComputerToolDesc": "Anthropic API で Claude に学習済みの専用コンピューターツールを使わせます（まとめて実行、最も正確なクリック）。Pawn のアクセシビリティ・OCR・アプリ・メニューツールも引き続き使えます。",
+      "nativeCodingTools": "モデルネイティブのコーディングツール",
+      "nativeCodingToolsDesc": "各モデルが学習した編集ツールをそのまま使わせます：Anthropic API の Claude にはテキストエディタと永続 bash、GPT モデルには apply_patch。取り消し・権限・検証はそのまま有効です。"
     },
     "agentsSection": {
       "title": "サブエージェント",
@@ -1140,7 +1147,19 @@
     "windows": "ウインドウ",
     "menu": "メニュー",
     "openItem": "開く",
-    "computerStatus": "コンピューターの状態"
+    "computerStatus": "コンピューターの状態",
+    "patch": "パッチ適用",
+    "waitJob": "ジョブ待機",
+    "readOutput": "保存された出力を読む",
+    "notes": "作業メモ",
+    "checkpoint": "チェックポイント",
+    "restore": "チェックポイント復元",
+    "profile": "リポジトリプロファイル",
+    "affectedTests": "影響するテスト",
+    "debug": "デバッガー",
+    "console": "ページのコンソール",
+    "network": "ページのネットワーク",
+    "secondOpinion": "セカンドオピニオン"
   },
   "diffView": {
     "showAllLines": "すべての行を表示",

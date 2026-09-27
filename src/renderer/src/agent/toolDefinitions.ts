@@ -12,15 +12,21 @@ import { APP_TOOLS } from './toolDefs/app'
 import { CONNECTIONS_TOOLS } from './toolDefs/connections'
 import { AGENT_TOOLS } from './toolDefs/agent'
 import { LSP_TOOLS } from './toolDefs/lsp'
+import { BROWSER_RUNTIME_TOOLS, CODE_INTEL_TOOLS, RUNTIME_TOOLS } from './toolDefs/runtime'
+import { DEBUG_TOOLS } from './toolDefs/debug'
 
 /** Tool definitions sent to the LLM (concatenated by domain modules). */
 export const TOOLS: ToolDefinition[] = [
   ...FS_TOOLS,
   ...LSP_TOOLS,
+  ...CODE_INTEL_TOOLS,
   ...SHELL_TOOLS,
+  ...RUNTIME_TOOLS,
+  ...DEBUG_TOOLS,
   ...GIT_TOOLS,
   ...COMPUTER_TOOLS,
   ...BROWSER_TOOLS,
+  ...BROWSER_RUNTIME_TOOLS,
   ...WEB_TOOLS,
   ...MEMORY_TOOLS,
   ...APP_TOOLS,

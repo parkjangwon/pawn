@@ -169,7 +169,8 @@ export const AGENT_TOOLS: ToolDefinition[] = [
     name: 'load_tools',
     description:
       'Load optional tool groups that are not in your tool list yet; their tools become callable on your next step. ' +
-      'Groups: browser (embedded browser: navigate/snapshot/click/fill/eval/tabs), computer (desktop screenshot/mouse/keyboard/clipboard), ' +
+      'Groups: browser (embedded browser: navigate/snapshot/click/fill/eval/tabs/console/network), computer (desktop apps: accessibility UI, screenshot, mouse/keyboard, OCR, menus), ' +
+      'debug (real debugger: breakpoints, stepping, variables, eval — Node, Python, Go, C/C++/Rust), ' +
       'github, gitlab, google (Gmail/Drive/Calendar/Tasks/Sheets/Docs/Slides), codecommit, ' +
       'app (switch model/permission mode/reasoning/theme, open panels, automations). ' +
       'Account groups need the account connected in Settings → Connections.',
@@ -181,7 +182,7 @@ export const AGENT_TOOLS: ToolDefinition[] = [
           description: 'Groups to load',
           items: {
             type: 'string',
-            enum: ['browser', 'computer', 'github', 'gitlab', 'google', 'codecommit', 'app']
+            enum: ['browser', 'computer', 'debug', 'github', 'gitlab', 'google', 'codecommit', 'app']
           }
         }
       },

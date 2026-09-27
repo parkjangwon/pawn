@@ -32,6 +32,8 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
   const setSmartCompaction = useProviderStore((s) => s.setSmartCompaction)
   const toolLoading = useProviderStore((s) => s.toolLoading)
   const setToolLoading = useProviderStore((s) => s.setToolLoading)
+  const nativeCodingTools = useProviderStore((s) => s.nativeCodingTools)
+  const setNativeCodingTools = useProviderStore((s) => s.setNativeCodingTools)
   const nativeComputerTool = useProviderStore((s) => s.nativeComputerTool)
   const setNativeComputerTool = useProviderStore((s) => s.setNativeComputerTool)
   const [computerInfo, setComputerInfo] = useState<string | null>(null)
@@ -227,6 +229,16 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           >
             {t('settings.agentSection.computerCheck')}
           </button>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label">{t('settings.agentSection.nativeCodingTools')}</span>
+            <span className="settings-row-desc">{t('settings.agentSection.nativeCodingToolsDesc')}</span>
+          </div>
+          <label className="toggle-switch">
+            <input type="checkbox" checked={nativeCodingTools} onChange={(e) => setNativeCodingTools(e.target.checked)} />
+            <span className="toggle-slider" />
+          </label>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">

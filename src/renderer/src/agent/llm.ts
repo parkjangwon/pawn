@@ -8,6 +8,7 @@ import { useProviderStore } from '../stores/provider'
 import { toolsToClaude, toolsToOpenAI, getMcpToolDefinitions, type ToolCall } from './tools'
 import { NATIVE_DUPLICATES, claudeComputerVersion, planNativeComputer } from './computerToolset'
 import { noteComputerModel, shotPolicyFor } from './toolHandlers/computer'
+import { planApplyPatch, planClaudeNativeTools } from './nativeTools'
 import type { CallUsage } from '../stores/usage'
 import type { RouteDecision } from './router'
 import {
@@ -131,6 +132,11 @@ export interface LlmRequest {
   toolDenylist?: string[]
   /** Harness mode override (subagents pass the parent session's mode). */
   harnessMode?: HarnessMode
+  /**
+   * Called as soon as each tool call's arguments are complete, while the rest
+   * of the response is still streaming (lets read-only tools start early).
+   */
+  onToolCall?: (call: ToolCall) => void
 }
 
 /** No data for this long means the provider connection is dead; bail out. */
@@ -186,6 +192,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
 
   if (provider.apiFormat === 'claude' || deepSeekAnthropic) {
     const budget = claudeThinkingBudget(userEffort, harnessMode)
+    const claudeTools = await claudeToolsWithNative(toolsToClaude(mcpTools, toolListOpts), provider, model.modelId, headers)
 
     // DeepSeek Anthropic base: https://api.deepseek.com/anthropic (+ /messages)
     url = deepSeekAnthropic
@@ -222,8 +229,10 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
           ? { type: 'text', text, cache_control: { type: 'ephemeral' } }
           : { type: 'text', text }
       ),
-      tools: await claudeToolsWithComputer(toolsToClaude(mcpTools, toolListOpts), provider, model.modelId, headers),
-      messages: withConversationCacheAnchors(injectClaudePreamble(toClaudeMessages(sendable), projectPreamble))
+      tools: claudeTools.tools,
+      messages: withConversationCacheAnchors(
+        injectClaudePreamble(toClaudeMessages(sendable), joinPreamble(projectPreamble, claudeTools.note))
+      )
     }
   } else {
     // OpenAI-compatible; DeepSeek docs: base https://api.deepseek.com → /chat/completions
@@ -235,6 +244,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     if (/xiaomimimo\.com/i.test(provider.baseUrl || '')) {
       headers['api-key'] = token
     }
+    const openAITools = openAIToolsWithPatch(toolsToOpenAI(mcpTools, toolListOpts), model.modelId)
     const deepSeekExtras = deepSeekChatBodyExtras({
       modelId: model.modelId,
       reasoningEffort: dsEffort,
@@ -249,7 +259,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       max_tokens: deepSeekModel
         ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort: dsEffort, complexity })
         : 16_384,
-      tools: toolsToOpenAI(mcpTools, toolListOpts),
+      tools: openAITools.tools,
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
         : {}),
@@ -260,7 +270,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       // Stable system prefix first — disk cache hits require byte-stable prefixes.
       messages: [
         { role: 'system', content: systemLayers.join('\n\n') },
-        ...(projectPreamble ? [{ role: 'system', content: projectPreamble }] : []),
+        ...(joinPreamble(projectPreamble, openAITools.note) ? [{ role: 'system', content: joinPreamble(projectPreamble, openAITools.note) }] : []),
         ...toOpenAIMessages(sendable, {
           echoReasoningContent: needsReasoningContentEcho(model.modelId)
         })
@@ -294,6 +304,22 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const usage: CallUsage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
   const toolBuffers = new Map<number, { id: string; name: string; args: string; toolset?: string }>()
   const thinkingBuffers = new Map<number, TranscriptThinking>()
+  const emitted = new Set<string>()
+  const emitToolCall = (call: ToolCall): void => {
+    if (!req.onToolCall || emitted.has(call.id) || call.arguments?.__parse_error === true) return
+    emitted.add(call.id)
+    try {
+      req.onToolCall(call)
+    } catch {
+      /* early execution is an optimization only */
+    }
+  }
+  const emitOpenAIBuffer = (buf: { id: string; name: string; args: string }): void => {
+    if (!buf.name || emitted.has(buf.id)) return
+    const args = safeParseArgs(buf.args)
+    if (args.__parse_error === true) return
+    emitToolCall({ id: buf.id, name: buf.name, arguments: args })
+  }
 
   // Throttle store updates to one per animation frame: a long stream otherwise
   // re-renders the whole chat on every token.
@@ -457,13 +483,15 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
             case 'content_block_stop': {
               const buf = toolBuffers.get(parsed.index)
               if (buf) {
-                toolCalls.push({
+                const call: ToolCall = {
                   id: buf.id,
                   name: buf.name,
                   arguments: buf.args.trim() ? safeParseArgs(buf.args) : {},
                   ...(buf.toolset ? { toolset: buf.toolset } : {})
-                })
+                }
+                toolCalls.push(call)
                 toolBuffers.delete(parsed.index)
+                emitToolCall(call)
               }
               const think = thinkingBuffers.get(parsed.index)
               if (think) {
@@ -517,13 +545,27 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
             const idx = tc.index ?? 0
             let buf = toolBuffers.get(idx)
             if (!buf) {
+              // Calls stream in index order: a new index means every earlier
+              // one is complete and can start executing.
+              for (const [i, prev] of Array.from(toolBuffers.entries())) {
+                if (i < idx) emitOpenAIBuffer(prev)
+              }
               buf = { id: tc.id || `call_${idx}`, name: tc.function?.name || '', args: '' }
               toolBuffers.set(idx, buf)
             }
             if (tc.id) buf.id = tc.id
             if (tc.function?.name) buf.name = tc.function.name
-            if (tc.function?.arguments) buf.args += tc.function.arguments
+            if (tc.function?.arguments) {
+              buf.args += tc.function.arguments
+              // Complete JSON can't be extended (no trailing content), so a
+              // parseable object means this call's arguments are final.
+              if (req.onToolCall && buf.args.trimEnd().endsWith('}')) emitOpenAIBuffer(buf)
+            }
           }
+        }
+        // All calls are complete once the choice finishes (usage may still follow).
+        if (choice.finish_reason) {
+          for (const buf of Array.from(toolBuffers.values())) emitOpenAIBuffer(buf)
         }
       }
     }
@@ -621,6 +663,60 @@ export async function claudeToolsWithComputer(
     headers['anthropic-beta'] = headers['anthropic-beta'] ? `${headers['anthropic-beta']},${plan.betaHeader}` : plan.betaHeader
   }
   return kept
+}
+
+function joinPreamble(preamble: string, note: string): string {
+  if (!note) return preamble
+  return preamble ? `${preamble}\n\n${note}` : note
+}
+
+/**
+ * Claude request tools: model-native coding tools (text editor + bash) and
+ * the native computer tool replace their Pawn duplicates. Exactly one
+ * cache_control breakpoint stays on the last tool.
+ */
+export async function claudeToolsWithNative(
+  tools: Array<Record<string, unknown>>,
+  provider: { apiFormat: string; baseUrl: string },
+  modelId: string,
+  headers: Record<string, string>
+): Promise<{ tools: Array<Record<string, unknown>>; note: string }> {
+  const settings = useProviderStore.getState()
+  const coding = planClaudeNativeTools({
+    apiFormat: provider.apiFormat,
+    baseUrl: provider.baseUrl,
+    modelId,
+    toolNames: tools.map((t) => String(t.name || '')),
+    platform: window.api?.platform,
+    enabled: settings.nativeCodingTools !== false
+  })
+  let list = tools
+  if (coding) {
+    list = [
+      ...tools.filter((t) => !coding.drop.has(String(t.name || ''))).map(({ cache_control: _c, ...rest }) => rest),
+      ...coding.entries
+    ]
+    list[list.length - 1] = { ...list[list.length - 1], cache_control: { type: 'ephemeral' } }
+  }
+  const withComputer = await claudeToolsWithComputer(list, provider, modelId, headers)
+  return { tools: withComputer, note: coding?.note ?? '' }
+}
+
+/** OpenAI-format tools: apply_patch replaces edit_file / write_file for GPT-family models. */
+export function openAIToolsWithPatch(
+  tools: Array<Record<string, unknown>>,
+  modelId: string
+): { tools: Array<Record<string, unknown>>; note: string } {
+  const names = tools.map((t) => String((t.function as { name?: string } | undefined)?.name || ''))
+  const plan = planApplyPatch(modelId, names, useProviderStore.getState().nativeCodingTools !== false)
+  if (!plan) return { tools, note: '' }
+  return {
+    tools: [
+      ...tools.filter((t) => !plan.drop.has(String((t.function as { name?: string } | undefined)?.name || ''))),
+      { type: 'function', function: { name: plan.add.name, description: plan.add.description, parameters: plan.add.parameters } }
+    ],
+    note: '--- Native tools on this connection ---\napply_patch replaces edit_file / write_file here: edit, create, move and delete files with one patch.'
+  }
 }
 
 export function safeParseArgs(raw: string): Record<string, unknown> {

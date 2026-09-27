@@ -83,7 +83,10 @@
       "sessionBudget": "会话预算已达 (${{cost}} / ${{cap}})",
       "dailyBudget": "每日预算已达 (${{cost}} / ${{cap}})",
       "compactedManual": "已手动压缩上下文",
-      "compactedSmart": "已用模型撰写的摘要压缩上下文 — 正在重新预热缓存前缀。"
+      "compactedSmart": "已用模型撰写的摘要压缩上下文 — 正在重新预热缓存前缀。",
+      "lessonLearned": "已从你的纠正中学习：{{rule}}",
+      "toolResultsCleared": "为保持上下文精简，已清理 {{count}} 条旧工具结果（约 {{tokens}}k tokens）— 代理仍可取回全文",
+      "stuckRecovery": "代理似乎卡住了（第 {{level}} 级，{{action}}）：{{detail}}"
     },
     "errors": {
       "noProvider": "未配置提供商或模型。请打开设置 → 提供商，然后设置 → 模型。",
@@ -98,7 +101,8 @@
       "emptyResponse": "模型返回了空回复。请重试，或换用更强的模型。（不支持发送邮件 — Google 连接仅为只读。）",
       "hookBlocked": "已被钩子阻止 (UserPromptSubmit)",
       "sessionBudgetHit": "已停止：会话花费 ${{cost}}（上限 ${{cap}}）。请在 Settings → Usage 提高上限，或新开会话。",
-      "dailyBudgetHit": "已停止：今日花费 ${{cost}}（上限 ${{cap}}）。请在 Settings → Usage 提高上限。"
+      "dailyBudgetHit": "已停止：今日花费 ${{cost}}（上限 ${{cap}}）。请在 Settings → Usage 提高上限。",
+      "stuckAskUser": "代理反复卡住，已停止（{{detail}}）。尝试过的内容已在上方总结 — 请告诉它如何继续。"
     },
     "showEarlier": "显示更早的消息 ({{count}}条)",
     "suggestions": {
@@ -189,7 +193,8 @@
       "m": "{{n}} 分",
       "s": "{{n}} 秒"
     },
-    "compacting": "正在压缩上下文…"
+    "compacting": "正在压缩上下文…",
+    "secondOpinion": "正在请另一个模型给出意见…"
   },
   "automation": {
     "title": "自动化",
@@ -493,7 +498,9 @@
       "computerReady": "就绪 — {{backend}} 助手 {{version}}",
       "computerUnavailable": "电脑操作仅在桌面应用中可用。",
       "nativeComputerTool": "Claude 原生电脑工具",
-      "nativeComputerToolDesc": "在 Anthropic API 上让 Claude 使用其训练过的专用电脑工具（批量操作，点击最准确）。Pawn 的辅助功能、OCR、应用和菜单工具仍可使用。"
+      "nativeComputerToolDesc": "在 Anthropic API 上让 Claude 使用其训练过的专用电脑工具（批量操作，点击最准确）。Pawn 的辅助功能、OCR、应用和菜单工具仍可使用。",
+      "nativeCodingTools": "模型原生编码工具",
+      "nativeCodingToolsDesc": "为每个模型提供其训练时使用的编辑工具：Anthropic API 上的 Claude 使用文本编辑器和持久 bash，GPT 模型使用 apply_patch。撤销、权限和验证仍然适用。"
     },
     "agentsSection": {
       "title": "子代理",
@@ -1140,7 +1147,19 @@
     "windows": "窗口",
     "menu": "菜单",
     "openItem": "打开",
-    "computerStatus": "电脑状态"
+    "computerStatus": "电脑状态",
+    "patch": "应用补丁",
+    "waitJob": "等待任务",
+    "readOutput": "读取已保存输出",
+    "notes": "工作笔记",
+    "checkpoint": "检查点",
+    "restore": "恢复检查点",
+    "profile": "仓库档案",
+    "affectedTests": "受影响的测试",
+    "debug": "调试器",
+    "console": "页面控制台",
+    "network": "页面网络",
+    "secondOpinion": "第二意见"
   },
   "diffView": {
     "showAllLines": "显示所有行",

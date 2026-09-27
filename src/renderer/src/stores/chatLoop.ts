@@ -14,6 +14,19 @@ import { useRoutineStore } from './routine'
 import { useUsageStore } from './usage'
 import { clearTurnCheckpoint, type AgentTurnCheckpoint } from './turnCheckpoint'
 import { executeTool, TOOL_SAFETY, type ToolCall, type ToolResult } from '../agent/tools'
+import { NEEDS_APPROVAL_IN_AUTO } from '../agent/toolPermission'
+import { effectiveToolName } from '../agent/toolIdentity'
+import { APPLY_PATCH_NAME, BASH_NAME, TEXT_EDITOR_NAME, isFileMutation } from '../agent/nativeTools'
+import { clearOldToolResults } from '../agent/contextEditing'
+import { hydrateNotes, getNotes } from '../agent/workingNotes'
+import { StuckDetector, stuckDigest } from '../agent/stuckRecovery'
+import { requestSecondOpinion } from '../agent/secondOpinion'
+import { collectRuntimeEvents } from '../agent/runtimeWatch'
+import { formatPrefetched, prefetchMentionedFiles } from '../agent/mentionPrefetch'
+import { noteFileSeen, snapshotScope } from '../agent/fileSnapshots'
+import { formatProfileBlock, learnFromCommand, loadProfile } from '../agent/repoProfile'
+import { detectCorrection, takeRecentRevert } from '../agent/correctionLearning'
+import { learnFromCorrection } from '../agent/learning'
 import { runProjectChecks } from '../agent/runChecks'
 import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
 import {
@@ -57,10 +70,19 @@ export function describeToolAction(tc: ToolCall): string {
     const q = String(args.query || args.pattern || '').trim()
     return q ? `Searching for "${q.slice(0, 24)}"` : 'Searching codebase'
   }
-  if (name === 'shell_exec') {
+  if (name === 'shell_exec' || name === BASH_NAME) {
     const cmd = String(args.command || '').trim()
     return cmd ? `Running: ${cmd.slice(0, 30)}` : 'Running shell command'
   }
+  if (name === TEXT_EDITOR_NAME) {
+    const verb = args.command === 'view' ? 'Reading' : args.command === 'create' ? 'Writing' : 'Editing'
+    return `${verb} ${fname(args.path)}`
+  }
+  if (name === APPLY_PATCH_NAME) return 'Applying patch'
+  if (name === 'shell_wait') return 'Waiting for background job'
+  if (name === 'semantic_search' || name === 'codebase_search') return 'Searching codebase'
+  if (name.startsWith('debug_')) return 'Debugging'
+  if (name.startsWith('lsp_')) return 'Querying language server'
   if (name === 'run_checks') return 'Running project checks'
   if (name === 'spawn_agent' || name === 'parallel_agents') return 'Running subagents'
   if (name === 'web_search' || name === 'web_research') return 'Searching the web'
@@ -76,7 +98,7 @@ export function describeToolAction(tc: ToolCall): string {
 // Round ceiling and compaction ratio come from the harness profile
 // (default 50 rounds / 0.6; eco 25 / 0.45; maxing 80 / 0.7).
 /** Consecutive identical tool-call sets before we call it a loop and stop. */
-const MAX_REPEATED_TOOL_ROUNDS = 3
+const MAX_REPEATED_TOOL_ROUNDS = 12
 /** Model attempts per round before the turn gives up (each on a different model). */
 const MAX_ROUTE_ATTEMPTS = 3
 const DEFAULT_CONTEXT_WINDOW = 128_000
@@ -195,6 +217,28 @@ export async function compactSessionNow(sessionId: string): Promise<boolean> {
     return false
   }
 }
+
+/** Save a full tool output out of context; returns its id (or null). */
+async function offloadOutput(sessionId: string, content: string): Promise<string | null> {
+  const save = window.api?.outputs?.save
+  if (typeof save !== 'function') return null
+  try {
+    const r = await save(sessionId, content)
+    return r.ok && r.id ? r.id : null
+  } catch {
+    return null
+  }
+}
+
+/** Append agent-facing text to the round's last tool result (cache-friendly: no extra message). */
+function appendToLastToolResult(entries: TranscriptEntry[], text: string): void {
+  const i = entries.length - 1
+  const e = entries[i]
+  if (e && e.role === 'tool') entries[i] = { ...e, content: `${e.content}\n\n${text}` }
+}
+
+/** Frozen per session so the preamble (and the prompt cache) stays stable. */
+const profileBlockBySession = new Map<string, string>()
 
 export async function agentLoop(
   projectId: string,
@@ -352,6 +396,17 @@ export async function agentLoop(
     } catch {
       // Memory optional
     }
+    // Repo onboarding profile (learned commands, conventions, gotchas). Frozen
+    // for the session so the preamble — and the prompt cache — stays stable.
+    if (projectPath) {
+      let block = profileBlockBySession.get(sessionId)
+      if (block === undefined) {
+        const profile = await loadProfile(projectPath).catch(() => null)
+        block = profile ? formatProfileBlock(profile) : ''
+        profileBlockBySession.set(sessionId, block)
+      }
+      if (block) projectPreamble += (projectPreamble ? '\n\n' : '') + block
+    }
     // systemLayers stays [SYSTEM_PROMPT] only — project context is passed as
     // preamble to callLLM, where it is injected into the messages array.
 
@@ -373,6 +428,34 @@ export async function agentLoop(
       }
     } else {
       entries = await loadTranscript(projectId, sessionId)
+    }
+    hydrateNotes(sessionId, entries)
+
+    // Correction learning: the user correcting the previous turn becomes a
+    // durable lesson (project Memory + repo profile). Fire-and-forget.
+    if (!resumeFrom && window.api?.memory?.save) {
+      const prevAssistant = [...entries].reverse().find((e) => e.role === 'assistant' && !!e.content?.trim())
+      const prevUser = [...entries].reverse().find((e) => e.role === 'user')
+      const reverted = takeRecentRevert(sessionId)
+      const signal = detectCorrection(userContent, { hadAgentTurn: !!prevAssistant, reverted: !!reverted })
+      if (signal && signal.confidence >= 0.6) {
+        void learnFromCorrection({
+          sessionId,
+          projectId: projectId && projectId !== '__general__' ? projectId : null,
+          projectPath,
+          correction: userContent,
+          previousRequest: prevUser?.content,
+          previousAnswer: prevAssistant?.content,
+          reverted,
+          useModel: useProviderStore.getState().smartCompaction !== false
+        })
+          .then((r) => {
+            if (r?.saved) {
+              useUsageStore.getState().noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.lessonLearned', { rule: r.rule.slice(0, 120) }))
+            }
+          })
+          .catch(() => {})
+      }
     }
 
     // Lifecycle hooks (Claude/Codex-compatible) — SessionStart once per empty transcript.
@@ -423,16 +506,48 @@ export async function agentLoop(
 
     if (!userMessageAppended) {
       const imgs = imageAttachments(attachments)
+      // Files named in the message are attached up front (saves read rounds).
+      let mentioned = ''
+      if (projectPaths.length) {
+        try {
+          const roots = Array.from(new Set([cwd, ...projectPaths].filter(Boolean)))
+          const files = await prefetchMentionedFiles(userContent, {
+            roots,
+            read: async (p) => {
+              const r = await window.api.fs.readFile(p).catch(() => null)
+              return typeof r === 'string' ? r : null
+            },
+            isFile: async (p) => {
+              const st = window.api.fs.stat ? await window.api.fs.stat(p).catch(() => null) : null
+              return !!st && 'isFile' in st && st.isFile && st.size <= 1_000_000
+            }
+          })
+          for (const f of files) {
+            const r = await window.api.fs.readFile(f.path).catch(() => null)
+            if (typeof r === 'string') noteFileSeen(snapshotScope({ sessionId }), f.path, r)
+          }
+          mentioned = formatPrefetched(files)
+        } catch {
+          /* prefetch is an optimization only */
+        }
+      }
       entries.push({
         role: 'user',
-        content: buildTranscriptText(userContent, attachments),
+        content: buildTranscriptText(userContent, attachments) + mentioned,
         ...(imgs.length > 0 ? { attachments: imgs } : {})
       })
       userMessageAppended = true
     }
 
     let lastDecision: RouteDecision | null = null
+    // Hard backstop for pathological repetition; the stuck-recovery ladder
+    // below normally intervenes long before.
     const loopCounter = new ToolLoopCounter(MAX_REPEATED_TOOL_ROUNDS)
+    const stuck = new StuckDetector()
+    let stuckEscalate = 0
+    const toolHistory: Array<{ call: string; result: string; isError?: boolean }> = []
+    const turnToolCwd = cwd || projectPath
+    let turnUsedBrowser = false
     // Account-backed tool groups are hidden while disconnected (bounded wait).
     await refreshConnectedProviders()
 
@@ -469,14 +584,39 @@ export async function agentLoop(
       // exactly one cache re-prime — unlike a sliding window, which would silently
       // re-prime on every single request.
       const contextWindow = lastDecision?.model.contextWindow || DEFAULT_CONTEXT_WINDOW
-      const tokenEst = estimateTokens(entries)
+      let tokenEst = estimateTokens(entries)
       useUsageStore.getState().noteContext(sessionId, tokenEst, contextWindow, false)
+      // Gentle stage first: clear stale bulky tool results (saved as outputs
+      // the agent can read back) before a full compaction is needed.
+      const clearAt = contextWindow * Math.max(0.3, harness.compactAtRatio - 0.15)
+      if (tokenEst > clearAt && tokenEst <= contextWindow * harness.compactAtRatio + contextWindow * 0.2) {
+        const cleared = await clearOldToolResults(entries, {
+          keepRecent: 8,
+          minKeep: 3,
+          keepRecentTokens: Math.round(contextWindow * 0.25),
+          targetTokens: Math.max(15_000, Math.round(contextWindow * 0.12)),
+          minTokens: 6_000,
+          offload: (content) => offloadOutput(sessionId, content)
+        }).catch(() => null)
+        if (cleared && cleared.cleared > 0) {
+          entries = cleared.entries
+          persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
+          tokenEst = estimateTokens(entries)
+          useUsageStore.getState().noteDiagnostic(
+            sessionId,
+            'info',
+            i18n.t('chat.diagnostics.toolResultsCleared', { count: cleared.cleared, tokens: Math.round(cleared.tokensSaved / 1000) })
+          )
+          useUsageStore.getState().noteContext(sessionId, tokenEst, contextWindow, true)
+        }
+      }
       if (tokenEst > contextWindow * harness.compactAtRatio) {
         setCompactingActivity(projectId, sessionId, true)
         const compacted = await compactWithSummary(entries, {
           sessionId,
           contextWindow,
           plan: currentPlanFor(sessionId),
+          notes: getNotes(sessionId),
           useModel: useProviderStore.getState().smartCompaction,
           signal
         }).catch(() => null)
@@ -484,7 +624,7 @@ export async function agentLoop(
         if (signal.aborted) break
         entries = compacted?.compacted
           ? compacted.entries
-          : compactTranscript(entries, { keepEntries: 30, plan: currentPlanFor(sessionId) })
+          : compactTranscript(entries, { keepEntries: 30, plan: currentPlanFor(sessionId), notes: getNotes(sessionId) })
         persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
         useUsageStore
           .getState()
@@ -498,7 +638,7 @@ export async function agentLoop(
           .noteContext(sessionId, estimateTokens(entries), contextWindow, true)
       }
 
-      const escalate = shouldEscalate({ consecutiveToolErrors, round, emptyResponses })
+      const escalate = shouldEscalate({ consecutiveToolErrors, round, emptyResponses }) + stuckEscalate
       const excluded = new Set<string>()
       let transientFailures = 0
       let result: LlmResult | null = null
@@ -506,6 +646,22 @@ export async function agentLoop(
       let lastAssistantMsgId: string | null = null
 
       let needsVision = transcriptNeedsVision(entries)
+      // Read-only tools start while the response is still streaming.
+      let early = new Map<string, { started: number; promise: Promise<ToolResult> }>()
+      const permissionModeNow = useProviderStore.getState().permissionMode
+      const startEarly = (tc: ToolCall): void => {
+        if (signal.aborted || permissionModeNow === 'ask' || early.has(tc.id)) return
+        const eff = effectiveToolName(tc)
+        if (TOOL_SAFETY[eff] !== 'safe' || NEEDS_APPROVAL_IN_AUTO.has(eff)) return
+        early.set(tc.id, {
+          started: Date.now(),
+          promise: executeTool(tc, turnToolCwd, signal, { sessionId, projectId }).catch((err) => ({
+            toolCallId: tc.id,
+            content: `Tool error (${tc.name}): ${String(err)}`,
+            isError: true
+          }))
+        })
+      }
 
       // Try up to MAX_ROUTE_ATTEMPTS distinct models before failing the turn.
       for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; attempt++) {
@@ -557,6 +713,8 @@ export async function agentLoop(
           )
         }
 
+        // Results of a failed attempt belong to calls that never happened.
+        early = new Map()
         const assistantMsgId = `${Date.now()}-assistant-${round}-${attempt}`
         useAppStore.getState().addMessage(projectId, sessionId, {
           id: assistantMsgId, role: 'assistant', content: '', createdAt: Date.now()
@@ -567,6 +725,7 @@ export async function agentLoop(
          result = await callLLM({
             decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal,
             complexity,
+            onToolCall: startEarly,
             toolDenylist: hiddenToolNames({
               entries,
               allToolNames: STATIC_TOOL_NAMES,
@@ -827,7 +986,9 @@ export async function agentLoop(
       const safe: ToolCall[] = []
       const risky: ToolCall[] = []
       for (const tc of result.toolCalls) {
-        (TOOL_SAFETY[tc.name] === 'safe' ? safe : risky).push(tc)
+        // Model-native tools classify as the Pawn tool they act as (a text
+        // editor "view" is a read and may run in parallel).
+        (TOOL_SAFETY[effectiveToolName(tc)] === 'safe' || early.has(tc.id) ? safe : risky).push(tc)
       }
 
       const resultsById = new Map<string, ToolResult>()
@@ -841,7 +1002,15 @@ export async function agentLoop(
         }
       }
       if (safe.length > 0 && !signal.aborted) {
-        const settled = await Promise.all(safe.map((tc) => timedExecute(tc)))
+        const settled = await Promise.all(
+          safe.map(async (tc) => {
+            const pre = early.get(tc.id)
+            if (!pre) return timedExecute(tc)
+            const r = await pre.promise
+            durationsById.set(tc.id, Date.now() - pre.started)
+            return r
+          })
+        )
         safe.forEach((tc, i) => resultsById.set(tc.id, settled[i]))
       }
       // Computer actions run in order; after the first failure the rest of the
@@ -884,11 +1053,34 @@ export async function agentLoop(
           isError: true
         }
         if (raw.isError) roundErrors++
-        const truncated = truncateToolResult(raw, tc.name, toolResultCap(tc.name, harness.toolResultScale))
+        const cap = toolResultCap(tc.name, harness.toolResultScale)
+        let truncated = truncateToolResult(raw, tc.name, cap)
+        // Too long for context: keep the full text retrievable (read_output).
+        if (truncated !== raw.content && raw.content.length > cap) {
+          const id = await offloadOutput(sessionId, raw.content)
+          if (id) {
+            truncated += `\n[full output: ${raw.content.length.toLocaleString('en-US')} chars saved — read_output {"id":"${id}"} to page, grep or tail it]`
+          }
+        }
 
-        if (!raw.isError && (tc.name === 'edit_file' || tc.name === 'write_file' || tc.name === 'delete_file')) {
+        if (!raw.isError && isFileMutation(tc)) {
           turnHadCodeEdits = true
         }
+        if (tc.name.startsWith('browser_')) turnUsedBrowser = true
+        // Learn which project commands work (repo profile).
+        const eff = effectiveToolName(tc)
+        if (projectPath && eff === 'shell_exec' && typeof tc.arguments.command === 'string' && tc.arguments.restart !== true && !tc.arguments.background) {
+          learnFromCommand(projectPath, tc.arguments.command, {
+            exitCode: raw.isError ? 1 : 0,
+            durationMs: durationsById.get(tc.id),
+            notFound: /command not found|is not recognized as an internal|No such file or directory.*(npx|npm|pnpm|yarn)/i.test(raw.content)
+          })
+        }
+        toolHistory.push({
+          call: `${tc.name}(${JSON.stringify(tc.arguments).slice(0, 300)})`,
+          result: raw.content.slice(0, 600),
+          isError: raw.isError === true
+        })
         if (tc.name === 'run_checks' && !raw.isError) {
           turnRanChecks = true
         }
@@ -912,6 +1104,63 @@ export async function agentLoop(
       }
 
       consecutiveToolErrors = roundErrors > 0 ? consecutiveToolErrors + 1 : 0
+
+      // Runtime perception: new errors from background jobs / the browser page.
+      if (!signal.aborted) {
+        const explicitPageCheck = result.toolCalls.some((tc) => tc.name === 'browser_console' || tc.name === 'browser_network')
+        const runtimeNote = await collectRuntimeEvents({
+          sessionKey: sessionId,
+          browserOwner: `session:${sessionId}`,
+          poll: window.api?.shell?.poll ? (id) => window.api.shell.poll(id) : undefined,
+          runtime: window.api?.browser?.runtime,
+          includeBrowser: turnUsedBrowser && !explicitPageCheck
+        }).catch(() => '')
+        if (runtimeNote) appendToLastToolResult(entries, runtimeNote)
+      }
+
+      // Stuck recovery ladder (replaces a hard stop on repeated rounds).
+      const step = stuck.observe({
+        calls: result.toolCalls,
+        results: result.toolCalls.map((tc) => {
+          const r = resultsById.get(tc.id)
+          return { name: tc.name, isError: r?.isError, content: r?.content || '' }
+        })
+      })
+      if (step && !signal.aborted) {
+        useUsageStore.getState().noteDiagnostic(
+          sessionId,
+          'warn',
+          i18n.t('chat.diagnostics.stuckRecovery', { level: step.level, action: step.action, detail: step.signal.detail.slice(0, 140) })
+        )
+        let nudge = step.nudge
+        if (step.action === 'escalate') stuckEscalate = 1
+        if (step.action === 'rollback') stuckEscalate = 2
+        if (step.action === 'second_opinion') {
+          if (lastAssistantMsgId) useStreamingStore.getState().setActivity(lastAssistantMsgId, i18n.t('chat.secondOpinion'))
+          const opinion = await requestSecondOpinion(stuckDigest(userContent, toolHistory, step.signal), {
+            currentKey: decision.key,
+            sessionId,
+            signal
+          }).catch(() => null)
+          if (lastAssistantMsgId) useStreamingStore.getState().setActivity(lastAssistantMsgId, null)
+          if (opinion) {
+            nudge = nudge.replace('</stuck_recovery>', `<second_opinion model="${opinion.model}">\n${opinion.text}\n</second_opinion>\n</stuck_recovery>`)
+            useAppStore.getState().addMessage(projectId, sessionId, {
+              id: `${Date.now()}-second-opinion`,
+              role: 'system',
+              content: `[Tool: second_opinion] OK\n${opinion.model}: ${opinion.text}`,
+              createdAt: Date.now()
+            })
+          }
+        }
+        appendToLastToolResult(entries, nudge)
+        if (step.action === 'ask_user') {
+          persistTranscript(sessionId, entries, decision.key, decision.tier)
+          systemError(projectId, sessionId, i18n.t('chat.errors.stuckAskUser', { detail: step.signal.detail.slice(0, 200) }))
+          break
+        }
+      }
+
       persistTranscript(sessionId, entries, decision.key, decision.tier)
       // Never re-mark a Stop'd turn as running (false cold-start resume).
       if (!signal.aborted) {

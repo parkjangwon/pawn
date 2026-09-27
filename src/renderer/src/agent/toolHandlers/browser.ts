@@ -1,4 +1,5 @@
 import { requireBrowser } from './browserHelpers'
+import { withPageEvents } from './runtime'
 import type { ToolHandler } from './types'
 
 
@@ -211,18 +212,18 @@ const browser_tab_close: ToolHandler = async (call, projectPath, _signal, ctx, a
 }
 
 export const browserHandlers: Record<string, ToolHandler> = {
-  'browser_navigate': browser_navigate,
+  'browser_navigate': withPageEvents(browser_navigate),
   'browser_snapshot': browser_snapshot,
-  'browser_click': browser_click,
-  'browser_fill': browser_fill,
+  'browser_click': withPageEvents(browser_click),
+  'browser_fill': withPageEvents(browser_fill),
   'browser_read_text': browser_read_text,
-  'browser_eval': browser_eval,
-  'browser_back': browser_back,
+  'browser_eval': withPageEvents(browser_eval),
+  'browser_back': withPageEvents(browser_back),
   'browser_screenshot': browser_screenshot,
   'browser_open_external': browser_open_external,
-  'browser_wait': browser_wait,
-  'browser_scroll': browser_scroll,
-  'browser_select': browser_select,
+  'browser_wait': withPageEvents(browser_wait),
+  'browser_scroll': withPageEvents(browser_scroll),
+  'browser_select': withPageEvents(browser_select),
   'browser_tab_new': browser_tab_new,
   'browser_tab_list': browser_tab_list,
   'browser_tab_switch': browser_tab_switch,

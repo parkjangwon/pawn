@@ -227,6 +227,8 @@ const api = {
     tabSwitch: (id: string, owner?: string) => ipcRenderer.invoke('browser:tabSwitch', id, owner),
     tabClose: (id: string, owner?: string) => ipcRenderer.invoke('browser:tabClose', id, owner),
     logs: () => ipcRenderer.invoke('browser:logs'),
+    runtime: (owner?: string, opts?: { since?: number; kinds?: string[]; minLevel?: string; limit?: number; clear?: boolean }) =>
+      ipcRenderer.invoke('browser:runtime', owner, opts || {}),
     navigate: (url: string, owner?: string) => ipcRenderer.invoke('browser:navigate', url, owner),
     back: (owner?: string) => ipcRenderer.invoke('browser:back', owner),
     reload: (owner?: string) => ipcRenderer.invoke('browser:reload', owner),
@@ -391,7 +393,61 @@ const api = {
     references: (root: string, path: string, line: number, character: number) =>
       ipcRenderer.invoke('lsp:references', root, path, line, character),
     hover: (root: string, path: string, line: number, character: number) =>
-      ipcRenderer.invoke('lsp:hover', root, path, line, character)
+      ipcRenderer.invoke('lsp:hover', root, path, line, character),
+    rename: (root: string, path: string, line: number, character: number, newName: string) =>
+      ipcRenderer.invoke('lsp:rename', root, path, line, character, newName),
+    symbols: (root: string, path: string, query?: string) => ipcRenderer.invoke('lsp:symbols', root, path, query || ''),
+    callHierarchy: (root: string, path: string, line: number, character: number, direction: 'incoming' | 'outgoing') =>
+      ipcRenderer.invoke('lsp:callHierarchy', root, path, line, character, direction),
+    codeActions: (
+      root: string,
+      path: string,
+      range: { startLine: number; startColumn?: number; endLine?: number; endColumn?: number },
+      only?: string[]
+    ) => ipcRenderer.invoke('lsp:codeActions', root, path, range, only),
+    applyCodeAction: (root: string, path: string, index: number) =>
+      ipcRenderer.invoke('lsp:applyCodeAction', root, path, index)
+  },
+  /** Persistent bash sessions (Claude's bash tool). */
+  bash: {
+    run: (key: string, command: string, opts: { cwd: string; timeoutMs?: number; sandbox?: Record<string, unknown> }) =>
+      ipcRenderer.invoke('bash:run', key, command, opts),
+    restart: (key: string, cwd: string, sandbox?: Record<string, unknown>) => ipcRenderer.invoke('bash:restart', key, cwd, sandbox),
+    kill: (key: string) => ipcRenderer.invoke('bash:kill', key)
+  },
+  /** Debugger (DAP adapters + Node inspector). */
+  debug: {
+    start: (opts: Record<string, unknown>) => ipcRenderer.invoke('debug:start', opts),
+    setBreakpoints: (key: string, path: string, lines: Array<number | { line: number; condition?: string }>) =>
+      ipcRenderer.invoke('debug:setBreakpoints', key, path, lines),
+    control: (key: string, action: 'continue' | 'over' | 'into' | 'out' | 'pause' | 'state', timeoutMs?: number) =>
+      ipcRenderer.invoke('debug:control', key, action, timeoutMs),
+    evaluate: (key: string, expression: string, frameId?: number) => ipcRenderer.invoke('debug:evaluate', key, expression, frameId),
+    stop: (key: string) => ipcRenderer.invoke('debug:stop', key),
+    list: () => ipcRenderer.invoke('debug:list')
+  },
+  /** Local code index (hybrid BM25 + dense) and affected-test selection. */
+  codeIndex: {
+    search: (root: string, queries: string[], opts?: { limit?: number; pathPrefix?: string }) =>
+      ipcRenderer.invoke('codeIndex:search', root, queries, opts || {}),
+    update: (root: string) => ipcRenderer.invoke('codeIndex:update', root)
+  },
+  tests: {
+    affected: (root: string, files: string[], opts?: { maxDepth?: number; limit?: number }) =>
+      ipcRenderer.invoke('tests:affected', root, files, opts || {})
+  },
+  net: {
+    probePort: (port: number, host?: string) => ipcRenderer.invoke('net:probePort', port, host)
+  },
+  /** Full tool outputs offloaded out of the context window. */
+  outputs: {
+    save: (sessionId: string, content: string) => ipcRenderer.invoke('outputs:save', sessionId, content),
+    read: (id: string, opts?: Record<string, unknown>) => ipcRenderer.invoke('outputs:read', id, opts || {})
+  },
+  /** Learned per-repository profile (commands, conventions, gotchas). */
+  profile: {
+    get: (root: string) => ipcRenderer.invoke('profile:get', root),
+    save: (root: string, json: string) => ipcRenderer.invoke('profile:save', root, json)
   },
   connections: {
     list: () => ipcRenderer.invoke('connections:list'),

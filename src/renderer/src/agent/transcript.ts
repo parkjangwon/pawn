@@ -15,6 +15,8 @@
 
 import type { ModelTier } from '../types/provider'
 
+import { callPaths, isFileMutation } from './nativeTools'
+
 export interface TranscriptToolCall {
   id: string
   name: string
@@ -231,6 +233,8 @@ export interface CompactOptions {
   llmSummary?: string
   /** Current plan (update_plan) to carry across compaction. */
   plan?: Array<{ content: string; status: string }>
+  /** The agent's working notes (working_notes) to carry across compaction. */
+  notes?: string
 }
 
 const PRESERVED_RESULT_BUDGET = 4500
@@ -293,8 +297,10 @@ function touchedFiles(older: TranscriptEntry[]): string[] {
   for (const e of older) {
     if (e.role !== 'assistant') continue
     for (const tc of e.toolCalls || []) {
-      const p = tc.arguments.path || tc.arguments.file_path || tc.arguments.cwd
-      if (typeof p === 'string') files.add(p)
+      const paths = callPaths(tc)
+      for (const p of paths) files.add(p)
+      const cwd = tc.arguments.cwd
+      if (!paths.length && typeof cwd === 'string') files.add(cwd)
     }
   }
   return Array.from(files)
@@ -321,8 +327,9 @@ export function heuristicDigest(older: TranscriptEntry[]): string[] {
       for (const tc of e.toolCalls || []) {
         toolNames.set(tc.name, (toolNames.get(tc.name) || 0) + 1)
         const p = tc.arguments.path || tc.arguments.file_path || tc.arguments.cwd
-        if (tc.name === 'edit_file' || tc.name === 'write_file' || tc.name === 'delete_file' || tc.name === 'git_commit') {
-          decisions.push(`${tc.name}${typeof p === 'string' ? ` → ${p}` : ''}`)
+        if (tc.name === 'git_commit' || isFileMutation(tc)) {
+          const paths = callPaths(tc)
+          decisions.push(`${tc.name}${paths.length ? ` → ${paths.slice(0, 4).join(', ')}` : typeof p === 'string' ? ` → ${p}` : ''}`)
         }
       }
     }
@@ -403,6 +410,9 @@ export function buildCompactionSummary(older: TranscriptEntry[], opts: CompactOp
   }
   const plan = formatPlan(opts.plan)
   if (plan) parts.push(plan)
+  if (opts.notes?.trim()) {
+    parts.push(`Your working notes (still current — keep them updated with working_notes):\n<working_notes>\n${opts.notes.trim()}\n</working_notes>`)
+  }
   parts.push(
     'Re-read any file above before editing it; full contents are no longer in context. Prefer git_status/git_diff if unsure what landed.'
   )

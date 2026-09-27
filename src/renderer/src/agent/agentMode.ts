@@ -16,6 +16,7 @@ const MUTATING_PREFIXES = [
   'delete_',
   'shell_',
   'computer_',
+  'debug_',
   'install_',
   'app_create_',
   'memory_save',
@@ -29,6 +30,12 @@ const MUTATING_PREFIXES = [
 ] as const
 
 const MUTATING_EXACT = new Set([
+  'apply_patch',
+  'bash',
+  'lsp_rename',
+  'lsp_apply_code_action',
+  'checkpoint_restore',
+  'str_replace_based_edit_tool',
   'browser_click',
   'browser_fill',
   'browser_eval',
@@ -53,6 +60,9 @@ const MUTATING_EXACT = new Set([
 /** Explicitly allowed mutators that are actually planning (none currently). */
 const PLAN_EXTRA_ALLOW = new Set([
   'update_plan',
+  'shell_wait',
+  'working_notes',
+  'project_profile',
   'repo_map',
   'load_skill',
   'load_tools',

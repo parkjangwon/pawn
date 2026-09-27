@@ -40,6 +40,8 @@ interface ProviderState {
   toolLoading: ToolLoadingMode
   /** Declare Claude's native computer tool on the Anthropic API (better accuracy, batched actions). */
   nativeComputerTool: boolean
+  /** Model-native coding tools: Claude text editor + bash, GPT apply_patch. */
+  nativeCodingTools: boolean
   /**
    * Subagent tier pin policy for cost control:
    * frugal | balanced (default) | quality
@@ -89,6 +91,7 @@ interface ProviderState {
   setLspDiagnostics: (v: boolean) => void
   setToolLoading: (mode: ToolLoadingMode) => void
   setNativeComputerTool: (v: boolean) => void
+  setNativeCodingTools: (v: boolean) => void
   setSubagentCostMode: (mode: 'frugal' | 'balanced' | 'quality') => void
   setMaxParallelSubagents: (n: number) => void
   setAutoOpenAgentsPanel: (v: boolean) => void
@@ -149,6 +152,7 @@ function saveToBackend(state: ProviderState): void {
       lspDiagnostics: state.lspDiagnostics,
       toolLoading: state.toolLoading,
       nativeComputerTool: state.nativeComputerTool,
+      nativeCodingTools: state.nativeCodingTools,
       subagentCostMode: state.subagentCostMode,
       maxParallelSubagents: state.maxParallelSubagents,
       autoOpenAgentsPanel: state.autoOpenAgentsPanel
@@ -177,6 +181,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   lspDiagnostics: true,
   toolLoading: 'smart',
   nativeComputerTool: true,
+  nativeCodingTools: true,
   subagentCostMode: 'balanced',
   maxParallelSubagents: 4,
   autoOpenAgentsPanel: true,
@@ -222,6 +227,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         lspDiagnostics: settings.lspDiagnostics !== false,
         toolLoading: parseToolLoadingMode(settings.toolLoading),
         nativeComputerTool: settings.nativeComputerTool !== false,
+        nativeCodingTools: settings.nativeCodingTools !== false,
         subagentCostMode: parseSubagentCostMode(settings.subagentCostMode),
         maxParallelSubagents: parseMaxParallelSubagents(settings.maxParallelSubagents),
         autoOpenAgentsPanel: settings.autoOpenAgentsPanel !== false,
@@ -442,6 +448,13 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       return { lspDiagnostics: v }
     })
     void window.api?.lsp?.setEnabled?.(v)?.catch?.(() => {})
+  },
+  setNativeCodingTools: (v) => {
+    set((s) => {
+      const next = { ...s, nativeCodingTools: v }
+      saveToBackend(next)
+      return { nativeCodingTools: v }
+    })
   },
   setNativeComputerTool: (v) => {
     set((s) => {

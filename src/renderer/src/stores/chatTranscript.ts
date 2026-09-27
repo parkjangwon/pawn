@@ -187,7 +187,18 @@ const TOOL_RESULT_CAPS: Record<string, number> = {
   computer_ui_snapshot: 30_000,
   computer_ocr: 20_000,
   computer_windows: 8_000,
-  computer_apps: 8_000
+  computer_apps: 8_000,
+  // Model-native coding tools and runtime tools.
+  str_replace_based_edit_tool: 80_000,
+  bash: 24_000,
+  apply_patch: 8_000,
+  shell_wait: 8_000,
+  read_output: 40_000,
+  semantic_search: 16_000,
+  lsp_symbols: 16_000,
+  debug_start: 12_000,
+  debug_control: 12_000,
+  working_notes: 10_000
 }
 const DEFAULT_TOOL_RESULT_CAP = 12_000
 

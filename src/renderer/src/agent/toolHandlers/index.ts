@@ -10,6 +10,9 @@ import { memoryHandlers } from './memory'
 import { shellHandlers } from './shell'
 import { webHandlers } from './web'
 import { lspHandlers } from './lsp'
+import { nativeHandlers } from './native'
+import { runtimeHandlers } from './runtime'
+import { debugHandlers } from './debug'
 
 export type { ToolExecContext, ToolHandler } from './types'
 
@@ -25,4 +28,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   ...shellHandlers,
   ...webHandlers,
   ...lspHandlers,
+  ...nativeHandlers,
+  ...runtimeHandlers,
+  ...debugHandlers
 }

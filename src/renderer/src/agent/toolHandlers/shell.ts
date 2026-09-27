@@ -1,7 +1,29 @@
 import { resolveToolPath } from '../pathUtils'
 import { useProviderStore } from '../../stores/provider'
 import type { ToolHandler } from './types'
+import { analyzeProcessOutput, formatAnalysis, markJobSeen, watchJob } from '../runtimeWatch'
 
+
+/**
+ * Sandbox options for an agent shell. User prefs are a ceiling: the model may
+ * tighten (sandbox on, network off) but never loosen what the user configured.
+ */
+export function shellSandboxFor(
+  args: Record<string, unknown>,
+  projectPath: string | undefined,
+  ctx?: { sessionId?: string }
+): { enabled: boolean; network: boolean; projectRoot?: string; jailCwd: boolean; sessionId?: string } {
+  const prefs = useProviderStore.getState()
+  const prefSandbox = prefs.shellSandbox !== false
+  const prefNetwork = prefs.shellNetwork !== false
+  return {
+    enabled: prefSandbox ? true : args.sandbox === true,
+    network: prefNetwork ? args.network !== false : false,
+    projectRoot: projectPath,
+    jailCwd: prefs.shellCwdJail !== false,
+    sessionId: ctx?.sessionId
+  }
+}
 
 const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
         if (signal?.aborted) {
@@ -21,20 +43,7 @@ const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
         )
         const workDir = cwd === '.' ? projectPath : cwd
         const background = Boolean(call.arguments.background)
-        const prefs = useProviderStore.getState()
-        // User prefs are a ceiling: the model may tighten (sandbox on, network
-        // off) but never loosen what the user configured.
-        const prefSandbox = prefs.shellSandbox !== false
-        const sandboxEnabled = prefSandbox ? true : call.arguments.sandbox === true
-        const prefNetwork = prefs.shellNetwork !== false
-        const network = prefNetwork ? call.arguments.network !== false : false
-        const sandbox = {
-          enabled: sandboxEnabled,
-          network,
-          projectRoot: projectPath,
-          jailCwd: prefs.shellCwdJail !== false,
-          sessionId: ctx?.sessionId
-        }
+        const sandbox = shellSandboxFor(call.arguments, projectPath, ctx)
         if (background) {
           const started = await api.shell.start(command, workDir, sandbox)
           if (started.error || !started.jobId) {
@@ -44,9 +53,10 @@ const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
               isError: true
             }
           }
+          watchJob(ctx?.subagent && ctx.subagentRunId ? `sub-${ctx.subagentRunId}` : ctx?.sessionId || 'default', started.jobId, command)
           return {
             toolCallId: call.id,
-            content: `Background job started: ${started.jobId}${started.pid ? ` (pid ${started.pid})` : ''}${started.sandboxNote ? `\n(${started.sandboxNote})` : ''}\nUse shell_poll with job_id to check output; shell_kill to stop.`
+            content: `Background job started: ${started.jobId}${started.pid ? ` (pid ${started.pid})` : ''}${started.sandboxNote ? `\n(${started.sandboxNote})` : ''}\nUse shell_wait (until a pattern / port / exit) or shell_poll to check output; shell_kill to stop. New errors it prints are reported to you automatically.`
           }
         }
         // Stop/steer aborts kill this session's shells only (not other concurrent turns).
@@ -97,13 +107,15 @@ const shell_poll: ToolHandler = async (call, projectPath, _signal, ctx, api) => 
         }
         const header = `[${polled.status}] ${polled.command || jobId} (${polled.elapsedMs || 0}ms)`
         const body = [polled.stdout, polled.stderr].filter(Boolean).join('\n')
+        markJobSeen(ctx?.subagent && ctx.subagentRunId ? `sub-${ctx.subagentRunId}` : ctx?.sessionId || 'default', jobId, (polled.stdout || '').length + (polled.stderr ? polled.stderr.length + 1 : 0))
+        const detected = formatAnalysis(analyzeProcessOutput(body))
         const foot =
           polled.status === 'exited'
             ? `\n(exit ${polled.exitCode}${polled.killed ? ', killed' : ''})`
             : ''
         return {
           toolCallId: call.id,
-          content: (header + (body ? '\n' + body : '') + foot).slice(0, 24000)
+          content: (header + (detected ? `\n${detected}` : '') + (body ? '\n' + (body.length > 22_000 ? `…${body.slice(-22_000)}` : body) : '') + foot).slice(0, 24000)
         }
       }
 

@@ -3,6 +3,7 @@ import { getConnectedProviders, hiddenToolNames } from './toolsets'
 import { TOOLS as SUBAGENT_TOOLS } from './toolDefinitions'
 import { executeTool } from './toolExecutor'
 import { TOOL_SAFETY } from './toolPermission'
+import { effectiveToolName } from './toolIdentity'
 import {
   route,
   setSessionRoute,
@@ -585,7 +586,7 @@ export async function runSubagent(
           continue
         }
         applyBudget(toolBudget, decision)
-        ;(TOOL_SAFETY[tc.name] === 'safe' ? safe : risky).push(tc)
+        ;(TOOL_SAFETY[effectiveToolName(tc)] === 'safe' ? safe : risky).push(tc)
       }
 
       policyBlockStreak = nextPolicyBlockStreak(policyBlockStreak, {

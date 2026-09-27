@@ -98,6 +98,25 @@ Agent loop: up to **50** tool rounds/turn; identical-call loop break. Permission
 | `write_artifact` / `list_artifacts` | `<project>/artifacts/` |
 | `terminal_list` / `terminal_read` | Embedded terminal buffer |
 | `update_plan` | Session checklist |
+| `shell_wait` | Wait for a background job: output pattern, localhost port, or exit (dev servers) |
+| `semantic_search` | Concept search over the repo (local hybrid BM25 + dense index in `~/.pawn/index`) |
+| `affected_tests` | Tests touched by changed files via the import graph (TS/JS aliases, Python, Go) + exact command |
+| `lsp_diagnostics` / `lsp_definition` / `lsp_references` / `lsp_hover` / `lsp_symbols` / `lsp_call_hierarchy` | Language-server navigation |
+| `lsp_rename` / `lsp_code_actions` / `lsp_apply_code_action` | Semantic rename, quick fixes, refactorings (applied with undo) |
+| `read_output` | Page / grep / tail a full tool output that was truncated or cleared (`~/.pawn/outputs`, 7 days) |
+| `working_notes` | Agent scratchpad that survives context clearing and compaction |
+| `checkpoint_mark` / `checkpoint_restore` | Named known-good states of the agent's changed files |
+| `project_profile` | Learned repo profile (`~/.pawn/profiles`): verified commands, conventions, gotchas |
+| `debug_start` / `debug_breakpoints` / `debug_control` / `debug_eval` / `debug_stop` | Real debugger (group `debug`): Node inspector, debugpy, delve, lldb-dap |
+
+**Model-native tools** (Settings → Agent → *Model-native coding tools*, on by default): Claude 4+ on the Anthropic API gets `str_replace_based_edit_tool` (`text_editor_20250728`) and a persistent `bash` session (`bash_20250124`) instead of `read_file`/`write_file`/`edit_file`; GPT-4.1 / GPT-5 / o3 / o4 / Codex models get `apply_patch` (V4A) instead of `edit_file`/`write_file`. Both run through the same undo ledger, stale-write protection, verification, permissions and Plan mode.
+
+**Agent loop behaviour**
+- Read-only tools start while the model is still streaming; files named in the user's message are attached up front.
+- Tool outputs over the transcript cap are saved and referenced by id (`read_output`); stale bulky results are cleared (oldest first, one batch) before a full compaction is needed.
+- Errors printed by background jobs and the browser page (console, exceptions, failed requests) are surfaced to the agent in `<runtime_events>` after each round.
+- Stuck recovery: repeated calls / errors / edit thrash trigger a ladder — reflect → stronger model → second opinion from another model → rollback suggestion → stop and ask the user.
+- Corrections ("no, use pnpm", "그게 아니라…", or undoing a turn and explaining) become project Memory lessons.
 
 ### 5.2 Lifecycle hooks
 
@@ -151,7 +170,7 @@ SSRF guards block private/loopback by default. Fetched text wrapped as untrusted
 
 ### 5.5 Browser & computer use
 
-**Browser** (`browser_*`): embedded Chromium, own cookies — navigate, snapshot, click, fill, screenshot, AI cursor.
+**Browser** (`browser_*`): embedded Chromium, own cookies — navigate, snapshot, click, fill, screenshot, AI cursor. `browser_console` / `browser_network` show console errors, uncaught exceptions and failed requests; actions report what the page logged while they ran.
 
 **Computer** (`computer_*`) — full desktop OS. On macOS a bundled native helper (`pawn-cua`, Swift: ScreenCaptureKit, CGEvent, Accessibility, Vision) does the work; no Homebrew deps.
 

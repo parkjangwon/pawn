@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import { enqueueDbWrite } from '../utils/dbWriteQueue'
+import { noteRevert } from '../agent/correctionLearning'
 
 /** Max chars of file content kept for undo (per side). Larger files skip revert. */
 export const LEDGER_CONTENT_CAP = 2 * 1024 * 1024
@@ -359,6 +360,9 @@ export const useChangeLedger = create<ChangeLedgerState>((set, get) => ({
     }
     const latest = get().turns.find((t) => t.id === turn.id)
     if (latest) persistTurn(latest)
+    // The user undid the agent's work: their next message likely says why
+    // (correction learning pairs the two).
+    if (reverted > 0) noteRevert(turn.sessionId, applied.map((c) => c.path))
     return {
       ok: reverted > 0,
       reverted,

@@ -5,7 +5,8 @@ import type { ToolCall, ToolResult } from './toolDefinitionsTypes'
 import { TOOL_HANDLERS, type ToolExecContext } from './toolHandlers'
 import { isToolAllowedInAgentMode, planModeBlockMessage } from './agentMode'
 import { useProviderStore } from '../stores/provider'
-import { isNativeComputerCall, nativeCallToAction, permissionName } from './computerToolset'
+import { isNativeComputerCall, nativeCallToAction } from './computerToolset'
+import { effectiveToolName } from './toolIdentity'
 import { currentPolicy, toToolResult } from './toolHandlers/computer'
 
 export type { ToolExecContext } from './toolHandlers'
@@ -66,7 +67,7 @@ export async function executeTool(
 
   // Native Claude computer tool: permission + plan checks use computer_<action>.
   const native = isNativeComputerCall(call)
-  const permName = permissionName(call)
+  const permName = effectiveToolName(call)
   const agentMode = useProviderStore.getState().agentModeFor(ctx?.sessionId)
   if (!isToolAllowedInAgentMode(permName, agentMode)) {
     return { toolCallId: call.id, content: planModeBlockMessage(permName), isError: true }

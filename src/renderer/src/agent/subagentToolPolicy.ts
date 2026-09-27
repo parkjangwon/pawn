@@ -2,6 +2,8 @@
  * Bounded tool scope for subagents — beyond allow/deny tool name lists:
  * path globs, mutating-tool budgets, and shell caps.
  */
+import { effectiveToolName } from './toolIdentity'
+import { APPLY_PATCH_NAME, callPaths } from './nativeTools'
 import type { ToolCall } from './toolDefinitionsTypes'
 import type { AgentProfile } from './agentProfiles'
 
@@ -174,7 +176,8 @@ export function checkSubagentToolCall(
   budget: ToolBudgetState,
   opts?: { projectPath?: string }
 ): ToolPolicyDecision {
-  const name = call.name
+  // Model-native tools are policed as the Pawn tool they act as.
+  const name = call.name === APPLY_PATCH_NAME ? 'edit_file' : effectiveToolName(call)
   if (!profileAllowsToolName(name, profile)) {
     return { allowed: false, reason: `Tool "${name}" is not allowed for this subagent profile` }
   }
@@ -203,7 +206,7 @@ export function checkSubagentToolCall(
     }
   }
 
-  const rawPaths = extractToolPaths(call)
+  const rawPaths = call.name === APPLY_PATCH_NAME ? callPaths(call) : extractToolPaths(call)
   if (rawPaths.length > 0 && (profile.pathAllow?.length || profile.pathDeny?.length)) {
     for (const raw of rawPaths) {
       const rel = toProjectRelative(raw, opts?.projectPath)

@@ -18,6 +18,7 @@ import { contentSearch } from '../main/contentSearch'
 import { isProtectedRemovePath, isSecretDotFile } from '../main/fsGuards'
 import { CuaHelper, findHelper, helperCandidates } from '../main/computer/cuaHelper'
 import { ComputerEngine } from '../main/computer/engine'
+import { createAgentRuntime } from '../main/agentRuntime'
 
 export interface HeadlessConfig {
   settings?: Record<string, unknown>
@@ -310,7 +311,10 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       for (const c of Array.from(live)) killTree(c)
       return { ok: true, killed: n }
     },
-    killSession: async () => shell.killAll()
+    killSession: async (sessionId?: string) => {
+      if (sessionId) rt.bash.kill(sessionId)
+      return shell.killAll()
+    }
   }
 
   const db = {
@@ -389,8 +393,39 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
     }
   }
 
+  // Same runtime services as the desktop main process; outputs and profiles
+  // stay in memory (nothing is written under ~/.pawn).
+  const rt = createAgentRuntime({ pawnDir: null })
+
   const api: Record<string, any> = {
     platform: 'headless',
+    bash: {
+      run: (key: string, command: string, o: unknown) => rt.bash.run(key, command, o),
+      restart: (key: string, cwd: string, sandbox?: unknown) => rt.bash.restart(key, cwd, sandbox),
+      kill: async (key: string) => rt.bash.kill(key)
+    },
+    debug: {
+      start: (o: unknown) => rt.debug.start(o),
+      setBreakpoints: (key: string, path: string, lines: unknown) => rt.debug.setBreakpoints(key, path, lines),
+      control: (key: string, action: string, timeoutMs?: number) => rt.debug.control(key, action, timeoutMs),
+      evaluate: (key: string, expression: string, frameId?: number) => rt.debug.evaluate(key, expression, frameId),
+      stop: (key: string) => rt.debug.stop(key),
+      list: async () => rt.debug.list()
+    },
+    codeIndex: {
+      search: (root: string, queries: string[], o?: unknown) => rt.codeIndex.search(root, queries, o),
+      update: (root: string) => rt.codeIndex.update(root)
+    },
+    tests: { affected: (root: string, files: string[], o?: unknown) => rt.tests.affected(root, files, o) },
+    net: { probePort: (port: number, host?: string) => rt.net.probePort(port, host) },
+    outputs: {
+      save: (sessionId: string, content: string) => rt.outputs.save(sessionId, content),
+      read: (id: string, o?: unknown) => rt.outputs.read(id, o)
+    },
+    profile: {
+      get: (root: string) => rt.profile.get(root),
+      save: (root: string, json: string) => rt.profile.save(root, json)
+    },
     ...(computer ? { computer } : {}),
     appVersion: async () => 'headless',
     fs,
@@ -424,6 +459,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       for (const c of Array.from(live)) killTree(c)
       live.clear()
       cua?.dispose()
+      void rt.dispose()
     }
   }
 }

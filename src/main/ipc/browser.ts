@@ -1,9 +1,10 @@
-import { ipcMain, WebContentsView } from 'electron'
+import { ipcMain, session, WebContentsView } from 'electron'
 import { handleTrusted } from './trust'
 import { getMainWindow } from '../window'
 import { injectAICursor, cursorShow, cursorHide } from '../browserCursor'
 import { injectPicker, stopPicker, getPickerState } from '../browserPicker'
 import { BrowserTabManager, type BrowserTabInfo } from '../browserTabs'
+import { formatRuntimeEvents, parseConsoleMessage, RuntimeEventLog, type RuntimeEventKind, type RuntimeLevel } from '../browserRuntime'
 
 // The embedded browser runs in its own session partition. The app's own CSP is
 // installed on `session.defaultSession`; sharing it would apply `default-src
@@ -47,6 +48,40 @@ function normalizeBrowserUrl(rawUrl: string): string | null {
 // throttling keeps hidden pages cheap).
 
 const tabManager = new BrowserTabManager()
+/** Console / exception / network / crash events per tab (agent runtime perception). */
+const runtimeLog = new RuntimeEventLog()
+const tabByWebContents = new Map<number, string>()
+let networkWatchInstalled = false
+
+/** Failed requests of every tab, attributed through webContentsId. */
+function installNetworkWatch(): void {
+  if (networkWatchInstalled) return
+  networkWatchInstalled = true
+  try {
+    const ses = session.fromPartition(BROWSER_PARTITION)
+    ses.webRequest.onCompleted({ urls: ['*://*/*'] }, (d) => {
+      if (d.statusCode < 400 || /\/favicon\.ico(\?|$)/.test(d.url)) return
+      const tabId = typeof d.webContentsId === 'number' ? tabByWebContents.get(d.webContentsId) : undefined
+      if (!tabId) return
+      runtimeLog.push(tabId, {
+        kind: 'network',
+        level: d.statusCode >= 500 ? 'error' : 'warn',
+        text: `${d.resourceType || ''}`.trim(),
+        url: d.url.slice(0, 500),
+        status: d.statusCode,
+        method: d.method
+      })
+    })
+    ses.webRequest.onErrorOccurred({ urls: ['*://*/*'] }, (d) => {
+      if (d.error === 'net::ERR_ABORTED' || d.error === 'net::ERR_BLOCKED_BY_CLIENT') return
+      const tabId = typeof d.webContentsId === 'number' ? tabByWebContents.get(d.webContentsId) : undefined
+      if (!tabId) return
+      runtimeLog.push(tabId, { kind: 'network', level: 'error', text: d.error, url: d.url.slice(0, 500), method: d.method })
+    })
+  } catch {
+    /* partition unavailable (tests) */
+  }
+}
 const views = new Map<string, WebContentsView>()
 const logsByTab = new Map<string, string[]>()
 let browserVisible = false
@@ -170,6 +205,8 @@ function createTabView(initialUrl?: string, owner?: string | null): { tab?: Brow
   const tab = tabManager.create({ owner })
   views.set(tab.id, view)
   logsByTab.set(tab.id, [])
+  tabByWebContents.set(wc.id, tab.id)
+  installNetworkWatch()
   win.contentView.addChildView(view)
   parkView(view)
 
@@ -187,16 +224,32 @@ function createTabView(initialUrl?: string, owner?: string | null): { tab?: Brow
     if (!views.has(tab.id)) return
     views.delete(tab.id)
     logsByTab.delete(tab.id)
+    runtimeLog.drop(tab.id)
+    tabByWebContents.delete(wc.id)
     const result = tabManager.close(tab.id)
     if (result?.nextActiveId) showActiveView()
     if (tabManager.count === 0) pickerActive = false
     emitBrowserEvent({ type: 'tab:closed', tabId: tab.id, ...browserState() })
   })
-  wc.on('console-message', (_e, level, message, line, sourceId) => {
-    const tag = level === 2 ? 'warn' : level === 3 ? 'error' : 'info'
+  // Electron 35+ passes one details object; older versions positional args.
+  ;(wc as unknown as { on(ev: string, cb: (...args: unknown[]) => void): void }).on('console-message', (...args: unknown[]) => {
+    const m = parseConsoleMessage(args)
     const logs = tabLogs(tab.id)
-    logs.push(`[${tag}] ${message}${sourceId ? ` (${sourceId}:${line})` : ''}`)
+    logs.push(`[${m.level}] ${m.message}${m.source ? ` (${m.source})` : ''}`)
     if (logs.length > 300) logs.splice(0, logs.length - 300)
+    if (m.level === 'debug') return
+    runtimeLog.push(tab.id, {
+      kind: /^Uncaught\b|^Unhandled Promise Rejection/i.test(m.message) ? 'exception' : 'console',
+      level: m.level,
+      text: m.message,
+      ...(m.source ? { source: m.source } : {})
+    })
+  })
+  wc.on('render-process-gone', (_e, details) => {
+    runtimeLog.push(tab.id, { kind: 'crash', level: 'error', text: `renderer ${details.reason}${details.exitCode ? ` (exit ${details.exitCode})` : ''}` })
+  })
+  wc.on('unresponsive', () => {
+    runtimeLog.push(tab.id, { kind: 'crash', level: 'warn', text: 'page became unresponsive (main thread blocked)' })
   })
   wc.on('did-start-loading', () => {
     tabManager.patch(tab.id, { loading: true })
@@ -222,6 +275,7 @@ function createTabView(initialUrl?: string, owner?: string | null): { tab?: Brow
   })
   wc.on('did-fail-load', (_e, code, desc, url, isMainFrame) => {
     if (!isMainFrame || code === -3) return // -3 is a user/script-initiated abort
+    runtimeLog.push(tab.id, { kind: 'load', level: 'error', text: `${desc} (${code})`, url: String(url || '').slice(0, 500) })
     emitBrowserEvent({ type: 'error', tabId: tab.id, code, description: desc, url, ...browserState() })
   })
 
@@ -500,6 +554,26 @@ export function registerBrowserIpc(): void {
   })
 
   handleTrusted('browser:logs', async () => tabLogs(tabManager.activeId).slice(-50))
+
+  handleTrusted('browser:runtime', async (_, owner?: string, opts?: unknown) => {
+    // Read-only: never create a tab just to report on it.
+    const tab = owner ? tabManager.findByOwner(owner) : tabManager.active
+    const res = { tab: tab ?? undefined }
+    if (!res.tab) return { ok: false, error: 'No browser tab yet (call browser_navigate first).', events: [], latestSeq: runtimeLog.latestSeq }
+    const o = (opts && typeof opts === 'object' ? opts : {}) as Record<string, unknown>
+    const kinds = Array.isArray(o.kinds)
+      ? o.kinds.filter((k): k is RuntimeEventKind => typeof k === 'string' && ['console', 'exception', 'network', 'crash', 'load'].includes(k))
+      : undefined
+    const minLevel = (['error', 'warn', 'info', 'debug'] as const).find((l) => l === o.minLevel) as RuntimeLevel | undefined
+    const events = runtimeLog.events(res.tab.id, {
+      since: typeof o.since === 'number' ? o.since : 0,
+      kinds,
+      minLevel,
+      limit: typeof o.limit === 'number' ? o.limit : 100
+    })
+    if (o.clear === true) runtimeLog.clear(res.tab.id)
+    return { ok: true, events, latestSeq: runtimeLog.latestSeq, text: formatRuntimeEvents(events), url: res.tab.url || '' }
+  })
 
   handleTrusted('browser:tabCreate', async (_, rawUrl?: string, owner?: string) => {
     try {

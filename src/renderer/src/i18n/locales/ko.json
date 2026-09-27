@@ -83,7 +83,10 @@
       "sessionBudget": "세션 예산 도달 (${{cost}} / ${{cap}})",
       "dailyBudget": "일일 예산 도달 (${{cost}} / ${{cap}})",
       "compactedManual": "컨텍스트를 수동으로 압축했습니다",
-      "compactedSmart": "모델이 작성한 요약으로 컨텍스트를 압축했어요 — 캐시 프리픽스를 다시 채우는 중이에요."
+      "compactedSmart": "모델이 작성한 요약으로 컨텍스트를 압축했어요 — 캐시 프리픽스를 다시 채우는 중이에요.",
+      "lessonLearned": "교정 내용을 학습했어요: {{rule}}",
+      "toolResultsCleared": "컨텍스트를 가볍게 유지하려고 오래된 도구 결과 {{count}}개(약 {{tokens}}k 토큰)를 정리했어요 — 원문은 에이전트가 다시 볼 수 있어요",
+      "stuckRecovery": "에이전트가 막힌 것 같아요 (단계 {{level}}, {{action}}): {{detail}}"
     },
     "errors": {
       "noProvider": "프로바이더나 모델이 설정되지 않았습니다. 설정 → 프로바이더, 설정 → 모델에서 추가하세요.",
@@ -98,7 +101,8 @@
       "emptyResponse": "모델이 빈 응답을 반환했습니다. 다시 시도하거나 더 나은 모델로 바꿔 보세요. (메일 보내기는 지원하지 않습니다 — Google은 읽기 전용 연동입니다.)",
       "hookBlocked": "훅에 의해 차단됨 (UserPromptSubmit)",
       "sessionBudgetHit": "중지: 세션 비용 ${{cost}} (한도 ${{cap}}). Settings → Usage에서 한도를 올리거나 새 세션을 시작하세요.",
-      "dailyBudgetHit": "중지: 오늘 비용 ${{cost}} (한도 ${{cap}}). Settings → Usage에서 한도를 올리세요."
+      "dailyBudgetHit": "중지: 오늘 비용 ${{cost}} (한도 ${{cap}}). Settings → Usage에서 한도를 올리세요.",
+      "stuckAskUser": "에이전트가 계속 막혀서 멈췄어요 ({{detail}}). 시도한 내용은 위에 정리되어 있어요 — 어떻게 진행할지 알려 주세요."
     },
     "showEarlier": "이전 메시지 보기 ({{count}}개)",
     "suggestions": {
@@ -189,7 +193,8 @@
       "m": "{{n}}분",
       "s": "{{n}}초"
     },
-    "compacting": "컨텍스트 압축 중…"
+    "compacting": "컨텍스트 압축 중…",
+    "secondOpinion": "다른 모델에게 의견을 묻는 중…"
   },
   "automation": {
     "title": "자동화",
@@ -493,7 +498,9 @@
       "computerReady": "준비됨 — {{backend}} 헬퍼 {{version}}",
       "computerUnavailable": "컴퓨터 사용은 데스크톱 앱에서만 가능해요.",
       "nativeComputerTool": "Claude 네이티브 컴퓨터 도구",
-      "nativeComputerToolDesc": "Anthropic API에서 Claude가 학습된 자체 컴퓨터 도구를 쓰게 해요(여러 동작을 한 번에, 가장 정확한 클릭). Pawn의 접근성·OCR·앱·메뉴 도구는 그대로 쓸 수 있어요."
+      "nativeComputerToolDesc": "Anthropic API에서 Claude가 학습된 자체 컴퓨터 도구를 쓰게 해요(여러 동작을 한 번에, 가장 정확한 클릭). Pawn의 접근성·OCR·앱·메뉴 도구는 그대로 쓸 수 있어요.",
+      "nativeCodingTools": "모델 네이티브 코딩 도구",
+      "nativeCodingToolsDesc": "각 모델이 학습한 편집 도구를 그대로 제공해요: Anthropic API의 Claude에는 텍스트 에디터와 지속형 bash, GPT 모델에는 apply_patch. 되돌리기·권한·검증은 그대로 적용돼요."
     },
     "agentsSection": {
       "title": "서브에이전트",
@@ -1140,7 +1147,19 @@
     "windows": "창",
     "menu": "메뉴",
     "openItem": "열기",
-    "computerStatus": "컴퓨터 상태"
+    "computerStatus": "컴퓨터 상태",
+    "patch": "패치 적용",
+    "waitJob": "작업 대기",
+    "readOutput": "저장된 출력 읽기",
+    "notes": "작업 메모",
+    "checkpoint": "체크포인트",
+    "restore": "체크포인트 복원",
+    "profile": "저장소 프로필",
+    "affectedTests": "영향받는 테스트",
+    "debug": "디버거",
+    "console": "페이지 콘솔",
+    "network": "페이지 네트워크",
+    "secondOpinion": "다른 모델 의견"
   },
   "diffView": {
     "showAllLines": "모든 줄 표시",

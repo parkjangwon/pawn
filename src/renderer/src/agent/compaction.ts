@@ -195,6 +195,7 @@ export async function compactWithSummary(
     sessionId: string
     contextWindow: number
     plan?: CompactOptions['plan']
+    notes?: string
     useModel?: boolean
     signal?: AbortSignal
     summarize?: typeof summarizeWithModel
@@ -203,7 +204,7 @@ export async function compactWithSummary(
   // Keep ~25% of the window verbatim (bounded), so recent reasoning and tool
   // results survive intact while the bulk is folded.
   const keepTokens = Math.round(Math.min(48_000, Math.max(6_000, opts.contextWindow * 0.25)))
-  const base: CompactOptions = { keepTokens, minKeep: 4, plan: opts.plan }
+  const base: CompactOptions = { keepTokens, minKeep: 4, plan: opts.plan, notes: opts.notes }
   const cut = compactionCut(entries, base)
   if (cut < 0) return { entries, compacted: false, usedModel: false }
   const older = entries.slice(0, cut)

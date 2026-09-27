@@ -83,7 +83,10 @@
       "sessionBudget": "Session budget hit (${{cost}} / ${{cap}})",
       "dailyBudget": "Daily budget hit (${{cost}} / ${{cap}})",
       "compactedManual": "Context compacted manually",
-      "compactedSmart": "Context compacted with a model-written summary — the cache prefix is being re-primed."
+      "compactedSmart": "Context compacted with a model-written summary — the cache prefix is being re-primed.",
+      "lessonLearned": "Learned from your correction: {{rule}}",
+      "toolResultsCleared": "Cleared {{count}} old tool results (~{{tokens}}k tokens) to keep the context focused — full text stays available to the agent",
+      "stuckRecovery": "Agent looked stuck (level {{level}}, {{action}}): {{detail}}"
     },
     "errors": {
       "noProvider": "No provider or model configured. Open Settings → Providers, then Settings → Models.",
@@ -98,7 +101,8 @@
       "emptyResponse": "The model returned an empty reply. Try again, or switch to a stronger model. (Gmail send is not supported — Google is connected for read-only tools only.)",
       "hookBlocked": "Blocked by hook (UserPromptSubmit)",
       "sessionBudgetHit": "Stopped: session spend reached ${{cost}} (cap ${{cap}}). Raise the limit under Settings → Usage, or start a new session.",
-      "dailyBudgetHit": "Stopped: today's spend reached ${{cost}} (cap ${{cap}}). Raise the limit under Settings → Usage."
+      "dailyBudgetHit": "Stopped: today's spend reached ${{cost}} (cap ${{cap}}). Raise the limit under Settings → Usage.",
+      "stuckAskUser": "The agent stopped because it kept getting stuck ({{detail}}). It summarized what it tried above — tell it how to proceed."
     },
     "showEarlier": "Show earlier messages ({{count}})",
     "suggestions": {
@@ -189,7 +193,8 @@
       "m": "{{n}}m",
       "s": "{{n}}s"
     },
-    "compacting": "Compacting context…"
+    "compacting": "Compacting context…",
+    "secondOpinion": "Asking another model for a second opinion…"
   },
   "automation": {
     "title": "Automations",
@@ -493,7 +498,9 @@
       "computerReady": "Ready — {{backend}} helper {{version}}",
       "computerUnavailable": "Computer use is only available in the desktop app.",
       "nativeComputerTool": "Claude native computer tool",
-      "nativeComputerToolDesc": "On the Anthropic API, give Claude its own trained computer tool (batched actions, best click accuracy). Pawn's accessibility, OCR, app and menu tools stay available."
+      "nativeComputerToolDesc": "On the Anthropic API, give Claude its own trained computer tool (batched actions, best click accuracy). Pawn's accessibility, OCR, app and menu tools stay available.",
+      "nativeCodingTools": "Model-native coding tools",
+      "nativeCodingToolsDesc": "Give each model the editing tools it was trained on: Claude's text editor and persistent bash on the Anthropic API, apply_patch for GPT models. Undo, permissions and verification still apply."
     },
     "agentsSection": {
       "title": "Subagents",
@@ -1140,7 +1147,19 @@
     "windows": "Windows",
     "menu": "Menu",
     "openItem": "Open",
-    "computerStatus": "Computer status"
+    "computerStatus": "Computer status",
+    "patch": "Apply patch",
+    "waitJob": "Wait for job",
+    "readOutput": "Read saved output",
+    "notes": "Working notes",
+    "checkpoint": "Checkpoint",
+    "restore": "Restore checkpoint",
+    "profile": "Repo profile",
+    "affectedTests": "Affected tests",
+    "debug": "Debugger",
+    "console": "Page console",
+    "network": "Page network",
+    "secondOpinion": "Second opinion"
   },
   "diffView": {
     "showAllLines": "Show all lines",

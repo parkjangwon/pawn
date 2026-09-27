@@ -1,6 +1,7 @@
 import { handleTrusted } from './trust'
 import { spawn, type ChildProcess } from 'child_process'
 import { planExecFile, planShellSpawn, type SandboxOptions } from '../shellSandbox'
+import { getBashSessionManager } from '../bashSession'
 
 /** Agent-controlled timeout: 5s..5min, default 30s. */
 function clampTimeout(timeoutMs: unknown): number {
@@ -89,6 +90,7 @@ export function killAllAgentShells(): number {
     n++
   }
   liveChildren.clear()
+  n += getBashSessionManager().killAll()
   for (const job of Array.from(backgroundJobs.values())) {
     if (job.exitCode === null) {
       killChild(job.child)
@@ -102,7 +104,7 @@ export function killAllAgentShells(): number {
 /** Kill only shells tagged with this session id (and untagged? no — only tagged). */
 export function killSessionAgentShells(sessionId: string): number {
   if (!sessionId) return 0
-  let n = 0
+  let n = getBashSessionManager().kill(sessionId) ? 1 : 0
   for (const [child, sid] of Array.from(liveChildren.entries())) {
     if (sid === sessionId) {
       killChild(child)
