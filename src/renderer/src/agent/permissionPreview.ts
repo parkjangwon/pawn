@@ -15,6 +15,8 @@ export interface PermissionPreviewLine {
 
 export interface PermissionPreview {
   kind: PermissionPreviewKind
+  /** Plain-language "what this does" (from the tool call's `purpose`). */
+  purpose?: string
   /** Path, command working folder, URL … */
   target?: string
   /** Short summary shown next to the target (e.g. "42 lines"). */
@@ -109,7 +111,8 @@ export function buildPermissionPreview(
     const flags = [a.background ? 'background' : '', a.network === false ? 'network off' : '', str(a.cwd) ? `in ${String(a.cwd)}` : '']
       .filter(Boolean)
       .join(' · ')
-    return { kind: 'command', ...(flags ? { summary: flags } : {}), lines, truncated }
+    const purpose = str(a.purpose)?.trim().slice(0, 240)
+    return { kind: 'command', ...(purpose ? { purpose } : {}), ...(flags ? { summary: flags } : {}), lines, truncated }
   }
 
   // Everything else: one "key: value" row per argument, strings unescaped.

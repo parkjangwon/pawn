@@ -1053,14 +1053,26 @@ export default function ChatArea({
     }
   }
 
-  const suggestions = [
-    { icon: 'code', text: t('chat.suggestions.summarize') },
-    { icon: 'globe', text: t('chat.suggestions.searchWeb') },
-    { icon: 'file', text: t('chat.suggestions.draftEmail') },
-    { icon: 'calendar', text: t('chat.suggestions.setupAutomation') },
-    { icon: 'monitor', text: t('chat.suggestions.screenshot') },
-    { icon: 'edit', text: t('chat.suggestions.writeReport') },
-  ]
+  // What people actually start with: code work inside a project, everyday
+  // office work (documents, spreadsheets, research, email) without one.
+  const inCodeProject = !!activeProject && activeProject.id !== '__general__' && !!effectivePath
+  const suggestions = inCodeProject
+    ? [
+        { icon: 'code', text: t('chat.suggestions.summarize') },
+        { icon: 'bug', text: t('chat.suggestions.fixFailingTests') },
+        { icon: 'edit', text: t('chat.suggestions.reviewChanges') },
+        { icon: 'file', text: t('chat.suggestions.writeReadme') },
+        { icon: 'globe', text: t('chat.suggestions.upgradeDeps') },
+        { icon: 'calendar', text: t('chat.suggestions.setupAutomation') }
+      ]
+    : [
+        { icon: 'table', text: t('chat.suggestions.spreadsheet') },
+        { icon: 'globe', text: t('chat.suggestions.researchCompare') },
+        { icon: 'file', text: t('chat.suggestions.draftEmail') },
+        { icon: 'folder', text: t('chat.suggestions.organizeFiles') },
+        { icon: 'edit', text: t('chat.suggestions.writeReport') },
+        { icon: 'calendar', text: t('chat.suggestions.setupAutomationEveryday') }
+      ]
 
   const triggerItems = getItems()
   const triggerOpen = trigger !== null
@@ -1091,7 +1103,7 @@ export default function ChatArea({
       )}
       <ChatHeader
         onToggleSidebar={onToggleSidebar}
-        projectName={activeProject?.name}
+        projectName={activeProject && activeProject.id !== '__general__' ? activeProject.name : undefined}
         gitBranch={gitBranch}
         projectPath={effectivePath}
         canGoBack={canGoBack}

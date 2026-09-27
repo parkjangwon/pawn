@@ -84,8 +84,7 @@ export default function WelcomeScreen({
         done: hasProject,
         action: !hasProject
           ? () => {
-              // Project picker lives in the sidebar; surface a guided prompt.
-              onPick(t('chat.checklist.projectHint'))
+              window.dispatchEvent(new CustomEvent('pawn:add-project'))
             }
           : undefined,
         actionLabel: t('chat.checklist.openProject')
@@ -106,8 +105,14 @@ export default function WelcomeScreen({
     return items
   }, [t, needsSetup, hasProject, githubConnected, onOpenSettings, onPick])
 
-  const allDone = checklist.every((c) => c.done)
-  const showChecklist = !dismissed && !allDone
+  // Only the provider is required. Project and GitHub are optional, so once
+  // a provider works the list only stays while it's still useful: on a
+  // project chat before GitHub is connected. Everyday work (no project)
+  // never nags about folders or GitHub after setup.
+  const inProject = Boolean(activeProject && activeProject.name && !String(activeProject.name).startsWith('__'))
+  const visibleChecklist = needsSetup ? checklist : inProject ? checklist.filter((c) => c.id !== 'project') : []
+  const allDone = visibleChecklist.every((c) => c.done)
+  const showChecklist = !dismissed && visibleChecklist.length > 0 && !allDone
 
   const dismissChecklist = (): void => {
     setDismissed(true)
@@ -154,7 +159,7 @@ export default function WelcomeScreen({
           </div>
           <p className="welcome-checklist-desc">{t('chat.checklist.desc')}</p>
           <ul className="welcome-checklist-list">
-            {checklist.map((item) => (
+            {visibleChecklist.map((item) => (
               <li
                 key={item.id}
                 className={`welcome-checklist-item ${item.done ? 'done' : 'pending'}`}
@@ -226,6 +231,23 @@ export default function WelcomeScreen({
                   <line x1="8" y1="21" x2="16" y2="21" />
                   <line x1="12" y1="17" x2="12" y2="21" />
                 </>
+              )}
+              {s.icon === 'bug' && (
+                <>
+                  <path d="M8 2l1.88 1.88M14.12 3.88L16 2M9 7.13v-1a3 3 0 1 1 6 0v1" />
+                  <path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6zM12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4" />
+                </>
+              )}
+              {s.icon === 'table' && (
+                <>
+                  <rect x="3" y="3" width="18" height="18" rx="2" />
+                  <line x1="3" y1="9" x2="21" y2="9" />
+                  <line x1="3" y1="15" x2="21" y2="15" />
+                  <line x1="9" y1="3" x2="9" y2="21" />
+                </>
+              )}
+              {s.icon === 'folder' && (
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
               )}
               {s.icon === 'edit' && (
                 <>

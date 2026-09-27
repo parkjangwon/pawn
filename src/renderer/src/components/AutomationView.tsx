@@ -1,15 +1,22 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useRoutineStore } from '../stores/routine'
+import { useAutomationDraftStore } from '../stores/automationDraft'
 import { useAppStore } from '../stores/app'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { activateOnKey, useFocusTrap } from '../utils/focusTrap'
 import ConfirmDialog from './ConfirmDialog'
 import NavControls from './NavControls'
 import Tooltip from './Tooltip'
+// Cards reuse Settings controls (toggle, badges, buttons); Settings is lazy,
+// so without this they render unstyled until Settings is opened once.
+import './Settings.css'
 import './AutomationView.css'
 
-type TriggerType = 'interval' | 'daily' | 'weekly' | 'cron' | 'file_watch'
+/** 'weekdays' is a UI trigger: saved as cron `M H * * 1-5`, recognized back on edit. */
+type TriggerType = 'interval' | 'daily' | 'weekdays' | 'weekly' | 'cron' | 'file_watch'
+
+const WEEKDAYS_CRON = /^(\d{1,2}) (\d{1,2}) \* \* 1-5$/
 
 interface AutomationViewProps {
   onToggleSidebar: () => void
@@ -109,7 +116,15 @@ export default function AutomationView({
         d.minute = String(parsed.minute ?? 0).padStart(2, '0')
       }
       if (parsed.type === 'weekly') d.weekday = String(parsed.weekday ?? 1)
-      if (parsed.type === 'cron') d.cronExpr = parsed.expr || d.cronExpr
+      if (parsed.type === 'cron') {
+        d.cronExpr = parsed.expr || d.cronExpr
+        const wd = WEEKDAYS_CRON.exec(d.cronExpr.trim())
+        if (wd) {
+          d.trigger = 'weekdays'
+          d.minute = wd[1].padStart(2, '0')
+          d.hour = wd[2].padStart(2, '0')
+        }
+      }
       if (parsed.type === 'file_watch') {
         d.watchPath = parsed.path || ''
         d.debounceMin = String(parsed.debounceMinutes ?? 1)
@@ -138,11 +153,11 @@ export default function AutomationView({
   const triggerLabel = (scheduleJson: string, enabled: boolean): string => {
     if (!enabled) return t('automation.manual')
     try {
-      const parsed = JSON.parse(scheduleJson) as { type: TriggerType }
+      const parsed = JSON.parse(scheduleJson) as { type: TriggerType; expr?: string }
       if (parsed.type === 'daily') return t('automation.daily')
       if (parsed.type === 'weekly') return t('automation.weekly')
-      if (parsed.type === 'cron') return 'Cron'
-      if (parsed.type === 'file_watch') return 'File watch'
+      if (parsed.type === 'cron') return WEEKDAYS_CRON.test((parsed.expr || '').trim()) ? t('automation.weekdays') : t('automation.cron')
+      if (parsed.type === 'file_watch') return t('automation.fileWatch')
       return t('automation.interval')
     } catch {
       return t('automation.manual')
@@ -153,8 +168,12 @@ export default function AutomationView({
     try {
       const s = JSON.parse(scheduleJson) as RoutineSchedule
       if (s.type === 'interval') return t('settings.automationSection.everyMinutes', { minutes: s.minutes })
-      if (s.type === 'cron') return `cron: ${s.expr}`
-      if (s.type === 'file_watch') return `watch: ${s.path}`
+      if (s.type === 'cron') {
+        const wd = WEEKDAYS_CRON.exec((s.expr || '').trim())
+        if (wd) return t('automation.weekdaysAt', { time: `${wd[2].padStart(2, '0')}:${wd[1].padStart(2, '0')}` })
+        return `cron: ${s.expr}`
+      }
+      if (s.type === 'file_watch') return t('automation.whenChanged', { path: s.path })
       if (s.type === 'daily') {
         const time = `${String(s.hour).padStart(2, '0')}:${String(s.minute).padStart(2, '0')}`
         return t('settings.automationSection.dailyAt', { time })
@@ -194,6 +213,8 @@ export default function AutomationView({
         hour: Number(draft.hour),
         minute: Number(draft.minute)
       }
+    } else if (draft.trigger === 'weekdays') {
+      base = { type: 'cron', expr: `${Number(draft.minute)} ${Number(draft.hour)} * * 1-5` }
     } else if (draft.trigger === 'cron') {
       base = { type: 'cron', expr: draft.cronExpr.trim() }
     } else {
@@ -250,8 +271,31 @@ export default function AutomationView({
     void refresh()
   }, [refresh])
 
+  // "Repeat this" from a chat: open the editor prefilled with that prompt.
+  // Runs every weekday morning by default — the most common ask; one click to change.
+  const pendingDraft = useAutomationDraftStore((s) => s.pending)
+  useEffect(() => {
+    if (!pendingDraft) return
+    const seed = useAutomationDraftStore.getState().take()
+    if (!seed) return
+    openCreate({
+      name: seed.name || '',
+      prompt: seed.prompt,
+      trigger: 'weekdays',
+      hour: '09',
+      minute: '00',
+      projectId: seed.projectId && seed.projectId !== '__general__' ? seed.projectId : ''
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pendingDraft])
+
   const templates = useMemo(
     () => [
+      // Everyday work first (most people), then developer templates.
+      { title: t('automation.examples.morningBrief'), desc: t('automation.examples.morningBriefDesc'), badge: t('automation.weekdays'), trigger: 'weekdays' as TriggerType, preset: { hour: '08', minute: '30' } },
+      { title: t('automation.examples.inboxDigest'), desc: t('automation.examples.inboxDigestDesc'), badge: t('automation.weekdays'), trigger: 'weekdays' as TriggerType, preset: { hour: '09', minute: '00' } },
+      { title: t('automation.examples.weeklySummary'), desc: t('automation.examples.weeklySummaryDesc'), badge: t('automation.weekly'), trigger: 'weekly' as TriggerType, preset: { hour: '17', minute: '00', weekday: '5' } },
+      { title: t('automation.examples.folderTidy'), desc: t('automation.examples.folderTidyDesc'), badge: t('automation.weekly'), trigger: 'weekly' as TriggerType, preset: { hour: '18', minute: '00', weekday: '5' } },
       { title: t('automation.examples.dailyReport'), desc: t('automation.examples.dailyReportDesc'), badge: t('automation.daily'), trigger: 'daily' as TriggerType, preset: { hour: '18', minute: '00' } },
       { title: t('automation.examples.webMonitor'), desc: t('automation.examples.webMonitorDesc'), badge: t('automation.interval'), trigger: 'interval' as TriggerType, preset: { intervalMin: '30' } },
       { title: t('automation.examples.rssDigest'), desc: t('automation.examples.rssDigestDesc'), badge: t('automation.daily'), trigger: 'daily' as TriggerType, preset: { hour: '07', minute: '00' } },
@@ -344,34 +388,11 @@ export default function AutomationView({
             </div>
           )}
 
-          <div className="automation-templates">
+          {routines.length > 0 && (
             <div className="automation-page-head">
-              <h3>{t('automation.templates.title')}</h3>
+              <h3>{t('automation.yours')}</h3>
             </div>
-            <div className="automation-grid">
-              {templates.map((card) => {
-                const open = (): void =>
-                  openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger, ...card.preset })
-                return (
-                <article
-                  key={card.title}
-                  className="automation-card example"
-                  role="button"
-                  tabIndex={0}
-                  onClick={open}
-                  onKeyDown={(e) => activateOnKey(e, open)}
-                >
-                  <div className="automation-card-head">
-                    <h4>{card.title}</h4>
-                    <span className="settings-badge">{card.badge}</span>
-                  </div>
-                  <p className="automation-card-desc">{card.desc}</p>
-                </article>
-                )
-              })}
-            </div>
-          </div>
-
+          )}
           <div className="automation-grid">
             {routines.map((routine) => (
               <article key={routine.id} className="automation-card">
@@ -413,9 +434,10 @@ export default function AutomationView({
                   >
                     {t('automation.edit')}
                   </button>
-                  <label className="toggle-switch">
+                  <label className="toggle-switch" title={t('automation.toggleHint')}>
                     <input
                       type="checkbox"
+                      aria-label={t('automation.toggleHint')}
                       checked={routine.enabled}
                       onChange={(e) => void toggle(routine.id, e.target.checked)}
                     />
@@ -424,6 +446,8 @@ export default function AutomationView({
                   <button
                     className="delete-btn"
                     onClick={() => setConfirmDeleteRoutine({ id: routine.id, name: routine.name })}
+                    aria-label={t('automation.delete')}
+                    title={t('automation.delete')}
                   >
                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <polyline points="3 6 5 6 21 6" />
@@ -435,6 +459,35 @@ export default function AutomationView({
             ))}
 
           </div>
+
+          <details className="automation-templates" open={routines.length === 0}>
+            <summary className="automation-page-head">
+              <h3>{t('automation.templates.title')}</h3>
+            </summary>
+            <div className="automation-grid">
+              {templates.map((card) => {
+                const open = (): void =>
+                  openCreate({ name: card.title, prompt: card.desc, trigger: card.trigger, ...card.preset })
+                return (
+                <article
+                  key={card.title}
+                  className="automation-card example"
+                  role="button"
+                  tabIndex={0}
+                  onClick={open}
+                  onKeyDown={(e) => activateOnKey(e, open)}
+                >
+                  <div className="automation-card-head">
+                    <h4>{card.title}</h4>
+                    <span className="settings-badge">{card.badge}</span>
+                  </div>
+                  <p className="automation-card-desc">{card.desc}</p>
+                </article>
+                )
+              })}
+            </div>
+          </details>
+
         </div>
       </section>
 
@@ -466,10 +519,11 @@ export default function AutomationView({
                   <label>{t('automation.trigger')}</label>
                   <select value={draft.trigger} onChange={(e) => setDraft((d) => ({ ...d, trigger: e.target.value as TriggerType }))}>
                     <option value="daily">{t('automation.daily')}</option>
+                    <option value="weekdays">{t('automation.weekdays')}</option>
                     <option value="weekly">{t('automation.weekly')}</option>
                     <option value="interval">{t('automation.interval')}</option>
-                    <option value="cron">Cron</option>
-                    <option value="file_watch">File watch</option>
+                    <option value="file_watch">{t('automation.fileWatch')}</option>
+                    <option value="cron">{t('automation.cron')}</option>
                   </select>
                 </div>
                 {draft.trigger === 'weekly' && (
@@ -486,7 +540,7 @@ export default function AutomationView({
                     <input type="number" min={1} value={draft.intervalMin} onChange={(e) => setDraft((d) => ({ ...d, intervalMin: e.target.value }))} />
                   </div>
                 )}
-                {(draft.trigger === 'daily' || draft.trigger === 'weekly') && (
+                {(draft.trigger === 'daily' || draft.trigger === 'weekdays' || draft.trigger === 'weekly') && (
                   <>
                     <div className="automation-field">
                       <label>{t('automation.hour')}</label>
@@ -504,7 +558,7 @@ export default function AutomationView({
                 )}
                 {draft.trigger === 'cron' && (
                   <div className="automation-field">
-                    <label>Cron (min hour dom mon dow)</label>
+                    <label>{t('automation.cronLabel')}</label>
                     <input
                       value={draft.cronExpr}
                       onChange={(e) => setDraft((d) => ({ ...d, cronExpr: e.target.value }))}
@@ -515,15 +569,15 @@ export default function AutomationView({
                 {draft.trigger === 'file_watch' && (
                   <>
                     <div className="automation-field">
-                      <label>Watch path</label>
+                      <label>{t('automation.watchPath')}</label>
                       <input
                         value={draft.watchPath}
                         onChange={(e) => setDraft((d) => ({ ...d, watchPath: e.target.value }))}
-                        placeholder="/path/to/file-or-dir"
+                        placeholder={t('automation.watchPathPlaceholder')}
                       />
                     </div>
                     <div className="automation-field">
-                      <label>Debounce (min)</label>
+                      <label>{t('automation.debounce')}</label>
                       <input
                         type="number"
                         min={1}
@@ -533,28 +587,6 @@ export default function AutomationView({
                     </div>
                   </>
                 )}
-              </div>
-
-              <div className="automation-form-row">
-                <div className="automation-field">
-                  <label>Max retries</label>
-                  <input
-                    type="number"
-                    min={0}
-                    max={5}
-                    value={draft.maxRetries}
-                    onChange={(e) => setDraft((d) => ({ ...d, maxRetries: e.target.value }))}
-                  />
-                </div>
-                <div className="automation-field">
-                  <label>Retry delay (sec)</label>
-                  <input
-                    type="number"
-                    min={10}
-                    value={draft.retryDelaySec}
-                    onChange={(e) => setDraft((d) => ({ ...d, retryDelaySec: e.target.value }))}
-                  />
-                </div>
               </div>
 
               <div className="automation-field">
@@ -571,15 +603,40 @@ export default function AutomationView({
                 <textarea value={draft.prompt} onChange={(e) => setDraft((d) => ({ ...d, prompt: e.target.value }))} rows={4} placeholder={t('automation.promptPlaceholder')} />
               </div>
 
+              <details className="automation-advanced" open={draft.stepsText.trim().length > 0 || Number(draft.maxRetries) > 0}>
+                <summary>{t('automation.advanced')}</summary>
               <div className="automation-field">
-                <label>Multi-step prompts (one per line, optional)</label>
+                <label>{t('automation.steps')}</label>
                 <textarea
                   value={draft.stepsText}
                   onChange={(e) => setDraft((d) => ({ ...d, stepsText: e.target.value }))}
                   rows={3}
-                  placeholder={'Step 1: …\nStep 2: …'}
+                  placeholder={t('automation.stepsPlaceholder')}
                 />
               </div>
+              <div className="automation-form-row">
+                <div className="automation-field">
+                  <label>{t('automation.maxRetries')}</label>
+                  <input
+                    type="number"
+                    min={0}
+                    max={5}
+                    value={draft.maxRetries}
+                    onChange={(e) => setDraft((d) => ({ ...d, maxRetries: e.target.value }))}
+                  />
+                </div>
+                <div className="automation-field">
+                  <label>{t('automation.retryDelay')}</label>
+                  <input
+                    type="number"
+                    min={10}
+                    value={draft.retryDelaySec}
+                    onChange={(e) => setDraft((d) => ({ ...d, retryDelaySec: e.target.value }))}
+                  />
+                </div>
+              </div>
+
+              </details>
             </div>
 
             {saveError && (

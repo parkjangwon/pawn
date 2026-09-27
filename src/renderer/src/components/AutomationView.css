@@ -432,3 +432,57 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Retries / multi-step prompts: out of the way until needed. */
+.automation-advanced {
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 6px 12px;
+}
+.automation-advanced > summary {
+  cursor: pointer;
+  font-size: var(--font-sm, 12px);
+  color: var(--text-secondary);
+  padding: 4px 0;
+  user-select: none;
+}
+.automation-advanced[open] > summary {
+  margin-bottom: 8px;
+}
+.automation-advanced > .automation-field,
+.automation-advanced > .automation-form-row {
+  margin-bottom: 10px;
+}
+
+/* Badges never wrap (e.g. "Every weekday" next to a long name). */
+.automation-card-head .settings-badge {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+.automation-card-head h4 {
+  min-width: 0;
+}
+
+/* Templates collapse under "Start from a template" once you have automations. */
+.automation-templates > summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.automation-templates > summary::-webkit-details-marker {
+  display: none;
+}
+.automation-templates > summary::before {
+  content: '▸';
+  color: var(--text-muted);
+  font-size: 12px;
+  transition: transform 0.15s ease;
+}
+.automation-templates[open] > summary::before {
+  transform: rotate(90deg);
+}
+.automation-templates {
+  margin-top: var(--space-lg, 20px);
+}

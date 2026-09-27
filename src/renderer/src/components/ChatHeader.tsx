@@ -1,8 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
-import { useAppStore } from '../stores/app'
-import { useUsageStore, formatTokens } from '../stores/usage'
 import NavControls from './NavControls'
 import Tooltip from './Tooltip'
 
@@ -79,8 +77,6 @@ export default function ChatHeader({
   const panelShortcut = formatCombo(bindings['toggle-right-panel'])
   const terminalShortcut = formatCombo(bindings['toggle-terminal'])
   const sidebarShortcut = formatCombo(bindings['toggle-sidebar'])
-  const activeSessionId = useAppStore((s) => s.activeSessionId)
-  const totals = useUsageStore((s) => (activeSessionId ? s.totalsFor(activeSessionId) : null))
 
   const [showScriptMenu, setShowScriptMenu] = useState(false)
   const [showOpenMenu, setShowOpenMenu] = useState(false)
@@ -229,29 +225,15 @@ export default function ChatHeader({
         </Tooltip>
         <NavControls canGoBack={canGoBack} canGoForward={canGoForward} onBack={onGoBack} onForward={onGoForward} />
         <div className="chat-header-title-block">
-          <span className="chat-header-title">{projectName || t('contextBar.noProject')}</span>
+          <span className="chat-header-title">{projectName || t('chatHeader.everyday')}</span>
           {gitBranch && <span className="chat-header-branch">• {gitBranch}</span>}
-          {totals && totals.calls > 0 && (
-            <span
-              className="chat-header-cache-badge"
-              title={`Session prompt tokens: ${formatTokens(totals.inputTokens + totals.cacheReadTokens)} (${(totals.cacheHitRate * 100).toFixed(0)}% from cache)\nCache Savings: $${totals.savedCost.toFixed(4)}\nTotal Session Cost: $${totals.cost.toFixed(4)}`}
-            >
-              <span className="cache-badge-bolt" aria-hidden="true">⚡</span>
-              {totals.cacheHitRate > 0 && (
-                <span className="cache-badge-rate">{(totals.cacheHitRate * 100).toFixed(0)}% cache</span>
-              )}
-              {totals.savedCost > 0 && (
-                <span className="cache-badge-saved">+${totals.savedCost.toFixed(2)} saved</span>
-              )}
-              <span className="cache-badge-cost">${totals.cost.toFixed(3)}</span>
-            </span>
-          )}
         </div>
       </div>
 
       <div className="chat-header-right">
+        {canRunScript && (
         <div className="chat-header-action-group">
-          <button className="chat-header-btn" disabled={!canRunScript || !!runningScript} onClick={() => { setShowScriptMenu((v) => !v); setShowOpenMenu(false) }}>
+          <button className="chat-header-btn" disabled={!!runningScript} onClick={() => { setShowScriptMenu((v) => !v); setShowOpenMenu(false) }}>
             <span>{runningScript ? `${t('chatHeader.running')} ${runningScript}` : t('chatHeader.run')}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
@@ -262,13 +244,14 @@ export default function ChatHeader({
                   {s.name}
                 </button>
               ))}
-              {scripts.length === 0 && <div className="chat-header-menu-empty">{t('chatHeader.noScripts')}</div>}
             </div>
           )}
         </div>
+        )}
 
+        {projectPath && (
         <div className="chat-header-action-group">
-          <button className="chat-header-btn" disabled={!projectPath} onClick={() => { setShowOpenMenu((v) => !v); setShowScriptMenu(false) }} aria-label={openButtonLabel}>
+          <button className="chat-header-btn" onClick={() => { setShowOpenMenu((v) => !v); setShowScriptMenu(false) }} aria-label={openButtonLabel}>
             <span>{openButtonLabel}</span>
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
           </button>
@@ -290,6 +273,7 @@ export default function ChatHeader({
             </div>
           )}
         </div>
+        )}
 
         <Tooltip label={t('contextBar.toggleTerminal')} shortcut={terminalShortcut} placement="bottom">
           <button className="sidebar-toggle-btn terminal-toggle" onClick={() => (window as any).__toggleTerminal?.()} aria-label={t('contextBar.toggleTerminal')}>

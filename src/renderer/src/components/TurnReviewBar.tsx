@@ -82,6 +82,14 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
   }
 
   const files = expanded ? applied : applied.slice(0, 8)
+  // "Show in Finder": the produced file (one file) or their shared folder.
+  const kept = applied.filter((c) => c.op !== 'delete')
+  const revealTarget = (() => {
+    if (kept.length === 0) return null
+    if (kept.length === 1) return kept[0].path
+    const dirs = new Set(kept.map((c) => c.path.slice(0, c.path.lastIndexOf('/'))))
+    return dirs.size === 1 ? [...dirs][0] : null
+  })()
 
   return (
     <div className="turn-review-bar" role="region" aria-label={t('turnReview.label')}>
@@ -163,6 +171,16 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
         >
           {t('turnReview.openDiff')}
         </button>
+        {revealTarget && (
+          <button
+            type="button"
+            className="turn-review-diff"
+            title={revealTarget}
+            onClick={() => void window.api.workspace?.reveal?.(revealTarget)?.catch?.(() => {})}
+          >
+            {window.api?.platform === 'darwin' ? t('turnReview.reveal') : t('turnReview.revealFolder')}
+          </button>
+        )}
         <button
           type="button"
           className="turn-review-undo"

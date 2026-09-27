@@ -28,6 +28,10 @@ describe('permission preview', () => {
     expect(patch.lines.filter((l) => l.mark === '+').map((l) => l.text)).toEqual(['+new', '+hi'])
     const cmd = buildPermissionPreview('shell_exec', { command: 'npm test -- --watch=false', background: true })
     expect(cmd).toMatchObject({ kind: 'command', summary: 'background', lines: [{ text: 'npm test -- --watch=false' }] })
+    expect(cmd.purpose).toBeUndefined()
+    // The agent's plain-language purpose rides along for non-developers.
+    const withPurpose = buildPermissionPreview('shell_exec', { command: 'rsvg-convert -o chart.png chart.svg', purpose: '  차트를 PNG 이미지로 변환해요  ' })
+    expect(withPurpose.purpose).toBe('차트를 PNG 이미지로 변환해요')
     const other = buildPermissionPreview('web_fetch', { url: 'https://x.dev', max_chars: 5000 })
     expect(other.lines.map((l) => l.text)).toEqual(['url: https://x.dev', 'max_chars: 5000'])
   })

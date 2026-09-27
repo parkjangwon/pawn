@@ -1907,47 +1907,6 @@
   white-space: nowrap;
 }
 
-.chat-header-cache-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 2px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--accent) 10%, var(--bg-secondary));
-  border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-color));
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  user-select: none;
-  cursor: default;
-  transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.chat-header-cache-badge:hover {
-  background: color-mix(in srgb, var(--accent) 16%, var(--bg-secondary));
-  border-color: var(--accent);
-}
-
-.cache-badge-bolt {
-  font-size: 10px;
-  color: var(--accent);
-}
-
-.cache-badge-rate {
-  color: var(--accent);
-  font-weight: 600;
-}
-
-.cache-badge-saved {
-  color: #16a34a;
-  font-weight: 600;
-}
-
-.cache-badge-cost {
-  color: var(--text-muted);
-}
-
 .chat-header-right {
   display: flex;
   align-items: center;

@@ -9,6 +9,7 @@ import { useChatStore } from '../stores/chat'
 import { stripDisplayImages } from '../utils/attachments'
 import { formatDuration, formatMessageTime, formatMessageTimeFull, normalizeTimestampMs } from '../utils/messageTime'
 import type { Message } from '../stores/app'
+import { openAutomationDraft } from '../stores/automationDraft'
 
 class MessageErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -175,7 +176,8 @@ const MessageRow = memo(function MessageRow({
   sessionId,
   canAct,
   continuation,
-  intermediate
+  intermediate,
+  turnPrompt
 }: {
   msg: Message
   animateIn?: boolean
@@ -187,6 +189,8 @@ const MessageRow = memo(function MessageRow({
   continuation?: boolean
   /** A later assistant block follows in the same turn: no action row. */
   intermediate?: boolean
+  /** The user prompt that started this turn (for "Repeat this"). */
+  turnPrompt?: string
 }): React.JSX.Element {
   const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
@@ -333,6 +337,16 @@ const MessageRow = memo(function MessageRow({
               {t('chat.regenerate')}
             </button>
           )}
+          {canAct && msg.role === 'assistant' && !isLive && turnPrompt && (
+            <button
+              type="button"
+              className="message-action-btn"
+              title={t('chat.repeatHint')}
+              onClick={() => openAutomationDraft({ prompt: turnPrompt, projectId: projectId || undefined })}
+            >
+              {t('chat.repeat')}
+            </button>
+          )}
           {!isLive && <MessageTime createdAt={msg.createdAt} />}
         </div>
         )}
@@ -381,10 +395,11 @@ export default function MessageList({
   // One turn reads as one answer: consecutive assistant blocks between two
   // user messages share a single "Assistant" label, and only the last one
   // carries Copy / Regenerate / time.
-  const turnShape = new Map<string, { continuation: boolean; intermediate: boolean }>()
+  const turnShape = new Map<string, { continuation: boolean; intermediate: boolean; prompt?: string }>()
   {
     let seenAssistant = false
     let lastAssistantId: string | null = null
+    let prompt: string | undefined
     const flush = (): void => {
       if (lastAssistantId) {
         const cur = turnShape.get(lastAssistantId)
@@ -396,8 +411,9 @@ export default function MessageList({
         flush()
         seenAssistant = false
         lastAssistantId = null
+        prompt = stripDisplayImages(m.content).trim() || undefined
       } else if (m.role === 'assistant') {
-        turnShape.set(m.id, { continuation: seenAssistant, intermediate: true })
+        turnShape.set(m.id, { continuation: seenAssistant, intermediate: true, prompt })
         seenAssistant = true
         lastAssistantId = m.id
       }
@@ -438,6 +454,7 @@ export default function MessageList({
               canAct={!busy && Boolean(projectId && sessionId)}
               continuation={turnShape.get(item.msg.id)?.continuation}
               intermediate={turnShape.get(item.msg.id)?.intermediate}
+              turnPrompt={turnShape.get(item.msg.id)?.prompt}
             />
           ) : (
             <ToolBatch

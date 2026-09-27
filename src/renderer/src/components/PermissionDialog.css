@@ -217,3 +217,14 @@
   color: var(--text-muted);
   font-style: italic;
 }
+
+/* Plain-language "what this does" above a shell command. */
+.permission-purpose {
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-secondary));
+  color: var(--text-primary);
+  font-size: var(--font-md, 14px);
+  line-height: 1.45;
+}

@@ -54,7 +54,17 @@ export default function App(): React.JSX.Element {
       window.setTimeout(() => setAppToast(null), 3200)
     }
     window.addEventListener('pawn:toast', onToast)
-    return () => window.removeEventListener('pawn:toast', onToast)
+    // "Open automations" / "Repeat this" from chat: switch views; the
+    // automation view picks up a pending draft itself.
+    const onOpenAutomations = (): void => {
+      setShowSettings(false)
+      setMainView('automations')
+    }
+    window.addEventListener('pawn:open-automations', onOpenAutomations)
+    return () => {
+      window.removeEventListener('pawn:toast', onToast)
+      window.removeEventListener('pawn:open-automations', onOpenAutomations)
+    }
   }, [])
 
   // Sidebar width is a single app-wide preference shared by the main sidebar

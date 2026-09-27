@@ -203,3 +203,23 @@ describe('MessageList turn grouping', () => {
     expect(a3.className).not.toContain('message-intermediate')
   })
 })
+
+describe('MessageList Repeat this', () => {
+  it('offers Repeat this on the finished turn with that turn\'s prompt', async () => {
+    const { useAutomationDraftStore } = await import('../../stores/automationDraft')
+    renderList({
+      projectId: 'p1',
+      sessionId: 's1',
+      messages: [
+        msg('u1', 'user', 'Summarize AI news with links'),
+        msg('a1', 'assistant', 'Here are 5 items.'),
+        msg('u2', 'user', 'thanks'),
+        msg('a2', 'assistant', 'Anytime.')
+      ]
+    })
+    const repeat = screen.getAllByRole('button', { name: 'chat.repeat' })
+    expect(repeat).toHaveLength(2)
+    fireEvent.click(repeat[0])
+    expect(useAutomationDraftStore.getState().take()).toMatchObject({ prompt: 'Summarize AI news with links', projectId: 'p1' })
+  })
+})

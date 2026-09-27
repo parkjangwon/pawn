@@ -81,7 +81,12 @@ export default function PermissionDialog(): React.JSX.Element | null {
           </div>
         )}
         <div className="permission-type">{typeLabels[current.type] || current.type}</div>
-        <p className="permission-desc">{current.description}</p>
+        {/* Plain-language purpose (from the agent) replaces the tool label. */}
+        {current.preview?.purpose ? (
+          <p className="permission-purpose">{current.preview.purpose}</p>
+        ) : (
+          <p className="permission-desc">{current.description}</p>
+        )}
         {current.preview ? (
           <div className={`permission-preview kind-${current.preview.kind}`}>
             {(current.preview.target || current.preview.summary) && (

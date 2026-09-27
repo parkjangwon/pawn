@@ -9,6 +9,11 @@ export const SHELL_TOOLS: ToolDefinition[] = [
       type: 'object',
       properties: {
         command: { type: 'string', description: 'Shell command to execute' },
+        purpose: {
+          type: 'string',
+          description:
+            "One short plain-language sentence, in the user's language, saying what this command does and why (shown to the user when asking permission), e.g. \"Convert the chart to PNG\". No jargon."
+        },
         cwd: { type: 'string', description: 'Working directory (optional, defaults to project root)' },
         timeout: { type: 'number', description: 'Timeout in seconds (5-300, default 30). Ignored when background is true.' },
         background: {

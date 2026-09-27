@@ -5,7 +5,20 @@ import ko from './locales/ko.json'
 import ja from './locales/ja.json'
 import zh from './locales/zh.json'
 
-const savedLang = localStorage.getItem('pawn-lang')
+const SUPPORTED = ['en', 'ko', 'ja', 'zh'] as const
+
+/** First launch follows the OS language (Korean macOS → Korean UI), else English. */
+export function detectLanguage(langs: readonly string[] | undefined): string {
+  for (const l of langs || []) {
+    const base = String(l).toLowerCase().slice(0, 2)
+    if ((SUPPORTED as readonly string[]).includes(base)) return base
+  }
+  return 'en'
+}
+
+const savedLang =
+  localStorage.getItem('pawn-lang') ||
+  (typeof navigator !== 'undefined' ? detectLanguage(navigator.languages?.length ? navigator.languages : [navigator.language]) : null)
 
 function applyDocumentLang(lng: string): void {
   if (typeof document !== 'undefined') document.documentElement.lang = lng

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import ToolMessage from './ToolMessage'
 import type { Message } from '../stores/app'
 import { aggregateToolMeta, formatToolDuration } from '../agent/toolMeta'
+import { toolLabel, toolLabelTable } from './toolLabels'
 import './ToolBatch.css'
 
 interface ToolBatchProps {
@@ -36,6 +37,7 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
   }, [messages])
 
   const stats = useMemo(() => aggregateToolMeta(messages.map((m) => m.toolMeta)), [messages])
+  const labels = useMemo(() => toolLabelTable(t), [t])
   const hasRunning = parsedTools.some((p) => p.isRunning)
   const hasError = parsedTools.some((p) => p.isError)
   const hasDiff = parsedTools.some((p) => p.hasDiff)
@@ -97,8 +99,8 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
             </span>
             <div className="tool-batch-chips">
               {Object.entries(counts).slice(0, 4).map(([name, count]) => (
-                <span key={name} className="tool-batch-chip">
-                  {name}
+                <span key={name} className="tool-batch-chip" title={name}>
+                  {toolLabel(t, name, labels).label}
                   {count > 1 ? ` ×${count}` : ''}
                 </span>
               ))}

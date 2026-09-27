@@ -33,8 +33,9 @@ describe('ToolBatch', () => {
     ]
     render(<ToolBatch messages={messages} />)
     expect(screen.getByText('Executed 3 operations')).toBeInTheDocument()
-    expect(screen.getByText('read_file ×2')).toBeInTheDocument()
-    expect(screen.getByText('grep_search')).toBeInTheDocument()
+    // Readable labels, raw id in the tooltip.
+    expect(screen.getByText('toolMessage.read ×2')).toHaveAttribute('title', 'read_file')
+    expect(screen.getByText('toolMessage.family.findFiles')).toHaveAttribute('title', 'grep_search')
   })
 
   it('expands on click to display individual tool items', () => {
@@ -45,8 +46,8 @@ describe('ToolBatch', () => {
     render(<ToolBatch messages={messages} />)
     const headerBtn = screen.getByRole('button')
     fireEvent.click(headerBtn)
-    expect(screen.getByText('toolMessage.read')).toBeInTheDocument()
-    expect(screen.getByText('toolMessage.write')).toBeInTheDocument()
+    const rows = Array.from(document.querySelectorAll('.tool-message .tool-name')).map((n) => n.textContent)
+    expect(rows).toEqual(['toolMessage.read', 'toolMessage.write'])
   })
 
   it('keeps working when a single-tool batch grows to two (stable hook order)', () => {
@@ -81,5 +82,22 @@ describe('ToolBatch', () => {
     expect(header).toHaveTextContent('+12')
     expect(header).toHaveTextContent('−3')
     expect(header).toHaveTextContent('4.2s')
+  })
+})
+
+describe('ToolBatch chips', () => {
+  it('shows readable labels with the raw tool name as tooltip', () => {
+    render(
+      <ToolBatch
+        messages={[
+          { id: 'a', role: 'system', content: '[Tool: write_file] OK\nwritten', createdAt: 1 },
+          { id: 'b', role: 'system', content: '[Tool: shell_exec] OK\nok', createdAt: 2 },
+          { id: 'c', role: 'system', content: '[Tool: browser_navigate] OK\nok', createdAt: 3 }
+        ]}
+      />
+    )
+    const chips = Array.from(document.querySelectorAll('.tool-batch-chip'))
+    expect(chips.map((c) => c.textContent)).toEqual(['toolMessage.write', 'toolMessage.shell', 'toolMessage.family.browser'])
+    expect(chips.map((c) => c.getAttribute('title'))).toEqual(['write_file', 'shell_exec', 'browser_navigate'])
   })
 })

@@ -200,7 +200,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   title={t('contextBar.switchProject')}
                 >
                   <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
-                  <span>{activeProject?.name || t('contextBar.noProject')}</span>
+                  <span>{activeProject && activeProject.id !== '__general__' ? activeProject.name : t('chatHeader.everyday')}</span>
                   <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
                 </button>
                 {showProjectPicker && (
@@ -343,6 +343,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                           {permissionMode === mode && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
                         </button>
                       ))}
+                      {/* Checks after code edits: only meaningful in a code project. */}
+                      {activeProject && activeProject.id !== '__general__' && (activeProject.paths?.length ?? 0) > 0 && (
                       <div className="picker-group">
                         <div className="picker-group-label">{t('contextBar.doneGateLabel')}</div>
                         {([
@@ -362,6 +364,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                           </button>
                         ))}
                       </div>
+                      )}
                     </div>
                   )}
                 </div>
