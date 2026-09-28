@@ -1554,6 +1554,13 @@ body.resizing-right-panel .rp-resizer::after {
   font-size: var(--font-sm);
 }
 
+/* File viewer: rendered markdown preview */
+.rp-fe-preview {
+  display: block;
+  overflow: auto;
+  padding: 16px 20px;
+}
+
 .rp-diff-binary {
   display: flex;
   align-items: center;

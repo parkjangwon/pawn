@@ -1303,7 +1303,9 @@
     "unsavedConfirm": "未保存の変更があります。破棄して閉じますか？",
     "discard": "破棄して閉じる",
     "viewSource": "ソース",
-    "reveal": "Finder で表示"
+    "reveal": "Finder で表示",
+    "preview": "プレビュー",
+    "viewCode": "コード"
   },
   "toolMessage": {
     "showFullOutput": "完全な出力を表示",

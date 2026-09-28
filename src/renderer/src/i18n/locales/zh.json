@@ -1303,7 +1303,9 @@
     "unsavedConfirm": "有未保存的更改。放弃并关闭？",
     "discard": "放弃并关闭",
     "viewSource": "源码",
-    "reveal": "在访达中显示"
+    "reveal": "在访达中显示",
+    "preview": "预览",
+    "viewCode": "代码"
   },
   "toolMessage": {
     "showFullOutput": "显示完整输出",

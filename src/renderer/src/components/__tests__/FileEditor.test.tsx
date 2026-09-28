@@ -58,6 +58,20 @@ describe('FileEditor', () => {
     expect(fs.readFile).not.toHaveBeenCalled()
   })
 
+  it('previews markdown and returns to the editor', async () => {
+    fs.stat.mockResolvedValue({ size: 11, isFile: true, isDirectory: false, mtime: 0 })
+    fs.readFile.mockResolvedValue('# Hello\n\nbody')
+    mount('note.md')
+
+    await waitFor(() => expect(screen.getByRole('textbox')).toBeInTheDocument())
+    fireEvent.click(screen.getByRole('button', { name: 'fileEditor.preview' }))
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Hello' })).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'fileEditor.viewCode' }))
+    expect(screen.getByRole('textbox')).toBeInTheDocument()
+  })
+
   it('renders a syntax-highlighted overlay for a known language', async () => {
     fs.stat.mockResolvedValue({ size: 18, isFile: true, isDirectory: false, mtime: 0 })
     fs.readFile.mockResolvedValue('const greeting = "hi";')

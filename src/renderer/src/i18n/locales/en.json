@@ -1303,7 +1303,9 @@
     "unsavedConfirm": "You have unsaved changes. Discard them and close?",
     "discard": "Discard & close",
     "viewSource": "Source",
-    "reveal": "Reveal"
+    "reveal": "Reveal",
+    "preview": "Preview",
+    "viewCode": "Code"
   },
   "toolMessage": {
     "showFullOutput": "Show full output",

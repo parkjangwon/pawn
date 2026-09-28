@@ -2,6 +2,8 @@ import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { languageForPath, highlightCode } from '../utils/syntaxHighlight'
 import ConfirmDialog from './ConfirmDialog'
+import MarkdownRenderer from './MarkdownRenderer'
+import { MarkdownBaseDirContext } from './LocalFileLinks'
 
 interface FileEditorProps {
   filePath: string
@@ -15,6 +17,13 @@ const MAX_BYTES = 1_000_000
 type Status = 'loading' | 'ready' | 'image' | 'binary' | 'tooLarge' | 'error'
 
 const IMAGE_FILE = /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i
+const MARKDOWN_FILE = /\.(md|markdown|mdown|mkd)$/i
+
+/** Directory of a path, for resolving relative links/images in the preview. */
+function dirOf(p: string): string {
+  const i = Math.max(p.lastIndexOf('/'), p.lastIndexOf('\\'))
+  return i > 0 ? p.slice(0, i) : ''
+}
 
 function isProbablyBinary(str: string): boolean {
   if (str.includes('\u0000')) return true
@@ -48,12 +57,15 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   /** SVG: show the markup instead of the rendered image. */
   const [showSource, setShowSource] = useState(false)
+  /** Markdown: render a formatted preview instead of the editor. */
+  const [preview, setPreview] = useState(false)
   const taRef = useRef<HTMLTextAreaElement>(null)
   const gutterRef = useRef<HTMLDivElement>(null)
   const preRef = useRef<HTMLPreElement>(null)
 
   const dirty = status === 'ready' && content !== original
   const language = useMemo(() => languageForPath(filePath), [filePath])
+  const isMarkdown = useMemo(() => MARKDOWN_FILE.test(filePath), [filePath])
 
   // Highlighted HTML for the overlay layer. The trailing-space append keeps the
   // final blank line aligned with the textarea when the file ends in a newline.
@@ -67,6 +79,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
     setStatus('loading')
     setContent('')
     setOriginal('')
+    setPreview(false)
     void (async (): Promise<void> => {
       const stat = await window.api.fs.stat(filePath)
       if (cancelled) return
@@ -237,25 +250,44 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
         </span>
         <div className="rp-fe-spacer" />
         <span className="rp-fe-meta">{lineCount} {t('fileEditor.linesUnit')}</span>
-        <button
-          className={`rp-fe-btn ${wrap ? 'is-active' : ''}`}
-          onClick={() => setWrap((w) => !w)}
-          title={t('fileEditor.wrap')}
-          aria-pressed={wrap}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="4 7 4 4 20 4 20 7" />
-            <line x1="9" y1="20" x2="15" y2="20" />
-            <path d="M6 20H4a2 2 0 0 1-2-2V9" />
-            <path d="M18 20h2a2 2 0 0 0 2-2V9" />
-            <polyline points="12 13 9 16 12 19" />
-            <line x1="9" y1="16" x2="15" y2="16" />
-          </svg>
-        </button>
+        {isMarkdown && (
+          <button
+            className={`rp-fe-btn rp-fe-text-btn ${preview ? 'is-active' : ''}`}
+            onClick={() => setPreview((p) => !p)}
+            title={preview ? t('fileEditor.viewCode') : t('fileEditor.preview')}
+            aria-pressed={preview}
+          >
+            {preview ? t('fileEditor.viewCode') : t('fileEditor.preview')}
+          </button>
+        )}
+        {!preview && (
+          <button
+            className={`rp-fe-btn ${wrap ? 'is-active' : ''}`}
+            onClick={() => setWrap((w) => !w)}
+            title={t('fileEditor.wrap')}
+            aria-pressed={wrap}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="4 7 4 4 20 4 20 7" />
+              <line x1="9" y1="20" x2="15" y2="20" />
+              <path d="M6 20H4a2 2 0 0 1-2-2V9" />
+              <path d="M18 20h2a2 2 0 0 0 2-2V9" />
+              <polyline points="12 13 9 16 12 19" />
+              <line x1="9" y1="16" x2="15" y2="16" />
+            </svg>
+          </button>
+        )}
         <button className="rp-fe-save" onClick={save} disabled={!dirty || saving}>
           {saving ? t('fileEditor.saving') : savedFlash ? t('fileEditor.saved') : t('common.save')}
         </button>
       </div>
+      {preview ? (
+        <div className="rp-fe-body rp-fe-preview">
+          <MarkdownBaseDirContext.Provider value={dirOf(filePath)}>
+            <MarkdownRenderer content={content} />
+          </MarkdownBaseDirContext.Provider>
+        </div>
+      ) : (
       <div className="rp-fe-body">
         {/* With wrapping, a logical line spans multiple rows and the per-line
             gutter can't track 1:1, so line numbers only render in nowrap mode. */}
@@ -286,6 +318,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
           />
         </div>
       </div>
+      )}
       {confirmClose && (
         <ConfirmDialog
           title={t('fileEditor.unsavedTitle')}
