@@ -4,10 +4,10 @@
   margin: 0 auto 10px;
   box-sizing: border-box;
   padding: 8px 12px;
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   transition: all var(--dur-fast) var(--ease-out-soft);
 }
@@ -44,7 +44,7 @@
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: var(--bg-hover);
   color: var(--text-secondary);
   flex-shrink: 0;
@@ -77,7 +77,7 @@
 
 .plan-strip-progress {
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -117,7 +117,7 @@
   font-size: 15px;
   line-height: 1;
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   transition: all var(--dur-fast) var(--ease-out-soft);
 }
 
@@ -141,7 +141,7 @@
   align-items: flex-start;
   gap: 8px;
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-sm);
   line-height: 1.4;
 }
 

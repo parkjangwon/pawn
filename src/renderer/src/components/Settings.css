@@ -35,7 +35,7 @@
   width: 30px;
   height: 30px;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   padding: 0;
@@ -121,11 +121,9 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .settings-nav-label {
-  font-size: var(--font-md, 13px);
+  font-size: var(--font-md);
   font-weight: 600;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   padding: var(--space-sm, 8px) var(--space-xs, 4px) var(--space-xs, 4px);
 }
 
@@ -137,10 +135,10 @@ body.resizing-sidebar .settings-resizer::after {
   min-height: 32px;
   padding: 5px var(--space-sm, 8px);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
-  font-size: var(--font-md, 13px);
+  font-size: var(--font-md);
   font-weight: 500;
   cursor: pointer;
   text-align: left;
@@ -161,13 +159,11 @@ body.resizing-sidebar .settings-resizer::after {
   background: var(--bg-active);
   color: var(--text-primary);
   font-weight: 600;
-  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .app.dark .settings-nav-item.active {
   background: var(--bg-active);
   color: var(--text-primary);
-  box-shadow: inset 2px 0 0 var(--accent);
 }
 
 .settings-nav-item svg {
@@ -183,7 +179,7 @@ body.resizing-sidebar .settings-resizer::after {
 
 .settings-nav-empty {
   padding: 12px 8px;
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   color: var(--text-muted);
   text-align: center;
 }
@@ -246,7 +242,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .settings-section h2 {
-  font-size: 20px;
+  font-size: var(--font-2xl);
   font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text-primary);
@@ -254,7 +250,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .settings-desc {
-  font-size: 13px;
+  font-size: var(--font-md);
   line-height: 1.5;
   color: var(--text-muted);
   margin-bottom: 18px;
@@ -262,7 +258,7 @@ body.resizing-sidebar .settings-resizer::after {
 
 .settings-card {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md);
   padding: 4px 16px;
   margin-bottom: 14px;
   background: var(--bg-elevated, var(--bg-primary));
@@ -321,8 +317,8 @@ body.resizing-sidebar .settings-resizer::after {
 
 .settings-badge {
   padding: 2px 8px;
-  border-radius: 4px;
-  font-size: 11px;
+  border-radius: var(--radius-xs);
+  font-size: var(--font-xs);
   font-weight: 500;
   background: var(--accent-subtle);
   color: var(--accent);
@@ -460,7 +456,7 @@ body.resizing-sidebar .settings-resizer::after {
   background: var(--control-bg, var(--bg-secondary));
   color: var(--text-secondary);
   cursor: pointer;
-  font-size: 14px;
+  font-size: var(--font-lg);
   line-height: 1;
   display: inline-flex;
   align-items: center;
@@ -500,7 +496,7 @@ body.resizing-sidebar .settings-resizer::after {
   gap: 2px;
   background: var(--control-bg, var(--bg-secondary));
   border: 1px solid var(--control-border, var(--border-color));
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   padding: 2px;
   box-sizing: border-box;
 }
@@ -512,10 +508,10 @@ body.resizing-sidebar .settings-resizer::after {
   gap: 6px;
   padding: 5px 12px;
   border: none;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   background: transparent;
   color: var(--text-muted);
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   font-weight: 500;
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-out-soft);
@@ -560,10 +556,10 @@ body.resizing-sidebar .settings-resizer::after {
 .settings-select {
   padding: 6px 12px;
   border: 1px solid var(--control-border, var(--border-color));
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   background: var(--control-bg, var(--bg-secondary));
   color: var(--text-primary);
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   font-weight: 500;
   outline: none;
   cursor: pointer;
@@ -602,7 +598,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .vision-badge {
-  font-size: 10px;
+  font-size: var(--font-xs);
   padding: 1px 6px;
   text-transform: none;
   letter-spacing: 0;
@@ -722,7 +718,7 @@ body.resizing-sidebar .settings-resizer::after {
 .settings-row-desc.sync-result {
   display: block;
   margin-top: 2px;
-  font-size: 11px;
+  font-size: var(--font-xs);
   opacity: 0.85;
   max-width: 420px;
   overflow: hidden;
@@ -734,10 +730,10 @@ body.resizing-sidebar .settings-resizer::after {
 .test-btn {
   padding: 4px 10px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-weight: 500;
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-out-soft);
@@ -805,10 +801,10 @@ body.resizing-sidebar .settings-resizer::after {
 .add-form textarea {
   padding: 8px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   outline: none;
   font-family: inherit;
   transition: border-color var(--dur-fast) var(--ease-out-soft);
@@ -825,11 +821,11 @@ body.resizing-sidebar .settings-resizer::after {
   width: 100%;
   padding: 9px 16px;
   border: 1px dashed var(--border-color);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: 12px;
-  font-weight: 550;
+  font-size: var(--font-sm);
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
@@ -847,10 +843,10 @@ body.resizing-sidebar .settings-resizer::after {
 .btn-primary {
   padding: 6px 14px;
   border: none;
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   background: var(--accent);
   color: var(--on-accent);
-  font-size: 12px;
+  font-size: var(--font-sm);
   font-weight: 600;
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-out-soft);
@@ -869,10 +865,10 @@ body.resizing-sidebar .settings-resizer::after {
 .btn-cancel {
   padding: 6px 12px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-sm);
   cursor: pointer;
   transition: all var(--dur-fast) var(--ease-out-soft);
 }
@@ -923,7 +919,7 @@ body.resizing-sidebar .settings-resizer::after {
   justify-content: center;
   width: 40px;
   height: 40px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   flex-shrink: 0;
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
@@ -978,7 +974,7 @@ body.resizing-sidebar .settings-resizer::after {
 .conn-pat-panel {
   margin: 0 0 12px;
   padding: 14px 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
 }
@@ -1013,7 +1009,7 @@ body.resizing-sidebar .settings-resizer::after {
 
 .conn-pat-field input {
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   background: var(--bg-primary);
   color: var(--text-primary);
@@ -1039,9 +1035,9 @@ body.resizing-sidebar .settings-resizer::after {
   min-width: 80px;
   height: 30px;
   padding: 0 14px;
-  border-radius: var(--radius-sm, 6px);
-  font-size: 12px;
-  font-weight: 550;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
+  font-weight: 500;
   cursor: pointer;
   box-sizing: border-box;
   transition: all var(--dur-fast) var(--ease-out-soft);
@@ -1086,7 +1082,7 @@ body.resizing-sidebar .settings-resizer::after {
 .conn-device-panel {
   margin-top: 4px;
   padding: 14px 16px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-secondary);
   border: 1px solid var(--border-color);
 }
@@ -1117,7 +1113,7 @@ body.resizing-sidebar .settings-resizer::after {
   font-weight: 700;
   letter-spacing: 0.12em;
   padding: 10px 16px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--bg-primary);
   border: 1px dashed var(--border-color);
   color: var(--text-primary);
@@ -1283,7 +1279,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .preset-recommended-tag {
-  font-size: 11px;
+  font-size: var(--font-xs);
   color: #f59e0b;
 }
 
@@ -1332,12 +1328,12 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .plugin-context-label {
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
 .plugin-context-path {
-  font-size: 11px;
+  font-size: var(--font-xs);
   color: var(--text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   overflow: hidden;
@@ -1348,7 +1344,7 @@ body.resizing-sidebar .settings-resizer::after {
 
 .plugin-context-status {
   flex-shrink: 0;
-  font-size: 11px;
+  font-size: var(--font-xs);
   border-radius: 999px;
   padding: 2px 8px;
   border: 1px solid var(--border-color);
@@ -1370,7 +1366,7 @@ body.resizing-sidebar .settings-resizer::after {
   margin-left: 8px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 500;
   vertical-align: middle;
   color: var(--text-muted);
@@ -1404,7 +1400,7 @@ body.resizing-sidebar .settings-resizer::after {
   border-radius: 999px;
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-xs);
   padding: 4px 10px;
   cursor: pointer;
 }
@@ -1436,14 +1432,14 @@ body.resizing-sidebar .settings-resizer::after {
   margin-left: 6px;
   padding: 1px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 500;
   color: var(--text-muted);
   background: var(--bg-secondary);
 }
 
 .plugin-source {
-  font-size: 11px;
+  font-size: var(--font-xs);
   color: var(--text-muted);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
@@ -1544,7 +1540,7 @@ body.resizing-sidebar .settings-resizer::after {
   min-width: 0;
 }
 .skill-store-status {
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   color: var(--text-muted);
   margin-bottom: 10px;
   min-height: 18px;
@@ -1563,7 +1559,7 @@ body.resizing-sidebar .settings-resizer::after {
   gap: 6px;
   padding: 12px 14px;
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-secondary);
   min-width: 0;
 }
@@ -1576,7 +1572,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 .skill-store-name {
   margin: 0;
-  font-size: var(--font-md, 14px);
+  font-size: var(--font-md);
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -1590,7 +1586,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 .skill-store-desc {
   margin: 0;
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   line-height: 1.45;
   color: var(--text-secondary);
   display: -webkit-box;
@@ -1606,7 +1602,7 @@ body.resizing-sidebar .settings-resizer::after {
   display: flex;
   flex-wrap: wrap;
   gap: 4px 10px;
-  font-size: 11px;
+  font-size: var(--font-xs);
   color: var(--text-muted);
   font-family: var(--font-mono, monospace);
 }
@@ -1629,7 +1625,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 .skill-store-btn {
   padding: 4px 12px;
-  font-size: 12px;
+  font-size: var(--font-sm);
 }
 .skill-store-pager {
   display: flex;
@@ -1637,7 +1633,7 @@ body.resizing-sidebar .settings-resizer::after {
   justify-content: center;
   gap: 12px;
   margin-top: 14px;
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 .skill-store-foot {
@@ -1678,7 +1674,7 @@ body.resizing-sidebar .settings-resizer::after {
   gap: 4px;
   padding: 12px 14px;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md);
   background: var(--bg-secondary);
   color: var(--text-primary);
   text-align: left;
@@ -1701,7 +1697,7 @@ body.resizing-sidebar .settings-resizer::after {
   font-size: var(--font-md);
 }
 .decision-preset-tag {
-  font-size: 10px;
+  font-size: var(--font-xs);
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 999px;
@@ -1758,4 +1754,62 @@ body.resizing-sidebar .settings-resizer::after {
 }
 .decision-privacy {
   margin-top: var(--space-sm);
+}
+
+/* Budget (USD) field — prefixed, right-aligned numeric input */
+.budget-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 112px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--control-border, var(--border-color));
+  border-radius: var(--radius-sm);
+  background: var(--control-bg, var(--bg-secondary));
+  cursor: text;
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    background var(--dur-fast) var(--ease-out-soft);
+}
+
+.budget-field:hover {
+  border-color: var(--border-strong, var(--border-color));
+}
+
+.budget-field:focus-within {
+  border-color: color-mix(in srgb, var(--text-primary) 40%, var(--border-strong, var(--border-color)));
+  background: var(--bg-elevated, var(--bg-primary));
+}
+
+.budget-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--font-md);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  appearance: textfield;
+}
+
+.budget-field input::-webkit-outer-spin-button,
+.budget-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.budget-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.budget-field-prefix {
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+  user-select: none;
 }

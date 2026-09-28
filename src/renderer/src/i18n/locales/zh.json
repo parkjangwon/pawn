@@ -579,6 +579,8 @@
       "computerUse": "电脑操作",
       "computerUseDesc": "控制这台 Mac 上的应用：辅助功能树操作、截图与放大、OCR、鼠标键盘、窗口与菜单。需要辅助功能和屏幕录制权限。按两次 Esc 可停止代理。",
       "computerCheck": "检查并请求权限",
+      "computerSettingUp": "正在设置… 正在准备辅助程序并打开权限提示。请在系统设置中启用 Pawn。",
+      "computerSettingUpShort": "设置中…",
       "computerReady": "就绪 — {{backend}} 助手 {{version}}",
       "computerUnavailable": "电脑操作仅在桌面应用中可用。",
       "nativeComputerTool": "Claude 原生电脑工具",

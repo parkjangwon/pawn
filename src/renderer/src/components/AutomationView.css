@@ -28,7 +28,7 @@
 }
 
 .automation-page-head h2 {
-  font-size: 24px;
+  font-size: var(--font-3xl);
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: var(--space-xs);
@@ -180,7 +180,7 @@
 
 .automation-card-result {
   margin: 0 0 10px;
-  font-size: 12px;
+  font-size: var(--font-sm);
   line-height: 1.4;
   color: var(--text-secondary);
   opacity: 0.9;
@@ -378,7 +378,7 @@
 .automation-tool-btn {
   padding: 6px 12px;
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--font-sm);
@@ -436,12 +436,12 @@
 /* Retries / multi-step prompts: out of the way until needed. */
 .automation-advanced {
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   padding: 6px 12px;
 }
 .automation-advanced > summary {
   cursor: pointer;
-  font-size: var(--font-sm, 12px);
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   padding: 4px 0;
   user-select: none;
@@ -477,7 +477,7 @@
 .automation-templates > summary::before {
   content: '▸';
   color: var(--text-muted);
-  font-size: 12px;
+  font-size: var(--font-sm);
   transition: transform 0.15s ease;
 }
 .automation-templates[open] > summary::before {

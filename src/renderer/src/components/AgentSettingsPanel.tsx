@@ -37,6 +37,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
   const nativeComputerTool = useProviderStore((s) => s.nativeComputerTool)
   const setNativeComputerTool = useProviderStore((s) => s.setNativeComputerTool)
   const [computerInfo, setComputerInfo] = useState<string | null>(null)
+  const [computerBusy, setComputerBusy] = useState(false)
   const lspDiagnostics = useProviderStore((s) => s.lspDiagnostics)
   const setLspDiagnostics = useProviderStore((s) => s.setLspDiagnostics)
   const models = useProviderStore((s) => s.models)
@@ -210,12 +211,15 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           <button
             type="button"
             className="test-btn"
+            disabled={computerBusy}
             onClick={() => {
               const status = window.api?.computer?.status
               if (!status) {
                 setComputerInfo(t('settings.agentSection.computerUnavailable'))
                 return
               }
+              setComputerBusy(true)
+              setComputerInfo(t('settings.agentSection.computerSettingUp'))
               void status({ prompt: true })
                 .then((r) =>
                   setComputerInfo(
@@ -225,9 +229,10 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
                   )
                 )
                 .catch((e) => setComputerInfo(String(e)))
+                .finally(() => setComputerBusy(false))
             }}
           >
-            {t('settings.agentSection.computerCheck')}
+            {computerBusy ? t('settings.agentSection.computerSettingUpShort') : t('settings.agentSection.computerCheck')}
           </button>
         </div>
         <div className="settings-row">

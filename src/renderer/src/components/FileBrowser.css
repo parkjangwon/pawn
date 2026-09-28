@@ -68,7 +68,7 @@
   color: var(--accent);
   cursor: pointer;
   padding: 2px 4px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   font-size: var(--font-sm);
 }
 

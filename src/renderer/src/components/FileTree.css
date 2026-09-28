@@ -1,5 +1,5 @@
 .file-tree {
-  font-size: 12px;
+  font-size: var(--font-sm);
   user-select: none;
 }
 
@@ -11,9 +11,7 @@
   cursor: pointer;
   color: var(--text-secondary);
   font-weight: 500;
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
+  font-size: var(--font-xs);
   border-top: 1px solid var(--border-color);
 }
 
@@ -91,5 +89,5 @@
   padding: 8px;
   text-align: center;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-xs);
 }

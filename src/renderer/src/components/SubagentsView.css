@@ -42,31 +42,26 @@
 .subagents-title-icon {
   width: 28px;
   height: 28px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   display: grid;
   place-items: center;
-  font-size: 12px;
-  color: #fff;
-  background: linear-gradient(
-    135deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 55%, #7c5cff)
-  );
-  box-shadow: 0 4px 12px color-mix(in srgb, var(--accent) 35%, transparent);
+  font-size: var(--font-sm);
+  background: color-mix(in srgb, var(--text-primary) 10%, var(--bg-secondary));
+  color: var(--text-primary);
   flex-shrink: 0;
 }
 
 .subagents-title h3 {
   margin: 0;
-  font-size: 14px;
-  font-weight: 650;
+  font-size: var(--font-lg);
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
 .subagents-count {
   display: block;
   margin-top: 2px;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
@@ -96,7 +91,7 @@
 .subagents-stat-val {
   display: block;
   font-size: 15px;
-  font-weight: 650;
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   line-height: 1.2;
@@ -116,21 +111,19 @@
 
 .subagents-stat-val.cost {
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--font-md);
 }
 
 .subagents-stat-cache {
   color: var(--text-secondary);
   font-weight: 500;
-  font-size: 11px;
+  font-size: var(--font-xs);
 }
 
 .subagents-stat-label {
   display: block;
   margin-top: 2px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--font-xs);
   color: var(--text-secondary);
 }
 
@@ -140,7 +133,7 @@
   border-radius: 999px;
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-sm);
   padding: 7px 12px;
   outline: none;
 }
@@ -159,7 +152,7 @@
   background: color-mix(in srgb, var(--bg-secondary) 92%, var(--accent));
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-sm);
   padding: 6px 14px;
   border-radius: 999px;
   box-shadow: 0 6px 18px color-mix(in srgb, #000 12%, transparent);
@@ -186,7 +179,7 @@
   border: none;
   background: transparent;
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-xs);
   padding: 5px 10px;
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
@@ -211,7 +204,7 @@
   background: transparent;
   color: var(--text-primary);
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--font-xs);
   padding: 5px 11px;
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
@@ -234,7 +227,7 @@
 .subagents-empty {
   padding: 32px 20px;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--font-md);
   line-height: 1.55;
   text-align: center;
   max-width: 360px;
@@ -245,7 +238,7 @@
   width: 48px;
   height: 48px;
   margin: 0 auto 12px;
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   display: grid;
   place-items: center;
   font-size: 18px;
@@ -256,7 +249,7 @@
 
 .subagents-empty-title {
   margin: 0 0 6px;
-  font-size: 14px;
+  font-size: var(--font-lg);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -266,7 +259,7 @@
   padding: 0;
   list-style: none;
   text-align: left;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
 }
 
@@ -299,7 +292,7 @@
 .subagents-card {
   position: relative;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--bg-secondary) 92%, transparent);
   overflow: hidden;
   transition: border-color 0.18s ease, box-shadow 0.18s ease, transform 0.18s ease;
@@ -329,13 +322,8 @@
   top: 0;
   height: 2px;
   max-width: 100%;
-  background: linear-gradient(
-    90deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 40%, #7c5cff)
-  );
+  background: var(--accent);
   transition: width 0.35s ease;
-  box-shadow: 0 0 8px color-mix(in srgb, var(--accent) 50%, transparent);
 }
 
 .subagents-progress-bar {
@@ -349,11 +337,7 @@
 .subagents-progress-bar > div {
   height: 100%;
   border-radius: 999px;
-  background: linear-gradient(
-    90deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 50%, #7c5cff)
-  );
+  background: var(--accent);
   transition: width 0.3s ease;
 }
 
@@ -368,7 +352,7 @@
   background: var(--bg-primary);
   color: var(--text-primary);
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--font-xs);
   padding: 3px 10px;
   cursor: pointer;
 }
@@ -394,7 +378,7 @@
   color: inherit;
   text-align: left;
   cursor: pointer;
-  font-size: 12px;
+  font-size: var(--font-sm);
 }
 
 .subagents-dot {
@@ -434,8 +418,8 @@
 }
 
 .subagents-name {
-  font-weight: 650;
-  font-size: 13px;
+  font-weight: 600;
+  font-size: var(--font-md);
   letter-spacing: -0.01em;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -444,16 +428,14 @@
 .subagents-agent {
   color: var(--text-secondary);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--font-xs);
   min-width: 0;
   overflow-wrap: anywhere;
 }
 
 .subagents-bg,
 .subagents-chip {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--font-xs);
   padding: 1px 7px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
@@ -473,7 +455,7 @@
 
 .subagents-meta {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-variant-numeric: tabular-nums;
   min-width: 0;
   overflow-wrap: anywhere;
@@ -481,9 +463,7 @@
 
 .subagents-status-label {
   margin-left: auto;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--font-xs);
   color: var(--text-secondary);
   font-weight: 600;
   white-space: nowrap;
@@ -510,7 +490,7 @@
   background: var(--bg-primary);
   color: #e55;
   border-radius: 999px;
-  font-size: 11px;
+  font-size: var(--font-xs);
   padding: 3px 10px;
   cursor: pointer;
   z-index: 1;
@@ -524,7 +504,7 @@
 .subagents-card-body {
   padding: 0 12px 12px;
   border-top: 1px solid color-mix(in srgb, var(--border-color) 80%, transparent);
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   animation: subagent-expand 0.16s ease;
 }
@@ -554,16 +534,14 @@
 .subagents-body-label {
   display: inline-block;
   margin-right: 6px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--font-xs);
   color: var(--text-secondary);
   font-weight: 600;
 }
 
 .subagents-prompt {
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg-primary) 80%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
   color: var(--text-primary);
@@ -590,11 +568,11 @@
   max-height: 240px;
   overflow: auto;
   background: var(--bg-primary);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   border: 1px solid var(--border-color);
   white-space: pre-wrap;
   word-break: break-word;
-  font-size: 11px;
+  font-size: var(--font-xs);
   line-height: 1.45;
   color: var(--text-primary);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;

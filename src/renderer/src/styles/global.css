@@ -3,6 +3,7 @@
   --titlebar-height: 0px;
   --app-header-height: 48px;
   --focus-ring: rgba(0, 0, 0, 0.25);
+  --radius-xs: 4px;
   --radius-sm: 6px;
   --radius-md: 10px;
   --radius-lg: 16px;
@@ -14,6 +15,8 @@
   --space-lg: 16px;
   --space-xl: 24px;
   --space-2xl: 32px;
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
   --font-xs: 11px;
   --font-sm: 12px;
   --font-md: 13px;
@@ -33,7 +36,7 @@
   /* Shared chat column width: welcome, messages, composer stay aligned */
   --chat-content-max: 720px;
   /* Message text size — Settings → Appearance overrides at runtime */
-  --chat-font-size: 14px;
+  --chat-font-size: var(--font-lg);
 }
 
 * {
@@ -45,7 +48,7 @@
 *:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: -2px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
 }
 
 html, body, #root {
@@ -57,7 +60,7 @@ html, body, #root {
   position: fixed;
   right: 10px;
   bottom: 5px;
-  font-size: 10px;
+  font-size: var(--font-xs);
   line-height: 1;
   color: var(--text-muted);
   opacity: 0.55;
@@ -67,7 +70,7 @@ html, body, #root {
 }
 
 body {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   font-size: var(--font-lg);
@@ -103,10 +106,10 @@ body {
   top: 12px;
   z-index: 10000;
   padding: 8px 14px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: var(--accent, #2c2c2c);
   color: var(--on-accent, #fff);
-  font-size: 13px;
+  font-size: var(--font-md);
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
@@ -143,6 +146,14 @@ body {
 }
 
 /* —— Interactive primitives (buttons, chips, list rows) —— */
+/* Form controls don't inherit font by default (they fell back to Arial). */
+button,
+input,
+textarea,
+select {
+  font-family: inherit;
+}
+
 button,
 [role='button'] {
   -webkit-tap-highlight-color: transparent;
@@ -285,33 +296,33 @@ select:focus-visible {
   padding-left: 92px;
 }
 
-/* Light theme */
+/* Light theme — one cool zinc gray family; ink accent; shadows tinted to the canvas */
 .app.light {
   --bg-primary: #ffffff;
   --bg-secondary: #f7f7f8;
   --bg-sidebar: #f7f7f8;
-  --bg-hover: #ececec;
-  --bg-active: #e0e0e0;
+  --bg-hover: #efeff1;
+  --bg-active: #e4e4e7;
   --bg-input: #f4f4f5;
   --bg-elevated: #ffffff;
-  --text-primary: #1a1a1a;
-  --text-secondary: #555555;
-  --text-muted: #8e8e8e;
-  --border-color: #e5e5e5;
-  --border-strong: #d4d4d4;
-  --accent: #2c2c2c;
-  --accent-hover: #1a1a1a;
-  --accent-subtle: rgba(44, 44, 44, 0.08);
+  --text-primary: #18181b;
+  --text-secondary: #52525b;
+  --text-muted: #71717a;
+  --border-color: #e4e4e7;
+  --border-strong: #d4d4d8;
+  --accent: #27272a;
+  --accent-hover: #18181b;
+  --accent-subtle: rgba(39, 39, 42, 0.08);
   /* Text/icon color sitting on --accent (primary buttons, filled chips) */
   --on-accent: #ffffff;
   --focus-ring: rgba(0, 0, 0, 0.25);
-  --user-bubble: #f0f0f0;
+  --user-bubble: #f1f1f3;
   --danger: #ef4444;
   --warning: #f59e0b;
   --success: #16a34a;
-  --shadow-elevated: 0 8px 24px rgba(0, 0, 0, 0.12);
+  --shadow-elevated: 0 1px 2px rgba(24, 24, 27, 0.05), 0 8px 24px rgba(24, 24, 27, 0.08);
   --control-bg: #f4f4f5;
-  --control-border: #d4d4d4;
+  --control-border: #d4d4d8;
   --find-highlight: #fde68a;
   --find-highlight-active: #f59e0b;
   --find-highlight-active-text: #1a1a1a;
@@ -328,7 +339,7 @@ select:focus-visible {
  * Text:
  *   - Primary: #f4f4f6 (soft off-white)
  *   - Secondary: #a1a1aa (clear slate-400)
- *   - Muted: #71717a (soft zinc-500)
+ *   - Muted: #8b8b94 (zinc, >= 4.5:1 on canvas and cards)
  * Borders:
  *   - Hairline alpha borders (rgba(255, 255, 255, 0.08) and 0.15)
  */
@@ -343,7 +354,7 @@ select:focus-visible {
 
   --text-primary: #f4f4f6;
   --text-secondary: #a1a1aa;
-  --text-muted: #71717a;
+  --text-muted: #8b8b94;
 
   --border-color: rgba(255, 255, 255, 0.08);
   --border-strong: rgba(255, 255, 255, 0.15);
@@ -357,7 +368,7 @@ select:focus-visible {
   --danger: #f87171;
   --warning: #fbbf24;
   --success: #34d399;
-  --shadow-elevated: 0 8px 28px rgba(0, 0, 0, 0.45);
+  --shadow-elevated: 0 1px 2px rgba(5, 5, 8, 0.3), 0 8px 28px rgba(5, 5, 8, 0.4);
 
   --control-bg: #1e1e23;
   --control-border: rgba(255, 255, 255, 0.12);
@@ -376,7 +387,7 @@ select:focus-visible {
 }
 ::-webkit-scrollbar-thumb {
   background: transparent;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 2px solid transparent;
   background-clip: padding-box;
   transition: background-color var(--dur-fast) ease;

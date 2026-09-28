@@ -133,7 +133,7 @@
   width: 18px;
   height: 18px;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: none;
   color: var(--text-muted);
   cursor: pointer;

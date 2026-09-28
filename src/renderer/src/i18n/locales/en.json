@@ -579,6 +579,8 @@
       "computerUse": "Computer use",
       "computerUseDesc": "Control apps on this Mac: accessibility-tree actions, screenshots and zoom, OCR, mouse and keyboard, windows and menus. Needs Accessibility and Screen Recording permission. Press Esc twice to stop the agent.",
       "computerCheck": "Check & grant permissions",
+      "computerSettingUp": "Setting up… preparing the helper and opening permission prompts. Turn on Pawn in System Settings.",
+      "computerSettingUpShort": "Setting up…",
       "computerReady": "Ready — {{backend}} helper {{version}}",
       "computerUnavailable": "Computer use is only available in the desktop app.",
       "nativeComputerTool": "Claude native computer tool",

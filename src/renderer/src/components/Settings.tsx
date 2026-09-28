@@ -190,30 +190,38 @@ export default function Settings({
                   <span className="settings-row-label">{t('settings.usageSection.sessionBudget')}</span>
                   <span className="settings-row-desc">{t('settings.usageSection.sessionBudgetDesc')}</span>
                 </div>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  style={{ width: 96 }}
-                  value={sessionBudgetUsd || ''}
-                  placeholder="0"
-                  onChange={(e) => setSessionBudgetUsd(Number(e.target.value) || 0)}
-                />
+                <label className="budget-field">
+                  <span className="budget-field-prefix" aria-hidden="true">$</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step={0.5}
+                    aria-label={t('settings.usageSection.sessionBudget')}
+                    value={sessionBudgetUsd || ''}
+                    placeholder="0"
+                    onChange={(e) => setSessionBudgetUsd(Number(e.target.value) || 0)}
+                  />
+                </label>
               </div>
               <div className="settings-row">
                 <div className="settings-row-info">
                   <span className="settings-row-label">{t('settings.usageSection.dailyBudget')}</span>
                   <span className="settings-row-desc">{t('settings.usageSection.dailyBudgetDesc')}</span>
                 </div>
-                <input
-                  type="number"
-                  min={0}
-                  step={0.5}
-                  style={{ width: 96 }}
-                  value={dailyBudgetUsd || ''}
-                  placeholder="0"
-                  onChange={(e) => setDailyBudgetUsd(Number(e.target.value) || 0)}
-                />
+                <label className="budget-field">
+                  <span className="budget-field-prefix" aria-hidden="true">$</span>
+                  <input
+                    type="number"
+                    inputMode="decimal"
+                    min={0}
+                    step={0.5}
+                    aria-label={t('settings.usageSection.dailyBudget')}
+                    value={dailyBudgetUsd || ''}
+                    placeholder="0"
+                    onChange={(e) => setDailyBudgetUsd(Number(e.target.value) || 0)}
+                  />
+                </label>
               </div>
             </div>
           </div>
