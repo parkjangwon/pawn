@@ -579,6 +579,8 @@
       "computerUse": "コンピューター操作",
       "computerUseDesc": "この Mac のアプリを操作します：アクセシビリティツリー操作、スクリーンショットと拡大、OCR、マウス・キーボード、ウインドウ・メニュー。アクセシビリティと画面収録の許可が必要です。Esc を2回押すとエージェントが停止します。",
       "computerCheck": "確認して許可を求める",
+      "computerSettingUp": "設定中… ヘルパーを準備し、権限ダイアログを開きます。システム設定で Pawn をオンにしてください。",
+      "computerSettingUpShort": "設定中…",
       "computerReady": "準備完了 — {{backend}} ヘルパー {{version}}",
       "computerUnavailable": "コンピューター操作はデスクトップアプリでのみ使えます。",
       "nativeComputerTool": "Claude ネイティブのコンピューターツール",

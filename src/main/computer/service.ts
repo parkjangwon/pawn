@@ -8,14 +8,16 @@
  * capture + xdotool / PowerShell / cliclick) for the core actions.
  */
 
-import { app } from 'electron'
+import { app, shell } from 'electron'
+import { existsSync } from 'fs'
+import { join } from 'path'
 import { CuaHelper, findHelper, helperCandidates } from './cuaHelper'
 import { ComputerActionError, ComputerEngine, pointArg, modifiersArg, type ComputerResult, type ShotPolicy } from './engine'
 import { takeScreenshot, listDisplays } from './screenshot'
 import { mouseClick, mouseDrag, mouseMove, mouseScroll } from './mouse'
 import { keypress, typeText } from './keyboard'
 import { clipboardRead, clipboardWrite } from './clipboard'
-import { clampLogicalPoint, computerPreflight, imageToLogical, sleep } from './platform'
+import { clampLogicalPoint, computerPreflight, imageToLogical, run, sleep } from './platform'
 
 let helper: CuaHelper | null = null
 let engine: ComputerEngine | null = null
@@ -212,6 +214,32 @@ export async function executeComputer(
   }
 }
 
+/**
+ * Dev checkouts ship without the compiled helper. Build it on demand so the
+ * settings button can finish setup by itself; packaged apps bundle it.
+ */
+async function buildHelperForDev(): Promise<string | null> {
+  if (process.platform !== 'darwin' || app.isPackaged) return null
+  let root = process.cwd()
+  try {
+    root = app.getAppPath()
+  } catch {
+    /* fall back to cwd */
+  }
+  const script = [join(root, 'scripts', 'build-native.sh'), join(root, '..', '..', 'scripts', 'build-native.sh')].find((p) =>
+    existsSync(p)
+  )
+  if (!script) return 'native helper build script not found'
+  try {
+    await run('bash', [script], { timeout: 300_000 })
+  } catch (err) {
+    return `native helper build failed: ${err instanceof Error ? err.message : String(err)}`
+  }
+  // Drop the cached "not found" helper so the fresh binary is picked up.
+  disposeComputer()
+  return null
+}
+
 export async function computerStatus(opts: { prompt?: boolean } = {}): Promise<{
   ok: boolean
   backend: 'native' | 'legacy'
@@ -223,11 +251,22 @@ export async function computerStatus(opts: { prompt?: boolean } = {}): Promise<{
   notes: string[]
   errors: string[]
 }> {
-  const h = getHelper()
+  let h = getHelper()
+  const setupErrors: string[] = []
+  if (opts.prompt && h && !h.isAvailable && !h.path) {
+    const buildError = await buildHelperForDev()
+    if (buildError) setupErrors.push(buildError)
+    h = getHelper()
+  }
   if (h?.isAvailable) {
     try {
       const p = await h.call<{ accessibility: boolean; screenRecording: boolean }>('permissions', { prompt: opts.prompt === true })
       const caps = await h.call<{ version: string; screenCaptureKit: boolean; arch: string }>('capabilities')
+      if (opts.prompt && (!p.accessibility || !p.screenRecording)) {
+        // Take the user straight to the pane that still needs a toggle.
+        const pane = !p.accessibility ? 'Privacy_Accessibility' : 'Privacy_ScreenCapture'
+        await shell.openExternal(`x-apple.systempreferences:com.apple.preference.security?${pane}`).catch(() => undefined)
+      }
       const errors: string[] = []
       if (!p.accessibility) errors.push('Accessibility permission missing — System Settings → Privacy & Security → Accessibility → enable Pawn')
       if (!p.screenRecording) errors.push('Screen Recording permission missing — System Settings → Privacy & Security → Screen & System Audio Recording → enable Pawn, then restart Pawn')
@@ -260,6 +299,8 @@ export async function computerStatus(opts: { prompt?: boolean } = {}): Promise<{
   const legacy = await computerPreflight()
   return {
     ...legacy,
+    ok: legacy.ok && setupErrors.length === 0,
+    errors: [...setupErrors, ...legacy.errors],
     backend: 'legacy',
     helper: null,
     notes: [...legacy.notes, ...(process.platform === 'darwin' ? ['native helper not found — run `npm run build:native` (dev) or reinstall Pawn'] : [])]
