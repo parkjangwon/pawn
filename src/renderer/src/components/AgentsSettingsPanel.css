@@ -4,7 +4,7 @@
 
 .agents-settings-subhint {
   margin: 6px 0 0;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   line-height: 1.45;
 }
@@ -12,7 +12,7 @@
 .agents-cost-mode {
   margin-bottom: 14px;
   padding: 12px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
 .agents-cost-mode .settings-row {
@@ -26,7 +26,7 @@
 
 .agents-cost-hint {
   margin: 8px 0 0;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   line-height: 1.45;
 }
@@ -147,8 +147,8 @@
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-primary);
-  border-radius: var(--radius-sm, 6px);
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
   font-weight: 500;
   padding: 5px 12px;
   cursor: pointer;
@@ -186,10 +186,10 @@
 .agents-search {
   width: 100%;
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm, 6px);
+  border-radius: var(--radius-sm);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-sm);
   padding: 6px 10px;
   outline: none;
   transition: border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft);
@@ -205,9 +205,7 @@
 }
 
 .agents-templates-label {
-  font-size: 11px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--font-xs);
   color: var(--text-muted);
   font-weight: 600;
   margin-bottom: 6px;
@@ -223,8 +221,8 @@
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-primary);
-  border-radius: var(--radius-sm, 6px);
-  font-size: 12px;
+  border-radius: var(--radius-sm);
+  font-size: var(--font-sm);
   font-weight: 500;
   padding: 4px 10px;
   cursor: pointer;
@@ -238,11 +236,11 @@
 }
 
 .agents-settings-ok {
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: #2a9d5c;
   margin-bottom: 8px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, #3ecf8e 12%, transparent);
 }
 
@@ -256,7 +254,7 @@
   border: none;
   background: none;
   padding: 0;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--accent);
   cursor: pointer;
   font-weight: 600;
@@ -268,7 +266,7 @@
 
 .agents-editor {
   border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-color));
-  border-radius: 14px;
+  border-radius: var(--radius-lg);
   background:
     radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 50%),
     var(--bg-secondary);
@@ -281,8 +279,8 @@
 }
 
 .agents-editor-title {
-  font-size: 14px;
-  font-weight: 650;
+  font-size: var(--font-lg);
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -290,7 +288,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: 12px;
+  font-size: var(--font-sm);
   flex: 1;
   min-width: 0;
 }
@@ -302,7 +300,7 @@
 
 .agents-field-hint {
   color: var(--text-secondary);
-  font-size: 11px;
+  font-size: var(--font-xs);
   line-height: 1.4;
 }
 
@@ -310,10 +308,10 @@
 .agents-field select,
 .agents-field textarea {
   border: 1px solid var(--border-color);
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   background: var(--bg-primary);
   color: var(--text-primary);
-  font-size: 12px;
+  font-size: var(--font-sm);
   padding: 8px 10px;
   font-family: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
@@ -348,8 +346,8 @@
 
 .agents-settings-h {
   margin: 18px 0 10px;
-  font-size: 13px;
-  font-weight: 650;
+  font-size: var(--font-md);
+  font-weight: 600;
   letter-spacing: -0.01em;
 }
 
@@ -370,7 +368,7 @@
 
 .agents-card {
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-md, 10px);
+  border-radius: var(--radius-md);
   padding: 14px 16px;
   background: var(--bg-elevated, var(--bg-primary));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
@@ -398,34 +396,29 @@
 .agents-avatar {
   width: 32px;
   height: 32px;
-  border-radius: 10px;
+  border-radius: var(--radius-md);
   display: grid;
   place-items: center;
-  font-size: 13px;
+  font-size: var(--font-md);
   font-weight: 700;
-  color: #fff;
   flex-shrink: 0;
-  background: linear-gradient(
-    135deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 50%, #7c5cff)
-  );
+  background: color-mix(in srgb, var(--text-primary) 10%, var(--bg-secondary));
+  color: var(--text-primary);
 }
 
 .agents-avatar.source-project {
-  background: linear-gradient(135deg, #3ecf8e, #2a9d5c);
+  background: color-mix(in srgb, var(--success, #2a9d5c) 16%, var(--bg-secondary));
+  color: var(--success, #2a9d5c);
 }
 
 .agents-avatar.source-user {
-  background: linear-gradient(135deg, #c9a227, #a67c00);
+  background: color-mix(in srgb, var(--warning, #a67c00) 16%, var(--bg-secondary));
+  color: var(--warning, #a67c00);
 }
 
 .agents-avatar.source-builtin {
-  background: linear-gradient(
-    135deg,
-    var(--accent),
-    color-mix(in srgb, var(--accent) 50%, #7c5cff)
-  );
+  background: color-mix(in srgb, var(--text-primary) 10%, var(--bg-secondary));
+  color: var(--text-primary);
 }
 
 .agents-card-head {
@@ -438,13 +431,11 @@
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--font-md);
 }
 
 .agents-settings-tag {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--font-xs);
   padding: 2px 7px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 14%, transparent);
@@ -459,7 +450,7 @@
 
 .agents-settings-desc {
   margin-top: 6px;
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   line-height: 1.45;
   display: -webkit-box;
@@ -470,26 +461,26 @@
 
 .agents-settings-meta {
   margin-top: 8px;
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--text-secondary);
   word-break: break-all;
 }
 
 .agents-settings-muted {
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: var(--text-secondary);
   line-height: 1.5;
   padding: 12px;
   border: 1px dashed var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
 .agents-settings-error {
-  font-size: 12px;
+  font-size: var(--font-sm);
   color: #e55;
   margin-bottom: 8px;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: color-mix(in srgb, #e55 10%, transparent);
 }

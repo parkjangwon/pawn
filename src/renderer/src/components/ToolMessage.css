@@ -1,10 +1,10 @@
 .tool-message {
   margin: 4px 0;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   background: var(--bg-elevated, var(--bg-secondary));
   overflow: hidden;
-  font-size: 12px;
+  font-size: var(--font-sm);
   transition:
     border-color var(--dur-fast) var(--ease-out-soft),
     box-shadow var(--dur-fast) var(--ease-out-soft),
@@ -62,7 +62,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--font-xs);
   color: var(--text-muted);
 }
 
@@ -71,7 +71,7 @@
   gap: 4px;
   flex-shrink: 0;
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--font-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -86,7 +86,7 @@
 .tool-duration {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: 10px;
+  font-size: var(--font-xs);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -97,9 +97,9 @@
 
 .tool-status {
   margin-left: auto;
-  font-size: 10px;
+  font-size: var(--font-xs);
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   font-weight: 600;
   letter-spacing: 0.3px;
 }
@@ -147,7 +147,7 @@
 }
 
 .tool-message-content {
-  font-size: 11px;
+  font-size: var(--font-xs);
   line-height: 1.4;
   margin: 0;
   white-space: pre-wrap;
@@ -169,7 +169,7 @@
 }
 
 .tool-show-more {
-  font-size: 11px;
+  font-size: var(--font-xs);
   color: var(--accent);
   background: none;
   border: none;
@@ -202,12 +202,10 @@
 }
 
 .tool-badge-warn {
-  font-size: 10px;
+  font-size: var(--font-xs);
   padding: 0 5px;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: color-mix(in srgb, #f59e0b 22%, transparent);
   color: #d97706;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.02em;
 }

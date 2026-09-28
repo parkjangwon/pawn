@@ -30,15 +30,15 @@
 
 .usage-stat {
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   padding: 12px;
   background: color-mix(in srgb, var(--bg-secondary) 90%, transparent);
 }
 
 .usage-stat-val {
   display: block;
-  font-size: 16px;
-  font-weight: 650;
+  font-size: var(--font-xl);
+  font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
 }
@@ -46,22 +46,20 @@
 .usage-stat-label {
   display: block;
   margin-top: 4px;
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--font-xs);
   color: var(--text-secondary);
 }
 
 .usage-table-wrap {
   overflow: auto;
   border: 1px solid var(--border-color);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
 }
 
 .usage-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--font-sm);
 }
 
 .usage-table th,
@@ -72,9 +70,7 @@
 }
 
 .usage-table th {
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--font-xs);
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
   position: sticky;
@@ -87,6 +83,6 @@
 
 .usage-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 11px;
+  font-size: var(--font-xs);
   word-break: break-all;
 }

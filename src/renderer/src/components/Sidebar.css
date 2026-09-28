@@ -104,7 +104,7 @@ body.resizing-sidebar .settings-sidebar {
   min-height: 32px;
   padding: 5px var(--space-sm);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--font-md);
@@ -124,7 +124,7 @@ body.resizing-sidebar .settings-sidebar {
 .sidebar-action-btn.active {
   background: var(--bg-active);
   color: var(--text-primary);
-  box-shadow: inset 2px 0 0 var(--accent);
+  font-weight: 500;
 }
 
 .sidebar-action-btn svg {
@@ -144,11 +144,9 @@ body.resizing-sidebar .settings-sidebar {
 }
 
 .section-label {
-  font-size: var(--font-md);
-  font-weight: 600;
+  font-size: var(--font-sm);
+  font-weight: 500;
   color: var(--text-muted);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   padding: var(--space-sm) var(--space-xs) var(--space-xs);
 }
 
@@ -189,7 +187,7 @@ body.resizing-sidebar .settings-sidebar {
   width: 18px;
   height: 18px;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: none;
   color: var(--text-muted);
   cursor: pointer;
@@ -213,7 +211,7 @@ body.resizing-sidebar .settings-sidebar {
   align-items: center;
   gap: var(--space-sm);
   padding: 6px var(--space-sm);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-secondary);
@@ -270,7 +268,7 @@ body.resizing-sidebar .settings-sidebar {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: var(--text-muted);
-  font-size: 11px;
+  font-size: var(--font-xs);
   flex-shrink: 1;
 }
 
@@ -295,7 +293,7 @@ body.resizing-sidebar .settings-sidebar {
   align-items: center;
   gap: 4px;
   padding: 6px var(--space-sm);
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-secondary);
@@ -352,7 +350,7 @@ body.resizing-sidebar .settings-sidebar {
   width: 18px;
   height: 18px;
   border: none;
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: none;
   color: var(--text-muted);
   cursor: pointer;
@@ -387,7 +385,7 @@ body.resizing-sidebar .settings-sidebar {
   align-items: center;
   gap: 4px;
   padding: 5px var(--space-sm);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   cursor: pointer;
   font-size: var(--font-md);
   color: var(--text-muted);
@@ -405,7 +403,7 @@ body.resizing-sidebar .settings-sidebar {
 .tree-session.active {
   background: var(--bg-active);
   color: var(--text-primary);
-  box-shadow: inset 2px 0 0 var(--accent);
+  font-weight: 500;
 }
 
 .tree-session svg {
@@ -442,7 +440,7 @@ body.resizing-sidebar .settings-sidebar {
   flex: 1;
   padding: 1px 4px;
   border: 1px solid var(--focus-ring);
-  border-radius: 3px;
+  border-radius: var(--radius-xs);
   background: var(--bg-primary);
   color: var(--text-primary);
   font-size: var(--font-md);
@@ -472,7 +470,7 @@ body.resizing-sidebar .settings-sidebar {
   width: 100%;
   padding: 8px var(--space-sm);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   background: none;
   color: var(--text-secondary);
   font-size: var(--font-md);
@@ -509,7 +507,7 @@ body.resizing-sidebar .settings-sidebar {
   justify-content: center;
   width: 28px;
   height: 28px;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   border: none;
   background: transparent;
   color: var(--text-muted);
@@ -533,7 +531,7 @@ body.resizing-sidebar .settings-sidebar {
   gap: 8px;
   padding: 0 10px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   transition: border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft);
@@ -555,7 +553,7 @@ body.resizing-sidebar .settings-sidebar {
   border: none;
   background: transparent;
   color: var(--text-primary);
-  font-size: var(--font-md, 13px);
+  font-size: var(--font-md);
   padding: 0;
   outline: none;
   font-family: inherit;
@@ -569,7 +567,7 @@ body.resizing-sidebar .settings-sidebar {
   border: none;
   background: none;
   color: var(--text-muted);
-  font-size: 14px;
+  font-size: var(--font-lg);
   line-height: 1;
   cursor: pointer;
   padding: 0 2px;
@@ -581,9 +579,9 @@ body.resizing-sidebar .settings-sidebar {
 .tree-session-rename {
   flex: 1;
   min-width: 0;
-  font-size: 12px;
+  font-size: var(--font-sm);
   padding: 2px 6px;
-  border-radius: 4px;
+  border-radius: var(--radius-xs);
   border: 1px solid var(--accent);
   background: var(--bg-primary);
   color: var(--text-primary);
