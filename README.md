@@ -36,7 +36,14 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
 
-### Latest — v0.15.0
+### Latest — v0.15.1
+
+**UI refresh + easier Computer Use setup**
+- **Quieter, more refined UI** — Pretendard typeface, one consistent type, spacing and radius scale, a neutral zinc light theme with better muted-text contrast, and no more all-caps labels, accent stripes, gradients or glows. Inputs firm up their border on focus instead of glowing
+- **Usage budgets** — the session and daily spend limits are now proper `$` fields with aligned numbers
+- **One-click Computer Use setup** — Settings → Computer Use now prepares the native helper when it is missing (dev builds), asks for Accessibility and Screen Recording, and opens the System Settings pane that still needs a toggle. Korean UI now says "Computer Use" and "LSP"
+
+### v0.15.0
 
 **Record & Replay + decision models**
 - **Record & Replay (macOS)** — Show Pawn a workflow once, get a reusable skill. Press the record button in the composer (or `/record`), do the task in Pawn's browser and/or any Mac app, then stop (Esc twice works too). Pawn writes a `SKILL.md` with the inputs that change per run, steps by visible label (not coordinates), checks, and a confirm-before-submit rule. Save it to `~/.agents/skills`, run it again with new inputs (`/skill-name`), refine it in chat, or schedule it as an automation
