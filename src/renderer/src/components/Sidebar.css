@@ -83,10 +83,10 @@ body.resizing-sidebar .settings-sidebar {
 }
 
 .sidebar-logo {
-  font-size: var(--font-md);
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.4px;
+  font-size: var(--font-lg);
+  font-weight: 400;
+  color: var(--primary);
+  letter-spacing: -0.02em;
 }
 
 /* Quick actions */

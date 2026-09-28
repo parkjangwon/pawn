@@ -5,9 +5,9 @@
   --focus-ring: rgba(0, 0, 0, 0.25);
   --radius-xs: 4px;
   --radius-sm: 6px;
-  --radius-md: 10px;
-  --radius-lg: 16px;
-  --radius-xl: 20px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
   --space-2xs: 2px;
   --space-xs: 4px;
   --space-sm: 8px;
@@ -15,8 +15,17 @@
   --space-lg: 16px;
   --space-xl: 24px;
   --space-2xl: 32px;
-  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC', sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: Inter, 'Pretendard Variable', Pretendard, system-ui, 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
+  /* Brand orange is scarce: primary CTAs and the wordmark. Not selection chrome. */
+  --primary: #f54e00;
+  --primary-active: #d04200;
+  --on-primary: #ffffff;
+  --timeline-thinking: #dfa88f;
+  --timeline-grep: #9fc9a2;
+  --timeline-read: #9fbbe0;
+  --timeline-edit: #c0a8dd;
+  --timeline-done: #c08532;
   --font-xs: 11px;
   --font-sm: 12px;
   --font-md: 13px;
@@ -96,7 +105,7 @@ body {
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg-secondary) 92%, var(--accent));
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
-  box-shadow: 0 8px 24px color-mix(in srgb, #000 14%, transparent);
+  box-shadow: none;
   pointer-events: none;
 }
 
@@ -132,7 +141,7 @@ body {
   transform: translateX(-50%);
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
 }
 
 .app.platform-mac .skip-link:focus,
@@ -296,85 +305,79 @@ select:focus-visible {
   padding-left: 92px;
 }
 
-/* Light theme — one cool zinc gray family; ink accent; shadows tinted to the canvas */
+/* Light theme — warm cream canvas, warm ink, hairlines. Orange lives on --primary. */
 .app.light {
-  --bg-primary: #ffffff;
-  --bg-secondary: #f7f7f8;
-  --bg-sidebar: #f7f7f8;
-  --bg-hover: #efeff1;
-  --bg-active: #e4e4e7;
-  --bg-input: #f4f4f5;
+  --bg-primary: #f7f7f4;
+  --bg-secondary: #fafaf7;
+  --bg-sidebar: #f7f7f4;
+  --bg-hover: #efeee8;
+  --bg-active: #e6e5e0;
+  --bg-input: #ffffff;
   --bg-elevated: #ffffff;
-  --text-primary: #18181b;
-  --text-secondary: #52525b;
-  --text-muted: #71717a;
-  --border-color: #e4e4e7;
-  --border-strong: #d4d4d8;
-  --accent: #27272a;
-  --accent-hover: #18181b;
-  --accent-subtle: rgba(39, 39, 42, 0.08);
-  /* Text/icon color sitting on --accent (primary buttons, filled chips) */
-  --on-accent: #ffffff;
-  --focus-ring: rgba(0, 0, 0, 0.25);
-  --user-bubble: #f1f1f3;
-  --danger: #ef4444;
-  --warning: #f59e0b;
-  --success: #16a34a;
-  --shadow-elevated: 0 1px 2px rgba(24, 24, 27, 0.05), 0 8px 24px rgba(24, 24, 27, 0.08);
-  --control-bg: #f4f4f5;
-  --control-border: #d4d4d8;
-  --find-highlight: #fde68a;
-  --find-highlight-active: #f59e0b;
-  --find-highlight-active-text: #1a1a1a;
+  --text-primary: #26251e;
+  --text-secondary: #5a5852;
+  /* Darkened from the marketing muted (#807d72) so it stays >= 4.5:1 on cream. */
+  --text-muted: #6b685f;
+  --border-color: #e6e5e0;
+  --border-strong: #cfcdc4;
+  --accent: #26251e;
+  --accent-hover: #1c1b16;
+  --accent-subtle: rgba(38, 37, 30, 0.08);
+  /* Text sitting on ink fills (download-style buttons), not on orange. */
+  --on-accent: #f7f7f4;
+  --focus-ring: rgba(38, 37, 30, 0.45);
+  --user-bubble: #ffffff;
+  --danger: #cf2d56;
+  --warning: #c08532;
+  --success: #1f8a65;
+  --shadow-elevated: none;
+  --control-bg: #ffffff;
+  --control-border: #cfcdc4;
+  --find-highlight: #f3e2c2;
+  --find-highlight-active: #c08532;
+  --find-highlight-active-text: #26251e;
 }
 
-/*
- * Dark theme — layered depth & contrast tuned for deep, comfortable focus (Linear / macOS Dark).
- * Surface stack:
- *   - Canvas: #161619 (rich neutral dark canvas)
- *   - Sidebar / Nav: #111114 (recessed darker frame)
- *   - Secondary / Cards: #1e1e23 (elevated card layer)
- *   - Elevated / Modals / Input: #242429 (top active elevation)
- *   - Hover / Active: #26262c / #2f2f37
- * Text:
- *   - Primary: #f4f4f6 (soft off-white)
- *   - Secondary: #a1a1aa (clear slate-400)
- *   - Muted: #8b8b94 (zinc, >= 4.5:1 on canvas and cards)
- * Borders:
- *   - Hairline alpha borders (rgba(255, 255, 255, 0.08) and 0.15)
- */
+/* Dark theme — the same warm family, inverted. Orange stays --primary. No shadows. */
 .app.dark {
-  --bg-primary: #161619;
-  --bg-secondary: #1e1e23;
-  --bg-sidebar: #111114;
-  --bg-hover: #26262c;
-  --bg-active: #2f2f37;
-  --bg-input: #1a1a1e;
-  --bg-elevated: #222227;
+  --bg-primary: #1c1b17;
+  --bg-secondary: #23221d;
+  --bg-sidebar: #16150f;
+  --bg-hover: #2e2d26;
+  --bg-active: #3a3830;
+  --bg-input: #201f1a;
+  --bg-elevated: #2a2923;
 
-  --text-primary: #f4f4f6;
-  --text-secondary: #a1a1aa;
-  --text-muted: #8b8b94;
+  --text-primary: #f7f7f4;
+  --text-secondary: #c4c1b6;
+  --text-muted: #a8a394;
 
-  --border-color: rgba(255, 255, 255, 0.08);
-  --border-strong: rgba(255, 255, 255, 0.15);
+  --border-color: rgba(247, 247, 244, 0.1);
+  --border-strong: rgba(247, 247, 244, 0.18);
 
-  --accent: #f4f4f6;
+  --accent: #f7f7f4;
   --accent-hover: #ffffff;
-  --accent-subtle: rgba(244, 244, 246, 0.08);
-  --on-accent: #161619;
-  --focus-ring: rgba(244, 244, 246, 0.35);
-  --user-bubble: #222227;
-  --danger: #f87171;
-  --warning: #fbbf24;
-  --success: #34d399;
-  --shadow-elevated: 0 1px 2px rgba(5, 5, 8, 0.3), 0 8px 28px rgba(5, 5, 8, 0.4);
+  --accent-subtle: rgba(247, 247, 244, 0.08);
+  --on-accent: #1c1b17;
+  --focus-ring: rgba(247, 247, 244, 0.45);
+  --user-bubble: #2a2923;
+  --danger: #e45b7a;
+  --warning: #d4a15a;
+  --success: #3dbe96;
+  --shadow-elevated: none;
 
-  --control-bg: #1e1e23;
-  --control-border: rgba(255, 255, 255, 0.12);
-  --find-highlight: rgba(250, 204, 21, 0.3);
-  --find-highlight-active: #facc15;
-  --find-highlight-active-text: #161619;
+  --control-bg: #2a2923;
+  --control-border: rgba(247, 247, 244, 0.16);
+  --find-highlight: rgba(192, 133, 50, 0.35);
+  --find-highlight-active: #c08532;
+  --find-highlight-active-text: #1c1b17;
+}
+
+code,
+kbd,
+pre,
+samp {
+  font-family: var(--font-mono);
 }
 
 /* Scrollbar — thin, fade-in on hover for a calmer chrome */

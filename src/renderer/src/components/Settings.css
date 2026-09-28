@@ -493,6 +493,7 @@ body.resizing-sidebar .settings-resizer::after {
 .theme-segmented-control,
 .theme-toggle {
   display: inline-flex;
+  flex-shrink: 0;
   gap: 2px;
   background: var(--control-bg, var(--bg-secondary));
   border: 1px solid var(--control-border, var(--border-color));
@@ -513,8 +514,9 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-muted);
   font-size: var(--font-sm);
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft);
 }
 
 .theme-segment-btn svg {
@@ -531,7 +533,6 @@ body.resizing-sidebar .settings-resizer::after {
   background: var(--bg-elevated, var(--bg-primary));
   color: var(--text-primary);
   font-weight: 600;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 .theme-segment-btn.active svg {
@@ -841,20 +842,20 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .btn-primary {
-  padding: 6px 14px;
+  padding: 8px 16px;
   border: none;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--on-accent);
-  font-size: var(--font-sm);
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--font-lg);
+  font-weight: 500;
+  line-height: 1;
   cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background var(--dur-fast) var(--ease-out-soft);
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.92;
-  transform: translateY(-1px);
+  background: var(--primary-active);
 }
 
 .btn-primary:disabled {
@@ -1144,35 +1145,25 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .btn-primary {
-  padding: 6px 14px;
+  padding: 8px 16px;
   border: none;
-  border-radius: var(--radius-sm);
-  background: var(--accent);
-  color: var(--on-accent, #fff);
-  font-size: var(--font-md);
+  border-radius: var(--radius-md);
+  background: var(--primary);
+  color: var(--on-primary);
+  font-size: var(--font-lg);
   font-weight: 500;
+  line-height: 1;
   cursor: pointer;
-  transition: opacity 0.15s, filter 0.15s;
+  transition: background var(--dur-fast) var(--ease-out-soft);
 }
 
 .btn-primary:hover:not(:disabled) {
-  opacity: 0.92;
+  background: var(--primary-active);
 }
 
 .btn-primary:disabled {
   opacity: 0.45;
   cursor: not-allowed;
-}
-
-/* Dark: light filled button needs dark label (was white-on-white / invisible) */
-.app.dark .btn-primary {
-  background: #f5f5f7;
-  color: #1c1c1e;
-}
-
-.app.dark .btn-primary:hover:not(:disabled) {
-  background: #ffffff;
-  opacity: 1;
 }
 
 .btn-cancel {

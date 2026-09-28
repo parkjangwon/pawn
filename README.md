@@ -36,7 +36,15 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
 
-### Latest — v0.15.1
+### Latest — v0.16.0
+
+**Cursor-inspired interface**
+- **Warm canvas** — cream page floor in light mode, warm near-black in dark. White cards sit on a hairline, with no drop shadows
+- **Scarce orange** — `#f54e00` is only the wordmark and primary actions (send, main buttons). Selection chrome stays ink
+- **Type** — Inter for UI text, Pretendard for Hangul, kana, and Han, JetBrains Mono on code
+- **Agent timeline** — tool rows use peach, mint, blue, and lavender pills by action, and gold when a step is done
+
+### v0.15.1
 
 **UI refresh + easier Computer Use setup**
 - **Quieter, more refined UI** — Pretendard typeface, one consistent type, spacing and radius scale, a neutral zinc light theme with better muted-text contrast, and no more all-caps labels, accent stripes, gradients or glows. Inputs firm up their border on focus instead of glowing

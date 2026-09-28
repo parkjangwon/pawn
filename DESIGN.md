@@ -1,36 +1,43 @@
 # Pawn Design Contract
 
-The UI for a desktop coding tool. Quiet and neutral, and dense without feeling cramped. Hierarchy comes from type, spacing and tone. Color and decoration are not used for hierarchy. Tokens live in `src/renderer/src/styles/global.css` (`:root`, `.app.light`, `.app.dark`); component CSS uses tokens, not raw values.
+Desktop coding tool, set in the Cursor visual language (`design/cursor-design-system.md`). Editorial and calm, still dense enough to work in. Hierarchy comes from type, warm surfaces, and hairlines. Tokens live in `src/renderer/src/styles/global.css` (`:root`, `.app.light`, `.app.dark`). Component CSS uses tokens, not raw values.
+
+The source system describes a marketing site. This app keeps its density. It does not adopt 72px heroes, 80px section padding, or a 1200px marketing grid.
+
+## Color
+- Canvas is warm cream in light (`#f7f7f4`), warm near-black in dark. Never pure white as the page floor, never cool zinc.
+- Ink is warm (`#26251e` light, cream text in dark). `--accent` stays ink and is for selection chrome, not for filling buttons.
+- `--primary` (`#f54e00`) is the only brand action color. Use it on primary CTAs, the wordmark, and nowhere else. Press state is `--primary-active`.
+- Cards are white (light) or one step above the canvas (dark), separated by a 1px hairline. No drop shadows. `--shadow-elevated` is `none`.
+- Timeline pastels (`--timeline-thinking|grep|read|edit|done`) appear only on agent tool rows.
+- Semantic `--danger`, `--warning`, `--success` are for status only.
+- `--text-muted` is darkened slightly from the marketing token so it stays at least 4.5:1 on the canvas.
 
 ## Typography
-- Font: `Pretendard Variable`, bundled from the `pretendard` package as a dynamic subset (CSP `font-src 'self'`). The system font stack is the fallback. Mono: `ui-monospace, SFMono-Regular, Menlo, monospace`.
-- Form controls inherit the font (`button, input, textarea, select { font-family: inherit }`).
-- Scale: `--font-xs 11` / `--font-sm 12` / `--font-md 13` / `--font-lg 14` / `--font-xl 16` / `--font-2xl 20` / `--font-3xl 24`. Nothing below 11px. No half-pixel sizes.
-- Weights: 400 body, 500 emphasis and active rows, 600 titles, 700 only for rare display text. Never use 550, 650 or 800.
-- Section labels use sentence case. No uppercase tracking.
+- Sans: Inter (CursorGothic substitute), then Pretendard Variable for Hangul, kana, and Han. Both are bundled. CSP `font-src` stays `'self'`.
+- Mono: JetBrains Mono on code, tool paths, and `<pre>` / `<code>`.
+- Weights: 400 body and display, 500 buttons and emphasis, 600 component titles and timeline labels. Do not use 700.
+- Display tracking goes slightly negative. Body tracking stays 0.
+- Section labels stay sentence case. Timeline pills may track, but they are not forced uppercase (ko/ja/zh labels).
 
 ## Radius
-- `--radius-xs 4` for chips, kbd and inline code.
-- `--radius-sm 6` for rows, buttons and inputs.
-- `--radius-md 10` for cards, menus and popovers.
-- `--radius-lg 16` for the composer and dialogs.
-- `--radius-xl 20` for large sheets.
-- `999px` is only for pills. `50%` is only for round icon buttons.
-
-## Color and surface
-- There is one gray family (cool zinc), and no second accent. `--accent` is ink (near-black in light mode, near-white in dark).
-- Text contrast is at least 4.5:1 for `--text-muted` on `--bg-primary`.
-- Shadows are tinted to the canvas and use `--shadow-elevated`. Never use raw black shadows.
-- Semantic colors are `--danger`, `--warning` and `--success`, used for status only.
+- `--radius-xs` 4px tags.
+- `--radius-sm` 6px compact rows.
+- `--radius-md` 8px buttons, inputs, primary CTAs.
+- `--radius-lg` 12px cards, composer, dialogs, menus.
+- `--radius-xl` 16px rare large sheets.
+- `999px` is only for pills.
 
 ## State
 - Hover shows `--bg-hover`. Active or selected shows `--bg-active` plus weight 500.
-- No colored edge stripes (inset or border-left accent) on rows or cards. The keyboard `focus-visible` ring is the only colored edge.
-- No decorative gradients or glows on avatars and icons. Use flat, tinted neutrals.
+- Primary hover and press use `--primary-active`. No glow, no lift shadow.
+- No colored edge stripes on rows or cards. The keyboard focus ring is ink, not orange.
+- No decorative gradients on avatars and icons.
 
 ## Motion
-- Use the existing `--dur-*` and `--ease-*` tokens. Animate only transform and opacity. `prefers-reduced-motion` is respected globally.
+- Use `--dur-*` and `--ease-*`. Animate transform and opacity. `prefers-reduced-motion` is respected globally.
 
 ## Accepted debt
-- UltraWork keeps its rainbow keyword treatment on purpose. It is a mode indicator, not decoration.
-- About 200 hardcoded hex colors remain in component CSS. They will be migrated as each surface is touched.
+- UltraWork keeps its rainbow keyword treatment. It is a mode indicator, not a brand color.
+- Hardcoded hex in component CSS remains until that surface is touched.
+- Marketing-only pieces (pricing inversion, 5-column footer, IDE mockup cards) are not part of the app.

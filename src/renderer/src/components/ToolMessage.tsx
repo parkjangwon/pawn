@@ -6,6 +6,7 @@ import { parseDiffMarker, stripDiffMarker } from '../utils/diffMarker'
 import { openFileInPanel } from '../stores/filesPanel'
 import { displayTarget, formatToolDuration, type ToolMeta } from '../agent/toolMeta'
 import { toolLabel } from './toolLabels'
+import { timelineStage } from './timelineStage'
 
 interface ToolMessageProps {
   content: string
@@ -84,7 +85,7 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
             <path d={info.icon} />
           </svg>
         )}
-        <span className="tool-name">{info.label}</span>
+        <span className={`tool-name timeline-pill timeline-pill-${timelineStage(toolName)}`}>{info.label}</span>
         {target && (
           <span className="tool-target" title={meta?.path || meta?.target}>
             {target}
