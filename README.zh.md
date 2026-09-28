@@ -1,3 +1,5 @@
+<img width="1728" height="1117" alt="image" src="https://github.com/user-attachments/assets/63c97c68-3a84-4da4-9c6f-7b23280b57ed" />
+
 # Pawn
 
 [English](./README.md) · [한국어](./README.ko.md) · [日本語](./README.ja.md)
