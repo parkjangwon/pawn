@@ -18,6 +18,7 @@ import { registerWorktreeIpc } from './worktree'
 import { registerLspIpc } from './lsp'
 import { registerAgentRuntimeIpc } from './agentRuntime'
 import { registerKiroIpc } from './kiro'
+import { registerXaiIpc } from './xai'
 import { registerSkillsIpc } from './skills'
 import { registerDecisionIpc } from './decision'
 import { registerRecorderIpc } from './recorder'
@@ -44,6 +45,7 @@ export function registerAllIpc(): void {
   registerLspIpc()
   registerAgentRuntimeIpc()
   registerKiroIpc()
+  registerXaiIpc()
   registerSkillsIpc()
   registerDecisionIpc()
   registerRecorderIpc()

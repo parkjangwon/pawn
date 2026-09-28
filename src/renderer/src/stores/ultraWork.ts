@@ -11,6 +11,7 @@ import {
 import { fetchWithRetry } from '../agent/llm'
 import { pickSummaryModel, parseSummaryResponse, renderForSummary } from '../agent/compaction'
 import { authHeadersForChat, providerChatUrl } from '../agent/testProvider'
+import { applyXaiSession } from '../agent/xaiSession'
 import type { TranscriptEntry } from '../agent/transcript'
 import { useUsageStore } from './usage'
 import { setUltraWorkSession } from './ultraWorkRegistry'
@@ -131,9 +132,10 @@ export async function evaluateGoal(
           ]
         }
   try {
+    const authed = await applyXaiSession(target.provider)
     const res = await fetchWithRetry(
-      providerChatUrl(target.provider),
-      authHeadersForChat(target.provider),
+      providerChatUrl(authed),
+      authHeadersForChat(authed),
       body,
       window.api?.platform === 'browser',
       combined

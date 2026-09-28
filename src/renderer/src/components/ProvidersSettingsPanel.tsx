@@ -3,6 +3,8 @@ import { isOpenRouterProvider } from '../agent/listModels'
 import type { ApiFormat } from '../types/provider'
 import type { SettingsState } from './settingsState'
 import KiroAuthPanel from './KiroAuthPanel'
+import XaiAuthPanel from './XaiAuthPanel'
+import { isXaiHost } from '../agent/xaiSession'
 
 export default function ProvidersSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -48,6 +50,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                   </span>
                 )}
                 {p.apiFormat === 'kiro' && <KiroAuthPanel onSignedIn={() => void handleSyncModels(p.id)} />}
+                {isXaiHost(p.baseUrl) && <XaiAuthPanel onSignedIn={() => void handleSyncModels(p.id)} />}
               </div>
               <div className="settings-row-actions">
                 {!isOpenRouter ? (
@@ -125,7 +128,11 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             {!presetPicking.localNoKey && !presetPicking.signIn && (
               <input
                 type="password"
-                placeholder={t('settings.providerSection.pasteApiKey')}
+                placeholder={
+                  presetPicking.optionalKey
+                    ? t('settings.providerSection.xai.keyOptional')
+                    : t('settings.providerSection.pasteApiKey')
+                }
                 value={presetKey}
                 onChange={(e) => setPresetKey(e.target.value)}
                 autoFocus
@@ -135,7 +142,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               <button
                 className="btn-primary"
                 onClick={() => handleAddFromPreset(presetPicking, presetKey)}
-                disabled={!presetPicking.localNoKey && !presetPicking.signIn && !presetKey.trim()}
+                disabled={!presetPicking.localNoKey && !presetPicking.signIn && !presetPicking.optionalKey && !presetKey.trim()}
               >
                 {t('settings.providerSection.addWithModels', { count: presetPicking.models.length })}
               </button>

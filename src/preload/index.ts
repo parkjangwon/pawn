@@ -432,6 +432,19 @@ const api = {
       return () => ipcRenderer.removeListener('kiro:loginDone', handler)
     }
   },
+  /** xAI subscription OAuth. The access token is fetched per request; the refresh token stays in main. */
+  xai: {
+    status: () => ipcRenderer.invoke('xai:status'),
+    startLogin: () => ipcRenderer.invoke('xai:startLogin'),
+    cancelLogin: () => ipcRenderer.invoke('xai:cancelLogin'),
+    signOut: () => ipcRenderer.invoke('xai:signOut'),
+    accessToken: () => ipcRenderer.invoke('xai:accessToken'),
+    onLoginDone: (callback: (data: { ok: boolean; email?: string; error?: string }) => void) => {
+      const handler = (_: unknown, data: { ok: boolean; email?: string; error?: string }): void => callback(data)
+      ipcRenderer.on('xai:loginDone', handler)
+      return () => ipcRenderer.removeListener('xai:loginDone', handler)
+    }
+  },
   /** Persistent bash sessions (Claude's bash tool). */
   bash: {
     run: (key: string, command: string, opts: { cwd: string; timeoutMs?: number; sandbox?: Record<string, unknown> }) =>

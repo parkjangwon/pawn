@@ -35,6 +35,8 @@ export interface ProviderPreset {
   localNoKey?: boolean
   /** Signs in inside Pawn instead of taking a pasted key (Kiro). */
   signIn?: boolean
+  /** A pasted key is optional because the row can also sign in (xAI). */
+  optionalKey?: boolean
   models: PresetModel[]
 }
 
@@ -308,7 +310,9 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     name: 'xAI (Grok)',
     apiFormat: 'openai',
     baseUrl: 'https://api.x.ai/v1',
-    keyHint: 'console.x.ai — API Keys',
+    keyHint: 'Sign in with SuperGrok or X Premium+, or paste an API key from console.x.ai',
+    keyHintKey: 'settings.providerSection.xai.hint',
+    optionalKey: true,
     // https://docs.x.ai/developers/models (2026-08)
     models: [
       model('grok-4.5', 'Grok 4.5', 'high'),

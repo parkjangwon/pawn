@@ -23,6 +23,7 @@ import {
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
 import { isOpenRouterProvider } from '../agent/listModels'
+import { applyXaiSession } from '../agent/xaiSession'
 import { useSidebarResize } from '../hooks/useSidebarResize'
 import { MCP_TEMPLATES } from '../agent/mcpTemplates'
 import {
@@ -181,7 +182,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   )
 
   const handleAddFromPreset = async (preset: ProviderPreset, apiKey: string): Promise<void> => {
-    if (!preset.localNoKey && !preset.signIn && !apiKey.trim()) return
+    if (!preset.localNoKey && !preset.signIn && !preset.optionalKey && !apiKey.trim()) return
     const before = useProviderStore.getState().providers.length
     addProvider({
       id: '',
@@ -362,8 +363,9 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         setTestResult((r) => ({ ...r, [providerId]: 'FAIL: no model' }))
         return
       }
-      const url = providerChatUrl(p)
-      const headers = authHeadersForChat(p)
+      const authed = await applyXaiSession(p)
+      const url = providerChatUrl(authed)
+      const headers = authHeadersForChat(authed)
       const body = buildTestRequestBody(p.apiFormat, modelId)
       const isBrowser = window.api?.platform === 'browser'
       let response: Response

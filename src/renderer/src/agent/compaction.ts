@@ -14,6 +14,7 @@ import type { ModelEntry, Provider } from '../types/provider'
 import { fetchWithRetry } from './llm'
 import { isProviderAvailable } from './router'
 import { authHeadersForChat, providerChatUrl } from './testProvider'
+import { applyXaiSession } from './xaiSession'
 import {
   buildCompactionSummary,
   compactionCut,
@@ -155,9 +156,10 @@ export async function summarizeWithModel(
   const timer = setTimeout(() => controller.abort(), SUMMARY_TIMEOUT_MS)
   const signal = opts.signal ? AbortSignal.any([opts.signal, controller.signal]) : controller.signal
   try {
+    const authed = await applyXaiSession(target.provider)
     const res = await fetchWithRetry(
-      providerChatUrl(target.provider),
-      authHeadersForChat(target.provider),
+      providerChatUrl(authed),
+      authHeadersForChat(authed),
       buildSummaryRequest(target.provider, target.model.modelId, transcriptText),
       window.api?.platform === 'browser',
       signal

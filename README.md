@@ -36,7 +36,13 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
 
-### Latest — v0.16.0
+### Latest — v0.16.1
+
+**xAI sign-in and markdown preview**
+- **xAI OAuth** — Settings → Providers → xAI can sign in with SuperGrok or X Premium+ (device code). A console API key still works, and is used when you are signed out. The refresh token stays encrypted in `~/.pawn`
+- **Markdown preview** — `.md` files in the file viewer toggle between rendered preview and source. Relative links resolve from the file's folder
+
+### v0.16.0
 
 **Cursor-inspired interface**
 - **Warm canvas** — cream page floor in light mode, warm near-black in dark. White cards sit on a hairline, with no drop shadows

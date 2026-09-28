@@ -7,6 +7,7 @@
  */
 
 import { uid } from '../utils/uid'
+import { applyXaiSession } from './xaiSession'
 import { guessPricing, guessSupportsVision } from '../types/provider'
 import type { ApiFormat, ModelEntry, ModelTier, Provider } from '../types/provider'
 
@@ -191,8 +192,9 @@ export async function fetchProviderModels(
   provider: Pick<Provider, 'apiFormat' | 'baseUrl' | 'apiKey' | 'name'>,
   opts?: { isBrowser?: boolean; signal?: AbortSignal }
 ): Promise<ListModelsResult> {
-  const url = modelsListUrl(provider.baseUrl)
-  const headers = authHeadersForProvider(provider)
+  const authed = await applyXaiSession(provider)
+  const url = modelsListUrl(authed.baseUrl)
+  const headers = authHeadersForProvider(authed)
   const isBrowser = opts?.isBrowser ?? (typeof window !== 'undefined' && window.api?.platform === 'browser')
 
   let response: Response

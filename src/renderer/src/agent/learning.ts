@@ -10,6 +10,7 @@ import { heuristicLesson, LESSON_PROMPT, lessonTitle } from './correctionLearnin
 import { fetchWithRetry } from './llm'
 import { addProfileNote } from './repoProfile'
 import { authHeadersForChat, providerChatUrl } from './testProvider'
+import { applyXaiSession } from './xaiSession'
 
 async function distill(input: string, sessionId: string): Promise<string | null> {
   const target = pickSummaryModel(Math.ceil(input.length / 3))
@@ -29,7 +30,8 @@ async function distill(input: string, sessionId: string): Promise<string | null>
               { role: 'user', content: input }
             ]
           }
-    const res = await fetchWithRetry(providerChatUrl(target.provider), authHeadersForChat(target.provider), body, window.api?.platform === 'browser', controller.signal)
+    const authed = await applyXaiSession(target.provider)
+    const res = await fetchWithRetry(providerChatUrl(authed), authHeadersForChat(authed), body, window.api?.platform === 'browser', controller.signal)
     const { text, usage } = parseSummaryResponse(await res.json())
     try {
       useUsageStore.getState().record(sessionId, target.model, usage)

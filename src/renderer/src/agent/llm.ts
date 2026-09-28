@@ -10,6 +10,7 @@ import { NATIVE_DUPLICATES, claudeComputerVersion, planNativeComputer } from './
 import { noteComputerModel, shotPolicyFor } from './toolHandlers/computer'
 import { planApplyPatch, planClaudeNativeTools } from './nativeTools'
 import { buildKiroRequest, kiroConversationId, type KiroRequestBuild } from './kiroWire'
+import { applyXaiSession } from './xaiSession'
 import { estimateCharsAsTokens } from './transcript'
 import type { CallUsage } from '../stores/usage'
 import type { RouteDecision } from './router'
@@ -176,7 +177,8 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   let url: string
   let body: Record<string, unknown>
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  const token = provider.apiKey || ''
+  const authedProvider = await applyXaiSession(provider)
+  const token = authedProvider.apiKey || ''
 
   // Idle timeout: a stalled stream must not hold the turn forever. It aborts
   // the fetch/reader through a combined signal and surfaces as a transient

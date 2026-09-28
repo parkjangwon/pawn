@@ -503,6 +503,20 @@
         "openPage": "Open sign-in page",
         "failed": "Kiro sign-in failed",
         "note": "Kiro has no official public model API for third-party apps; Pawn talks to Kiro's service protocol directly. It may change without notice — use at your own risk. The Kiro CLI / IDE login is used read-only and never refreshed by Pawn."
+      },
+      "xai": {
+        "hint": "Sign in with SuperGrok or X Premium+, or paste an API key from console.x.ai. A signed-in session is used instead of the key until you sign out.",
+        "keyOptional": "API key (optional if you sign in)",
+        "desktopOnly": "xAI sign-in is available in the desktop app. Paste an API key to use it here.",
+        "signedOut": "Not signed in. Paste an API key, or sign in with a SuperGrok / X Premium+ account.",
+        "signedIn": "Signed in to xAI ({{email}}). This session is used instead of an API key.",
+        "account": "account",
+        "signIn": "Sign in with xAI",
+        "signOut": "Sign out",
+        "enterCode": "Confirm this code in your browser:",
+        "openPage": "Open sign-in page",
+        "failed": "xAI sign-in failed",
+        "note": "Subscription sign-in uses the public Grok sign-in. If xAI rejects the session, sign out and use an API key from console.x.ai."
       }
     },
     "modelSection": {

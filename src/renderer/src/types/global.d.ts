@@ -45,6 +45,12 @@ declare global {
     | { id: string; source: McpServerSource; status: 'connected'; tools: McpToolInfo[] }
     | { id: string; source: McpServerSource; status: 'error'; error: string }
 
+  interface XaiStatusDto {
+    signedIn: boolean
+    email?: string
+    expiresAt?: number
+  }
+
   interface KiroStatusDto {
     signedIn: boolean
     mode?: 'builder-id' | 'idc' | 'api-key' | 'import'
@@ -1148,6 +1154,18 @@ declare global {
         chatAbort: (requestId: string) => Promise<{ ok: boolean }>
         onEvent: (callback: (data: { requestId: string; event: KiroEventDto }) => void) => () => void
         onLoginDone: (callback: (data: { ok: boolean; status?: KiroStatusDto; error?: string }) => void) => () => void
+      }
+      /** xAI subscription sign-in (device code). API keys stay on the provider row. */
+      xai?: {
+        status: () => Promise<XaiStatusDto>
+        startLogin: () => Promise<
+          | { ok: true; userCode: string; verificationUri: string; verificationUriComplete: string; expiresIn: number }
+          | { ok: false; error: string }
+        >
+        cancelLogin: () => Promise<{ ok: boolean }>
+        signOut: () => Promise<{ ok: boolean }>
+        accessToken: () => Promise<{ ok: true; token: string } | { ok: false; error?: string }>
+        onLoginDone: (callback: (data: { ok: boolean; email?: string; error?: string }) => void) => () => void
       }
       bash?: {
         run: (

@@ -4,6 +4,7 @@ import { registerAllIpc } from './ipc'
 import { disposeLsp } from './ipc/lsp'
 import { disposeAgentRuntime } from './ipc/agentRuntime'
 import { disposeKiro } from './ipc/kiro'
+import { disposeXai } from './ipc/xai'
 import { disposeComputer } from './computer/service'
 import { disposeRecorder } from './ipc/recorder'
 import { createMainWindow, getMainWindow } from './window'
@@ -90,6 +91,7 @@ app.whenReady().then(() => {
     void disposeLsp().catch(() => {})
     void disposeAgentRuntime()
     disposeKiro()
+    disposeXai()
     disposeComputer()
     stopRoutineServices()
     destroyTray()

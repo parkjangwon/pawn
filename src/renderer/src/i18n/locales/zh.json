@@ -503,6 +503,20 @@
         "openPage": "打开登录页面",
         "failed": "Kiro 登录失败",
         "note": "Kiro 没有面向第三方应用的官方模型 API，Pawn 直接与 Kiro 的服务协议通信，可能随时变化，请自行承担风险。Kiro CLI / IDE 的登录仅以只读方式使用，Pawn 不会刷新它。"
+      },
+      "xai": {
+        "hint": "使用 SuperGrok 或 X Premium+ 登录，或粘贴 console.x.ai 的 API 密钥。已登录的会话会优先于密钥，直到你退出。",
+        "keyOptional": "API 密钥（登录后可省略）",
+        "desktopOnly": "xAI 登录仅在桌面应用中可用。在这里请粘贴 API 密钥。",
+        "signedOut": "尚未登录。请粘贴 API 密钥，或使用 SuperGrok / X Premium+ 登录。",
+        "signedIn": "已登录 xAI（{{email}}）。将使用此会话而不是 API 密钥。",
+        "account": "账户",
+        "signIn": "使用 xAI 登录",
+        "signOut": "退出登录",
+        "enterCode": "请在浏览器中确认此代码：",
+        "openPage": "打开登录页",
+        "failed": "xAI 登录失败",
+        "note": "订阅登录使用 Grok 的公开登录。如果 xAI 拒绝该会话，请退出并改用 console.x.ai 的 API 密钥。"
       }
     },
     "modelSection": {

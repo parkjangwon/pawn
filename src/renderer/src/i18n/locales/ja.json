@@ -503,6 +503,20 @@
         "openPage": "サインインページを開く",
         "failed": "Kiro のサインインに失敗しました",
         "note": "Kiro にはサードパーティアプリ向けの公式モデル API がないため、Pawn は Kiro のサービスプロトコルと直接通信します。予告なく変わる可能性があるため自己責任でご利用ください。Kiro CLI / IDE のログインは読み取り専用で使い、Pawn が更新することはありません。"
+      },
+      "xai": {
+        "hint": "SuperGrok または X Premium+ でサインインするか、console.x.ai の API キーを貼り付けます。サインイン中のセッションは、サインアウトするまでキーより優先されます。",
+        "keyOptional": "API キー（サインインする場合は省略可）",
+        "desktopOnly": "xAI のサインインはデスクトップアプリで行えます。ここでは API キーを貼り付けてください。",
+        "signedOut": "サインインしていません。API キーを貼り付けるか、SuperGrok / X Premium+ でサインインしてください。",
+        "signedIn": "xAI にサインイン済み（{{email}}）。このセッションが API キーの代わりに使われます。",
+        "account": "アカウント",
+        "signIn": "xAI でサインイン",
+        "signOut": "サインアウト",
+        "enterCode": "ブラウザでこのコードを確認してください:",
+        "openPage": "サインインページを開く",
+        "failed": "xAI のサインインに失敗しました",
+        "note": "サブスクリプションのサインインは Grok の公開ログインを使います。xAI がセッションを拒否した場合はサインアウトし、console.x.ai の API キーを使ってください。"
       }
     },
     "modelSection": {

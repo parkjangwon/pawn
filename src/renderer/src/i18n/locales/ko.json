@@ -503,6 +503,20 @@
         "openPage": "로그인 페이지 열기",
         "failed": "Kiro 로그인에 실패했어요",
         "note": "Kiro는 서드파티 앱용 공식 모델 API를 제공하지 않아, Pawn이 Kiro 서비스 프로토콜과 직접 통신해요. 예고 없이 바뀔 수 있으니 본인 책임하에 사용하세요. Kiro CLI / IDE 로그인은 읽기 전용으로만 쓰고 Pawn이 갱신하지 않아요."
+      },
+      "xai": {
+        "hint": "SuperGrok 또는 X Premium+로 로그인하거나 console.x.ai API 키를 붙여 넣으세요. 로그인된 세션은 로그아웃할 때까지 키보다 우선합니다.",
+        "keyOptional": "API 키 (로그인하면 생략 가능)",
+        "desktopOnly": "xAI 로그인은 데스크톱 앱에서 할 수 있어요. 여기서는 API 키를 붙여 넣으세요.",
+        "signedOut": "로그인되어 있지 않아요. API 키를 넣거나 SuperGrok / X Premium+로 로그인하세요.",
+        "signedIn": "xAI에 로그인됨 ({{email}}). 이 세션이 API 키 대신 쓰여요.",
+        "account": "계정",
+        "signIn": "xAI로 로그인",
+        "signOut": "로그아웃",
+        "enterCode": "브라우저에서 이 코드를 확인하세요:",
+        "openPage": "로그인 페이지 열기",
+        "failed": "xAI 로그인에 실패했어요",
+        "note": "구독 로그인은 Grok 공개 로그인을 사용해요. xAI가 세션을 거부하면 로그아웃하고 console.x.ai API 키를 쓰세요."
       }
     },
     "modelSection": {
