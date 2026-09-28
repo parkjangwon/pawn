@@ -1755,3 +1755,61 @@ body.resizing-sidebar .settings-resizer::after {
 .decision-privacy {
   margin-top: var(--space-sm);
 }
+
+/* Budget (USD) field — prefixed, right-aligned numeric input */
+.budget-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  width: 112px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid var(--control-border, var(--border-color));
+  border-radius: var(--radius-sm);
+  background: var(--control-bg, var(--bg-secondary));
+  cursor: text;
+  transition:
+    border-color var(--dur-fast) var(--ease-out-soft),
+    background var(--dur-fast) var(--ease-out-soft);
+}
+
+.budget-field:hover {
+  border-color: var(--border-strong, var(--border-color));
+}
+
+.budget-field:focus-within {
+  border-color: color-mix(in srgb, var(--text-primary) 40%, var(--border-strong, var(--border-color)));
+  background: var(--bg-elevated, var(--bg-primary));
+}
+
+.budget-field input {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
+  outline: none;
+  background: none;
+  color: var(--text-primary);
+  font-size: var(--font-md);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  appearance: textfield;
+}
+
+.budget-field input::-webkit-outer-spin-button,
+.budget-field input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.budget-field input::placeholder {
+  color: var(--text-muted);
+}
+
+.budget-field-prefix {
+  color: var(--text-muted);
+  font-size: var(--font-sm);
+  user-select: none;
+}
