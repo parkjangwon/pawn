@@ -505,18 +505,18 @@
         "note": "Kiro는 서드파티 앱용 공식 모델 API를 제공하지 않아, Pawn이 Kiro 서비스 프로토콜과 직접 통신해요. 예고 없이 바뀔 수 있으니 본인 책임하에 사용하세요. Kiro CLI / IDE 로그인은 읽기 전용으로만 쓰고 Pawn이 갱신하지 않아요."
       },
       "xai": {
-        "hint": "SuperGrok 또는 X Premium+로 로그인하거나 console.x.ai API 키를 붙여 넣으세요. 로그인된 세션은 로그아웃할 때까지 키보다 우선합니다.",
+        "hint": "SuperGrok 또는 X Premium+로 로그인하거나 console.x.ai API 키를 붙여넣으세요. 로그인한 상태에서는 로그아웃하기 전까지 API 키보다 로그인이 우선해요.",
         "keyOptional": "API 키 (로그인하면 생략 가능)",
         "desktopOnly": "xAI 로그인은 데스크톱 앱에서 할 수 있어요. 여기서는 API 키를 붙여 넣으세요.",
         "signedOut": "로그인되어 있지 않아요. API 키를 넣거나 SuperGrok / X Premium+로 로그인하세요.",
-        "signedIn": "xAI에 로그인됨 ({{email}}). 이 세션이 API 키 대신 쓰여요.",
+        "signedIn": "xAI에 로그인됨 ({{email}}). 로그아웃하기 전까지 API 키 대신 로그인이 쓰여요.",
         "account": "계정",
         "signIn": "xAI로 로그인",
         "signOut": "로그아웃",
         "enterCode": "브라우저에서 이 코드를 확인하세요:",
         "openPage": "로그인 페이지 열기",
         "failed": "xAI 로그인에 실패했어요",
-        "note": "구독 로그인은 Grok 공개 로그인을 사용해요. xAI가 세션을 거부하면 로그아웃하고 console.x.ai API 키를 쓰세요."
+        "note": "구독 로그인은 Grok 공개 로그인을 사용해요. xAI가 로그인을 거부하면 로그아웃하고 console.x.ai API 키를 쓰세요."
       },
       "chatgpt": {
         "hint": "ChatGPT Plus, Pro, Team, Enterprise로 로그인해요. 사용량은 그 구독에서 차감돼요. API 키는 OpenAI 프리셋을 쓰세요.",
@@ -528,13 +528,13 @@
         "signOut": "로그아웃",
         "enterCode": "브라우저에서 이 코드를 확인하세요:",
         "failed": "ChatGPT 로그인에 실패했어요",
-        "note": "ChatGPT 기기 코드 로그인을 사용해요. 페이지에서 켜라고 하면 ChatGPT 보안 설정에서 기기 코드 로그인을 켜세요. OpenAI가 세션을 거부하면 OpenAI 프리셋의 API 키를 쓰세요."
+        "note": "ChatGPT 기기 코드 로그인을 사용해요. 페이지에서 켜라고 하면 ChatGPT 보안 설정에서 기기 코드 로그인을 켜세요. OpenAI가 로그인을 거부하면 OpenAI 프리셋의 API 키를 쓰세요."
       },
       "claudeSub": {
-        "hint": "Claude Pro, Max, Team, Enterprise로 로그인하거나 console.anthropic.com API 키를 붙여 넣으세요. 로그인된 세션은 로그아웃할 때까지 키보다 우선해요.",
+        "hint": "Claude Pro, Max, Team, Enterprise로 로그인하거나 console.anthropic.com API 키를 붙여넣으세요. 로그인한 상태에서는 로그아웃하기 전까지 API 키보다 로그인이 우선해요.",
         "desktopOnly": "Claude 로그인은 데스크톱 앱에서 할 수 있어요. 여기서는 API 키를 붙여 넣으세요.",
         "signedOut": "로그인되어 있지 않아요. API 키를 넣거나 Claude 구독으로 로그인하세요.",
-        "signedIn": "Claude에 로그인됨 ({{email}}). 이 세션이 API 키 대신 쓰여요.",
+        "signedIn": "Claude에 로그인됨 ({{email}}). 로그아웃하기 전까지 API 키 대신 로그인이 쓰여요.",
         "account": "계정",
         "signIn": "Claude로 로그인",
         "signOut": "로그아웃",
@@ -542,7 +542,7 @@
         "pastePlaceholder": "코드 붙여 넣기",
         "submitCode": "계속",
         "failed": "Claude 로그인에 실패했어요",
-        "note": "구독 로그인은 Claude 공개 로그인을 사용해요. Anthropic이 세션을 거부하면 로그아웃하고 API 키를 쓰세요."
+        "note": "구독 로그인은 Claude 공개 로그인을 사용해요. Anthropic이 로그인을 거부하면 로그아웃하고 API 키를 쓰세요."
       },
       "antigravity": {
         "hint": "Antigravity에 쓰는 Google 계정으로 로그인해요. 사용량은 그 할당량에서 차감돼요. API 키는 Google (Gemini) 프리셋을 쓰세요.",
