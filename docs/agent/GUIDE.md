@@ -1,30 +1,22 @@
-# Pawn — Agent Maintenance Guide
+# Pawn — Agent guide
 
-> **Audience:** coding agents (and maintainers) that install, configure, debug, or extend Pawn.  
-> **Humans:** start at the root [README](../../README.md).  
+> **Audience:** coding agents (and maintainers) that install, configure, debug, or extend Pawn.
+> **Humans:** [README](../../README.md).
 > **Locales:** [한국어](./GUIDE.ko.md) · [中文](./GUIDE.zh.md) · [日本語](./GUIDE.ja.md)
 
-When a user pastes this repository URL and asks you to set something up, **read this file first**, then change only what they asked for.
+When a user pastes this repo and asks for a change, read this file, then change only what they asked for.
 
 ---
 
-## 1. What Pawn is
+## 1. Product
 
-Desktop **AI coding agent** (Electron + React). BYOK: any OpenAI- or Claude-compatible API. Local-first data under `~/.pawn`. No cloud harness.
+Desktop agent. Electron + React + TypeScript. BYOK: any OpenAI- or Claude-compatible API. Local data under `~/.pawn`. UI languages: en, ko, ja, zh.
 
-Philosophy:
+- Skills, plugins, MCP, and hooks are user-installed. The built-in tool list is the product surface.
+- Claude Code layout is read in place: `CLAUDE.md`, `AGENTS.md`, `.claude/skills`, `.claude/rules`, `~/.agents/`, Claude `settings.json` hooks, `.mcp.json`.
+- Composer placeholder (`chat.placeholder` in `src/renderer/src/i18n/locales/*.json`) is one invitation sentence. Leave `/`, `@`, and `$` out of it. Those characters open menus when typed: `/` commands and skills, `@` files and folders, `$` gambits at the start of the draft only (`$ulw`). Visible controls are attach, record (macOS), Plan/Build, the permission pill, the model chip, and send.
 
-- **No harness** — thin built-in tools + user-installed skills/plugins; not a fixed research product pipeline
-- **BYOK** — register any compatible endpoint
-- **Auto mode** — multi-model routing by complexity + cache stickiness
-- **Local Memory** — `~/.pawn/memory.db` only; never a Pawn cloud
-- **Hooks** — Claude/Codex-compatible; Claude + Pawn sources **merge** with command/url **dedupe**; **deny wins** over YOLO
-- **Claude Code compatible** — `CLAUDE.md`, `AGENTS.md`, skills, rules, `~/.agents/`, Claude `settings.json` hooks
-- **MCP-native** — discovers Claude Code / Cursor / Pawn MCP servers
-
----
-
-## 2. Install & launch (for users)
+## 2. Install
 
 ```bash
 npx @parkjangwon/pawn
@@ -34,94 +26,99 @@ npm install -g @parkjangwon/pawn && pawn
 
 Releases: https://github.com/parkjangwon/pawn/releases/latest
 
-| OS | Artifact | Notes |
-|----|----------|--------|
-| macOS | `Pawn-*-universal.dmg` | Unsigned: right-click → Open first time |
-| Windows | `*-x64-setup.exe` / `*-arm64-setup.exe` | |
-| Linux | `.AppImage` / `.deb` | or `npm run dist:linux` |
+| OS | Artifact |
+|----|----------|
+| macOS | `pawn-<version>-universal.dmg`. Unsigned: right-click → Open once. |
+| Windows | `pawn-<version>-x64-setup.exe`, `pawn-<version>-arm64-setup.exe` |
+| Linux | `pawn-<version>-{x64,arm64}.AppImage` and `.deb` |
 
-**Requirements:** macOS 10.12+ / Win 10+ / Linux; Node `^20.19.0 || >=22.12.0` if building from source; API key (BYOK).
+Installer cache: `~/.pawn/installers/`. In-app check: Settings → System. Node to build from source: `^20.19.0 || >=22.12.0`.
 
-Installer cache: `~/.pawn/installers/`.
+## 3. `~/.pawn`
 
----
+| Path | Contents |
+|------|----------|
+| `pawn.db` | Projects, sessions, messages, transcripts, usage, routines. WAL. Transcripts stay separate from UI messages so prompt-cache prefixes hold. |
+| `memory.db` | Long-term memory. FTS5 + local hash embeddings. |
+| `hooks.json` / `hooks-settings.json` | User hooks, and the master switch. |
+| `config.toml` | App settings. |
+| `mcp.json` | Pawn-managed MCP servers. |
+| `decision.json` | Decision-model provider. Keys sealed with `safeStorage`, file mode `0600`. |
+| `kiro.json` | Kiro credentials, sealed. |
+| `index/` | Local code index (BM25 + dense). |
+| `outputs/` | Offloaded tool output, 7 days. Read back with `read_output`. |
+| `profiles/` | Learned per-repo commands and gotchas. |
+| `reports/` | Automation deliverables. |
 
-## 3. Skills & plugins
+## 4. Loop, modes, permissions
 
-| Method | How |
-|--------|-----|
-| Ask the agent | GitHub URL + “install this skill” → `install_skill` |
-| User-global skills | `~/.agents/skills/<name>/SKILL.md` or `~/.claude/skills/` |
-| Project skills | `<project>/.claude/skills/`, `skills/`, `.agent/skills/` |
-| Plugins | Project: `.claude/plugins/`; user: Claude Code or `~/.claude/plugins/` + `installed_plugins.json` |
-| UI | **Settings → Plugins** (toggle catalog) |
+Main loop is in `src/renderer/src/stores/chatLoop.ts`. One user message runs until a final answer, a permission stop, or the round cap.
 
-Skills are **catalog entries**: short summary in context; full text via `load_skill`. Built-in tools (`web_fetch`, `memory_search`, `run_checks`, …) are always available without install.
+| Knob | Values |
+|------|--------|
+| Agent mode | `plan` (mutating tools hidden and refused) · `build` (full surface; permissions still apply). `app_set_agent_mode`. |
+| Permission | `ask` · `auto` · `yolo`. Per-tool class in `src/renderer/src/agent/toolPermission.ts`. |
+| Harness | `default` (50 rounds, 6 tasks/parallel call) · `eco` (25 rounds, tier ceiling `mid`, 3 tasks, pool 2) · `maxing` (80 rounds, 12 tasks, pool 8, prefer stronger same-tier models). Does not bypass permissions, Plan, or spend caps, and does not touch skills, MCP, or hooks. An explicit reasoning choice beats the mode. |
+| Ultra Work | `$ulw` / `$ultrawork` at the start of a message, or `pawn-headless --ulw`. Loops until the goal is verified. A `$` later in the text (`$5`, `$HOME`) is not a gambit. |
+| Tool diet | ~130 schemas. Core tools stay on. Optional groups load when the transcript already used them, the user text matches the group's keywords, or the model calls `load_tools`. Account groups stay hidden until that account is connected. Setting: smart (default) or all. |
+| Stuck | Repeated identical calls, edit thrash, or errors climb a ladder: reflect → stronger model → second opinion → rollback suggestion → stop and ask. |
+| Streaming | Read-only tools may start while the model is still streaming. Bulky results are offloaded, then cleared oldest-first before a full compaction. |
 
-Also loaded: `CLAUDE.md` / `CLAUDE.local.md`, `.claude/rules/*.md`, Codex `.agent/`, `~/.agents/AGENTS.md`.
+Subagent hard max is 25 rounds. `parallel_agents` accepts up to the harness task cap (default 6).
 
----
+## 5. Tools
 
-## 4. Local data (`~/.pawn`)
+Names are the contract. Schemas live in `src/renderer/src/agent/toolDefs/`.
 
-| Path | Purpose |
-|------|---------|
-| `~/.pawn/pawn.db` | Projects, sessions, messages, transcripts, usage, routines |
-| `~/.pawn/memory.db` | Long-term Memory cards (FTS5 + local hash embeddings) |
-| `~/.pawn/hooks.json` | Pawn user lifecycle hooks |
-| `~/.pawn/hooks-settings.json` | Hooks master switch / source toggles |
-| `~/.pawn/config.toml` | App settings (incl. quit confirmation) |
-| `~/.pawn/mcp.json` | Pawn-managed MCP servers |
-| `~/.pawn/decision.json` | Decision-model providers + harness switches (keys sealed with safeStorage, file 0600) |
-| `~/.pawn/reports/` | Automation deliverables |
-| `~/.pawn/installers/` | Cached install packages |
+**Files, git, shell** (core): `read_file` `write_file` `edit_file` `delete_file` `list_dir` `search_files` `grep_search` `read_spreadsheet` · `git_status` `git_diff` `git_log` `git_add` `git_commit` `git_push` `git_branch` `git_stash` `git_pr_ready` · `shell_exec` `shell_poll` `shell_kill` `shell_wait` `terminal_list` `terminal_read`.
 
-SQLite WAL (`better-sqlite3`). **Transcripts** stay separate from UI messages for prompt-cache stability.
+**Code intelligence** (core, except the refactor group): `codebase_search` `semantic_search` `affected_tests` `repo_map` `run_checks` `issue_to_pr` · `lsp_diagnostics` `lsp_definition` `lsp_references` `lsp_hover` · refactor group: `lsp_symbols` `lsp_call_hierarchy` `lsp_code_actions` `lsp_apply_code_action` · `lsp_rename` stays available for semantic rename.
 
----
+**Endurance** (`workspace` group): `working_notes` `checkpoint_mark` `checkpoint_restore` `project_profile` · `read_output` is core.
 
-## 5. Built-in tools (reference)
+**Agent** (core): `update_plan` `ask_user` `request_plan_approval` `load_tools` `load_skill` `install_skill` `write_artifact` `list_artifacts` · `save_skill` is the `skills` group.
 
-Agent loop: up to **50** tool rounds/turn; identical-call loop break. Permissions per tool type (incl. MCP). Queue / steering send modes.
+**Web** (core, public pages, no extra key): `web_search` (DDG HTML + HN + Wikipedia) `web_fetch` (platform API → header grid → Jina) `web_research`. Fetched text is untrusted. SSRF blocks private and loopback hosts. `must_invoke_browser` means switch to `browser_*`. Adapted from [insane-search](https://github.com/fivetaku/insane-search) (MIT).
 
-### 5.1 Files, shell, git
+**Browser** (group `browser`): embedded Chromium, own cookie jar. `browser_navigate` `browser_snapshot` `browser_click` `browser_fill` `browser_select` `browser_read_text` `browser_eval` `browser_scroll` `browser_back` `browser_wait` `browser_screenshot` `browser_open_external` · tabs: `browser_tab_new` `browser_tab_list` `browser_tab_switch` `browser_tab_close` · `browser_console` `browser_network`. The agent, the UI panel, and each subagent get their own tab.
 
-| Tool | Purpose |
-|------|---------|
-| `read_file` / `write_file` / `edit_file` / `list_dir` / `delete_file` | Safe local FS |
-| `read_spreadsheet` | CSV/TSV/XLSX with hard caps |
-| `search_files` / `grep_search` | Globs and regex |
-| `codebase_search` | Symbol-aware (defs then refs) |
-| `shell_exec` / `shell_poll` / `shell_kill` | Local shell; background jobs |
-| `git_status` / `git_diff` / `git_log` | Git without raw shell |
-| `git_pr_ready` | Branch readiness + PR checklist |
-| `run_checks` | typecheck / test / lint detection |
-| `write_artifact` / `list_artifacts` | `<project>/artifacts/` |
-| `terminal_list` / `terminal_read` | Embedded terminal buffer |
-| `update_plan` | Session checklist |
-| `shell_wait` | Wait for a background job: output pattern, localhost port, or exit (dev servers) |
-| `semantic_search` | Concept search over the repo (local hybrid BM25 + dense index in `~/.pawn/index`) |
-| `affected_tests` | Tests touched by changed files via the import graph (TS/JS aliases, Python, Go) + exact command |
-| `lsp_diagnostics` / `lsp_definition` / `lsp_references` / `lsp_hover` / `lsp_symbols` / `lsp_call_hierarchy` | Language-server navigation |
-| `lsp_rename` / `lsp_code_actions` / `lsp_apply_code_action` | Semantic rename, quick fixes, refactorings (applied with undo) |
-| `read_output` | Page / grep / tail a full tool output that was truncated or cleared (`~/.pawn/outputs`, 7 days) |
-| `working_notes` | Agent scratchpad that survives context clearing and compaction |
-| `checkpoint_mark` / `checkpoint_restore` | Named known-good states of the agent's changed files |
-| `project_profile` | Learned repo profile (`~/.pawn/profiles`): verified commands, conventions, gotchas |
-| `debug_start` / `debug_breakpoints` / `debug_control` / `debug_eval` / `debug_stop` | Real debugger (group `debug`): Node inspector, debugpy, delve, lldb-dap |
+**Computer** (group `computer`): `computer_screenshot` `computer_zoom` `computer_ui_snapshot` `computer_ui_action` `computer_find` `computer_ocr` `computer_apps` `computer_windows` `computer_menu` `computer_open` `computer_click` `computer_mouse` `computer_drag` `computer_scroll` `computer_type` `computer_key` `computer_hold_key` `computer_clipboard` `computer_wait` `computer_displays` `computer_status`.
 
-**Model-native tools** (Settings → Agent → *Model-native coding tools*, on by default): Claude 4+ on the Anthropic API gets `str_replace_based_edit_tool` (`text_editor_20250728`) and a persistent `bash` session (`bash_20250124`) instead of `read_file`/`write_file`/`edit_file`; GPT-4.1 / GPT-5 / o3 / o4 / Codex models get `apply_patch` (V4A) instead of `edit_file`/`write_file`. Both run through the same undo ledger, stale-write protection, verification, permissions and Plan mode.
+**Debug** (group `debug`): `debug_start` `debug_breakpoints` `debug_control` `debug_eval` `debug_stop`. Node inspector, debugpy, delve, lldb-dap.
 
-**Agent loop behaviour**
-- Read-only tools start while the model is still streaming; files named in the user's message are attached up front.
-- Tool outputs over the transcript cap are saved and referenced by id (`read_output`); stale bulky results are cleared (oldest first, one batch) before a full compaction is needed.
-- Errors printed by background jobs and the browser page (console, exceptions, failed requests) are surfaced to the agent in `<runtime_events>` after each round.
-- Stuck recovery: repeated calls / errors / edit thrash trigger a ladder — reflect → stronger model → second opinion from another model → rollback suggestion → stop and ask the user.
-- Corrections ("no, use pnpm", "그게 아니라…", or undoing a turn and explaining) become project Memory lessons.
+**Memory** (core): `memory_search` `memory_save` `memory_list` `memory_update` `memory_forget` `memory_consolidate`. Auto-capture after turns. Injected matches are untrusted data. Scopes: user / project. Secrets are rejected on save. UI: Settings → Agent → Memory.
 
-### 5.2 Lifecycle hooks
+**Decision** (core, hidden while no provider is active): `decide`. Up to 32 typed questions per call.
 
-Sources **merge** (not replace); **command/url dedupe**:
+**App** (group `app`; `app_set_agent_mode` stays core): `app_open_tab` `app_close_tab` `app_set_model` `app_set_permission_mode` `app_set_reasoning` `app_toggle_theme` `app_list_automations` `app_create_automation`.
+
+**Subagents** (core): `spawn_agent` `parallel_agents` `list_agents` `await_agent` `cancel_agent` `research_report`.
+
+**Model-native tools** (Settings → Agent, on by default): Claude 4+ on the Anthropic API gets `str_replace_based_edit_tool` and a persistent `bash` instead of `read_file` / `write_file` / `edit_file`. GPT-4.1 / GPT-5 / o3 / o4 / Codex get `apply_patch` instead of `edit_file` / `write_file`. Same undo ledger, stale-write check, permissions, and Plan gate. Claude on the Anthropic API can also receive its native computer tool (`computer_20251124` and siblings; same settings page).
+
+`load_tools` groups: `browser` `computer` `debug` `refactor` `workspace` `github` `gitlab` `google` `codecommit` `app` `skills`.
+
+## 6. Subagents and research
+
+`spawn_agent` profiles: `explore` and `plan` (read-only), `worker` (implements; default isolation `worktree`, apply `auto`), `code-reviewer` (read-only). Custom profiles: `.pawn/agents/` or `.claude/agents/`. `background: true` returns a run id; `await_agent` / `cancel_agent` take an id, a name, or `*`.
+
+`parallel_agents` runs independent tasks concurrently and orders the rest with `depends_on`. Failed dependencies skip their dependents unless `on_dependency_fail` says otherwise.
+
+`research_report` plans the topic, runs parallel workers (each in its own tab, mixing `web_*` and `browser_*`), dedups sources, then a synthesizer with only read tools plus `write_artifact` writes the report. That synthesizer profile stays narrow even if a project agent file would widen it.
+
+## 7. Skills, hooks, MCP
+
+| Skills | Where |
+|--------|--------|
+| Ask in chat | Git URL → `install_skill` (`user` default, or `project`) |
+| User | `~/.agents/skills/<name>/SKILL.md`, `~/.claude/skills/` |
+| Project | `<project>/.claude/skills/`, `skills/`, `.agent/skills/` |
+| Plugins | `.claude/plugins/` plus `installed_plugins.json` |
+| Write from the agent | `save_skill` → `~/.agents/skills`. Refused in Plan. |
+
+A skill is a catalog line until `load_skill`. Also loaded: `CLAUDE.md`, `CLAUDE.local.md`, `.claude/rules/*.md`, Codex `.agent/`, `~/.agents/AGENTS.md`. UI: Settings → Plugins.
+
+Hooks merge across sources. Same command or URL is deduped. A `PreToolUse` deny still denies in `yolo`.
 
 | Source | Path |
 |--------|------|
@@ -130,221 +127,139 @@ Sources **merge** (not replace); **command/url dedupe**:
 | Pawn user | `~/.pawn/hooks.json` |
 | Pawn project | `<project>/.pawn/hooks.json` |
 
-| Event | When |
-|-------|------|
-| `SessionStart` | First turn of empty transcript |
-| `UserPromptSubmit` | Each user message (can block) |
-| `PreToolUse` | Before tool (can deny even in YOLO) |
-| `PermissionRequest` | Before Ask dialog |
-| `PostToolUse` | After tool (advisory) |
-| `Stop` | End of completed turn |
+Events: `SessionStart`, `UserPromptSubmit` (may block), `PreToolUse` (may deny), `PermissionRequest`, `PostToolUse` (advisory), `Stop`. Handler `type` is `command` (stdin JSON) or `http` (POST JSON). Matchers accept Claude aliases (`Bash` → `shell_exec`, `Write` / `Edit` → write/edit). UI: Settings → Agent → Hooks. Hooks run in the main process only.
 
-Handlers: `type: "command"` (stdin JSON) or `type: "http"` (POST JSON). Matchers accept Claude aliases (`Bash` → `shell_exec`, `Write`/`Edit` → write/edit). UI: **Settings → Agent → Hooks**.
+MCP discovery, stdio, first match wins on id collision with project overriding user:
 
-### 5.3 Long-term Memory
+1. `~/.claude.json`
+2. `<project>/.mcp.json`
+3. `~/.pawn/mcp.json`
 
-| Tool | Purpose |
-|------|---------|
-| `memory_search` | Hybrid FTS + local embeddings |
-| `memory_save` | Save durable card |
-| `memory_list` | Browse / filter |
-| `memory_update` / `memory_forget` | Correct / delete |
+UI: Settings → MCP. `user-claude` entries are read-only; Pawn does not write Claude Code's file.
 
-- Auto-capture after turns; inject top matches as **untrusted** preamble (not instructions)
-- UI: **Settings → Agent → Memory** — on/off, export/import/clear, list (search/pin/forget)
-- Scopes: **user** / **project**; secrets redacted/rejected on save
-- DB: `~/.pawn/memory.db` only
+## 8. Record and replay (macOS)
 
-### 5.4 Public web (no extra API keys)
+One demonstration becomes a `SKILL.md`. Replay uses `browser_*`, `computer_*`, and MCP. Steps are intent and visible labels, never coordinates.
 
-Adapted from [insane-search](https://github.com/fivetaku/insane-search) (MIT). Not a login/paywall bypass.
+- Start: composer record button, `/record`, command palette, or the menu bar. Setup asks for the goal, which inputs change per run, and the source: Pawn browser (isolated-world script, element name/role/label, `isTrusted` events) and/or Mac apps (`pawn-cua` ≥ 1.1.0).
+- Stop: recording bar, menu bar, or Esc twice. Caps: 30 min / 3000 events. A red pill stays on screen.
+- Privacy: password, OTP, card, and macOS secure fields are stored as "secret value, not recorded". Pawn's own windows and the agent's synthetic input are ignored. The raw recording (events + up to 8 screenshots) stays in memory, goes to the chat model once to draft the skill, then is dropped.
+- Card actions: Save (`~/.agents/skills`, asks before replace), Run (fills `/<name>` plus inputs), Automate, Refine (`save_skill`). A failed draft stays in memory for Try again until discard or quit.
 
-| Tool | Purpose |
-|------|---------|
-| `web_search` | DDG HTML + HN + Wikipedia |
-| `web_fetch` | Platform APIs → header grid → Jina Reader |
-| `web_research` | Multi-page topic research |
+Code: `src/main/recorder/*`, `src/main/ipc/recorder.ts`, `native/macos/pawn-cua/Recorder.swift`, `src/renderer/src/stores/recording.ts`, `src/renderer/src/agent/recordReplay.ts`, `src/renderer/src/agent/skillDrafting.ts`.
 
-**vs browser:** `web_*` = read public pages; `browser_*` = interact / logged-in. If `web_fetch` returns `must_invoke_browser`, escalate.
+## 9. Providers, routing, decisions
 
-SSRF guards block private/loopback by default. Fetched text wrapped as untrusted public web.
+Presets include Kiro, OpenAI, Anthropic, OpenRouter, DeepSeek, OpenCode Go (`https://opencode.ai/zen/go/v1`), Command Code (`https://api.commandcode.ai/provider/v1`), Xiaomi MiMo (`https://api.xiaomimimo.com/v1`, OpenAI + Anthropic paths), Gemini, xAI, Groq, Moonshot, Ollama, LM Studio, plus any custom OpenAI- or Claude-compatible base URL.
 
-### 5.5 Browser & computer use
+- **Subscription sign-in** (Settings → Providers): ChatGPT (Plus, Pro, Team, Enterprise; device code; usage on that subscription; API keys stay on the OpenAI preset), Claude (Pro, Max, Team, Enterprise, or a console API key; a signed-in session is used for `api.anthropic.com` until sign-out), xAI (SuperGrok or X Premium+ device code; the console API key is used while signed out), Antigravity (the Google account used for Antigravity; API keys stay on the Gemini preset). Refresh tokens stay encrypted under `~/.pawn`.
+- **Sync models** calls `GET {baseUrl}/models`. Seed models are only a bootstrap. Test uses a model already attached to that provider.
+- Keys use OS `safeStorage` when it is available.
+- Router: complexity `simple|medium|complex`, cache stickiness, escalate after tool failures, provider cooldown 5s–120s, vision fallback when the turn has images. DeepSeek and MiMo thinking tool-loops must echo `reasoning_content` (empty string if none).
+- **Kiro** (`apiFormat: kiro`, `src/main/kiro/*`): AWS Builder ID / IAM Identity Center device flow, a Kiro API key (`ksk_`), or a read-only import of the Kiro CLI / IDE login (Pawn does not refresh that login). Chat is `GenerateAssistantResponse`. Unofficial protocol. Headless: `KIRO_API_KEY` or the CLI login. Live test: `PAWN_KIRO_E2E=1`.
 
-**Browser** (`browser_*`): embedded Chromium, own cookies — navigate, snapshot, click, fill, screenshot, AI cursor. `browser_console` / `browser_network` show console errors, uncaught exceptions and failed requests; actions report what the page logged while they ran.
+Decision models (Settings → Decision models, `src/main/decision/*`). One active provider. Nothing changes when none is set. Transport is main-process only, official `@typesafe-ai/sdk`, secrets redacted.
 
-**Computer** (`computer_*`) — full desktop OS. On macOS a bundled native helper (`pawn-cua`, Swift: ScreenCaptureKit, CGEvent, Accessibility, Vision) does the work; no Homebrew deps.
+| Provider | Notes |
+|----------|--------|
+| TypeSafe (Jev) | `https://api.typesafe.ai`, key required, default model `jev-latest`. |
+| Ollaya | Open models (Laya, Winnow, …) at `http://localhost:11435`. No key unless `OLLAYA_API_KEY`. |
+| Custom | Any TypeSafe-compatible `/v1/systemone`. |
 
-| Tool | Purpose |
-|------|---------|
-| `computer_ui_snapshot` / `computer_ui_action` | Accessibility outline with element ids → press / set_value / select / show_menu (exact, works on covered windows) |
-| `computer_apps` / `computer_windows` / `computer_menu` / `computer_open` | Launch/activate/quit apps, move/resize windows, run any menu command, open URLs/files |
-| `computer_screenshot` / `computer_zoom` | Vision capture (model-sized: 1568 px or 1920 px tier), `annotate` numbers elements, zoom for small text |
-| `computer_find` / `computer_ocr` | Locate text/elements (accessibility, then on-device OCR) |
-| `computer_click` / `computer_mouse` / `computer_drag` / `computer_scroll` | Pointer (element or image coords, modifiers, down/up, paths) |
-| `computer_type` / `computer_key` / `computer_hold_key` | Any-language text (IME-safe, long text pasted), shortcuts |
-| `computer_clipboard` / `computer_wait` / `computer_displays` / `computer_status` | Clipboard, settle, monitors, permissions |
+Switches, each fails open: `decide` (default on); shell risk check (default on) sends an auto-approved `shell_exec` back to the user when it looks destructive (`≥ 0.5`) or exfiltrating (`≥ 0.8`); router assist (default off, key `routerAssist`) may label a turn's complexity when p ≥ 0.5. Headless reads `~/.pawn/decision.json`. Keys: `TYPESAFE_API_KEY` / `OLLAYA_API_KEY` / `PAWN_DECISION_API_KEY`.
 
-- Claude on the Anthropic API also gets its native computer tool (`computer_toolset_20260801` / `computer_20251124` / `computer_20250124` by model; Settings → Agent toggle)
-- Coordinates: pixels of the latest screenshot (multi-monitor aware); `return_screenshot` on any action
-- **macOS:** grant Accessibility + Screen Recording to Pawn (Settings → Agent → Computer use → Check). Esc twice stops the agent
-- **Windows / Linux:** basic mouse/keyboard/screenshot/clipboard (PowerShell / `xdotool`)
-- Headless: `pawn-headless run --computer "…"` gives the CLI agent the same tools
+## 10. Connections
 
-### 5.6 Service connections (Settings → Connections)
+Settings → Connections. Tokens stay under `~/.pawn`.
 
-Tokens only under `~/.pawn`. No separate inbox UI — tools in chat.
+| Provider | Auth | Tools |
+|----------|------|--------|
+| GitHub | OAuth | `github_whoami` `list_repos` `get_repo` `list_issues` `get_issue` `list_pulls` `get_pull` `review_pull` `list_commits` `get_file` `search_code` `search_issues` `create_issue` `draft_issue` `comment` `create_pull` |
+| GitLab | PAT + base URL | `gitlab_whoami` `list_projects` `get_project` `list_issues` `get_issue` `list_merge_requests` `get_merge_request` `list_commits` `get_file` `search` `create_issue` `comment` `create_merge_request` |
+| Google | OAuth, read by default | `google_whoami` `drive_search` `drive_read` `gmail_search` `gmail_read` `calendar_list` `tasks_list` `sheets_read` `docs_read` `slides_read`. After a reconnect that grants write scopes: `google_gmail_send` `google_sheets_write` `google_calendar_create`. Confirm with the user before send or create. |
+| CodeCommit | IAM keys | `codecommit_whoami` `list_repos` `get_repo` `list_branches` `get_branch` `list_commits` `get_file` |
 
-| Provider | Auth | Tools (summary) |
-|----------|------|-----------------|
-| Google | OAuth | Drive, Gmail, Calendar, Tasks, Docs, Sheets, Slides, `google_whoami` (read-only) |
-| GitHub | OAuth | repos, issues, PRs, **`github_review_pull`**, commits, files, search; create/draft issue, comment, create PR |
-| GitLab | PAT (base URL + token) | projects, issues, merge requests, commits, files, search, create issue, comment, create MR |
-| AWS CodeCommit | IAM keys | repos, branches, commits, files |
+Desktop OAuth client IDs (Google, GitHub) are injected at release. See [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md) and [PRIVACY.md](../../PRIVACY.md).
 
-Maintainers: inject Desktop OAuth client IDs (Google/GitHub) at release via Actions secrets — [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md). GitLab/CodeCommit use PAT/IAM credentials entered in Settings — no OAuth client needed. Privacy: [PRIVACY.md](../../PRIVACY.md).
+## 11. Computer use
 
-### 5.7 App control & skills
+macOS uses the bundled helper `pawn-cua` (Swift: ScreenCaptureKit, CGEvent, Accessibility, Vision). No Homebrew package. Grant Accessibility and Screen Recording (Settings → Agent → Computer use → Check). Esc twice stops. Coordinates are pixels of the latest screenshot and are multi-monitor aware. `return_screenshot` can ride on an action. Typing is IME-safe; long text is pasted.
 
-| Tool | Purpose |
-|------|---------|
-| `app_open_tab` / `app_close_tab` | Right-panel tabs |
-| `app_set_model` / `app_set_permission_mode` / `app_set_reasoning` / `app_toggle_theme` | Session UI |
-| `app_list_automations` / `app_create_automation` | Automations from chat |
-| `load_skill` / `install_skill` | Skill catalog / git install |
-| `save_skill` | Write / update `~/.agents/skills/<name>/SKILL.md` (group `skills`; prompts; blocked in Plan) |
+Windows and Linux: mouse, keyboard, screenshot, clipboard via PowerShell / `xdotool`.
 
-### 5.8 Record & Replay (macOS)
+Headless: `pawn-headless run --computer "…"`.
 
-The user demonstrates a workflow once; Pawn drafts a reusable `SKILL.md`; the agent replays it later with its own tools (`browser_*`, `computer_*`, MCP). It is not a macro: steps are described by intent and visible labels, never coordinates.
+## 12. Headless
 
-- **Start:** record button in the composer, `/record`, the command palette, or the menu-bar item. The setup asks for the goal, what changes between runs, and what to record: **Pawn browser** (isolated-world script, element name / role / label, `isTrusted` events only) and/or **Mac apps** (native helper `pawn-cua` ≥ 1.1.0: global click / shortcut / typing / scroll monitors + app switches, resolved to accessibility elements; needs Accessibility, screenshots need Screen Recording)
-- **Stop:** the recording bar, the menu bar, or Esc twice (a red "Pawn is recording" pill stays on every screen). Limits: 30 min / 3000 events
-- **Privacy:** password / one-time-code / card fields and macOS secure text fields are never read (recorded as "secret value, not recorded"); secrets in values and URLs are redacted; Pawn's own windows and the agent's synthetic input are ignored. The raw recording (events + up to 8 screenshots) lives only in memory: it is sent once to the chat model to draft the skill, then dropped. Nothing is written to disk; the chat keeps a one-line note plus the draft
-- **Draft:** a no-tools call to a vision model (falls back to steps only) answers with a ````skill block → shown as a card: **Save skill** (`~/.agents/skills`, asks before replacing), **Run it** (asks for the `## Inputs`, puts `/<name>` + values in the composer), **Automate** (automation draft that `load_skill`s it), **Refine** (the agent revises and calls `save_skill`). If drafting fails, the recording stays in memory for **Try again** until discarded or the app quits
-- Code: `src/main/recorder/*` (timeline, browser script, service, desktop source), `src/main/ipc/recorder.ts`, `native/macos/pawn-cua/Recorder.swift`, `src/renderer/src/{stores/recording.ts,agent/recordReplay.ts,agent/skillDrafting.ts,components/RecordingBar.tsx,components/SkillDraftCard.tsx}`
+`npm run headless` builds `out/headless/pawn-headless.mjs`.
 
----
+```text
+pawn-headless run "<prompt>" [--cwd DIR] [--mode default|eco|maxing]
+    [--model ID] [--permission auto|yolo|deny] [--plan] [--json]
+    [--ulw] [--max-iterations N] [--computer] [--config FILE]
+pawn-headless eval [--tasks ids,tags] [--modes a,b] [--models id,id]
+    [--repeat N] [--out report.md] [--json-out report.json] [--keep]
+pawn-headless tasks
+```
 
-## 6. MCP
+`--permission deny` maps to `ask`. Config default is `~/.pawn/config.toml`. Keys: `PAWN_API_KEY_<PROVIDER_ID>` or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY` / `GEMINI_API_KEY`.
 
-Discovery (stdio):
+## 13. Security invariants
 
-1. `~/.claude.json` (Claude Code)
-2. Project `.mcp.json`
-3. `~/.pawn/mcp.json` (Pawn-managed)
+- Renderer: `nodeIntegration: false`, `contextIsolation: true`. System calls go through `src/main/ipc/*` and `src/preload/index.ts` (`contextBridge`).
+- Memory and fetched web text are untrusted data, not instructions.
+- `PreToolUse` / `PermissionRequest` deny is enforced in `yolo`.
+- Research SSRF guards stay on. Secrets are not written to memory or recordings.
 
-Project-scoped overrides user on id collision. UI: **Settings → MCP** (id, command, args, env, enable/disable).
-
----
-
-## 7. Providers & smart routing
-
-- OpenAI-format and Claude-format APIs; custom OpenAI-compatible endpoints
-- **Presets include:** **Kiro** (sign-in), OpenAI, Anthropic, OpenRouter, DeepSeek (+ Anthropic path), **OpenCode Go** (`https://opencode.ai/zen/go/v1`, + Anthropic Messages preset for MiniMax/Qwen), **Command Code** (`https://api.commandcode.ai/provider/v1`), **Xiaomi MiMo** (`https://api.xiaomimimo.com/v1` + Anthropic path), Gemini, xAI, Groq, Moonshot, Ollama, LM Studio, …
-- **Live model sync:** Settings → Providers → **Sync models** calls `GET {baseUrl}/models` and merges (add new, refresh metadata, keep user `enabled`/pricing). Seed models on preset add are a bootstrap; auto-sync runs after preset add when the network allows
-- **Connection Test:** probes with a model already attached to that provider (not hardcoded `gpt-4o-mini`); surfaces status + short error body
-- **DeepSeek first-class:** presets `deepseek-v4-flash` / `deepseek-v4-pro`; thinking (`thinking` + `reasoning_effort`); stream `reasoning_content`; **must replay `reasoning_content` on every tool-loop request** (empty string if none) or API returns 400. Pair with a vision model for screenshots/computer use
-- **Xiaomi MiMo:** same `reasoning_content` echo on thinking tool loops; dual auth headers (`Authorization` + `api-key`) for official hosts
-- **Kiro (`apiFormat: kiro`):** auth + transport in the main process (`src/main/kiro/*`): AWS Builder ID / IAM Identity Center device flow with Pawn's own OIDC client registration, Kiro API key (`ksk_`, `tokentype: API_KEY`), or read-only import of the Kiro CLI (`data.sqlite3`) / IDE (`~/.aws/sso/cache/kiro-auth-token.json`) login — never refreshed by Pawn. Credentials encrypted in `~/.pawn/kiro.json` (safeStorage). Chat = `GenerateAssistantResponse` (AWS event-stream), models = `ListAvailableModels`, credits = `getUsageLimits`. Headless: `KIRO_API_KEY` or the Kiro CLI login; live test `PAWN_KIRO_E2E=1`. Unofficial protocol — may change without notice
-- **Router:** complexity `simple|medium|complex`; cache-aware stickiness; escalate after tool failures; provider cooldown 5s–120s; vision fallback when images present
-
-### 7.1 Decision models (optional)
-
-Settings → **Decision models**. A decision model ("System One") returns typed, calibrated answers (choice / score / yes-no) in one forward pass instead of text. Nothing changes when none is configured.
-
-- **Providers:** **TypeSafe** (hosted Jev, first-party, `https://api.typesafe.ai`, key required, default model `jev-latest`), **Ollaya** (local open models such as Laya / Winnow, `http://localhost:11435`, no key unless the server sets `OLLAYA_API_KEY`), or any TypeSafe-compatible server. One provider is active at a time
-- **Transport:** main process only, through the official `@typesafe-ai/sdk` (`POST /v1/systemone`, `GET /v1/models`; `src/main/decision/*`). The renderer never sees keys. Secrets are redacted from every request; plain http only for local / private hosts; SDK logging is off
-- **Harness switches** (each fails open to normal behaviour):
-  - `decide` tool (default on): the agent asks typed questions (`state` or `items`, up to 32 questions). Hidden from the model while no provider is active
-  - Shell risk check (default on): rates each `shell_exec` command (`read_only` / `reversible` / `destructive`, plus "sends data"). A command that would auto-run (Full auto, always-allow rule, allow-until-quit) is sent back to the user when `destructive ≥ 0.5` or `sends_data ≥ 0.8`. It only adds prompts; trivially read-only commands skip the call; not used when the window is hidden
-  - Request difficulty for auto routing (default off; config key `routerAssist`): in auto routing, classifies each new turn's complexity (`simple|medium|complex`, kept only when p ≥ 0.5); otherwise the local heuristic stands
-- **Headless:** reads `~/.pawn/decision.json` (or `decision` in `--config`); keys from `TYPESAFE_API_KEY` / `OLLAYA_API_KEY` / `PAWN_DECISION_API_KEY`
-
----
-
-## 8. UI surfaces agents should know
-
-- Right panel: Terminal (xterm + node-pty), Files, Git, Diff, Artifacts, Browser
-- Automations: interval/daily/weekly; templates; reports under `~/.pawn/reports/`
-- Tray/menu bar; command palette `Cmd/Ctrl+K`; progressive `Cmd/Ctrl+W`; quit confirm `Cmd/Ctrl+Q`
-- i18n: en, ko, ja, zh
-
----
-
-## 9. Security constraints (do not break)
-
-- Renderer: `nodeIntegration: false`, `contextIsolation: true`; system ops only via IPC + `contextBridge` (`src/preload/index.ts`, `src/main/ipc/*`)
-- Never put Node/native modules in renderer
-- Memory/web inject = untrusted data
-- Hooks run in main only; PreToolUse/PermissionRequest **deny** enforced in YOLO
-- No secrets in Memory; research SSRF guards on
-
----
-
-## 10. Develop & package
+## 14. Develop
 
 ```bash
 npm install
 npm run dev          # Electron + Vite HMR
-npm run dev:web      # renderer only
-npm run build
+npm run dev:web      # renderer only, 127.0.0.1:5173
 npm run typecheck
 npm run test
 npm run check        # typecheck + test + build
-
-npm run dist         # current platform → release/
+npm run dist         # current OS → release/
 npm run dist:mac | dist:win | dist:linux
-npm run pack         # directory only
+npm run pack
 ```
 
-### Project map
+Release builds are unsigned unless `CSC_LINK` / `CSC_KEY_PASSWORD` and `APPLE_ID` / `APPLE_APP_SPECIFIC_PASSWORD` / `APPLE_TEAM_ID` are set. `build/notarize.cjs` runs only then.
 
 ```
-src/
-├── main/              # Electron main (IPC, DB, window)
-│   ├── connections/   # Google/GitHub OAuth + GitLab/CodeCommit PAT + tools
-│   ├── memory/        # Memory engine
-│   ├── hooks/         # Lifecycle hooks
-│   ├── computer/      # Desktop computer-use
-│   ├── research/      # web_search / web_fetch / web_research
-│   ├── ipc/           # handlers
-│   └── mcpManager.ts
-├── preload/           # contextBridge
-└── renderer/src/
-    ├── agent/         # loop, tools, router, transcripts, MCP client
-    ├── components/
-    ├── stores/        # Zustand
-    └── i18n/
+src/main/            Electron main, IPC, DB, window
+  connections/       OAuth + PAT tools
+  memory/  hooks/  computer/  research/  recorder/  kiro/  decision/
+  codeIndex/  debug/  lsp/
+src/preload/         contextBridge
+src/renderer/src/agent/    loop, toolDefs, toolHandlers, router
+src/headless/        pawn-headless
+native/macos/pawn-cua/
 ```
 
-Product guidelines for contributors: root `CLAUDE.md` / `Claude.md`.
+Contributor rules: root `CLAUDE.md`. Stack: Electron, React 19, TypeScript, electron-vite, Zustand, i18next, better-sqlite3, MCP SDK, xterm.js, node-pty.
 
-### Tech stack
+Right panel: Terminal, Files, Git, Diff, Artifacts, Browser. `.md` files in the file viewer toggle between rendered preview and source; relative links resolve from that file's folder. Command palette `Cmd/Ctrl+K`. Automations write `~/.pawn/reports/<name>/`. A project may list several folders; the session path picks the tool cwd.
 
-Electron, React 19, TypeScript, electron-vite, Zustand, i18next, better-sqlite3, MCP SDK, xterm.js + node-pty, exceljs, react-markdown.
+## 15. Playbook
 
----
+| Ask | Do |
+|-----|----|
+| Install | `npx @parkjangwon/pawn`, or the release artifact. macOS Gatekeeper: right-click → Open. |
+| Add a provider | Settings → Providers → preset or base URL → Sync models. DeepSeek/MiMo thinking must echo `reasoning_content`. Pair computer use with a vision model. |
+| Install a skill | `install_skill` with a git URL, or copy into `~/.agents/skills/<name>/SKILL.md`. |
+| Computer use on a Mac | Bundled `pawn-cua`. Grant Accessibility + Screen Recording. Do not install cliclick. |
+| MCP | Settings → MCP, or `~/.pawn/mcp.json`, or the project's `.mcp.json`. |
+| Hooks | `~/.pawn/hooks.json` or Claude `settings.json`. Merge + dedupe. Deny wins. |
+| Memory | Settings → Agent → Memory. DB: `~/.pawn/memory.db`. |
+| Connections | Settings → Connections. Google write tools need a reconnect that grants write scopes. |
+| Record a workflow | macOS. Record button or `/record` → perform it → Stop → Save. Later `/<skill-name>`. |
+| Decision model | Settings → Decision models. TypeSafe key, or `ollaya serve` + `ollaya pull laya`. |
+| Headless | `npm run headless`, then `node out/headless/pawn-headless.mjs run "…"`. |
+| Build | Node version above, `npm install`, `npm run check`. |
+| Tool denied | Permission mode, Plan mode, `PreToolUse` deny, disconnected account, tool group not loaded. |
 
-## 11. Common agent tasks (playbook)
+## 16. License
 
-| User ask | What you do |
-|----------|-------------|
-| Install Pawn | `npx @parkjangwon/pawn` or release DMG/exe; note Gatekeeper on macOS |
-| Add API / DeepSeek | Settings → Providers; for DeepSeek ensure thinking + vision fallback |
-| Install a skill | `install_skill` with git URL, or copy to `~/.agents/skills/` |
-| Enable computer use (macOS) | Install cliclick; grant Accessibility + Screen Recording; use vision model |
-| Wire MCP | Edit `~/.pawn/mcp.json` or Settings → MCP; or reuse Claude `.mcp.json` |
-| Add hooks | Edit `~/.pawn/hooks.json` or Claude `settings.json` `hooks`; merge rules apply |
-| Memory on/off / export | Settings → Agent → Memory; DB at `~/.pawn/memory.db` |
-| Connect services (Google/GitHub/GitLab/CodeCommit) | Settings → Connections; OAuth or PAT/IAM, tokens in `~/.pawn` only |
-| Turn a demonstrated workflow into a skill (macOS) | Composer record button or `/record` → do the task → Stop → review the card → Save skill; later `/<skill-name>` or **Automate** |
-| Add a decision model (Jev / Ollaya) | Settings → Decision models → TypeSafe (API key) or Ollaya (`ollaya serve` + `ollaya pull laya`) → Test; the harness switches are on the same page |
-| Build from source | Node version + `npm install` + `npm run dev` / `npm run check` |
-| Debug tool deny | Check permission mode, Hooks PreToolUse deny, MCP server status |
-
----
-
-## 12. License
-
-MIT. Privacy for OAuth: [PRIVACY.md](../../PRIVACY.md).
+MIT. OAuth privacy: [PRIVACY.md](../../PRIVACY.md).

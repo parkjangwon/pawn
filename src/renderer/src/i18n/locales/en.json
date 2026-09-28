@@ -51,7 +51,7 @@
     "waitingHint": "The agent is waiting for your answer or approval"
   },
   "chat": {
-    "placeholder": "Send a message… (/ for commands, @ for files, drop to attach)",
+    "placeholder": "What would you like to do?",
     "welcome": "What can I help you with?",
     "welcomeSub": "Code, browse, automate — all in one place.",
     "send": "Send",

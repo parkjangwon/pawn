@@ -51,7 +51,7 @@
     "waitingHint": "代理正在等待你的回答或批准"
   },
   "chat": {
-    "placeholder": "输入消息…（/ 命令、@ 文件、拖放附件）",
+    "placeholder": "写下想做的事",
     "welcome": "有什么可以帮你的？",
     "welcomeSub": "编码、浏览、自动化 — 尽在一处。",
     "send": "发送",
