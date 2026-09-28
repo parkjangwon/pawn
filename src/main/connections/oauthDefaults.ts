@@ -13,13 +13,17 @@ export type EmbeddedOAuth = {
   googleClientSecret: string
   githubClientId: string
   githubClientSecret: string
+  antigravityClientId: string
+  antigravityClientSecret: string
 }
 
 const EMPTY: EmbeddedOAuth = {
   googleClientId: '',
   googleClientSecret: '',
   githubClientId: '',
-  githubClientSecret: ''
+  githubClientSecret: '',
+  antigravityClientId: '',
+  antigravityClientSecret: ''
 }
 
 function readBuildInjected(): EmbeddedOAuth {
@@ -31,7 +35,9 @@ function readBuildInjected(): EmbeddedOAuth {
         googleClientId: String(v.googleClientId || ''),
         googleClientSecret: String(v.googleClientSecret || ''),
         githubClientId: String(v.githubClientId || ''),
-        githubClientSecret: String(v.githubClientSecret || '')
+        githubClientSecret: String(v.githubClientSecret || ''),
+        antigravityClientId: String(v.antigravityClientId || ''),
+        antigravityClientSecret: String(v.antigravityClientSecret || '')
       }
     }
   } catch {

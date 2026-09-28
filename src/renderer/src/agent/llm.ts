@@ -10,7 +10,8 @@ import { NATIVE_DUPLICATES, claudeComputerVersion, planNativeComputer } from './
 import { noteComputerModel, shotPolicyFor } from './toolHandlers/computer'
 import { planApplyPatch, planClaudeNativeTools } from './nativeTools'
 import { buildKiroRequest, kiroConversationId, type KiroRequestBuild } from './kiroWire'
-import { applyXaiSession } from './xaiSession'
+import { applyProviderAuth } from './subscriptionSession'
+import { AntigravityStream, ResponsesStream, rewriteSubscriptionCall, type WireSink } from './subscriptionWire'
 import { estimateCharsAsTokens } from './transcript'
 import type { CallUsage } from '../stores/usage'
 import type { RouteDecision } from './router'
@@ -176,8 +177,8 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
 
   let url: string
   let body: Record<string, unknown>
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-  const authedProvider = await applyXaiSession(provider)
+  let headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const authedProvider = await applyProviderAuth(provider)
   const token = authedProvider.apiKey || ''
 
   // Idle timeout: a stalled stream must not hold the turn forever. It aborts
@@ -308,6 +309,17 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     delete (body as { tools?: unknown }).tools
   }
 
+  const wired = rewriteSubscriptionCall({
+    provider: authedProvider,
+    url,
+    headers,
+    body,
+    stream: true
+  })
+  url = wired.url
+  headers = wired.headers
+  body = wired.body
+
   const decoder = new TextDecoder()
   let buffer = ''
   let fullText = ''
@@ -389,6 +401,31 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       applyFlush(display, think)
     }
   }
+
+  const wireSink: WireSink = {
+    text: (delta) => {
+      fullText += delta
+      flushText()
+    },
+    reasoning: (delta) => {
+      reasoningText += delta
+      flushText()
+    },
+    tool: (call) => {
+      toolCalls.push(call)
+      emitToolCall(call)
+    },
+    usage: (partial) => {
+      if (typeof partial.inputTokens === 'number') usage.inputTokens = partial.inputTokens
+      if (typeof partial.outputTokens === 'number') usage.outputTokens = partial.outputTokens
+      if (typeof partial.cacheReadTokens === 'number') usage.cacheReadTokens = partial.cacheReadTokens
+    },
+    error: (message) => {
+      throw markTransient(new Error(message), true)
+    }
+  }
+  const responsesStream = new ResponsesStream(wireSink)
+  const antigravityStream = new AntigravityStream(wireSink)
 
   const flushNow = (): void => {
     if (rafId !== null && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(rafId)
@@ -505,14 +542,25 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
         // (https://api-docs.deepseek.com/quick_start/rate_limit).
         const trimmed = line.trim()
         if (!trimmed || trimmed.startsWith(':')) continue
-        if (!trimmed.startsWith('data:')) continue
-        const data = trimmed.slice(5).trim()
+        let data = ''
+        if (trimmed.startsWith('data:')) data = trimmed.slice(5).trim()
+        else if (wired.streamKind === 'antigravity' && trimmed.startsWith('{')) data = trimmed
+        else continue
         if (!data || data === '[DONE]') continue
 
         let parsed: Record<string, any>
         try {
           parsed = JSON.parse(data)
         } catch {
+          continue
+        }
+
+        if (wired.streamKind === 'responses') {
+          responsesStream.consume(parsed)
+          continue
+        }
+        if (wired.streamKind === 'antigravity') {
+          antigravityStream.consume(parsed)
           continue
         }
 

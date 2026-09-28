@@ -10,8 +10,7 @@ import {
 } from '../agent/ultraWork'
 import { fetchWithRetry } from '../agent/llm'
 import { pickSummaryModel, parseSummaryResponse, renderForSummary } from '../agent/compaction'
-import { authHeadersForChat, providerChatUrl } from '../agent/testProvider'
-import { applyXaiSession } from '../agent/xaiSession'
+import { prepareSideCall } from '../agent/subscriptionSession'
 import type { TranscriptEntry } from '../agent/transcript'
 import { useUsageStore } from './usage'
 import { setUltraWorkSession } from './ultraWorkRegistry'
@@ -132,11 +131,11 @@ export async function evaluateGoal(
           ]
         }
   try {
-    const authed = await applyXaiSession(target.provider)
+    const call = await prepareSideCall(target.provider, body)
     const res = await fetchWithRetry(
-      providerChatUrl(authed),
-      authHeadersForChat(authed),
-      body,
+      call.url,
+      call.headers,
+      call.body,
       window.api?.platform === 'browser',
       combined
     )

@@ -13,8 +13,7 @@ import { useUsageStore, type CallUsage } from '../stores/usage'
 import type { ModelEntry, Provider } from '../types/provider'
 import { fetchWithRetry } from './llm'
 import { isProviderAvailable } from './router'
-import { authHeadersForChat, providerChatUrl } from './testProvider'
-import { applyXaiSession } from './xaiSession'
+import { prepareSideCall } from './subscriptionSession'
 import {
   buildCompactionSummary,
   compactionCut,
@@ -120,11 +119,22 @@ export function buildSummaryRequest(
   }
 }
 
-/** Extract text + usage from a non-streaming Claude or OpenAI-style response. */
+/** Extract text + usage from a non-streaming Claude, OpenAI, Responses, or Cloud Code body. */
 export function parseSummaryResponse(json: unknown): { text: string; usage: CallUsage } {
   const j = (json || {}) as Record<string, any>
   let text = ''
-  if (Array.isArray(j.content)) {
+  if (typeof j.output_text === 'string') {
+    text = j.output_text
+  } else if (Array.isArray(j.output)) {
+    text = j.output.map((item: any) => {
+      if (typeof item?.content === 'string') return item.content
+      if (!Array.isArray(item?.content)) return ''
+      return item.content
+        .filter((part: any) => (part?.type === 'output_text' || part?.type === 'text') && typeof part.text === 'string')
+        .map((part: any) => part.text)
+        .join('')
+    }).join('')
+  } else if (Array.isArray(j.content)) {
     text = j.content
       .filter((b: any) => b?.type === 'text' && typeof b.text === 'string')
       .map((b: any) => b.text)
@@ -133,11 +143,19 @@ export function parseSummaryResponse(json: unknown): { text: string; usage: Call
     const msg = j.choices[0]?.message
     text = typeof msg?.content === 'string' ? msg.content : ''
   }
+  const gemini = j.response?.candidates || j.candidates
+  if (!text && Array.isArray(gemini)) {
+    text = gemini.flatMap((candidate: any) => candidate?.content?.parts || [])
+      .map((part: any) => (typeof part?.text === 'string' ? part.text : ''))
+      .join('')
+  }
+  const details = j.usage?.input_tokens_details
+  const meta = j.usageMetadata || j.response?.usageMetadata || {}
   const u = j.usage || {}
   const usage: CallUsage = {
-    inputTokens: Number(u.input_tokens ?? u.prompt_tokens ?? 0) || 0,
-    outputTokens: Number(u.output_tokens ?? u.completion_tokens ?? 0) || 0,
-    cacheReadTokens: Number(u.cache_read_input_tokens ?? u.prompt_cache_hit_tokens ?? 0) || 0,
+    inputTokens: Number(u.input_tokens ?? u.prompt_tokens ?? meta.promptTokenCount ?? 0) || 0,
+    outputTokens: Number(u.output_tokens ?? u.completion_tokens ?? meta.candidatesTokenCount ?? 0) || 0,
+    cacheReadTokens: Number(u.cache_read_input_tokens ?? u.prompt_cache_hit_tokens ?? details?.cached_tokens ?? meta.cachedContentTokenCount ?? 0) || 0,
     cacheWriteTokens: Number(u.cache_creation_input_tokens ?? 0) || 0
   }
   return { text: text.trim(), usage }
@@ -156,11 +174,14 @@ export async function summarizeWithModel(
   const timer = setTimeout(() => controller.abort(), SUMMARY_TIMEOUT_MS)
   const signal = opts.signal ? AbortSignal.any([opts.signal, controller.signal]) : controller.signal
   try {
-    const authed = await applyXaiSession(target.provider)
+    const call = await prepareSideCall(
+      target.provider,
+      buildSummaryRequest(target.provider, target.model.modelId, transcriptText)
+    )
     const res = await fetchWithRetry(
-      providerChatUrl(authed),
-      authHeadersForChat(authed),
-      buildSummaryRequest(target.provider, target.model.modelId, transcriptText),
+      call.url,
+      call.headers,
+      call.body,
       window.api?.platform === 'browser',
       signal
     )

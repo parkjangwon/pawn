@@ -15,7 +15,9 @@ function pawnOAuthDefine(mode: string): Record<string, string> {
     googleClientId: pick('PAWN_GOOGLE_CLIENT_ID'),
     googleClientSecret: pick('PAWN_GOOGLE_CLIENT_SECRET'),
     githubClientId: pick('PAWN_GITHUB_CLIENT_ID'),
-    githubClientSecret: pick('PAWN_GITHUB_CLIENT_SECRET')
+    githubClientSecret: pick('PAWN_GITHUB_CLIENT_SECRET'),
+    antigravityClientId: pick('PAWN_ANTIGRAVITY_CLIENT_ID'),
+    antigravityClientSecret: pick('PAWN_ANTIGRAVITY_CLIENT_SECRET')
   }
   return {
     __PAWN_OAUTH__: JSON.stringify(oauth)

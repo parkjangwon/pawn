@@ -36,7 +36,14 @@ Pawn 不是又一个云端锁定 IDE。接入任意 OpenAI / Claude 兼容 API�
 
 界面：ChatGPT 风格布局，终端 / 文件 / Git / Diff / 浏览器面板，明暗主题。语言：英 / 韩 / 日 / 中。
 
-### 最新 — v0.16.1
+### 最新 — v0.16.2
+
+**ChatGPT、Claude、Antigravity 登录**
+- **ChatGPT** — 设置 → 提供商 → ChatGPT 使用设备码登录（Plus、Pro、Team 或 Enterprise）。用量计入该订阅。API 密钥请用 OpenAI 预设
+- **Claude** — 使用 Claude Pro、Max、Team 或 Enterprise 登录，或粘贴 console API 密钥。已登录的会话在退出前用于 `api.anthropic.com`
+- **Antigravity** — 使用 Antigravity 所用的 Google 账号登录。API 密钥请用 Google (Gemini) 预设。刷新令牌加密保存在 `~/.pawn`
+
+### v0.16.1
 
 **xAI 登录与 Markdown 预览**
 - **xAI OAuth** — 设置 → 提供商 → xAI 可用 SuperGrok 或 X Premium+ 登录（设备码）。console API 密钥仍然可用，退出登录后使用密钥。刷新令牌加密保存在 `~/.pawn`

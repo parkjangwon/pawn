@@ -51,6 +51,18 @@ declare global {
     expiresAt?: number
   }
 
+  interface SubscriptionStatusDto {
+    signedIn: boolean
+    email?: string
+    expiresAt?: number
+  }
+
+  interface SubscriptionLoginDto {
+    ok: boolean
+    email?: string
+    error?: string
+  }
+
   interface KiroStatusDto {
     signedIn: boolean
     mode?: 'builder-id' | 'idc' | 'api-key' | 'import'
@@ -1166,6 +1178,37 @@ declare global {
         signOut: () => Promise<{ ok: boolean }>
         accessToken: () => Promise<{ ok: true; token: string } | { ok: false; error?: string }>
         onLoginDone: (callback: (data: { ok: boolean; email?: string; error?: string }) => void) => () => void
+      }
+      /** ChatGPT subscription (Codex device code). The refresh token stays in the main process. */
+      chatgpt?: {
+        status: () => Promise<SubscriptionStatusDto>
+        startLogin: () => Promise<
+          | { ok: true; userCode: string; verificationUri: string; verificationUriComplete: string; expiresIn: number }
+          | { ok: false; error: string }
+        >
+        cancelLogin: () => Promise<{ ok: boolean }>
+        signOut: () => Promise<{ ok: boolean }>
+        accessToken: () => Promise<{ ok: true; token: string; accountId?: string } | { ok: false; error?: string }>
+        onLoginDone: (callback: (data: SubscriptionLoginDto) => void) => () => void
+      }
+      /** Claude subscription (paste the code from the consent page). */
+      claudeOauth?: {
+        status: () => Promise<SubscriptionStatusDto>
+        startLogin: () => Promise<{ ok: true; verificationUri: string; verificationUriComplete: string } | { ok: false; error: string }>
+        submitCode: (code: string) => Promise<{ ok: boolean; error?: string; email?: string }>
+        cancelLogin: () => Promise<{ ok: boolean }>
+        signOut: () => Promise<{ ok: boolean }>
+        accessToken: () => Promise<{ ok: true; token: string } | { ok: false; error?: string }>
+        onLoginDone: (callback: (data: SubscriptionLoginDto) => void) => () => void
+      }
+      /** Antigravity subscription (Google loopback on port 51121). */
+      antigravity?: {
+        status: () => Promise<SubscriptionStatusDto>
+        startLogin: () => Promise<{ ok: true; verificationUri: string; verificationUriComplete: string } | { ok: false; error: string }>
+        cancelLogin: () => Promise<{ ok: boolean }>
+        signOut: () => Promise<{ ok: boolean }>
+        accessToken: () => Promise<{ ok: true; token: string; projectId?: string } | { ok: false; error?: string }>
+        onLoginDone: (callback: (data: SubscriptionLoginDto) => void) => () => void
       }
       bash?: {
         run: (

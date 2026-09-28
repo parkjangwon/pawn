@@ -39,6 +39,8 @@ Repo → **Settings → Secrets and variables → Actions** → add:
 | `PAWN_GOOGLE_CLIENT_SECRET` | Google client secret |
 | `PAWN_GITHUB_CLIENT_ID` | GitHub OAuth App client ID |
 | `PAWN_GITHUB_CLIENT_SECRET` | GitHub client secret |
+| `PAWN_ANTIGRAVITY_CLIENT_ID` | Antigravity desktop Google client ID |
+| `PAWN_ANTIGRAVITY_CLIENT_SECRET` | Antigravity desktop Google client secret |
 
 `.github/workflows/release.yml` passes these into `npm run build` on tag `v*` / `workflow_dispatch` only — **not** on pull_request.
 

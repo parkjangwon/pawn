@@ -5,6 +5,9 @@ import { disposeLsp } from './ipc/lsp'
 import { disposeAgentRuntime } from './ipc/agentRuntime'
 import { disposeKiro } from './ipc/kiro'
 import { disposeXai } from './ipc/xai'
+import { disposeChatGpt } from './ipc/chatgpt'
+import { disposeClaudeOauth } from './ipc/claudeOauth'
+import { disposeAntigravity } from './ipc/antigravity'
 import { disposeComputer } from './computer/service'
 import { disposeRecorder } from './ipc/recorder'
 import { createMainWindow, getMainWindow } from './window'
@@ -92,6 +95,9 @@ app.whenReady().then(() => {
     void disposeAgentRuntime()
     disposeKiro()
     disposeXai()
+    disposeChatGpt()
+    disposeClaudeOauth()
+    disposeAntigravity()
     disposeComputer()
     stopRoutineServices()
     destroyTray()

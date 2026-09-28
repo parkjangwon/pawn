@@ -4,4 +4,6 @@ declare const __PAWN_OAUTH__: {
   googleClientSecret: string
   githubClientId: string
   githubClientSecret: string
+  antigravityClientId: string
+  antigravityClientSecret: string
 }

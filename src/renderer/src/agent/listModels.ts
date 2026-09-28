@@ -7,7 +7,8 @@
  */
 
 import { uid } from '../utils/uid'
-import { applyXaiSession } from './xaiSession'
+import { applyProviderAuth } from './subscriptionSession'
+import { isAntigravityBase, isChatGptCodexBase, withClaudeOauthHeaders } from './subscriptionWire'
 import { guessPricing, guessSupportsVision } from '../types/provider'
 import type { ApiFormat, ModelEntry, ModelTier, Provider } from '../types/provider'
 
@@ -192,9 +193,12 @@ export async function fetchProviderModels(
   provider: Pick<Provider, 'apiFormat' | 'baseUrl' | 'apiKey' | 'name'>,
   opts?: { isBrowser?: boolean; signal?: AbortSignal }
 ): Promise<ListModelsResult> {
-  const authed = await applyXaiSession(provider)
+  if (isChatGptCodexBase(provider.baseUrl) || isAntigravityBase(provider.baseUrl)) {
+    throw new Error('This sign-in provider has no model catalog. Edit models on the provider row.')
+  }
+  const authed = await applyProviderAuth(provider)
   const url = modelsListUrl(authed.baseUrl)
-  const headers = authHeadersForProvider(authed)
+  const headers = withClaudeOauthHeaders(authHeadersForProvider(authed), authed.subscription?.kind)
   const isBrowser = opts?.isBrowser ?? (typeof window !== 'undefined' && window.api?.platform === 'browser')
 
   let response: Response

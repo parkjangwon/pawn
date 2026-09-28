@@ -36,7 +36,14 @@ Pawn은 또 하나의 클라우드 락인 IDE가 아닙니다. OpenAI·Claude �
 
 UI: ChatGPT 스타일 레이아웃, 터미널/파일/git/diff/브라우저 패널, 라이트·다크. 언어: 영어·한국어·일본어·중국어.
 
-### 최신 — v0.16.1
+### 최신 — v0.16.2
+
+**ChatGPT, Claude, Antigravity 로그인**
+- **ChatGPT** — 설정 → 프로바이더 → ChatGPT에서 기기 코드로 로그인합니다(Plus, Pro, Team, Enterprise). 사용량은 그 구독에서 차감됩니다. API 키는 OpenAI 프리셋을 쓰면 됩니다
+- **Claude** — Claude Pro, Max, Team, Enterprise로 로그인하거나 console API 키를 붙여 넣습니다. 로그인된 세션은 로그아웃할 때까지 `api.anthropic.com`에 쓰입니다
+- **Antigravity** — Antigravity에 쓰는 Google 계정으로 로그인합니다. API 키는 Google (Gemini) 프리셋을 쓰면 됩니다. 갱신 토큰은 `~/.pawn`에 암호화되어 있습니다
+
+### v0.16.1
 
 **xAI 로그인과 마크다운 미리보기**
 - **xAI OAuth** — 설정 → 프로바이더 → xAI에서 SuperGrok 또는 X Premium+로 로그인할 수 있습니다(기기 코드). console API 키도 그대로 쓸 수 있고, 로그아웃하면 키가 사용됩니다. 갱신 토큰은 `~/.pawn`에 암호화되어 있습니다

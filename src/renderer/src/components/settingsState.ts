@@ -14,16 +14,14 @@ import {
 import { guessPricing, guessSupportsVision, type ApiFormat, type ModelPricing, type Provider } from '../types/provider'
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
 import {
-  authHeadersForChat,
   buildTestRequestBody,
   pickTestModelId,
-  providerChatUrl,
   summarizeProviderError
 } from '../agent/testProvider'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
 import { isOpenRouterProvider } from '../agent/listModels'
-import { applyXaiSession } from '../agent/xaiSession'
+import { prepareSideCall } from '../agent/subscriptionSession'
 import { useSidebarResize } from '../hooks/useSidebarResize'
 import { MCP_TEMPLATES } from '../agent/mcpTemplates'
 import {
@@ -208,7 +206,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       // Best-effort live catalog sync so seeds are not the long-term source of truth.
       // OpenRouter is excluded to avoid pulling hundreds of models.
       // Sign-in presets sync after the sign-in completes (KiroAuthPanel).
-      if (preset.id !== 'openrouter' && !isOpenRouterProvider(preset) && !preset.signIn) {
+      if (preset.id !== 'openrouter' && !isOpenRouterProvider(preset) && !preset.signIn && !(preset.skipCatalogSync && !apiKey.trim())) {
         setSyncingId(created.id)
         try {
           const r = await syncModelsFromProvider(created.id)
@@ -363,10 +361,10 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         setTestResult((r) => ({ ...r, [providerId]: 'FAIL: no model' }))
         return
       }
-      const authed = await applyXaiSession(p)
-      const url = providerChatUrl(authed)
-      const headers = authHeadersForChat(authed)
-      const body = buildTestRequestBody(p.apiFormat, modelId)
+      const call = await prepareSideCall(p, buildTestRequestBody(p.apiFormat, modelId))
+      const url = call.url
+      const headers = call.headers
+      const body = call.body
       const isBrowser = window.api?.platform === 'browser'
       let response: Response
       if (isBrowser) {

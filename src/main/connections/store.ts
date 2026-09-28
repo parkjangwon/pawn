@@ -114,3 +114,19 @@ export function getGithubClientSecret(): string {
     EMBEDDED_OAUTH.githubClientSecret
   )
 }
+
+export function getAntigravityClientId(): string {
+  return pick(
+    'PAWN_ANTIGRAVITY_CLIENT_ID',
+    loadOAuthClients().antigravityClientId,
+    EMBEDDED_OAUTH.antigravityClientId
+  )
+}
+
+export function getAntigravityClientSecret(): string {
+  return pick(
+    'PAWN_ANTIGRAVITY_CLIENT_SECRET',
+    loadOAuthClients().antigravityClientSecret,
+    EMBEDDED_OAUTH.antigravityClientSecret
+  )
+}

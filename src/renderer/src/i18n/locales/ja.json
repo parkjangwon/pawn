@@ -517,6 +517,44 @@
         "openPage": "サインインページを開く",
         "failed": "xAI のサインインに失敗しました",
         "note": "サブスクリプションのサインインは Grok の公開ログインを使います。xAI がセッションを拒否した場合はサインアウトし、console.x.ai の API キーを使ってください。"
+      },
+      "chatgpt": {
+        "hint": "ChatGPT Plus、Pro、Team、Enterprise でサインインします。利用量はそのサブスクリプションから消費されます。API キーは OpenAI プリセットを使ってください。",
+        "desktopOnly": "ChatGPT のサインインはデスクトップアプリで行えます。",
+        "signedOut": "ChatGPT にサインインしていません。",
+        "signedIn": "ChatGPT にサインイン済み（{{email}}）。",
+        "account": "アカウント",
+        "signIn": "ChatGPT でサインイン",
+        "signOut": "サインアウト",
+        "enterCode": "ブラウザでこのコードを確認してください:",
+        "failed": "ChatGPT のサインインに失敗しました",
+        "note": "ChatGPT のデバイスコードログインを使います。ページで有効化を求められたら、ChatGPT のセキュリティ設定でデバイスコードログインをオンにしてください。OpenAI がセッションを拒否した場合は OpenAI プリセットの API キーを使ってください。"
+      },
+      "claudeSub": {
+        "hint": "Claude Pro、Max、Team、Enterprise でサインインするか、console.anthropic.com の API キーを貼り付けます。サインイン中のセッションは、サインアウトするまでキーより優先されます。",
+        "desktopOnly": "Claude のサインインはデスクトップアプリで行えます。ここでは API キーを貼り付けてください。",
+        "signedOut": "サインインしていません。API キーを貼り付けるか、Claude のサブスクリプションでサインインしてください。",
+        "signedIn": "Claude にサインイン済み（{{email}}）。このセッションが API キーの代わりに使われます。",
+        "account": "アカウント",
+        "signIn": "Claude でサインイン",
+        "signOut": "サインアウト",
+        "pastePrompt": "アクセスを許可したあと、ページに表示されたコードを貼り付けてください。",
+        "pastePlaceholder": "コードを貼り付け",
+        "submitCode": "続ける",
+        "failed": "Claude のサインインに失敗しました",
+        "note": "サブスクリプションのサインインは Claude の公開ログインを使います。Anthropic がセッションを拒否した場合はサインアウトし、API キーを使ってください。"
+      },
+      "antigravity": {
+        "hint": "Antigravity で使っている Google アカウントでサインインします。利用量はその割り当てから消費されます。API キーは Google (Gemini) プリセットを使ってください。",
+        "desktopOnly": "Antigravity のサインインはデスクトップアプリで行えます。",
+        "signedOut": "Antigravity にサインインしていません。",
+        "signedIn": "Antigravity にサインイン済み（{{email}}）。",
+        "account": "アカウント",
+        "signIn": "Antigravity でサインイン",
+        "signOut": "サインアウト",
+        "waiting": "ブラウザでサインインを完了してください。終わると Pawn が更新します。",
+        "failed": "Antigravity のサインインに失敗しました",
+        "note": "Antigravity のデスクトップログインを使います。Google が変更したり拒否したりすることがあります。失敗した場合は Google (Gemini) プリセットの API キーを使ってください。"
       }
     },
     "modelSection": {

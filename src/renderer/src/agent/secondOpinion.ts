@@ -12,8 +12,7 @@ import { parseSummaryResponse } from './compaction'
 import { fetchWithRetry } from './llm'
 import { isProviderAvailable } from './router'
 import { SECOND_OPINION_PROMPT } from './stuckRecovery'
-import { authHeadersForChat, providerChatUrl } from './testProvider'
-import { applyXaiSession } from './xaiSession'
+import { prepareSideCall } from './subscriptionSession'
 
 const TIER_RANK: Record<string, number> = { low: 0, mid: 1, high: 2 }
 const TIMEOUT_MS = 60_000
@@ -66,11 +65,11 @@ export async function requestSecondOpinion(
           ]
         }
   try {
-    const authed = await applyXaiSession(target.provider)
+    const call = await prepareSideCall(target.provider, body)
     const res = await fetchWithRetry(
-      providerChatUrl(authed),
-      authHeadersForChat(authed),
-      body,
+      call.url,
+      call.headers,
+      call.body,
       window.api?.platform === 'browser',
       signal
     )

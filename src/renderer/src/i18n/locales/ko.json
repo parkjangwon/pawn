@@ -517,6 +517,44 @@
         "openPage": "로그인 페이지 열기",
         "failed": "xAI 로그인에 실패했어요",
         "note": "구독 로그인은 Grok 공개 로그인을 사용해요. xAI가 세션을 거부하면 로그아웃하고 console.x.ai API 키를 쓰세요."
+      },
+      "chatgpt": {
+        "hint": "ChatGPT Plus, Pro, Team, Enterprise로 로그인해요. 사용량은 그 구독에서 차감돼요. API 키는 OpenAI 프리셋을 쓰세요.",
+        "desktopOnly": "ChatGPT 로그인은 데스크톱 앱에서 할 수 있어요.",
+        "signedOut": "ChatGPT에 로그인되어 있지 않아요.",
+        "signedIn": "ChatGPT에 로그인됨 ({{email}}).",
+        "account": "계정",
+        "signIn": "ChatGPT로 로그인",
+        "signOut": "로그아웃",
+        "enterCode": "브라우저에서 이 코드를 확인하세요:",
+        "failed": "ChatGPT 로그인에 실패했어요",
+        "note": "ChatGPT 기기 코드 로그인을 사용해요. 페이지에서 켜라고 하면 ChatGPT 보안 설정에서 기기 코드 로그인을 켜세요. OpenAI가 세션을 거부하면 OpenAI 프리셋의 API 키를 쓰세요."
+      },
+      "claudeSub": {
+        "hint": "Claude Pro, Max, Team, Enterprise로 로그인하거나 console.anthropic.com API 키를 붙여 넣으세요. 로그인된 세션은 로그아웃할 때까지 키보다 우선해요.",
+        "desktopOnly": "Claude 로그인은 데스크톱 앱에서 할 수 있어요. 여기서는 API 키를 붙여 넣으세요.",
+        "signedOut": "로그인되어 있지 않아요. API 키를 넣거나 Claude 구독으로 로그인하세요.",
+        "signedIn": "Claude에 로그인됨 ({{email}}). 이 세션이 API 키 대신 쓰여요.",
+        "account": "계정",
+        "signIn": "Claude로 로그인",
+        "signOut": "로그아웃",
+        "pastePrompt": "접근을 허용한 뒤, 페이지에 나온 코드를 붙여 넣으세요.",
+        "pastePlaceholder": "코드 붙여 넣기",
+        "submitCode": "계속",
+        "failed": "Claude 로그인에 실패했어요",
+        "note": "구독 로그인은 Claude 공개 로그인을 사용해요. Anthropic이 세션을 거부하면 로그아웃하고 API 키를 쓰세요."
+      },
+      "antigravity": {
+        "hint": "Antigravity에 쓰는 Google 계정으로 로그인해요. 사용량은 그 할당량에서 차감돼요. API 키는 Google (Gemini) 프리셋을 쓰세요.",
+        "desktopOnly": "Antigravity 로그인은 데스크톱 앱에서 할 수 있어요.",
+        "signedOut": "Antigravity에 로그인되어 있지 않아요.",
+        "signedIn": "Antigravity에 로그인됨 ({{email}}).",
+        "account": "계정",
+        "signIn": "Antigravity로 로그인",
+        "signOut": "로그아웃",
+        "waiting": "브라우저에서 로그인을 마치세요. 끝나면 Pawn이 갱신해요.",
+        "failed": "Antigravity 로그인에 실패했어요",
+        "note": "Antigravity 데스크톱 로그인을 사용해요. Google이 바꾸거나 거부할 수 있어요. 실패하면 Google (Gemini) 프리셋의 API 키를 쓰세요."
       }
     },
     "modelSection": {

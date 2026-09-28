@@ -46,6 +46,8 @@ export interface OAuthClientConfig {
   googleClientSecret?: string
   githubClientId?: string
   githubClientSecret?: string
+  antigravityClientId?: string
+  antigravityClientSecret?: string
 }
 
 export interface PatCredentials {

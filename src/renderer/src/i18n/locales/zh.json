@@ -517,6 +517,44 @@
         "openPage": "打开登录页",
         "failed": "xAI 登录失败",
         "note": "订阅登录使用 Grok 的公开登录。如果 xAI 拒绝该会话，请退出并改用 console.x.ai 的 API 密钥。"
+      },
+      "chatgpt": {
+        "hint": "使用 ChatGPT Plus、Pro、Team 或 Enterprise 登录。用量计入该订阅。API 密钥请用 OpenAI 预设。",
+        "desktopOnly": "ChatGPT 登录仅在桌面应用中可用。",
+        "signedOut": "尚未登录 ChatGPT。",
+        "signedIn": "已登录 ChatGPT（{{email}}）。",
+        "account": "账户",
+        "signIn": "使用 ChatGPT 登录",
+        "signOut": "退出登录",
+        "enterCode": "请在浏览器中确认此代码：",
+        "failed": "ChatGPT 登录失败",
+        "note": "登录使用 ChatGPT 的设备代码流程。如果页面要求开启，请在 ChatGPT 安全设置中打开设备代码登录。如果 OpenAI 拒绝该会话，请改用 OpenAI 预设的 API 密钥。"
+      },
+      "claudeSub": {
+        "hint": "使用 Claude Pro、Max、Team 或 Enterprise 登录，或粘贴 console.anthropic.com 的 API 密钥。已登录的会话会优先于密钥，直到你退出。",
+        "desktopOnly": "Claude 登录仅在桌面应用中可用。在这里请粘贴 API 密钥。",
+        "signedOut": "尚未登录。请粘贴 API 密钥，或使用 Claude 订阅登录。",
+        "signedIn": "已登录 Claude（{{email}}）。将使用此会话而不是 API 密钥。",
+        "account": "账户",
+        "signIn": "使用 Claude 登录",
+        "signOut": "退出登录",
+        "pastePrompt": "批准访问后，粘贴页面上显示的代码。",
+        "pastePlaceholder": "粘贴代码",
+        "submitCode": "继续",
+        "failed": "Claude 登录失败",
+        "note": "订阅登录使用 Claude 的公开登录。如果 Anthropic 拒绝该会话，请退出并改用 API 密钥。"
+      },
+      "antigravity": {
+        "hint": "使用你在 Antigravity 中使用的 Google 账号登录。用量计入该配额。API 密钥请用 Google (Gemini) 预设。",
+        "desktopOnly": "Antigravity 登录仅在桌面应用中可用。",
+        "signedOut": "尚未登录 Antigravity。",
+        "signedIn": "已登录 Antigravity（{{email}}）。",
+        "account": "账户",
+        "signIn": "使用 Antigravity 登录",
+        "signOut": "退出登录",
+        "waiting": "请在浏览器中完成登录。完成后 Pawn 会更新。",
+        "failed": "Antigravity 登录失败",
+        "note": "登录使用 Antigravity 的桌面登录。Google 可能会更改或拒绝它。如果失败，请改用 Google (Gemini) 预设的 API 密钥。"
       }
     },
     "modelSection": {

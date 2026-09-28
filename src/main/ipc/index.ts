@@ -19,6 +19,9 @@ import { registerLspIpc } from './lsp'
 import { registerAgentRuntimeIpc } from './agentRuntime'
 import { registerKiroIpc } from './kiro'
 import { registerXaiIpc } from './xai'
+import { registerChatGptIpc } from './chatgpt'
+import { registerClaudeOauthIpc } from './claudeOauth'
+import { registerAntigravityIpc } from './antigravity'
 import { registerSkillsIpc } from './skills'
 import { registerDecisionIpc } from './decision'
 import { registerRecorderIpc } from './recorder'
@@ -46,6 +49,9 @@ export function registerAllIpc(): void {
   registerAgentRuntimeIpc()
   registerKiroIpc()
   registerXaiIpc()
+  registerChatGptIpc()
+  registerClaudeOauthIpc()
+  registerAntigravityIpc()
   registerSkillsIpc()
   registerDecisionIpc()
   registerRecorderIpc()

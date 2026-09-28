@@ -517,6 +517,44 @@
         "openPage": "Open sign-in page",
         "failed": "xAI sign-in failed",
         "note": "Subscription sign-in uses the public Grok sign-in. If xAI rejects the session, sign out and use an API key from console.x.ai."
+      },
+      "chatgpt": {
+        "hint": "Sign in with ChatGPT Plus, Pro, Team, or Enterprise. Usage counts against that subscription. For an API key, use the OpenAI preset.",
+        "desktopOnly": "ChatGPT sign-in is available in the desktop app.",
+        "signedOut": "Not signed in to ChatGPT.",
+        "signedIn": "Signed in to ChatGPT ({{email}}).",
+        "account": "account",
+        "signIn": "Sign in with ChatGPT",
+        "signOut": "Sign out",
+        "enterCode": "Confirm this code in your browser:",
+        "failed": "ChatGPT sign-in failed",
+        "note": "Sign-in uses ChatGPT's device-code login. If the page asks you to enable it, turn on device-code sign-in in ChatGPT security settings. If OpenAI rejects the session, use the OpenAI preset with an API key."
+      },
+      "claudeSub": {
+        "hint": "Sign in with Claude Pro, Max, Team, or Enterprise, or paste an API key from console.anthropic.com. A signed-in session is used instead of the key until you sign out.",
+        "desktopOnly": "Claude sign-in is available in the desktop app. Paste an API key to use it here.",
+        "signedOut": "Not signed in. Paste an API key, or sign in with a Claude subscription.",
+        "signedIn": "Signed in to Claude ({{email}}). This session is used instead of an API key.",
+        "account": "account",
+        "signIn": "Sign in with Claude",
+        "signOut": "Sign out",
+        "pastePrompt": "After you approve access, paste the code shown on the page.",
+        "pastePlaceholder": "Paste the code",
+        "submitCode": "Continue",
+        "failed": "Claude sign-in failed",
+        "note": "Subscription sign-in uses Claude's public sign-in. If Anthropic rejects the session, sign out and use an API key."
+      },
+      "antigravity": {
+        "hint": "Sign in with the Google account you use for Antigravity. Usage counts against that quota. For an API key, use the Google (Gemini) preset.",
+        "desktopOnly": "Antigravity sign-in is available in the desktop app.",
+        "signedOut": "Not signed in to Antigravity.",
+        "signedIn": "Signed in to Antigravity ({{email}}).",
+        "account": "account",
+        "signIn": "Sign in with Antigravity",
+        "signOut": "Sign out",
+        "waiting": "Finish sign-in in your browser. Pawn updates when it completes.",
+        "failed": "Antigravity sign-in failed",
+        "note": "Sign-in uses Antigravity's desktop login. Google can change or refuse it. If it fails, use the Google (Gemini) preset with an API key."
       }
     },
     "modelSection": {

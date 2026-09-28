@@ -445,6 +445,43 @@ const api = {
       return () => ipcRenderer.removeListener('xai:loginDone', handler)
     }
   },
+  chatgpt: {
+    status: () => ipcRenderer.invoke('chatgpt:status'),
+    startLogin: () => ipcRenderer.invoke('chatgpt:startLogin'),
+    cancelLogin: () => ipcRenderer.invoke('chatgpt:cancelLogin'),
+    signOut: () => ipcRenderer.invoke('chatgpt:signOut'),
+    accessToken: () => ipcRenderer.invoke('chatgpt:accessToken'),
+    onLoginDone: (callback: (data: { ok: boolean; email?: string; error?: string }) => void) => {
+      const handler = (_: unknown, data: { ok: boolean; email?: string; error?: string }): void => callback(data)
+      ipcRenderer.on('chatgpt:loginDone', handler)
+      return () => ipcRenderer.removeListener('chatgpt:loginDone', handler)
+    }
+  },
+  claudeOauth: {
+    status: () => ipcRenderer.invoke('claudeOauth:status'),
+    startLogin: () => ipcRenderer.invoke('claudeOauth:startLogin'),
+    submitCode: (code: string) => ipcRenderer.invoke('claudeOauth:submitCode', code),
+    cancelLogin: () => ipcRenderer.invoke('claudeOauth:cancelLogin'),
+    signOut: () => ipcRenderer.invoke('claudeOauth:signOut'),
+    accessToken: () => ipcRenderer.invoke('claudeOauth:accessToken'),
+    onLoginDone: (callback: (data: { ok: boolean; email?: string; error?: string }) => void) => {
+      const handler = (_: unknown, data: { ok: boolean; email?: string; error?: string }): void => callback(data)
+      ipcRenderer.on('claudeOauth:loginDone', handler)
+      return () => ipcRenderer.removeListener('claudeOauth:loginDone', handler)
+    }
+  },
+  antigravity: {
+    status: () => ipcRenderer.invoke('antigravity:status'),
+    startLogin: () => ipcRenderer.invoke('antigravity:startLogin'),
+    cancelLogin: () => ipcRenderer.invoke('antigravity:cancelLogin'),
+    signOut: () => ipcRenderer.invoke('antigravity:signOut'),
+    accessToken: () => ipcRenderer.invoke('antigravity:accessToken'),
+    onLoginDone: (callback: (data: { ok: boolean; email?: string; error?: string }) => void) => {
+      const handler = (_: unknown, data: { ok: boolean; email?: string; error?: string }): void => callback(data)
+      ipcRenderer.on('antigravity:loginDone', handler)
+      return () => ipcRenderer.removeListener('antigravity:loginDone', handler)
+    }
+  },
   /** Persistent bash sessions (Claude's bash tool). */
   bash: {
     run: (key: string, command: string, opts: { cwd: string; timeoutMs?: number; sandbox?: Record<string, unknown> }) =>

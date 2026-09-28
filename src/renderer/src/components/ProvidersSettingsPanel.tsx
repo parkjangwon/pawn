@@ -4,7 +4,9 @@ import type { ApiFormat } from '../types/provider'
 import type { SettingsState } from './settingsState'
 import KiroAuthPanel from './KiroAuthPanel'
 import XaiAuthPanel from './XaiAuthPanel'
+import SubscriptionAuthPanel from './SubscriptionAuthPanel'
 import { isXaiHost } from '../agent/xaiSession'
+import { isAntigravityBase, isChatGptCodexBase, isClaudeApiBase } from '../agent/subscriptionWire'
 
 export default function ProvidersSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -37,6 +39,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
       <div className="settings-card">
         {providers.map((p) => {
           const isOpenRouter = isOpenRouterProvider(p)
+          const noCatalog = isChatGptCodexBase(p.baseUrl) || isAntigravityBase(p.baseUrl)
           return (
             <div key={p.id} className="settings-row provider-row">
               <div className="settings-row-info">
@@ -51,9 +54,12 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                 )}
                 {p.apiFormat === 'kiro' && <KiroAuthPanel onSignedIn={() => void handleSyncModels(p.id)} />}
                 {isXaiHost(p.baseUrl) && <XaiAuthPanel onSignedIn={() => void handleSyncModels(p.id)} />}
+                {isChatGptCodexBase(p.baseUrl) && <SubscriptionAuthPanel kind="chatgpt" />}
+                {isClaudeApiBase(p.baseUrl) && <SubscriptionAuthPanel kind="claude" onSignedIn={() => void handleSyncModels(p.id)} />}
+                {isAntigravityBase(p.baseUrl) && <SubscriptionAuthPanel kind="antigravity" />}
               </div>
               <div className="settings-row-actions">
-                {!isOpenRouter ? (
+                {noCatalog ? null : !isOpenRouter ? (
                   <button
                     className="test-btn"
                     onClick={() => handleSyncModels(p.id)}

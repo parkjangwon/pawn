@@ -35,8 +35,10 @@ export interface ProviderPreset {
   localNoKey?: boolean
   /** Signs in inside Pawn instead of taking a pasted key (Kiro). */
   signIn?: boolean
-  /** A pasted key is optional because the row can also sign in (xAI). */
+  /** A pasted key is optional because the row can also sign in (xAI, Claude). */
   optionalKey?: boolean
+  /** Skip the live model catalog until the user has a key (subscription hosts have none). */
+  skipCatalogSync?: boolean
   models: PresetModel[]
 }
 
@@ -62,6 +64,20 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
     ]
   },
   {
+    id: 'chatgpt',
+    name: 'ChatGPT',
+    apiFormat: 'openai',
+    baseUrl: 'https://chatgpt.com/backend-api/codex',
+    keyHint: 'Sign in with ChatGPT Plus, Pro, Team, or Enterprise. API keys stay on the OpenAI preset.',
+    keyHintKey: 'settings.providerSection.chatgpt.hint',
+    signIn: true,
+    models: [
+      model('gpt-5.6-sol', 'GPT-5.6 Sol', 'high'),
+      model('gpt-5.6-terra', 'GPT-5.6 Terra', 'mid'),
+      model('gpt-5.6-luna', 'GPT-5.6 Luna', 'low')
+    ]
+  },
+  {
     id: 'openai',
     name: 'OpenAI',
     apiFormat: 'openai',
@@ -72,6 +88,22 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       model('gpt-5.6-sol', 'GPT-5.6 Sol', 'high'),
       model('gpt-5.6-terra', 'GPT-5.6 Terra', 'mid'),
       model('gpt-5.6-luna', 'GPT-5.6 Luna', 'low')
+    ]
+  },
+  {
+    id: 'claude',
+    name: 'Claude',
+    apiFormat: 'claude',
+    baseUrl: 'https://api.anthropic.com/v1',
+    keyHint: 'Sign in with Claude Pro, Max, Team, or Enterprise, or paste a console.anthropic.com API key',
+    keyHintKey: 'settings.providerSection.claudeSub.hint',
+    optionalKey: true,
+    skipCatalogSync: true,
+    models: [
+      model('claude-fable-5', 'Claude Fable 5', 'high'),
+      model('claude-opus-5', 'Claude Opus 5', 'high'),
+      model('claude-sonnet-5', 'Claude Sonnet 5', 'mid'),
+      model('claude-haiku-4-5', 'Claude Haiku 4.5', 'low')
     ]
   },
   {
@@ -248,6 +280,20 @@ export const PROVIDER_PRESETS: ProviderPreset[] = [
       model('qwen-max', 'Qwen Max', 'high'),
       model('qwen-plus', 'Qwen Plus', 'mid'),
       model('qwen-turbo', 'Qwen Turbo', 'low')
+    ]
+  },
+  {
+    id: 'antigravity',
+    name: 'Antigravity',
+    apiFormat: 'openai',
+    baseUrl: 'https://cloudcode-pa.googleapis.com/v1internal',
+    keyHint: 'Sign in with the Google account you use for Antigravity. API keys stay on the Google (Gemini) preset.',
+    keyHintKey: 'settings.providerSection.antigravity.hint',
+    signIn: true,
+    models: [
+      model('gemini-3.1-pro-preview', 'Gemini 3.1 Pro (Antigravity)', 'high'),
+      model('gemini-3.6-flash', 'Gemini 3.6 Flash (Antigravity)', 'mid'),
+      model('gemini-3.5-flash', 'Gemini 3.5 Flash (Antigravity)', 'mid')
     ]
   },
   {

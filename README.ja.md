@@ -36,7 +36,14 @@ Pawn はまた別のクラウド囲い込み IDE ではありません。OpenAI 
 
 UI: ChatGPT 風レイアウト、ターミナル / ファイル / Git / Diff / ブラウザパネル、ライト・ダーク。言語: 英・韓・日・中。
 
-### 最新 — v0.16.1
+### 最新 — v0.16.2
+
+**ChatGPT、Claude、Antigravity のサインイン**
+- **ChatGPT** — 設定 → プロバイダー → ChatGPT でデバイスコードによりサインインします（Plus、Pro、Team、Enterprise）。利用量はそのサブスクリプションから消費されます。API キーは OpenAI プリセットを使います
+- **Claude** — Claude Pro、Max、Team、Enterprise でサインインするか、console の API キーを貼り付けます。サインイン中のセッションは、サインアウトするまで `api.anthropic.com` に使われます
+- **Antigravity** — Antigravity で使っている Google アカウントでサインインします。API キーは Google (Gemini) プリセットを使います。リフレッシュトークンは `~/.pawn` に暗号化して保存されます
+
+### v0.16.1
 
 **xAI サインインと Markdown プレビュー**
 - **xAI OAuth** — 設定 → プロバイダー → xAI で SuperGrok または X Premium+ にサインインできます（デバイスコード）。console の API キーも使え、サインアウト中はキーが使われます。リフレッシュトークンは `~/.pawn` に暗号化して保存されます

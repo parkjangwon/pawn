@@ -3,6 +3,7 @@ import { URL } from 'url'
 
 export interface LoopbackResult {
   code?: string
+  state?: string
   error?: string
   errorDescription?: string
   port: number
@@ -75,8 +76,15 @@ export function waitForOAuthCallback(timeoutMs = 5 * 60_000): Promise<LoopbackRe
   return promise
 }
 
+export interface LoopbackOptions {
+  /** Bind this port instead of an ephemeral one. Antigravity's client requires 51121. */
+  port?: number
+  /** Exact redirect URI to report. Defaults to http://127.0.0.1:{port}/callback. */
+  redirectUri?: string
+}
+
 /** Listen and return { port, wait } after the server is bound. */
-export async function startOAuthLoopback(timeoutMs = 5 * 60_000): Promise<{
+export async function startOAuthLoopback(timeoutMs = 5 * 60_000, opts?: LoopbackOptions): Promise<{
   port: number
   redirectUri: string
   wait: () => Promise<LoopbackResult>
@@ -117,6 +125,7 @@ export async function startOAuthLoopback(timeoutMs = 5 * 60_000): Promise<{
           return
         }
         const code = u.searchParams.get('code') || undefined
+        const state = u.searchParams.get('state') || undefined
         const error = u.searchParams.get('error') || undefined
         const errorDescription = u.searchParams.get('error_description') || undefined
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
@@ -125,7 +134,7 @@ export async function startOAuthLoopback(timeoutMs = 5 * 60_000): Promise<{
           <p style="opacity:.8">${error ? (errorDescription || error) : 'You can close this tab and return to Pawn.'}</p>
         </body></html>`)
         server.close()
-        finishWait(() => resultResolve({ code, error, errorDescription, port: boundPort }))
+        finishWait(() => resultResolve({ code, state, error, errorDescription, port: boundPort }))
       } catch (e) {
         server.close()
         finishWait(() => resultReject(e instanceof Error ? e : new Error(String(e))))
@@ -139,7 +148,7 @@ export async function startOAuthLoopback(timeoutMs = 5 * 60_000): Promise<{
       }
     })
 
-    server.listen(0, '127.0.0.1', () => {
+    server.listen(opts?.port ?? 0, '127.0.0.1', () => {
       const addr = server.address()
       if (!addr || typeof addr === 'string') {
         reject(new Error('Failed to bind OAuth loopback'))
@@ -149,7 +158,7 @@ export async function startOAuthLoopback(timeoutMs = 5 * 60_000): Promise<{
       boundPort = addr.port
       resolve({
         port: boundPort,
-        redirectUri: `http://127.0.0.1:${boundPort}/callback`,
+        redirectUri: opts?.redirectUri || `http://127.0.0.1:${boundPort}/callback`,
         wait: () => waitPromise,
         close: () => {
           try { server.close() } catch { /* ignore */ }

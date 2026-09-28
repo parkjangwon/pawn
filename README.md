@@ -36,7 +36,14 @@ In chess, the pawn is the piece that **does the work**: it advances, holds the l
 
 UI: ChatGPT-style layout, terminal / files / git / diff / browser panels, light & dark themes. Languages: English, Korean, Japanese, Chinese.
 
-### Latest — v0.16.1
+### Latest — v0.16.2
+
+**ChatGPT, Claude, and Antigravity sign-in**
+- **ChatGPT** — Settings → Providers → ChatGPT signs in with a device code (Plus, Pro, Team, or Enterprise). Usage counts against that subscription. API keys stay on the OpenAI preset
+- **Claude** — Sign in with Claude Pro, Max, Team, or Enterprise, or paste a console API key. A signed-in session is used for `api.anthropic.com` until you sign out
+- **Antigravity** — Sign in with the Google account you use for Antigravity. API keys stay on the Google (Gemini) preset. Refresh tokens stay encrypted in `~/.pawn`
+
+### v0.16.1
 
 **xAI sign-in and markdown preview**
 - **xAI OAuth** — Settings → Providers → xAI can sign in with SuperGrok or X Premium+ (device code). A console API key still works, and is used when you are signed out. The refresh token stays encrypted in `~/.pawn`
