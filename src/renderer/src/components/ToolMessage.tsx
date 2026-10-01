@@ -99,7 +99,10 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
         )}
         {structureWarn && <span className="tool-badge-warn" title={t('toolMessage.structureHint')}>{t('toolMessage.structure')}</span>}
         {duration && <span className="tool-duration">{duration}</span>}
-        <span className={`tool-status ${isRunning ? 'running' : isError ? 'error' : 'ok'}`}>
+        <span
+          className={`tool-status ${isRunning ? 'running' : isError ? 'error' : 'ok'}`}
+          title={isRunning ? undefined : isError ? t('toolMessage.statusError') : t('toolMessage.statusOk')}
+        >
           {isRunning ? '⋯' : isError ? t('toolMessage.statusError') : t('toolMessage.statusOk')}
         </span>
       </div>

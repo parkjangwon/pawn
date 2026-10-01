@@ -541,3 +541,24 @@ samp {
     display: none !important;
   }
 }
+
+/* —— Status/label chips: one line, always ——
+   Short status words must never wrap (CJK breaks per character: 완/료).
+   When the row runs out of room these chips shrink and ellipsize instead. */
+.timeline-pill,
+.question-card-badge,
+.perm-always-badge,
+.mcp-status-badge,
+.plugin-context-status,
+.plugin-kind,
+.decision-preset-tag,
+.skill-card-badge,
+.ulw-status,
+.agents-settings-tag,
+.turn-review-chip,
+.preset-chip {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}

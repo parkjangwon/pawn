@@ -121,6 +121,11 @@
   border-radius: var(--radius-xs);
   font-weight: 600;
   letter-spacing: 0.3px;
+  /* The status word must never wrap (CJK breaks per character: 완/료).
+     When the row runs out of room, shrink and ellipsize instead. */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .tool-status.ok {
