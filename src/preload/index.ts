@@ -683,6 +683,35 @@ const api = {
       ipcRenderer.invoke('memory:import', items, projectId)
   },
 
+  /**
+   * Telegram remote control. The bot token stays in the main process;
+   * status never includes it.
+   */
+  telegram: {
+    status: () => ipcRenderer.invoke('telegram:status'),
+    bindings: () => ipcRenderer.invoke('telegram:bindings'),
+    setEnabled: (enabled: boolean) => ipcRenderer.invoke('telegram:setEnabled', enabled),
+    setToken: (token: string) => ipcRenderer.invoke('telegram:setToken', token),
+    clearToken: () => ipcRenderer.invoke('telegram:clearToken'),
+    setProject: (projectId: string) => ipcRenderer.invoke('telegram:setProject', projectId),
+    approve: (code: string) => ipcRenderer.invoke('telegram:approve', code),
+    deny: (code: string) => ipcRenderer.invoke('telegram:deny', code),
+    revoke: (userId: string) => ipcRenderer.invoke('telegram:revoke', userId),
+    allowUser: (userId: string) => ipcRenderer.invoke('telegram:allowUser', userId),
+    bindChat: (chatId: string, projectId: string, sessionId: string, userId: string) =>
+      ipcRenderer.invoke('telegram:bindChat', chatId, projectId, sessionId, userId),
+    reply: (chatId: string, text: string) => ipcRenderer.invoke('telegram:reply', chatId, text),
+    progress: (chatId: string, text: string) => ipcRenderer.invoke('telegram:progress', chatId, text),
+    askPermission: (chatId: string, requestId: string, summary: string) =>
+      ipcRenderer.invoke('telegram:askPermission', chatId, requestId, summary),
+    listen: () => ipcRenderer.invoke('telegram:listen'),
+    onEvent: (callback: (event: Record<string, unknown>) => void) => {
+      const handler = (_: unknown, event: Record<string, unknown>): void => callback(event)
+      ipcRenderer.on('telegram:event', handler)
+      return () => ipcRenderer.removeListener('telegram:event', handler)
+    }
+  },
+
   /** Agent lifecycle hooks (Claude/Codex-compatible). */
   hooks: {
     settings: () => ipcRenderer.invoke('hooks:settings'),

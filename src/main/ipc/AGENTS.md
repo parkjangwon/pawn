@@ -1,7 +1,7 @@
 # src/main/ipc - IPC handlers
 
 ## OVERVIEW
-There are 25 per-domain handler files. `index.ts` `registerAllIpc()` wires them all and is called once from `src/main/index.ts`. `trust.ts` is the security choke point.
+There are 28 per-domain handler files. `index.ts` `registerAllIpc()` wires them all and is called once from `src/main/index.ts`. `trust.ts` is the security choke point.
 
 ## ADDING A CHANNEL (all four, or it is broken)
 1. `ipc/<domain>.ts`: `export function register<Domain>Ipc()` with `handleTrusted('domain:action', async (_e, ...args) => ...)`.

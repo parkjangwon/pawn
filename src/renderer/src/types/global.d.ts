@@ -18,6 +18,61 @@ declare global {
     installs: number
   }
 
+  interface TelegramAllowDto {
+    userId: string
+    username?: string
+    firstName?: string
+    approvedAt: number
+    language?: string
+  }
+
+  interface TelegramPendingDto {
+    code: string
+    userId: string
+    username?: string
+    firstName?: string
+    chatId: string
+    createdAt: number
+    language?: string
+  }
+
+  interface TelegramStatusDto {
+    ok: true
+    enabled: boolean
+    hasToken: boolean
+    username?: string
+    projectId: string
+    allowFrom: TelegramAllowDto[]
+    pending: TelegramPendingDto[]
+    polling: boolean
+    error?: string
+  }
+
+  type TelegramEventDto =
+    | {
+        type: 'inbound'
+        chatId: string
+        userId: string
+        username?: string
+        text: string
+        projectId: string
+        sessionId?: string
+        language?: string
+      }
+    | {
+        type: 'command'
+        name: 'new' | 'stop' | 'sessions' | 'chat' | 'project' | 'usage' | 'plan' | 'build' | 'tasks' | 'changes' | 'undo' | 'model' | 'compact'
+        chatId: string
+        userId: string
+        sessionId?: string
+        projectId?: string
+        arg?: string
+        language?: string
+      }
+    | { type: 'permission'; requestId: string; approved: boolean }
+    | { type: 'pairing'; code: string; userId: string; username?: string; chatId: string }
+    | { type: 'status' }
+
   interface Routine {
     id: string
     name: string
@@ -1252,6 +1307,38 @@ declare global {
       profile?: {
         get: (root: string) => Promise<{ ok: boolean; error?: string; json: string | null }>
         save: (root: string, json: string) => Promise<{ ok: boolean; error?: string }>
+      }
+      /** Telegram bot. Token stays in the main process. */
+      telegram?: {
+        status: () => Promise<TelegramStatusDto>
+        /** Persisted chat bindings, so the bridge re-arms watchers after a restart. */
+        bindings: () => Promise<{
+          ok: boolean
+          bindings: Array<{ chatId: string; projectId: string; sessionId: string; userId: string }>
+        }>
+        setEnabled: (enabled: boolean) => Promise<TelegramStatusDto>
+        setToken: (token: string) => Promise<TelegramStatusDto | { ok: false; error: string }>
+        clearToken: () => Promise<TelegramStatusDto>
+        setProject: (projectId: string) => Promise<TelegramStatusDto | { ok: false; error: string }>
+        approve: (code: string) => Promise<TelegramStatusDto | { ok: false; error: string }>
+        deny: (code: string) => Promise<TelegramStatusDto | { ok: false; error: string }>
+        revoke: (userId: string) => Promise<TelegramStatusDto | { ok: false; error: string }>
+        allowUser: (userId: string) => Promise<TelegramStatusDto | { ok: false; error: string }>
+        bindChat: (
+          chatId: string,
+          projectId: string,
+          sessionId: string,
+          userId: string
+        ) => Promise<{ ok: boolean; error?: string }>
+        reply: (chatId: string, text: string) => Promise<{ ok: boolean; error?: string }>
+        progress: (chatId: string, text: string) => Promise<{ ok: boolean; error?: string }>
+        askPermission: (
+          chatId: string,
+          requestId: string,
+          summary: string
+        ) => Promise<{ ok: boolean; error?: string }>
+        listen: () => Promise<{ ok: boolean; events: TelegramEventDto[] }>
+        onEvent: (callback: (event: TelegramEventDto) => void) => () => void
       }
       /** Long-term local Memory (self-learning knowledge cards). */
       memory?: {

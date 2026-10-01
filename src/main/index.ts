@@ -10,6 +10,7 @@ import { disposeClaudeOauth } from './ipc/claudeOauth'
 import { disposeAntigravity } from './ipc/antigravity'
 import { disposeComputer } from './computer/service'
 import { disposeRecorder } from './ipc/recorder'
+import { disposeTelegram } from './ipc/telegram'
 import { createMainWindow, getMainWindow } from './window'
 import { killAllTerminals } from './ipc/terminal'
 import { killAllMcpServers } from './mcpManager'
@@ -99,6 +100,7 @@ app.whenReady().then(() => {
     disposeClaudeOauth()
     disposeAntigravity()
     disposeComputer()
+    void disposeTelegram()
     stopRoutineServices()
     destroyTray()
     closeMemoryDb()

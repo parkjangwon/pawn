@@ -49,6 +49,7 @@ npm install -g @parkjangwon/pawn && pawn
 | `outputs/` | 卸下的工具输出，保留 7 天。用 `read_output` 读回。 |
 | `profiles/` | 按仓库学到的命令和注意点。 |
 | `reports/` | 自动化产物。 |
+| `telegram.json` | Telegram 机器人令牌（已封存）、配对允许列表、聊天绑定。模式 `0600`。 |
 
 ## 4. 循环、模式、权限
 
@@ -181,7 +182,18 @@ MCP 发现走 stdio。id 冲突时项目覆盖用户：
 
 桌面 OAuth 客户端 ID（Google、GitHub）在发布时注入。见 [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md) 和 [PRIVACY.md](../../PRIVACY.md)。
 
-## 11. 电脑使用
+## 11. Telegram
+
+设置 → Telegram。用一个私密机器人通过 DM 驱动这个桌面代理。长轮询（无公共 webhook），与 OpenClaw、Hermes 相同。令牌只留在 main 进程。
+
+- 陌生发信人只会收到配对码，不会触发代理回合。在设置中批准，或直接添加数字用户 id 以跳过配对码。群聊会被忽略。机器人文案跟随每个用户的 Telegram 语言（未知时用应用语言）。
+- 已配对的消息会在所选项目中以不抢焦点的侧边栏聊天运行。命令遵循代理惯例：`/plan [请求]` 把会话切到计划模式并只读执行请求（或刷新任务计划），`/build` 切回构建模式，`/tasks` 显示当前聊天的任务列表。另有 `/new` 新聊天、`/stop` 取消、`/sessions` + `/chat <编号>` 切换聊天、`/changes` 查看文件更改、`/undo <编号>` 还原一批更改（绝不覆盖之后又被修改的文件）、`/model` 模型与上下文、`/compact` 压缩上下文、`/project` 文件夹、`/usage` 最近一天用量，`/help` `/status` `/whoami` 由机器人直接回答。
+- `ask` 权限请求会以 Allow / Deny 按钮转发到该聊天。桌面对话框仍然可用。
+- 第二个轮询器（HTTP 409）重试后网关停止。退出 Pawn 机器人随之停止。每次成功启动都会把命令列表和聊天菜单按钮注册到 Telegram，输入 `/` 时客户端会给出自动补全。
+
+代码：`src/main/telegram/*`、`src/main/ipc/telegram.ts`、`src/renderer/src/stores/telegramBridge.ts`。
+
+## 12. 电脑使用
 
 macOS 使用捆绑助手 `pawn-cua`（Swift：ScreenCaptureKit、CGEvent、Accessibility、Vision）。没有 Homebrew 包。授予辅助功能和屏幕录制（设置 → 代理 → 电脑使用 → 检查）。按两次 Esc 停止。坐标是最近一张截图的像素，并知道多显示器。`return_screenshot` 可以附在动作上。输入对输入法安全；长文本用粘贴。
 
@@ -189,7 +201,7 @@ Windows 和 Linux：通过 PowerShell / `xdotool` 提供鼠标、键盘、截图
 
 无界面：`pawn-headless run --computer "…"`。
 
-## 12. 无界面
+## 13. 无界面
 
 `npm run headless` 生成 `out/headless/pawn-headless.mjs`。
 
@@ -204,14 +216,15 @@ pawn-headless tasks
 
 `--permission deny` 对应 `ask`。配置默认是 `~/.pawn/config.toml`。密钥：`PAWN_API_KEY_<PROVIDER_ID>` 或 `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY` / `GEMINI_API_KEY`。
 
-## 13. 安全不变量
+## 14. 安全不变量
 
 - 渲染进程：`nodeIntegration: false`，`contextIsolation: true`。系统调用走 `src/main/ipc/*` 和 `src/preload/index.ts`（`contextBridge`）。
 - 记忆和抓取的网页文本是不可信数据，不是指令。
 - `PreToolUse` / `PermissionRequest` 的拒绝在 `yolo` 中仍然执行。
 - 研究的 SSRF 防护保持开启。秘密不写入记忆或录制。
+- Telegram 机器人令牌不会进入渲染进程。DM 在这台电脑上批准配对码之前一律拒绝。
 
-## 14. 开发
+## 15. 开发
 
 ```bash
 npm install
@@ -242,7 +255,7 @@ native/macos/pawn-cua/
 
 右侧面板：终端、文件、Git、Diff、产物、浏览器。文件视图里的 `.md` 在渲染预览和源码之间切换，相对链接从该文件所在文件夹解析。命令面板 `Cmd/Ctrl+K`。自动化写入 `~/.pawn/reports/<name>/`。一个项目可以列多个文件夹；会话路径决定工具的 cwd。
 
-## 15. 操作表
+## 16. 操作表
 
 | 请求 | 做法 |
 |------|------|
@@ -260,6 +273,6 @@ native/macos/pawn-cua/
 | 构建 | 上面的 Node 版本，`npm install`，`npm run check`。 |
 | 工具被拒绝 | 权限模式、Plan 模式、`PreToolUse` 拒绝、账号未连接、工具组未加载。 |
 
-## 16. 许可证
+## 17. 许可证
 
 MIT。OAuth 隐私：[PRIVACY.md](../../PRIVACY.md)。

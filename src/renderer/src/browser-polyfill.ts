@@ -181,6 +181,66 @@ if (typeof window !== 'undefined' && !window.api) {
       listChangeLedgerTurns: async () => [],
       deleteChangeLedgerTurn: async () => ({ ok: true }),
       deleteChangeLedgerForSession: async () => ({ ok: true })
+    },
+
+    // Preview only: the desktop app polls Telegram from the main process.
+    telegram: {
+      status: async () => ({
+        ok: true as const,
+        enabled: false,
+        hasToken: false,
+        projectId: '',
+        allowFrom: [],
+        pending: [],
+        polling: false
+      }),
+      bindings: async () => ({ ok: true, bindings: [] }),
+      setEnabled: async () => ({
+        ok: true as const,
+        enabled: false,
+        hasToken: false,
+        projectId: '',
+        allowFrom: [],
+        pending: [],
+        polling: false
+      }),
+      setToken: async () => ({ ok: false as const, error: 'invalid_token' }),
+      clearToken: async () => ({
+        ok: true as const,
+        enabled: false,
+        hasToken: false,
+        projectId: '',
+        allowFrom: [],
+        pending: [],
+        polling: false
+      }),
+      setProject: async () => ({
+        ok: true as const,
+        enabled: false,
+        hasToken: false,
+        projectId: '',
+        allowFrom: [],
+        pending: [],
+        polling: false
+      }),
+      approve: async () => ({ ok: false as const, error: 'not_found' }),
+      deny: async () => ({ ok: false as const, error: 'not_found' }),
+      revoke: async () => ({ ok: false as const, error: 'not_found' }),
+      allowUser: async () => ({
+        ok: true as const,
+        enabled: false,
+        hasToken: false,
+        projectId: '',
+        allowFrom: [],
+        pending: [],
+        polling: false
+      }),
+      bindChat: async () => ({ ok: true }),
+      reply: async () => ({ ok: true }),
+      progress: async () => ({ ok: true }),
+      askPermission: async () => ({ ok: true }),
+      listen: async () => ({ ok: true, events: [] }),
+      onEvent: () => () => {}
     }
   }
 }

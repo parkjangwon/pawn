@@ -22,6 +22,8 @@ Pawn is an Electron app. Point it at any OpenAI- or Claude-compatible API. Sessi
 
 **It can keep working.** Auto routing picks a model and stays with it while the prompt cache is warm. Long jobs keep notes and checkpoints. Subagents can take a slice of the work, including in a git worktree. The same agent runs without the window via `pawn-headless`.
 
+**Reach it from Telegram.** Pair your own account and drive the same agent from a direct message — fresh chats, plan mode, permission approvals, even undoing file changes. The bot token never leaves the main process, and strangers get a pairing code instead of a turn.
+
 ## Install
 
 ```bash

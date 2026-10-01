@@ -7,6 +7,7 @@ import { useDecisionStore } from './stores/decision'
 import { useRecordingStore } from './stores/recording'
 import { applyChatFontSize, usePrefsStore } from './stores/prefs'
 import { useRoutineStore } from './stores/routine'
+import { startTelegramBridge } from './stores/telegramBridge'
 import { useMcpStore } from './stores/mcp'
 import { useKeybindingsStore, useKeybinding } from './stores/keybindings'
 import { useChatStore } from './stores/chat'
@@ -106,6 +107,7 @@ export default function App(): React.JSX.Element {
         .catch(() => {})
     })
     void useRoutineStore.getState().init()
+    startTelegramBridge()
     void useMcpStore.getState().init()
     void useKeybindingsStore.getState().init()
     void useChangeLedger.getState().hydrate()

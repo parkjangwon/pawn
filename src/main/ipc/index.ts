@@ -25,6 +25,7 @@ import { registerAntigravityIpc } from './antigravity'
 import { registerSkillsIpc } from './skills'
 import { registerDecisionIpc } from './decision'
 import { registerRecorderIpc } from './recorder'
+import { registerTelegramIpc } from './telegram'
 
 /** Register every main-process IPC handler in one place. */
 export function registerAllIpc(): void {
@@ -55,4 +56,5 @@ export function registerAllIpc(): void {
   registerSkillsIpc()
   registerDecisionIpc()
   registerRecorderIpc()
+  registerTelegramIpc()
 }

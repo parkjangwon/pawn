@@ -18,8 +18,8 @@ ipc/             handleTrusted handlers (own AGENTS.md)
 connections/     github, gitlab, google, codecommit: client + *Tools.ts each
 computer/        service.ts entry; spawns native pawn-cua on macOS, xdotool/PowerShell elsewhere
 codeIndex/       BM25 + hashed embeddings, JSON cache (CACHE_VERSION)
-debug/ lsp/ kiro/ decision/ memory/ recorder/ research/ hooks/
-__tests__/       34 flat tests; some domains also keep a local __tests__/
+debug/ lsp/ kiro/ decision/ memory/ recorder/ research/ hooks/ telegram/
+__tests__/       35 flat tests; some domains also keep a local __tests__/
 ```
 
 ## CONVENTIONS
@@ -35,7 +35,7 @@ __tests__/       34 flat tests; some domains also keep a local __tests__/
 ## ANTI-PATTERNS
 - Never spawn a process without `shellSandbox` planning, and never use the app's own cwd as a project root (`agentRuntime.ts`, `ipc/shell.ts`).
 - Never read, write or delete paths rejected by `fsGuards`.
-- Never let a secret reach the renderer or the logs (`decision/`, `kiro/`, `connections/`).
+- Never let a secret reach the renderer or the logs (`decision/`, `kiro/`, `connections/`, `telegram/`).
 - Never refresh or write another app's session (`kiro/auth.ts` reads the Kiro CLI/IDE DB read-only).
 - LSP uses global servers only. Never run project-local binaries such as a workspace TypeScript (`lsp/servers.ts`).
 - Wrap memory, research and web text as untrusted data (`memory/safety.ts`, `research/contentSafety.ts`). Never persist secrets to memory.

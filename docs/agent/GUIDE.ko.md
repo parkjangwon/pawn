@@ -49,6 +49,7 @@ npm install -g @parkjangwon/pawn && pawn
 | `outputs/` | 넘긴 도구 출력, 7일. `read_output`으로 다시 읽습니다. |
 | `profiles/` | 저장소마다 배운 명령과 주의점. |
 | `reports/` | 자동화 산출물. |
+| `telegram.json` | 텔레그램 봇 토큰(봉인), 페어링 허용 목록, 채팅 바인딩. 모드 `0600`. |
 
 ## 4. 루프, 모드, 권한
 
@@ -181,7 +182,18 @@ UI: 설정 → MCP. `user-claude` 항목은 읽기 전용입니다. Pawn은 Clau
 
 데스크톱 OAuth 클라이언트 ID (Google, GitHub)는 릴리스 때 주입합니다. [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md), [PRIVACY.md](../../PRIVACY.md).
 
-## 11. 컴퓨터 사용
+## 11. 텔레그램
+
+설정 → Telegram. 비공개 봇으로 이 데스크톱 에이전트를 DM에서 불러옵니다. 웹훅 없이 롱폴링(OpenClaw·Hermes와 같은 구조). 토큰은 main 프로세스에만 있습니다.
+
+- 모르는 발신자에게는 페어링 코드만 주고 에이전트 턴은 없습니다. 설정에서 승인하거나 숫자 사용자 id를 직접 추가해 코드를 건너뛸 수 있습니다. 그룹 채팅은 무시합니다. 봇 문구는 각 사용자의 텔레그램 언어를 따릅니다(모르면 앱 언어).
+- 페어링된 메시지는 그곳에서 고른 프로젝트에서, 포커스를 가져가지 않는 사이드바 채팅으로 실행됩니다. 명령어는 에이전트 관례를 따릅니다: `/plan [요청]`은 세션을 계획 모드로 바꾸고 요청(또는 작업 계획 갱신)을 읽기 전용으로 실행, `/build`는 빌드 모드 복귀, `/tasks`는 이 채팅의 작업 목록. 이 밖에 `/new` 새 채팅, `/stop` 취소, `/sessions` + `/chat <번호>` 채팅 전환, `/changes` 파일 변경 확인, `/undo <번호>` 되돌리기(나중에 다시 바뀐 파일은 절대 덮지 않음), `/model` 모델과 맥락 표시, `/compact` 맥락 축소, `/project` 폴더, `/usage` 하루 사용량, `/help` `/status` `/whoami`는 봇이 바로 답합니다.
+- `ask` 권한 요청은 그 채팅에 Allow / Deny 버튼으로 전달됩니다. 데스크톱 대화창도 그대로 동작합니다.
+- 두 번째 폴러(HTTP 409)는 재시도 후 게이트웨이가 멈춥니다. Pawn을 끄면 봇도 멈춥니다. 시작에 성공할 때마다 명령어 목록과 채팅 메뉴 버튼을 텔레그램에 등록해 `/` 입력 때 클라이언트 자동완성을 제공합니다.
+
+코드: `src/main/telegram/*`, `src/main/ipc/telegram.ts`, `src/renderer/src/stores/telegramBridge.ts`.
+
+## 12. 컴퓨터 사용
 
 macOS는 번들 헬퍼 `pawn-cua`를 씁니다 (Swift: ScreenCaptureKit, CGEvent, Accessibility, Vision). Homebrew 패키지는 없습니다. 손쉬운 사용과 화면 기록을 허용합니다 (설정 → 에이전트 → 컴퓨터 사용 → 확인). Esc 두 번이면 멈춥니다. 좌표는 마지막 스크린샷의 픽셀이고 멀티 모니터를 압니다. `return_screenshot`은 동작에 실을 수 있습니다. 입력은 IME에 안전하고, 긴 텍스트는 붙여 넣습니다.
 
@@ -189,7 +201,7 @@ Windows와 Linux: PowerShell / `xdotool`로 마우스, 키보드, 스크린샷, 
 
 헤드리스: `pawn-headless run --computer "…"`.
 
-## 12. 헤드리스
+## 13. 헤드리스
 
 `npm run headless`가 `out/headless/pawn-headless.mjs`를 만듭니다.
 
@@ -204,14 +216,15 @@ pawn-headless tasks
 
 `--permission deny`는 `ask`로 대응합니다. 설정 기본 파일은 `~/.pawn/config.toml`. 키: `PAWN_API_KEY_<PROVIDER_ID>` 또는 `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY` / `GEMINI_API_KEY`.
 
-## 13. 보안 불변 조건
+## 14. 보안 불변 조건
 
 - 렌더러: `nodeIntegration: false`, `contextIsolation: true`. 시스템 호출은 `src/main/ipc/*`와 `src/preload/index.ts` (`contextBridge`)를 통합니다.
 - 기억과 가져온 웹 텍스트는 신뢰하지 않는 데이터이고, 지시가 아닙니다.
 - `PreToolUse` / `PermissionRequest` 거부는 `yolo`에서도 적용됩니다.
 - 리서치 SSRF 가드는 켜 둡니다. 비밀은 기억이나 녹화에 쓰지 않습니다.
+- 텔레그램 봇 토큰은 렌더러에 닿지 않습니다. DM은 이 컴퓨터에서 페어링 코드를 승인할 때까지 거부됩니다.
 
-## 14. 개발
+## 15. 개발
 
 ```bash
 npm install
@@ -242,7 +255,7 @@ native/macos/pawn-cua/
 
 오른쪽 패널: 터미널, 파일, Git, Diff, 아티팩트, 브라우저. 파일 뷰어의 `.md`는 렌더된 미리보기와 원문을 오가고, 상대 링크는 그 파일의 폴더에서 엽니다. 명령 팔레트 `Cmd/Ctrl+K`. 자동화는 `~/.pawn/reports/<name>/`에 씁니다. 프로젝트는 폴더를 여러 개 가질 수 있고, 세션 경로가 도구 cwd를 고릅니다.
 
-## 15. 플레이북
+## 16. 플레이북
 
 | 요청 | 할 일 |
 |------|--------|
@@ -260,6 +273,6 @@ native/macos/pawn-cua/
 | 빌드 | 위의 Node 버전, `npm install`, `npm run check`. |
 | 도구 거부 | 권한 모드, Plan 모드, `PreToolUse` 거부, 연결되지 않은 계정, 로드되지 않은 도구 그룹. |
 
-## 16. 라이선스
+## 17. 라이선스
 
 MIT. OAuth 개인정보: [PRIVACY.md](../../PRIVACY.md).

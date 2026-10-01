@@ -1,0 +1,192 @@
+#telegram-step-token,
+#telegram-step-project,
+#telegram-step-enable,
+#telegram-step-pair {
+  scroll-margin-top: 72px;
+}
+
+.telegram-panel .toggle-switch:has(input:disabled) {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.telegram-steps {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0 0 16px;
+  padding: 0;
+  list-style: none;
+}
+
+.telegram-steps > li {
+  display: flex;
+  min-width: 0;
+}
+
+.telegram-step {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: var(--font-sm);
+  text-align: left;
+  cursor: pointer;
+}
+
+.telegram-step.now,
+.telegram-step.done {
+  color: var(--text-primary);
+}
+
+.telegram-step.now {
+  border-color: var(--text-primary);
+}
+
+.telegram-step-kicker {
+  font-size: var(--font-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.telegram-step-mark {
+  color: var(--success);
+}
+
+.telegram-step-label {
+  font-weight: 500;
+  line-height: 1.35;
+}
+
+.telegram-form,
+.telegram-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.telegram-form {
+  justify-content: flex-start;
+}
+
+.telegram-form input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-mono);
+  font-size: var(--font-md);
+  outline: none;
+  transition: border-color var(--dur-fast) var(--ease-out-soft);
+}
+
+.telegram-form input:focus {
+  border-color: var(--accent);
+}
+
+/* Same inset field the other settings forms use on a dark card. */
+.app.dark .telegram-form input {
+  background: #1c1c1e;
+  border-color: #3a3a3c;
+}
+
+a.telegram-link {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+  line-height: 1;
+}
+
+.telegram-error {
+  color: var(--danger);
+  margin: 8px 0 4px;
+  font-size: var(--font-sm);
+}
+
+.telegram-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.telegram-status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: currentColor;
+}
+
+.telegram-status.on {
+  color: var(--success);
+}
+
+.telegram-status.bad {
+  color: var(--danger);
+}
+
+.telegram-card-alert {
+  border-color: var(--warning);
+}
+
+.telegram-code {
+  font-family: var(--font-mono);
+  font-size: 18px;
+  letter-spacing: 0.12em;
+  color: var(--text-primary);
+  user-select: all;
+}
+
+.telegram-commands {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.telegram-commands li {
+  display: flex;
+  gap: 12px;
+  align-items: baseline;
+  padding: 6px 0;
+  font-size: var(--font-sm);
+  color: var(--text-muted);
+}
+
+.telegram-commands code {
+  flex: 0 0 72px;
+  font-family: var(--font-mono);
+  color: var(--text-primary);
+}
+
+@media (max-width: 720px) {
+  .telegram-steps {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  #telegram-step-project,
+  #telegram-step-enable {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  #telegram-step-project select {
+    width: 100%;
+  }
+}

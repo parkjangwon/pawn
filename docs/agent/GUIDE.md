@@ -49,6 +49,7 @@ Installer cache: `~/.pawn/installers/`. In-app check: Settings → System. Node 
 | `outputs/` | Offloaded tool output, 7 days. Read back with `read_output`. |
 | `profiles/` | Learned per-repo commands and gotchas. |
 | `reports/` | Automation deliverables. |
+| `telegram.json` | Telegram bot token (sealed), pairing allowlist, chat bindings. Mode `0600`. |
 
 ## 4. Loop, modes, permissions
 
@@ -181,7 +182,18 @@ Settings → Connections. Tokens stay under `~/.pawn`.
 
 Desktop OAuth client IDs (Google, GitHub) are injected at release. See [.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md) and [PRIVACY.md](../../PRIVACY.md).
 
-## 11. Computer use
+## 11. Telegram
+
+Settings → Telegram. A private bot controls this desktop agent from a direct message. Long polling (no public webhook), same shape as OpenClaw and Hermes. The token stays in the main process.
+
+- Unknown senders receive a pairing code and no agent turn. Approve or deny the code in Settings, or add a numeric user id by hand there to skip the code. Group chats are ignored. Bot copy follows each user's Telegram client language (with the app language as fallback).
+- Paired messages run in the project chosen there, as a sidebar chat that does not take focus. Commands follow agent conventions: `/plan [request]` switches the session to plan mode and runs the request (or refreshes the task plan) read-only, `/build` returns to build mode, `/tasks` shows the chat's task list. Also `/new` fresh chat, `/stop` cancel, `/sessions` + `/chat <n>` switch chats, `/changes` lists file changes with `/undo <n>` to revert one set (never clobbering later edits), `/model` shows the model and context fill, `/compact` shrinks the context, `/project` the folder, `/usage` the last day's spend, and `/help` `/status` `/whoami` stay on the bot.
+- `ask` permission prompts are forwarded to that chat as Allow / Deny buttons. The desktop dialog still works.
+- A second poller (HTTP 409) is retried, then the gateway stops. Quit Pawn and the bot stops. On every successful start the command list and the chat menu button are registered with Telegram, so the client offers autocomplete when typing `/`.
+
+Code: `src/main/telegram/*`, `src/main/ipc/telegram.ts`, `src/renderer/src/stores/telegramBridge.ts`.
+
+## 12. Computer use
 
 macOS uses the bundled helper `pawn-cua` (Swift: ScreenCaptureKit, CGEvent, Accessibility, Vision). No Homebrew package. Grant Accessibility and Screen Recording (Settings → Agent → Computer use → Check). Esc twice stops. Coordinates are pixels of the latest screenshot and are multi-monitor aware. `return_screenshot` can ride on an action. Typing is IME-safe; long text is pasted.
 
@@ -189,7 +201,7 @@ Windows and Linux: mouse, keyboard, screenshot, clipboard via PowerShell / `xdot
 
 Headless: `pawn-headless run --computer "…"`.
 
-## 12. Headless
+## 13. Headless
 
 `npm run headless` builds `out/headless/pawn-headless.mjs`.
 
@@ -204,14 +216,15 @@ pawn-headless tasks
 
 `--permission deny` maps to `ask`. Config default is `~/.pawn/config.toml`. Keys: `PAWN_API_KEY_<PROVIDER_ID>` or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY` / `GEMINI_API_KEY`.
 
-## 13. Security invariants
+## 14. Security invariants
 
 - Renderer: `nodeIntegration: false`, `contextIsolation: true`. System calls go through `src/main/ipc/*` and `src/preload/index.ts` (`contextBridge`).
 - Memory and fetched web text are untrusted data, not instructions.
 - `PreToolUse` / `PermissionRequest` deny is enforced in `yolo`.
 - Research SSRF guards stay on. Secrets are not written to memory or recordings.
+- The Telegram bot token never reaches the renderer. DMs stay denied until a pairing code is approved on this computer.
 
-## 14. Develop
+## 15. Develop
 
 ```bash
 npm install
@@ -242,7 +255,7 @@ Contributor rules: root `CLAUDE.md`. Stack: Electron, React 19, TypeScript, elec
 
 Right panel: Terminal, Files, Git, Diff, Artifacts, Browser. `.md` files in the file viewer toggle between rendered preview and source; relative links resolve from that file's folder. Command palette `Cmd/Ctrl+K`. Automations write `~/.pawn/reports/<name>/`. A project may list several folders; the session path picks the tool cwd.
 
-## 15. Playbook
+## 16. Playbook
 
 | Ask | Do |
 |-----|----|
@@ -260,6 +273,6 @@ Right panel: Terminal, Files, Git, Diff, Artifacts, Browser. `.md` files in the 
 | Build | Node version above, `npm install`, `npm run check`. |
 | Tool denied | Permission mode, Plan mode, `PreToolUse` deny, disconnected account, tool group not loaded. |
 
-## 16. License
+## 17. License
 
 MIT. OAuth privacy: [PRIVACY.md](../../PRIVACY.md).

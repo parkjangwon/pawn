@@ -88,6 +88,9 @@ interface PendingEntry {
 
 const resolvers: Map<string, PendingEntry> = new Map()
 let counter = 0
+// Telegram allow buttons carry this id forever; the boot tag keeps ids from a
+// previous app run from ever matching a freshly issued request again.
+const bootTag = Date.now().toString(36)
 const ALWAYS_KEY = 'pawn-permission-always-rules'
 
 function loadAlwaysRules(): AllowRule[] {
@@ -140,7 +143,7 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
         resolve(false)
         return
       }
-      const id = `perm-${++counter}`
+      const id = `perm-${bootTag}-${++counter}`
       let settled = false
       const finish = (approved: boolean): void => {
         if (settled) return

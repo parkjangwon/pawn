@@ -49,6 +49,7 @@ npm install -g @parkjangwon/pawn && pawn
 | `outputs/` | 退避したツール出力、7日。`read_output` で読み戻します。 |
 | `profiles/` | リポジトリごとに学習したコマンドと注意点。 |
 | `reports/` | 自動化の成果物。 |
+| `telegram.json` | Telegram ボットトークン（封印）、ペアリング許可リスト、チャットバインディング。モード `0600`。 |
 
 ## 4. ループ、モード、権限
 
@@ -181,7 +182,18 @@ UI: 設定 → MCP。`user-claude` は読み取り専用です。Pawn は Claude
 
 デスクトップ OAuth クライアント ID（Google、GitHub）はリリース時に注入します。[.github/OAUTH_SECRETS.md](../../.github/OAUTH_SECRETS.md)、[PRIVACY.md](../../PRIVACY.md)。
 
-## 11. コンピュータ使用
+## 11. Telegram
+
+設定 → Telegram。非公開のボットでこのデスクトップエージェントを DM から動かします。Webhook なしのロングポーリング（OpenClaw・Hermes と同じ構造）。トークンは main プロセスにだけあります。
+
+- 知らない送信者にはペアリングコードだけを返し、エージェントのターンは実行しません。設定で承認するか、数字のユーザー id を手動で追加してコードを省けます。グループチャットは無視します。ボットの文面は各ユーザーの Telegram 言語に従います（不明ならアプリの言語）。
+- ペアリング済みのメッセージは、そこで選んだプロジェクト内のフォーカスを奪わないサイドバーチャットとして実行されます。コマンドはエージェントの慣習に従います: `/plan [依頼]` はセッションを計画モードに切り替えて依頼（またはタスク計画の更新）を読み取り専用で実行、`/build` はビルドモードへ復帰、`/tasks` はこのチャットのタスク一覧。このほか `/new` 新しいチャット、`/stop` 取り消し、`/sessions` + `/chat <番号>` チャット切替、`/changes` ファイル変更の確認、`/undo <番号>` 取り消し（後で再変更されたファイルは決して上書きしません）、`/model` モデルと文脈の表示、`/compact` 文脈の圧縮、`/project` フォルダ、`/usage` 直近 1 日の使用量、`/help` `/status` `/whoami` はボットが即答します。
+- `ask` 権限の確認はそのチャットに Allow / Deny ボタンとして届きます。デスクトップのダイアログもそのまま動きます。
+- 第二のポーラー（HTTP 409）は再試行の後、ゲートウェイが停止します。Pawn を終了すればボットも止まります。起動に成功するたびにコマンド一覧とチャットメニューボタンを Telegram に登録し、`/` 入力時にクライアントの自動補全が出ます。
+
+コード: `src/main/telegram/*`、`src/main/ipc/telegram.ts`、`src/renderer/src/stores/telegramBridge.ts`。
+
+## 12. コンピュータ使用
 
 macOS は同梱ヘルパー `pawn-cua` を使います（Swift: ScreenCaptureKit、CGEvent、Accessibility、Vision）。Homebrew パッケージはありません。アクセシビリティと画面収録を許可します（設定 → エージェント → コンピュータ使用 → 確認）。Esc 二回で止まります。座標は最新スクリーンショットのピクセルで、マルチモニタを知っています。`return_screenshot` は操作に乗せられます。入力は IME 安全で、長いテキストは貼り付けます。
 
@@ -189,7 +201,7 @@ Windows と Linux: PowerShell / `xdotool` でマウス、キーボード、ス�
 
 ヘッドレス: `pawn-headless run --computer "…"`。
 
-## 12. ヘッドレス
+## 13. ヘッドレス
 
 `npm run headless` が `out/headless/pawn-headless.mjs` を作ります。
 
@@ -204,14 +216,15 @@ pawn-headless tasks
 
 `--permission deny` は `ask` に対応します。設定の既定ファイルは `~/.pawn/config.toml`。キー: `PAWN_API_KEY_<PROVIDER_ID>` または `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY` / `GEMINI_API_KEY`。
 
-## 13. セキュリティの不変条件
+## 14. セキュリティの不変条件
 
 - レンダラ: `nodeIntegration: false`、`contextIsolation: true`。システム呼び出しは `src/main/ipc/*` と `src/preload/index.ts`（`contextBridge`）を通ります。
 - 記憶と取得したウェブテキストは信頼しないデータであり、指示ではありません。
 - `PreToolUse` / `PermissionRequest` の拒否は `yolo` でも適用されます。
 - リサーチの SSRF ガードはオンのままです。秘密は記憶にも録画にも書きません。
+- Telegram ボットトークンがレンダラーに届くことはありません。DM はこのコンピュータでペアリングコードを承認するまで拒否されます。
 
-## 14. 開発
+## 15. 開発
 
 ```bash
 npm install
@@ -242,7 +255,7 @@ native/macos/pawn-cua/
 
 右パネル: ターミナル、ファイル、Git、Diff、アーティファクト、ブラウザ。ファイルビューアの `.md` は描画プレビューとソースを切り替え、相対リンクはそのファイルのフォルダから解決します。コマンドパレット `Cmd/Ctrl+K`。自動化は `~/.pawn/reports/<name>/` に書きます。プロジェクトはフォルダを複数持て、セッションのパスがツールの cwd を選びます。
 
-## 15. プレイブック
+## 16. プレイブック
 
 | 依頼 | すること |
 |------|----------|
@@ -260,6 +273,6 @@ native/macos/pawn-cua/
 | ビルド | 上の Node 版、`npm install`、`npm run check`。 |
 | ツール拒否 | 権限モード、Plan モード、`PreToolUse` の拒否、未接続のアカウント、ロードされていないツール群。 |
 
-## 16. ライセンス
+## 17. ライセンス
 
 MIT。OAuth のプライバシー: [PRIVACY.md](../../PRIVACY.md)。

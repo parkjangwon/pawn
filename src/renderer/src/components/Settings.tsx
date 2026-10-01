@@ -11,6 +11,7 @@ import AgentsSettingsPanel from './AgentsSettingsPanel'
 import UsageSettingsPanel from './UsageSettingsPanel'
 import PluginsSettingsPanel from './PluginsSettingsPanel'
 import SkillStorePanel from './SkillStorePanel'
+import TelegramSettingsPanel from './TelegramSettingsPanel'
 import McpSettingsPanel from './McpSettingsPanel'
 import ConnectionsSettingsPanel from './ConnectionsSettingsPanel'
 import SystemSettingsPanel from './SystemSettingsPanel'
@@ -54,7 +55,10 @@ export default function Settings({
   const filteredSections = useMemo(() => {
     if (!searchQuery.trim()) return null
     const q = searchQuery.toLowerCase().trim()
-    return SECTIONS.filter((s) => t(s.labelKey).toLowerCase().includes(q) || s.id.toLowerCase().includes(q))
+    return SECTIONS.filter((s) => {
+      const extra = s.searchKey ? t(s.searchKey) : ''
+      return `${t(s.labelKey)} ${s.id} ${extra}`.toLowerCase().includes(q)
+    })
   }, [searchQuery, t])
 
   const sidebarShortcut = formatCombo(keybindings['toggle-sidebar'])
@@ -230,6 +234,7 @@ export default function Settings({
         {activeSection === 'skillStore' && <SkillStorePanel t={state.t} />}
         {activeSection === 'mcp' && <McpSettingsPanel state={state} />}
         {activeSection === 'connections' && <ConnectionsSettingsPanel state={state} />}
+        {activeSection === 'telegram' && <TelegramSettingsPanel />}
         {activeSection === 'system' && <SystemSettingsPanel state={state} />}
         {activeSection === 'shortcuts' && <ShortcutsSettingsPanel state={state} />}
         {activeSection === 'data' && <DataSettingsPanel state={state} />}
