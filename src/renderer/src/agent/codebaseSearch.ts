@@ -176,7 +176,8 @@ async function searchWalk(
   })
 
   const hits: Hit[] = []
-  const reads = await window.api.fs.readFiles(files.slice(0, 500).map((f) => f.path))
+  // Polyfill/failed IPC can return non-array shapes — degrade to no hits.
+  const reads = (await window.api.fs.readFiles(files.slice(0, 500).map((f) => f.path))) || []
 
   for (const item of reads) {
     if (hits.length >= maxResults * 2) break

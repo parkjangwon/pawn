@@ -2,6 +2,13 @@ import { requireBrowser } from './browserHelpers'
 import { withPageEvents } from './runtime'
 import type { ToolHandler } from './types'
 
+/** Model-supplied numbers may be garbage ("10m") — undefined lets the action use its default. */
+function optNum(v: unknown): number | undefined {
+  if (v == null) return undefined
+  const n = Number(v)
+  return Number.isFinite(n) ? n : undefined
+}
+
 
 const browser_navigate: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
         const b = await requireBrowser(ctx)
@@ -114,11 +121,10 @@ const browser_wait: ToolHandler = async (call, projectPath, _signal, ctx, api) =
   const b = await requireBrowser(ctx)
   if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
   const res = await b.agent.wait({
-    ms: call.arguments.ms != null ? Number(call.arguments.ms) : undefined,
+    ms: optNum(call.arguments.ms),
     selector: call.arguments.selector != null ? String(call.arguments.selector) : undefined,
     text: call.arguments.text != null ? String(call.arguments.text) : undefined,
-    timeoutMs:
-      call.arguments.timeout_ms != null ? Number(call.arguments.timeout_ms) : undefined
+    timeoutMs: optNum(call.arguments.timeout_ms)
   })
   if (res.error) return { toolCallId: call.id, content: res.error, isError: true }
   return { toolCallId: call.id, content: `Waited ${res.waitedMs ?? 0}ms` }
@@ -128,8 +134,8 @@ const browser_scroll: ToolHandler = async (call, projectPath, _signal, ctx, api)
   const b = await requireBrowser(ctx)
   if ('error' in b) return { toolCallId: call.id, content: b.error, isError: true }
   const res = await b.agent.scroll({
-    dy: call.arguments.dy != null ? Number(call.arguments.dy) : undefined,
-    dx: call.arguments.dx != null ? Number(call.arguments.dx) : undefined,
+    dy: optNum(call.arguments.dy),
+    dx: optNum(call.arguments.dx),
     selector: call.arguments.selector != null ? String(call.arguments.selector) : undefined
   })
   if (res.error) return { toolCallId: call.id, content: res.error, isError: true }

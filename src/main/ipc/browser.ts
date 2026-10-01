@@ -12,6 +12,16 @@ import {
   isRecorderMessage,
   parseRecorderMessage
 } from '../recorder/browserScript'
+import {
+  clickScript,
+  fillScript,
+  readTextScript,
+  resolverExpr,
+  scrollScript,
+  selectScript,
+  snapshotScript,
+  waitScript
+} from '../browserPageScripts'
 
 // The embedded browser runs in its own session partition. The app's own CSP is
 // installed on `session.defaultSession`; sharing it would apply `default-src
@@ -445,26 +455,23 @@ async function runInPage<T>(code: string, owner?: string, timeoutMs = EVAL_TIMEO
   }
   try {
     const exec = guard.view.webContents.executeJavaScript(code, true) as Promise<T>
-    const result = await Promise.race([
-      exec,
-      new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(`Page script timed out after ${timeoutMs}ms`)), timeoutMs)
-      })
-    ])
-    return result
+    // Clear the timeout when the page wins the race — otherwise every eval
+    // leaks a live 30s timer that keeps the loop non-idle.
+    let timer: NodeJS.Timeout | undefined
+    try {
+      const result = await Promise.race([
+        exec,
+        new Promise<never>((_, reject) => {
+          timer = setTimeout(() => reject(new Error(`Page script timed out after ${timeoutMs}ms`)), timeoutMs)
+        })
+      ])
+      return result
+    } finally {
+      if (timer) clearTimeout(timer)
+    }
   } catch (err) {
     return { error: 'Page script failed: ' + String(err) }
   }
-}
-
-/** JS that resolves an element from a snapshot ref or a CSS selector. */
-function resolverExpr(ref: string, selector: string): string {
-  const r = JSON.stringify(ref || '')
-  const s = JSON.stringify(selector || '')
-  return `(function(){ var r=${r}, s=${s};
-    if (r) { var byRef = document.querySelector('[data-pawn-ref="' + r.replace(/"/g,'') + '"]'); if (byRef) return byRef }
-    if (s) { try { return document.querySelector(s) } catch (e) { return null } }
-    return null })()`
 }
 
 export function registerBrowserIpc(): void {
@@ -579,6 +586,11 @@ export function registerBrowserIpc(): void {
   handleTrusted('browser:bounds', async (_, x: number, y: number, width: number, height: number) => {
     const view = activeView()
     if (!view) return { error: 'Browser not created' }
+    // Math.max(1, NaN) is NaN — validate before setBounds, which would
+    // otherwise deep-throw inside Electron on malformed renderer args.
+    for (const n of [x, y, width, height]) {
+      if (typeof n !== 'number' || !Number.isFinite(n)) return { error: 'Invalid bounds' }
+    }
     const bounds = {
       x: Math.round(x), y: Math.round(y),
       width: Math.max(1, Math.round(width)), height: Math.max(1, Math.round(height))
@@ -773,146 +785,22 @@ export function registerBrowserIpc(): void {
 
   handleTrusted('browser:snapshot', async (_, filter: string, owner?: string) => {
     const f = JSON.stringify(String(filter || '').toLowerCase())
-    return runInPage(`(function(){
-      var FILTER = ${f};
-      var SEL = 'a[href],button,input:not([type="hidden"]),textarea,select,summary,[role="button"],[role="link"],[role="tab"],[role="checkbox"],[role="menuitem"],[contenteditable=""],[contenteditable="true"]';
-      var nodes = Array.prototype.slice.call(document.querySelectorAll(SEL));
-      var out = [], used = {};
-     for (var i = 0; i < nodes.length; i++) {
-       var el = nodes[i];
-       var rect = el.getBoundingClientRect();
-       if (rect.width === 0 && rect.height === 0) continue;
-       var st = window.getComputedStyle(el);
-       if (st.visibility === 'hidden' || st.display === 'none') continue;
-       if (el.disabled === true) continue;
-        // Deterministic ref: hash the element's stable attributes so the same
-        // element gets the same ref across snapshots. Sequential numbering (e1,
-        // e2, …) invalidated every ref when a single element was inserted or
-        // removed, which broke cache prefixes in the transcript.
-        var sigParts = [
-          el.tagName.toLowerCase(),
-          el.getAttribute('role') || '',
-          el.getAttribute('name') || '',
-          el.getAttribute('id') || '',
-          el.tagName === 'A' ? (el.getAttribute('href') || '') : '',
-          (el.getAttribute('aria-label') || el.getAttribute('title') || '').replace(/\\s+/g, ' ').trim().slice(0, 80)
-        ].join('|');
-        var hash = 0;
-        for (var j = 0; j < sigParts.length; j++) {
-          hash = ((hash << 5) - hash + sigParts.charCodeAt(j)) | 0;
-        }
-        var base = 'e' + Math.abs(hash);
-        var ref = base;
-        var suf = 1;
-        while (used[ref]) { ref = base + '_' + suf; suf++; }
-        used[ref] = true;
-       el.setAttribute('data-pawn-ref', ref);
-        var label = el.getAttribute('aria-label') || el.getAttribute('title') || '';
-        if (!label && el.labels && el.labels[0]) label = el.labels[0].innerText || '';
-        var text = (el.innerText || label || '').replace(/\\s+/g, ' ').trim().slice(0, 90);
-        var isSecret = el.tagName === 'INPUT' && (el.type === 'password' || el.autocomplete === 'one-time-code');
-        var item = {
-          ref: ref,
-          role: (el.getAttribute('role') || (el.tagName.toLowerCase() + (el.type ? ':' + el.type : ''))),
-          text: text,
-          name: (el.getAttribute('name') || el.id || '').slice(0, 60),
-          placeholder: (el.getAttribute('placeholder') || '').slice(0, 60),
-          value: isSecret ? '' : String(el.value == null ? '' : el.value).slice(0, 60),
-          href: el.tagName === 'A' ? String(el.getAttribute('href') || '').slice(0, 140) : ''
-        };
-        if (FILTER) {
-          var hay = (item.text + ' ' + item.name + ' ' + item.placeholder + ' ' + item.href).toLowerCase();
-          if (hay.indexOf(FILTER) === -1) continue;
-        }
-        out.push(item);
-      }
-      return { url: location.href, title: document.title, elements: out.slice(0, 150), truncated: out.length > 150 };
-    })()`, owner)
+    return runInPage(snapshotScript(f), owner)
   })
 
   handleTrusted('browser:click', async (_, ref: string, selector: string, owner?: string) => {
-    return runInPage(`(function(){
-      var el = ${resolverExpr(ref, selector)};
-      if (!el) return { error: 'No element matched. Take a fresh browser_snapshot — refs are invalidated by navigation.' };
-      try { el.scrollIntoView({ block: 'center', inline: 'center' }) } catch (e) {}
-      if (el.focus) { try { el.focus() } catch (e) {} }
-      var label = (el.getAttribute('aria-label') || el.innerText || el.value || el.tagName).toString().replace(/\\s+/g,' ').trim().slice(0, 60);
-      var r = el.getBoundingClientRect();
-      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      return new Promise(function (resolve) {
-        var doClick = function () {
-          el.click();
-          resolve({ message: 'Clicked ' + JSON.stringify(label) + '. Take a new snapshot if the page changed.' });
-        };
-        if (window.__pawnCursor) {
-          // Wait for the glide to finish before pressing the target.
-          var move = window.__pawnCursor.show(cx, cy, 'click') || 0;
-          setTimeout(doClick, move + 90);
-        } else {
-          doClick();
-        }
-      });
-    })()`, owner)
+    return runInPage(clickScript(resolverExpr(ref, selector)), owner)
   })
 
   handleTrusted('browser:fill', async (_, ref: string, selector: string, value: string, submit: boolean, owner?: string) => {
     const v = JSON.stringify(String(value ?? ''))
     const doSubmit = submit === true ? 'true' : 'false'
-    return runInPage(`(function(){
-      var el = ${resolverExpr(ref, selector)};
-      if (!el) return { error: 'No element matched. Take a fresh browser_snapshot — refs are invalidated by navigation.' };
-      var value = ${v};
-      try { el.scrollIntoView({ block: 'center' }) } catch (e) {}
-      if (el.focus) { try { el.focus() } catch (e) {} }
-      if (el.isContentEditable) {
-        el.textContent = value;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-      } else if ('value' in el) {
-        // Assign through the prototype setter so React and other frameworks that
-        // patch the value property still observe the change.
-        var proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype;
-        var desc = Object.getOwnPropertyDescriptor(proto, 'value');
-        if (desc && desc.set) desc.set.call(el, value); else el.value = value;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-      } else {
-        return { error: 'Element is not editable' };
-      }
-      var r = el.getBoundingClientRect();
-      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      var done = function () {
-        if (${doSubmit}) {
-          el.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-          el.dispatchEvent(new KeyboardEvent('keyup', { key: 'Enter', code: 'Enter', keyCode: 13, which: 13, bubbles: true }));
-          if (el.form && el.form.requestSubmit) { try { el.form.requestSubmit() } catch (e) {} }
-        }
-        return { message: 'Filled ' + (el.getAttribute('name') || el.getAttribute('placeholder') || el.tagName) + (${doSubmit} ? ' and submitted' : '') };
-      };
-      if (window.__pawnCursor) {
-        return new Promise(function (resolve) {
-          var move = window.__pawnCursor.show(cx, cy, 'type') || 0;
-          setTimeout(function () { resolve(done()) }, Math.min(900, move + 140 + value.length * 5));
-        });
-      }
-      return done();
-    })()`, owner)
+    return runInPage(fillScript(resolverExpr(ref, selector), v, doSubmit), owner)
   })
 
   handleTrusted('browser:readText', async (_, selector: string, owner?: string) => {
     const s = JSON.stringify(String(selector || ''))
-    return runInPage(`(function(){
-      var s = ${s};
-      var root = document.body;
-      if (s) { try { root = document.querySelector(s) } catch (e) { root = null } }
-      if (!root) return { error: 'No element matched selector ' + s };
-      var r = root.getBoundingClientRect();
-      var cx = r.left + r.width / 2, cy = r.top + r.height / 2;
-      var text = (root.innerText || '').replace(/\\n{3,}/g, '\\n\\n').trim();
-      if (window.__pawnCursor) {
-        window.__pawnCursor.show(cx, cy, 'move');
-      }
-      return { text: text.slice(0, 12000), truncated: text.length > 12000 };
-    })()`, owner)
+    return runInPage(readTextScript(s), owner)
   })
 
   handleTrusted('browser:screenshot', async (_, owner?: string) => {
@@ -966,28 +854,7 @@ export function registerBrowserIpc(): void {
       }
       try {
         const res = await guard.view.webContents.executeJavaScript(
-          `(async function(){
-            const timeout = ${timeout};
-            const selector = ${JSON.stringify(selector)};
-            const text = ${JSON.stringify(text)};
-            const start = Date.now();
-            function ready() {
-              if (selector) {
-                try { if (!document.querySelector(selector)) return false } catch (e) { return false }
-              }
-              if (text) {
-                const body = (document.body && document.body.innerText) || '';
-                if (!body.includes(text)) return false;
-              }
-              return true;
-            }
-            if (ready()) return { ok: true, waitedMs: 0 };
-            while (Date.now() - start < timeout) {
-              await new Promise(r => setTimeout(r, 120));
-              if (ready()) return { ok: true, waitedMs: Date.now() - start };
-            }
-            return { ok: false, error: 'wait timed out after ' + timeout + 'ms', waitedMs: Date.now() - start };
-          })()`,
+          waitScript(timeout, selector, text),
           true
         )
         return res
@@ -1003,16 +870,7 @@ export function registerBrowserIpc(): void {
       const dy = Math.floor(Number(opts?.dy) || 0)
       const dx = Math.floor(Number(opts?.dx) || 0)
       const selector = opts?.selector ? String(opts.selector) : ''
-      return runInPage(`(function(){
-        var dy = ${dy}, dx = ${dx};
-        var s = ${JSON.stringify(selector)};
-        var el = s ? null : window;
-        if (s) { try { el = document.querySelector(s) } catch (e) { el = null } }
-        if (s && !el) return { error: 'No element matched selector' };
-        if (el === window) window.scrollBy(dx, dy);
-        else el.scrollBy(dx, dy);
-        return { ok: true, dx: dx, dy: dy };
-      })()`, owner)
+      return runInPage(scrollScript(dy, dx, JSON.stringify(selector)), owner)
     }
   )
 
@@ -1022,20 +880,7 @@ export function registerBrowserIpc(): void {
       const ref = opts?.ref ? String(opts.ref) : ''
       const selector = opts?.selector ? String(opts.selector) : ''
       const value = opts?.value != null ? String(opts.value) : ''
-      return runInPage(`(function(){
-        var ref = ${JSON.stringify(ref)};
-        var selector = ${JSON.stringify(selector)};
-        var value = ${JSON.stringify(value)};
-        var el = null;
-        if (ref && window.__pawnRefs && window.__pawnRefs[ref]) el = window.__pawnRefs[ref];
-        if (!el && selector) { try { el = document.querySelector(selector) } catch (e) {} }
-        if (!el) return { error: 'Element not found' };
-        if (el.tagName !== 'SELECT') return { error: 'Element is not a <select>' };
-        el.value = value;
-        el.dispatchEvent(new Event('input', { bubbles: true }));
-        el.dispatchEvent(new Event('change', { bubbles: true }));
-        return { ok: true, value: el.value, message: 'Selected ' + JSON.stringify(el.value) };
-      })()`, owner)
+      return runInPage(selectScript(ref, selector, value), owner)
     }
   )
 }

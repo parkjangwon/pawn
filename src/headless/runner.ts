@@ -267,26 +267,31 @@ export async function runHeadlessTurn(opts: HeadlessTurnOptions): Promise<Headle
 
   const ulw = opts.ultraWork ? useUltraWorkStore.getState().get(sessionId) : undefined
   if (ulw?.status === 'active') useUltraWorkStore.getState().stop(sessionId)
-  dispose()
-  installed = null
-  return {
-    ...(ulw ? { ultraWork: { status: ulw.status === 'active' ? 'stopped' : ulw.status, iterations: ulw.iteration, reason: ulw.lastReason } } : {}),
-    ok: outcome === 'completed' && !error,
-    outcome: error && outcome === 'completed' ? 'error' : outcome,
-    ...(error ? { error } : {}),
-    finalText: assistant[assistant.length - 1]?.content ?? '',
-    assistantMessages: assistant.length,
-    tools,
-    usage: {
-      calls: totals?.calls ?? 0,
-      inputTokens: totals?.inputTokens ?? 0,
-      outputTokens: totals?.outputTokens ?? 0,
-      cacheReadTokens: totals?.cacheReadTokens ?? 0,
-      cacheWriteTokens: totals?.cacheWriteTokens ?? 0,
-      cost: totals?.cost ?? 0
-    },
-    durationMs: Date.now() - started,
-    models,
-    autoAnswers
+  try {
+    return {
+      ...(ulw ? { ultraWork: { status: ulw.status === 'active' ? 'stopped' : ulw.status, iterations: ulw.iteration, reason: ulw.lastReason } } : {}),
+      ok: outcome === 'completed' && !error,
+      outcome: error && outcome === 'completed' ? 'error' : outcome,
+      ...(error ? { error } : {}),
+      finalText: assistant[assistant.length - 1]?.content ?? '',
+      assistantMessages: assistant.length,
+      tools,
+      usage: {
+        calls: totals?.calls ?? 0,
+        inputTokens: totals?.inputTokens ?? 0,
+        outputTokens: totals?.outputTokens ?? 0,
+        cacheReadTokens: totals?.cacheReadTokens ?? 0,
+        cacheWriteTokens: totals?.cacheWriteTokens ?? 0,
+        cost: totals?.cost ?? 0
+      },
+      durationMs: Date.now() - started,
+      models,
+      autoAnswers
+    }
+  } finally {
+    // Always tear the Node API down, even if result assembly throws — the CLI
+    // process would otherwise exit with sqlite handles and MCP children live.
+    dispose()
+    installed = null
   }
 }

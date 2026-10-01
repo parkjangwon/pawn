@@ -48,7 +48,8 @@ export function createAgentWorktree(projectPath: string, runId: string): Worktre
   if (!isGitRepo(root)) {
     return { ok: false, error: 'Not a git repository — worktree isolation unavailable' }
   }
-  const safeId = runId.replace(/[^\w.-]+/g, '_').slice(0, 40) || 'run'
+  // Leading dots survive the charset filter and '..' would traverse — strip them.
+  const safeId = runId.replace(/[^\w.-]+/g, '_').replace(/^\.+/, '').slice(0, 40) || 'run'
   const branch = `pawn/agent-${safeId}`
   const base = join(root, '.pawn', 'worktrees')
   const path = join(base, safeId)

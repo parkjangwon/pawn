@@ -1,6 +1,11 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'http'
 import { URL } from 'url'
 
+/** The redirect error text is attacker-craftable via the URL — never raw-embed it. */
+function esc(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 export interface LoopbackResult {
   code?: string
   state?: string
@@ -29,7 +34,7 @@ export function waitForOAuthCallback(timeoutMs = 5 * 60_000): Promise<LoopbackRe
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
         res.end(`<!doctype html><html><body style="font-family:system-ui;padding:40px;text-align:center">
           <h2>${error ? 'Connection failed' : 'Connected'}</h2>
-          <p>${error ? (errorDescription || error) : 'You can close this window and return to Pawn.'}</p>
+          <p>${error ? esc(errorDescription || error) : 'You can close this window and return to Pawn.'}</p>
           <script>setTimeout(()=>window.close(),800)</script>
         </body></html>`)
 
@@ -46,12 +51,17 @@ export function waitForOAuthCallback(timeoutMs = 5 * 60_000): Promise<LoopbackRe
       if (addr && typeof addr === 'object') port = addr.port
     })
 
-    server.on('error', reject)
-
     const timer = setTimeout(() => {
       try { server.close() } catch { /* ignore */ }
       reject(new Error('OAuth timed out — no redirect received'))
     }, timeoutMs)
+
+    // Declared after the timer so the handler can clear it: an EADDRINUSE
+    // must not leave the timeout keeping the event loop alive for 5 minutes.
+    server.on('error', (err) => {
+      clearTimeout(timer)
+      reject(err)
+    })
 
     const origResolve = resolve
     // clear timeout when done
@@ -131,7 +141,7 @@ export async function startOAuthLoopback(timeoutMs = 5 * 60_000, opts?: Loopback
         res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' })
         res.end(`<!doctype html><html><body style="font-family:system-ui;padding:48px;text-align:center;background:#111;color:#eee">
           <h2 style="margin:0 0 12px">${error ? 'Sign-in failed' : 'Pawn connected'}</h2>
-          <p style="opacity:.8">${error ? (errorDescription || error) : 'You can close this tab and return to Pawn.'}</p>
+          <p style="opacity:.8">${error ? esc(errorDescription || error) : 'You can close this tab and return to Pawn.'}</p>
         </body></html>`)
         server.close()
         finishWait(() => resultResolve({ code, state, error, errorDescription, port: boundPort }))

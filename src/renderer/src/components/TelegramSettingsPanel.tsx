@@ -79,6 +79,11 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
     }
   }
 
+  /** Fire an IPC call and route both its result and any transport error into the UI. */
+  const run = (p: Promise<TelegramStatusDto | { ok: false; error: string }> | undefined): void => {
+    p?.then((r) => void apply(r)).catch((err) => setFormError(err instanceof Error ? err.message : String(err)))
+  }
+
   const saveToken = async (): Promise<void> => {
     const value = token.trim()
     if (!value) return
@@ -90,6 +95,8 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
         setToken('')
         setReplacing(false)
       }
+    } catch (err) {
+      setFormError(err instanceof Error ? err.message : String(err))
     } finally {
       setBusy(false)
     }
@@ -110,6 +117,8 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
         setUserId('')
         setUserError(null)
       }
+    } catch (err) {
+      setUserError(err instanceof Error ? err.message : String(err))
     } finally {
       setBusy(false)
     }
@@ -223,7 +232,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 onClick={() => {
                   setReplacing(true)
                   setToken('')
-                  void window.api?.telegram?.clearToken().then((r) => apply(r))
+                  run(window.api?.telegram?.clearToken())
                 }}
               >
                 {t('settings.telegramSection.clearToken')}
@@ -284,7 +293,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
             value={hasProject ? status?.projectId : ''}
             disabled={folders.length === 0}
             onChange={(e) => {
-              void window.api?.telegram?.setProject(e.target.value).then((r) => apply(r))
+              run(window.api?.telegram?.setProject(e.target.value))
             }}
           >
             <option value="">{t('settings.telegramSection.projectNone')}</option>
@@ -313,7 +322,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               checked={!!status?.enabled}
               disabled={!hasToken}
               onChange={(e) => {
-                void window.api?.telegram?.setEnabled(e.target.checked).then((r) => apply(r))
+                run(window.api?.telegram?.setEnabled(e.target.checked))
               }}
             />
             <span className="toggle-slider" />
@@ -344,7 +353,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 type="button"
                 className="btn-primary"
                 onClick={() => {
-                  void window.api?.telegram?.approve(p.code).then((r) => apply(r))
+                  run(window.api?.telegram?.approve(p.code))
                 }}
               >
                 {t('settings.telegramSection.approve')}
@@ -353,7 +362,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 type="button"
                 className="btn-cancel"
                 onClick={() => {
-                  void window.api?.telegram?.deny(p.code).then((r) => apply(r))
+                  run(window.api?.telegram?.deny(p.code))
                 }}
               >
                 {t('settings.telegramSection.deny')}
@@ -382,7 +391,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               type="button"
               className="btn-cancel"
               onClick={() => {
-                void window.api?.telegram?.revoke(u.userId).then((r) => apply(r))
+                run(window.api?.telegram?.revoke(u.userId))
               }}
             >
               {t('settings.telegramSection.revoke')}

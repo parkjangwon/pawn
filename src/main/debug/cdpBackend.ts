@@ -92,6 +92,13 @@ export class CdpBackend extends EventEmitter {
       env
     }) as ChildProcessWithoutNullStreams
     this.child = child
+    // A spawn failure (missing node binary, EACCES) is an async 'error' event;
+    // log it so the wait timeout is not the only symptom.
+    child.on('error', (err) => {
+      console.error('[cdp] node spawn failed:', err)
+      this.terminated = true
+      this.emit('terminated', -1)
+    })
 
     const wsUrl = await this.waitForWsUrl(child)
     this.wsUrl = wsUrl

@@ -121,7 +121,10 @@ function NativeBrowserView(): React.JSX.Element {
     if (!showConsole) return
     let cancelled = false
     const pull = (): void => {
-      window.api.browser.logs().then((l) => { if (!cancelled) setLogs(l) })
+      window.api.browser
+        .logs()
+        .then((l) => { if (!cancelled) setLogs(l) })
+        .catch(() => {})
     }
     pull()
     const id = setInterval(pull, 1000)
@@ -160,8 +163,12 @@ function NativeBrowserView(): React.JSX.Element {
     const t = target.trim()
     if (!t) return
     setError(null)
-    const res = await window.api.browser.navigate(t)
-    if (res.error) setError(res.error)
+    try {
+      const res = await window.api.browser.navigate(t)
+      if (res.error) setError(res.error)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+    }
   }
 
   const switchTab = async (id: string): Promise<void> => {
@@ -230,6 +237,11 @@ function NativeBrowserView(): React.JSX.Element {
       }
       const mode = useChatStore.getState().isStreaming ? 'steer' : 'queue'
       useChatStore.getState().sendMessage(projectId, sessionId, block, mode, attachments)
+      setPickActive(false)
+    } catch (err) {
+      // Poll callers fire this with void — a failure must not escape as an
+      // unhandled rejection every tick.
+      setError(err instanceof Error ? err.message : String(err))
       setPickActive(false)
     } finally {
       sendingRef.current = false

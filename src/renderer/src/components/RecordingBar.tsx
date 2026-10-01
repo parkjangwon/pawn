@@ -119,12 +119,12 @@ function RecordingSetup(): React.JSX.Element {
         {desktop?.supported && (!desktop.accessibility || !desktop.screenRecording) && (
           <div className="rec-perm-actions">
             {!desktop.accessibility && (
-              <button type="button" className="rec-link" onClick={() => void window.api.recorder?.openPermissions('accessibility')}>
+              <button type="button" className="rec-link" onClick={() => window.api.recorder?.openPermissions('accessibility')?.catch?.(() => {})}>
                 {t('record.setup.openAccessibility')}
               </button>
             )}
             {!desktop.screenRecording && (
-              <button type="button" className="rec-link" onClick={() => void window.api.recorder?.openPermissions('screen')}>
+              <button type="button" className="rec-link" onClick={() => window.api.recorder?.openPermissions('screen')?.catch?.(() => {})}>
                 {t('record.setup.openScreenRecording')}
               </button>
             )}

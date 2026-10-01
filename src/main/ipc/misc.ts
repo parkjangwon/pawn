@@ -224,20 +224,35 @@ export function registerMiscIpc(): void {
       if (compareSemver(latest, current) <= 0) {
         return { ok: true, alreadyLatest: true, current }
       }
-      const { mkdirSync, existsSync, createWriteStream } = await import('fs')
+      const { mkdirSync, existsSync, createWriteStream, readdirSync, unlinkSync, renameSync } = await import('fs')
       const { pipeline } = await import('stream/promises')
       const { Readable } = await import('stream')
       const dir = join(getPawnDir(), 'installers')
       if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+      // Clean partial installers a previous failed download left behind.
+      for (const f of existsSync(dir) ? readdirSync(dir) : []) {
+        if (f.endsWith('.part')) {
+          try { unlinkSync(join(dir, f)) } catch { /* gone already */ }
+        }
+      }
       const dest = join(dir, asset.name)
+      const tmp = `${dest}.part`
       const dl = await fetch(asset.browser_download_url, {
         headers: { 'User-Agent': `Pawn/${current}` }
       })
       if (!dl.ok || !dl.body) {
         return { ok: false, error: `Download failed (${dl.status})` }
       }
-      const nodeStream = Readable.fromWeb(dl.body as import('stream/web').ReadableStream)
-      await pipeline(nodeStream, createWriteStream(dest))
+      try {
+        const nodeStream = Readable.fromWeb(dl.body as import('stream/web').ReadableStream)
+        // Download to a .part file first: a dropped connection must not leave
+        // an installer that looks complete and fails to run.
+        await pipeline(nodeStream, createWriteStream(tmp))
+        renameSync(tmp, dest)
+      } catch (err) {
+        try { unlinkSync(tmp) } catch { /* gone already */ }
+        return { ok: false, error: `Download failed: ${err instanceof Error ? err.message : String(err)}` }
+      }
       await shell.openPath(dest)
       return {
         ok: true,
@@ -521,6 +536,8 @@ export function registerMiscIpc(): void {
 
     if (process.platform === 'darwin') {
       const child = spawn('open', ['-a', appName, path], { detached: true, stdio: 'ignore' })
+      // Spawn failures (app missing) are async events — never leave them unhandled.
+      child.on('error', (err) => console.error('[workspace] open failed:', err))
       child.unref()
       return { ok: true }
     }
@@ -591,11 +608,14 @@ export function registerMiscIpc(): void {
       const apple = `tell application "Terminal" to do script "${appleScriptString(command)}"\n` +
         `tell application "Terminal" to activate`
       const child = spawn('osascript', ['-e', apple], { detached: true, stdio: 'ignore' })
+      child.on('error', (err) => console.error('[workspace] runScript (terminal) failed:', err))
       child.unref()
       return { ok: true }
     }
 
     const child = spawn(pm, ['run', script], { cwd, detached: true, stdio: 'ignore' })
+    // ENOENT (package manager not on PATH) is an async event, not a throw.
+    child.on('error', (err) => console.error(`[workspace] runScript (${pm}) failed:`, err))
     child.unref()
     return { ok: true }
   })

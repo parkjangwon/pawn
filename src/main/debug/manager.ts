@@ -298,6 +298,14 @@ class DapSession implements DebugSession {
         env: this.adapter.env
       })
       this.child = child
+      // A spawn failure (bad adapter path, EACCES) is an async 'error' event;
+      // without a handler it surfaces as a generic wait timeout instead.
+      child.on('error', (err) => {
+        console.error(`[debug] adapter spawn failed (${this.adapter.command}):`, err)
+        this.status = 'terminated'
+        this.exitCode = -1
+        this.notify()
+      })
       child.on('exit', (code) => {
         if (this.status !== 'terminated') {
           this.status = 'terminated'
@@ -328,6 +336,12 @@ class DapSession implements DebugSession {
         env: this.adapter.env
       })
       this.child = child
+      child.on('error', (err) => {
+        if (settled) return
+        settled = true
+        clearTimeout(timer)
+        reject(new Error(`Could not spawn the DAP server (${this.adapter.spawnCommand}): ${err.message}`))
+      })
       let settled = false
       const timer = setTimeout(() => {
         if (settled) return

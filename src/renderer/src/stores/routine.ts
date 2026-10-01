@@ -214,6 +214,12 @@ export async function runRoutine(routine: Routine): Promise<void> {
     const reportPath = await saveAutomationReport(routine, result)
     const note = reportPath ? `\nReport: ${reportPath}` : ''
     window.api.notification?.send?.(i18n.t('notifications.automationFinished', { name: routine.name }), (result + note).slice(0, 200))?.catch?.(() => {})
+  } catch (err) {
+    // The fire callback runs this with void — a throw must become a recorded
+    // failure, not a silent unhandled rejection.
+    const msg = `error: ${err instanceof Error ? err.message : String(err)}`
+    void window.api.routine?.recordResult?.(routine.id, msg.slice(0, 2000))?.catch?.(() => {})
+    window.api.notification?.send?.(i18n.t('notifications.automationFinished', { name: routine.name }), msg.slice(0, 200))?.catch?.(() => {})
   } finally {
     useRoutineStore.setState((s) => {
       const next = new Set(s.runningIds)

@@ -130,7 +130,13 @@ export function createTelegramService(opts: TelegramServiceOptions) {
   }
 
   function persist(): void {
-    store.save(state)
+    try {
+      store.save(state)
+    } catch (err) {
+      // Disk failure (ENOSPC, permissions) must not reject inside the poll
+      // loop: in-memory state stays authoritative until a save succeeds.
+      console.error('[telegram] persist failed:', err)
+    }
   }
 
   function status(): TelegramPublicStatus {

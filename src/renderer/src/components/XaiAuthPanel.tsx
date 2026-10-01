@@ -68,7 +68,7 @@ export default function XaiAuthPanel({ onSignedIn }: { onSignedIn?: () => void }
             onClick={() => void api.cancelLogin().then(() => {
               setDevice(null)
               setBusy(false)
-            })}
+            }).catch(() => {})}
           >
             {t('common.cancel')}
           </button>

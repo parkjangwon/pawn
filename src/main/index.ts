@@ -1,4 +1,4 @@
-import { app, BrowserWindow, session } from 'electron'
+import { app, BrowserWindow, dialog, session } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { registerAllIpc } from './ipc'
 import { disposeLsp } from './ipc/lsp'
@@ -49,6 +49,18 @@ if (!app.requestSingleInstanceLock()) {
 registerShortcutForwarding()
 
 app.whenReady().then(() => {
+  try {
+    boot()
+  } catch (err) {
+    // A broken store must never leave a zombie process with no window and no
+    // teardown handlers: surface it and quit.
+    console.error('[pawn] boot failed:', err)
+    dialog.showErrorBox('Pawn failed to start', err instanceof Error ? err.message : String(err))
+    app.quit()
+  }
+})
+
+const boot = (): void => {
   // CSP for security
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     // In dev mode, allow Vite dev server (localhost:5173)
@@ -84,7 +96,12 @@ app.whenReady().then(() => {
   registerAllIpc()
   initKeybindings()
   registerQuitConfirm()
-  startRoutineServices()
+  try {
+    startRoutineServices()
+  } catch (err) {
+    // A corrupt or locked store must degrade (no automations), not kill boot.
+    console.error('[pawn] routine services failed to start:', err)
+  }
 
   app.on('will-quit', () => {
     killAllTerminals()
@@ -124,7 +141,7 @@ app.whenReady().then(() => {
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
-})
+}
 
 app.on('window-all-closed', () => {
   // Keep the app alive on Windows/Linux while the tray is enabled, so the

@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, writeFileSync, rmSync } from 'fs'
+import { chmodSync, existsSync, readFileSync, writeFileSync, rmSync } from 'fs'
 import { join } from 'path'
 import Database from 'better-sqlite3'
 import { app, safeStorage, shell } from 'electron'
@@ -36,6 +36,8 @@ function secureStore(): KiroSecureStore {
       }
       const data = safeStorage.encryptString(JSON.stringify(creds)).toString('base64')
       writeFileSync(path, JSON.stringify({ v: 1, data }), { encoding: 'utf8', mode: 0o600 })
+      // Older versions could have created the file world-readable.
+      try { chmodSync(path, 0o600) } catch { /* Windows */ }
     }
   }
 }

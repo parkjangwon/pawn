@@ -26,10 +26,15 @@ function armHeadlessWatchdog(): void {
     headlessWatchdog = null
     // Safety net: a crashed renderer never sends recordResult, so force-close
     // the hidden window and forget the run instead of leaking it forever.
-    closeHeadlessWindow()
-    headlessReady = false
-    headlessActive.clear()
-    pendingHeadlessFires = []
+    try {
+      closeHeadlessWindow()
+    } catch (err) {
+      console.error('[routine] headless window close failed:', err)
+    } finally {
+      headlessReady = false
+      headlessActive.clear()
+      pendingHeadlessFires = []
+    }
   }, HEADLESS_WATCHDOG_MS)
 }
 
@@ -103,6 +108,11 @@ function armTimer(row: db.RoutineRow): void {
         const fresh = db.getAllRoutines().find((r) => r.id === row.id)
         if (fresh?.enabled) fireRoutine(fresh, schedule)
       })
+      // A deleted/renamed watch target must not become an unhandled 'error'
+      // event: drop the watcher, the poll timer keeps the routine alive.
+      watcher.on('error', () => {
+        fileWatchers.delete(row.id)
+      })
       fileWatchers.set(row.id, watcher)
     } catch {
       // Path missing — fall through to poll timer so user can create it later.
@@ -111,7 +121,13 @@ function armTimer(row: db.RoutineRow): void {
 
   const fire = (): void => {
     clearTimer(row.id)
-    fireRoutine(row, schedule)
+    try {
+      fireRoutine(row, schedule)
+    } catch (err) {
+      // nextRunAt was already advanced — never let a failed fire silently
+      // skip the run; at least leave a trace.
+      console.error(`[routine] fire ${row.id} (${row.name}) failed:`, err)
+    }
   }
 
   const delay = Math.max(0, row.nextRunAt - Date.now())

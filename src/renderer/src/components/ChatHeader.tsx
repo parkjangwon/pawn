@@ -106,7 +106,13 @@ export default function ChatHeader({
     }
     let cancelled = false
     const loadScripts = async (): Promise<void> => {
-      const file = await window.api.fs.readFile(`${projectPath}/package.json`)
+      let file: unknown
+      try {
+        file = await window.api.fs.readFile(`${projectPath}/package.json`)
+      } catch {
+        if (!cancelled) setScripts([])
+        return
+      }
       if (cancelled || typeof file !== 'string') {
         if (!cancelled) setScripts([])
         return

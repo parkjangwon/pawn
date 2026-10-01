@@ -3,7 +3,7 @@
  * Prefer Electron safeStorage when available; fall back to base64 (dev).
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
+import { chmodSync, existsSync, mkdirSync, readFileSync, writeFileSync, unlinkSync } from 'fs'
 import { join } from 'path'
 import { safeStorage } from 'electron'
 import { getPawnDir } from '../config'
@@ -55,7 +55,11 @@ export function loadTokens(provider: ConnectionProvider): StoredTokens | null {
 
 export function saveTokens(provider: ConnectionProvider, tokens: StoredTokens): void {
   ensureDir()
-  writeFileSync(tokenPath(provider), encodePayload(JSON.stringify(tokens)))
+  const p = tokenPath(provider)
+  // Same at-rest hygiene as the other sealed stores, even in the plaintext
+  // fallback where safeStorage is unavailable.
+  writeFileSync(p, encodePayload(JSON.stringify(tokens)), { mode: 0o600 })
+  try { chmodSync(p, 0o600) } catch { /* Windows */ }
 }
 
 export function clearTokens(provider: ConnectionProvider): void {

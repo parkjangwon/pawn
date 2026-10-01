@@ -138,7 +138,8 @@ const run_checks: ToolHandler = async (call, projectPath, _signal, ctx, api) => 
         const kind = (['all', 'typecheck', 'test', 'lint', 'build'].includes(kindRaw)
           ? kindRaw
           : 'all') as 'all' | 'typecheck' | 'test' | 'lint' | 'build'
-        const timeout = call.arguments.timeout !== undefined ? Number(call.arguments.timeout) : 120
+        const timeoutRaw = call.arguments.timeout !== undefined ? Number(call.arguments.timeout) : 120
+        const timeout = Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? timeoutRaw : 120
         const text = await runProjectChecks(workDir, kind, timeout)
         return { toolCallId: call.id, content: text }
       }

@@ -166,8 +166,9 @@ export class ComputerEngine {
   /** Mapping for coordinates when the model acts before any screenshot. */
   async ensureFrame(): Promise<Frame> {
     if (this.frame) return this.frame
-    const res = await this.cua.call<{ displays: HelperDisplay[] }>('displays')
-    const d = res.displays.find((x) => x.primary) ?? res.displays[0]
+    const res = await this.cua.call<{ displays?: HelperDisplay[] }>('displays')
+    const displays = res.displays || []
+    const d = displays.find((x) => x.primary) ?? displays[0]
     if (!d) throw new ComputerActionError('No display found', 'no_display')
     const size = fitSize(d.frame.width, d.frame.height, this.policy)
     this.frame = { region: d.frame, width: size.width, height: size.height, displayId: d.id }
@@ -215,7 +216,9 @@ export class ComputerEngine {
       displayId: shot.display?.id,
       ...(windowId !== undefined ? { windowId } : {})
     }
-    const cursor = toImage(this.frame, shot.cursor.x, shot.cursor.y)
+    // Older helper binaries may omit cursor info — report it off-image instead
+    // of throwing a TypeError out of screenshot().
+    const cursor = shot.cursor ? toImage(this.frame, shot.cursor.x, shot.cursor.y) : { x: -1, y: -1 }
     const onImage = cursor.x >= 0 && cursor.y >= 0 && cursor.x < shot.width && cursor.y < shot.height
     const lines = [
       `screenshot ${shot.width}x${shot.height} (${windowId !== undefined ? `window ${windowId}` : `display ${shot.display?.id} "${shot.display?.name}"`}; ` +
@@ -603,8 +606,9 @@ export class ComputerEngine {
       case 'display_size': {
         // Screenshot size of the primary display under the current policy
         // (declared to Claude's computer_2025* tools as display_width/height).
-        const res = await this.cua.call<{ displays: HelperDisplay[] }>('displays')
-        const d = res.displays.find((x) => x.primary) ?? res.displays[0]
+        const res = await this.cua.call<{ displays?: HelperDisplay[] }>('displays')
+        const displays = res.displays || []
+        const d = displays.find((x) => x.primary) ?? displays[0]
         if (!d) throw new ComputerActionError('No display found', 'no_display')
         const size = fitSize(d.frame.width, d.frame.height, this.policy)
         return { ok: true, text: `${size.width}x${size.height}`, data: size }

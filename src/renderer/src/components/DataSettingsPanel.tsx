@@ -65,8 +65,8 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
               input.onchange = async (e) => {
                 const file = (e.target as HTMLInputElement).files?.[0]
                 if (!file) return
-                const text = await file.text()
                 try {
+                  const text = await file.text()
                   const data = JSON.parse(text) as {
                     providers?: typeof providers
                     models?: typeof models

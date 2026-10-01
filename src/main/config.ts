@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
+import { chmodSync, readFileSync, writeFileSync, existsSync, mkdirSync } from 'fs'
 import { join } from 'path'
 import { homedir } from 'os'
 import { parse, stringify } from 'smol-toml'
@@ -91,7 +91,10 @@ export function saveConfig(partial: PawnConfig, dir = PAWN_DIR): void {
   const existing = loadConfig(dir)
   const merged = deepMerge(existing as Record<string, unknown>, partial as Record<string, unknown>) as PawnConfig
   const raw = stringify(merged as Record<string, unknown>)
-  writeFileSync(join(dir, 'config.toml'), raw, 'utf-8')
+  const configPath = join(dir, 'config.toml')
+  // Contains sealed key material — enforce 0600 on every write, not just creation.
+  writeFileSync(configPath, raw, { encoding: 'utf-8', mode: 0o600 })
+  try { chmodSync(configPath, 0o600) } catch { /* Windows */ }
 }
 
 export function getConfigPath(): string {

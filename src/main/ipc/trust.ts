@@ -26,7 +26,13 @@ export function isTrustedSender(event: {
   }
   if (!frame) return false
   // Compare by ids, not object identity: WebFrameMain wrappers are not guaranteed stable.
-  const main = event.sender.mainFrame
+  let main: WebFrameMain
+  try {
+    main = event.sender.mainFrame
+  } catch {
+    // Same disposed-sender hazard as senderFrame — treat as untrusted.
+    return false
+  }
   if (frame.parent !== null) return false
   if (frame.processId !== main.processId || frame.routingId !== main.routingId) return false
   return isAppUrl(frame.url)

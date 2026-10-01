@@ -58,28 +58,40 @@ export const useDecisionStore = create<DecisionState>((set) => {
     saveProvider: async (input) => {
       const d = api()
       if (!d) return { ok: false, error: 'Decision models are only available in the desktop app.' }
-      const r = await d.saveProvider(input)
-      if (r.ok) {
-        apply(r.status)
-        return { ok: true, id: r.id }
+      try {
+        const r = await d.saveProvider(input)
+        if (r.ok) {
+          apply(r.status)
+          return { ok: true, id: r.id }
+        }
+        return { ok: false, error: r.error }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
       }
-      return { ok: false, error: r.error }
     },
 
     removeProvider: async (id) => {
       const d = api()
       if (!d) return { ok: false }
-      const r = await d.removeProvider(id)
-      apply(r.status)
-      return { ok: r.ok, error: r.error }
+      try {
+        const r = await d.removeProvider(id)
+        apply(r.status)
+        return { ok: r.ok, error: r.error }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
     },
 
     setEnabled: async (id, enabled) => {
       const d = api()
       if (!d) return { ok: false }
-      const r = await d.setEnabled(id, enabled)
-      apply(r.status)
-      return { ok: r.ok, error: r.error }
+      try {
+        const r = await d.setEnabled(id, enabled)
+        apply(r.status)
+        return { ok: r.ok, error: r.error }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
     },
 
     setFeatures: async (partial) => {
@@ -87,8 +99,12 @@ export const useDecisionStore = create<DecisionState>((set) => {
       if (!d) return
       // Optimistic so toggles feel instant; the reply re-syncs.
       set((s) => (s.status ? { status: { ...s.status, features: { ...s.status.features, ...partial } } } : s))
-      const r = await d.setFeatures(partial)
-      apply(r.status)
+      try {
+        const r = await d.setFeatures(partial)
+        apply(r.status)
+      } catch {
+        // Leave the optimistic state; the next status pull re-syncs.
+      }
     }
   }
 })

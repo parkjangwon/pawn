@@ -81,47 +81,54 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
     setOriginal('')
     setPreview(false)
     void (async (): Promise<void> => {
-      const stat = await window.api.fs.stat(filePath)
-      if (cancelled) return
-      if (stat && 'error' in stat) {
-        setStatus('error')
-        setErrorMsg(stat.error)
-        return
-      }
-      if (!stat.isFile) {
-        setStatus('error')
-        setErrorMsg('not a file')
-        return
-      }
-      setFileSize(stat.size)
-      // Images preview instead of showing "binary file".
-      if (IMAGE_FILE.test(filePath) && !showSource && window.api.fs.readImage) {
-        const img = await window.api.fs.readImage(filePath)
+      try {
+        const stat = await window.api.fs.stat(filePath)
         if (cancelled) return
-        if ('dataUrl' in img) {
-          setImageSrc(img.dataUrl)
-          setStatus('image')
+        if (stat && 'error' in stat) {
+          setStatus('error')
+          setErrorMsg(stat.error)
           return
         }
+        if (!stat.isFile) {
+          setStatus('error')
+          setErrorMsg('not a file')
+          return
+        }
+        setFileSize(stat.size)
+        // Images preview instead of showing "binary file".
+        if (IMAGE_FILE.test(filePath) && !showSource && window.api.fs.readImage) {
+          const img = await window.api.fs.readImage(filePath)
+          if (cancelled) return
+          if ('dataUrl' in img) {
+            setImageSrc(img.dataUrl)
+            setStatus('image')
+            return
+          }
+        }
+        if (stat.size > MAX_BYTES) {
+          setStatus('tooLarge')
+          return
+        }
+        const res = await window.api.fs.readFile(filePath)
+        if (cancelled) return
+        if (typeof res !== 'string') {
+          setStatus('error')
+          setErrorMsg(res?.error || 'read failed')
+          return
+        }
+        if (isProbablyBinary(res)) {
+          setStatus('binary')
+          return
+        }
+        setContent(res)
+        setOriginal(res)
+        setStatus('ready')
+      } catch (err) {
+        if (!cancelled) {
+          setStatus('error')
+          setErrorMsg(err instanceof Error ? err.message : String(err))
+        }
       }
-      if (stat.size > MAX_BYTES) {
-        setStatus('tooLarge')
-        return
-      }
-      const res = await window.api.fs.readFile(filePath)
-      if (cancelled) return
-      if (typeof res !== 'string') {
-        setStatus('error')
-        setErrorMsg(res?.error || 'read failed')
-        return
-      }
-      if (isProbablyBinary(res)) {
-        setStatus('binary')
-        return
-      }
-      setContent(res)
-      setOriginal(res)
-      setStatus('ready')
     })()
     return () => {
       cancelled = true
@@ -131,16 +138,24 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
   const save = useCallback(async (): Promise<void> => {
     if (!dirty || saving) return
     setSaving(true)
-    const res = await window.api.fs.writeFile(filePath, content)
-    setSaving(false)
-    if (res && res.error) {
+    try {
+      const res = await window.api.fs.writeFile(filePath, content)
+      if (res && res.error) {
+        setStatus('error')
+        setErrorMsg(res.error)
+        return
+      }
+      setOriginal(content)
+      setSavedFlash(true)
+      window.setTimeout(() => setSavedFlash(false), 1500)
+    } catch (err) {
       setStatus('error')
-      setErrorMsg(res.error)
-      return
+      setErrorMsg(err instanceof Error ? err.message : String(err))
+    } finally {
+      // Without this finally a rejected write leaves the editor stuck in
+      // "saving" forever.
+      setSaving(false)
     }
-    setOriginal(content)
-    setSavedFlash(true)
-    window.setTimeout(() => setSavedFlash(false), 1500)
   }, [content, dirty, filePath, saving])
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
@@ -202,7 +217,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
               {t('fileEditor.viewSource')}
             </button>
           )}
-          <button className="rp-fe-btn rp-fe-text-btn" onClick={() => void window.api?.workspace?.reveal?.(filePath)}>
+          <button className="rp-fe-btn rp-fe-text-btn" onClick={() => window.api?.workspace?.reveal?.(filePath)?.catch?.(() => {})}>
             {t('fileEditor.reveal')}
           </button>
         </div>
