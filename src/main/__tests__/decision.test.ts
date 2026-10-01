@@ -146,7 +146,9 @@ describe('decision service registry', () => {
     expect(st.active?.kind).toBe('typesafe')
     expect(st.providers.find((p) => p.kind === 'ollaya')).toMatchObject({ enabled: false, local: true, hasKey: false, model: 'laya' })
     expect(JSON.stringify(st)).not.toContain('ts-live-secret-123456')
-    expect(st.providers[0].keyHint).toBe('…3456')
+    // keyHint intentionally reveals no characters of the key.
+    expect(st.providers[0].keyHint).toBe('••••')
+    expect(st.providers[0].keyHint).not.toContain('3456')
   })
 
   it('keeps one provider active, keeps the key on edit, clears it on request', () => {

@@ -681,13 +681,17 @@ export function createTelegramService(opts: TelegramServiceOptions) {
     const prev = state.chats[chatId]
     const boundUser =
       typeof userId === 'string' && USER_ID.test(userId) ? userId : prev?.userId && prev.userId !== '0' ? prev.userId : '0'
-    state = {
-      ...state,
-      chats: {
-        ...state.chats,
-        [chatId]: { projectId, sessionId, userId: boundUser }
+    // Drop the oldest binding when the map grows unboundedly (insertion order
+    // in the persisted JSON is chronological).
+    let chats = { ...state.chats, [chatId]: { projectId, sessionId, userId: boundUser } }
+    const keys = Object.keys(chats)
+    if (keys.length > 50) {
+      for (const oldest of keys) {
+        if (oldest !== chatId) delete chats[oldest]
+        if (Object.keys(chats).length <= 50) break
       }
     }
+    state = { ...state, chats }
     persist()
     return { ok: true }
   }

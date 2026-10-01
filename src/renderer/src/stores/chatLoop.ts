@@ -3,6 +3,21 @@ import {
   sessionControllers, setSessionStreamingFlags, type ChatGet, type ChatSet
 } from './chatState'
 import {
+  appendToLastToolResult,
+  checkSpendBudget,
+  compactSessionNow,
+  currentPlanFor,
+  describeToolAction,
+  lastAssistantText,
+  offloadOutput,
+  recordTurnDuration,
+  setCompactingActivity
+} from './chatTurnHelpers'
+
+// Leaf turn helpers were split into chatTurnHelpers.ts; re-export the public
+// surface so the chat facade and other importers keep working.
+export { compactSessionNow, describeToolAction, recordTurnDuration } from './chatTurnHelpers'
+import {
   checkpointSnapshot, currentMessageContent, demoteVisionPayloadsToText, loadTranscript,
   persistTranscript, systemError, ToolLoopCounter, toolResultCap, truncateToolResult
 } from './chatTranscript'
@@ -60,185 +75,13 @@ import { classifyComplexity, refreshDecisionStatus } from '../agent/decision'
 import { TOOLS } from '../agent/toolDefinitions'
 import i18n from '../i18n'
 
-export function describeToolAction(tc: ToolCall): string {
-  const name = tc.name
-  const args = tc.arguments || {}
-  const fname = (p?: unknown) => String(p || '').split('/').pop() || 'file'
-  if (name === 'read_file') return `Reading ${fname(args.path)}`
-  if (name === 'edit_file') return `Editing ${fname(args.path)}`
-  if (name === 'write_file') return `Writing ${fname(args.path)}`
-  if (name === 'delete_file') return `Deleting ${fname(args.path)}`
-  if (name === 'list_dir') return `Listing ${fname(args.path || '.')}`
-  if (name === 'grep_search' || name === 'search_files') {
-    const q = String(args.query || args.pattern || '').trim()
-    return q ? `Searching for "${q.slice(0, 24)}"` : 'Searching codebase'
-  }
-  if (name === 'shell_exec' || name === BASH_NAME) {
-    const cmd = String(args.command || '').trim()
-    return cmd ? `Running: ${cmd.slice(0, 30)}` : 'Running shell command'
-  }
-  if (name === TEXT_EDITOR_NAME) {
-    const verb = args.command === 'view' ? 'Reading' : args.command === 'create' ? 'Writing' : 'Editing'
-    return `${verb} ${fname(args.path)}`
-  }
-  if (name === APPLY_PATCH_NAME) return 'Applying patch'
-  if (name === 'shell_wait') return 'Waiting for background job'
-  if (name === 'semantic_search' || name === 'codebase_search') return 'Searching codebase'
-  if (name.startsWith('debug_')) return 'Debugging'
-  if (name.startsWith('lsp_')) return 'Querying language server'
-  if (name === 'run_checks') return 'Running project checks'
-  if (name === 'spawn_agent' || name === 'parallel_agents') return 'Running subagents'
-  if (name === 'web_search' || name === 'web_research') return 'Searching the web'
-  if (name === 'research_report') return 'Compiling research report'
-  if (name.startsWith('browser_')) return 'Navigating browser'
-  if (tc.toolset === 'computer' || name === 'computer' || name.startsWith('computer_')) {
-    const action = tc.toolset === 'computer' ? name : name === 'computer' ? String(args.action || '') : name.slice(9)
-    return action === 'screenshot' || action === 'zoom' ? 'Looking at the screen' : `Using the computer (${action.replace(/_/g, ' ')})`
-  }
-  return `Running ${name}`
-}
-
 // Round ceiling and compaction ratio come from the harness profile
 // (default 50 rounds / 0.6; eco 25 / 0.45; maxing 80 / 0.7).
 /** Consecutive identical tool-call sets before we call it a loop and stop. */
 const MAX_REPEATED_TOOL_ROUNDS = 12
 /** Model attempts per round before the turn gives up (each on a different model). */
 const MAX_ROUTE_ATTEMPTS = 3
-const DEFAULT_CONTEXT_WINDOW = 128_000
-
-// --- Agent loop -------------------------------------------------------------
-
-async function checkSpendBudget(sessionId: string): Promise<string | null> {
-  const { sessionBudgetUsd, dailyBudgetUsd } = usePrefsStore.getState()
-  if (sessionBudgetUsd <= 0 && dailyBudgetUsd <= 0) return null
-  const sessionCost = useUsageStore.getState().totalsFor(sessionId).cost
-  if (sessionBudgetUsd > 0 && sessionCost >= sessionBudgetUsd) {
-    useUsageStore.getState().noteDiagnostic(
-      sessionId,
-      'warn',
-      i18n.t('chat.diagnostics.sessionBudget', {
-        cost: sessionCost.toFixed(2),
-        cap: sessionBudgetUsd.toFixed(2)
-      })
-    )
-    return i18n.t('chat.errors.sessionBudgetHit', {
-      cost: sessionCost.toFixed(2),
-      cap: sessionBudgetUsd.toFixed(2)
-    })
-  }
-  if (dailyBudgetUsd > 0 && window.api?.db?.getUsageSummary) {
-    try {
-      const startOfDay = Math.floor(new Date().setHours(0, 0, 0, 0) / 1000)
-      const rows = await window.api.db.getUsageSummary(startOfDay)
-      const dayCost = (Array.isArray(rows) ? rows : []).reduce(
-        (sum, r) => sum + (Number((r as { cost?: number }).cost) || 0),
-        0
-      )
-      if (dayCost >= dailyBudgetUsd) {
-        useUsageStore.getState().noteDiagnostic(
-          sessionId,
-          'warn',
-          i18n.t('chat.diagnostics.dailyBudget', {
-            cost: dayCost.toFixed(2),
-            cap: dailyBudgetUsd.toFixed(2)
-          })
-        )
-        return i18n.t('chat.errors.dailyBudgetHit', {
-          cost: dayCost.toFixed(2),
-          cap: dailyBudgetUsd.toFixed(2)
-        })
-      }
-    } catch {
-      /* accounting optional */
-    }
-  }
-  return null
-}
-
 const STATIC_TOOL_NAMES = TOOLS.map((t) => t.name)
-
-/** Plan items for the session, carried across compaction. */
-function currentPlanFor(sessionId: string): Array<{ content: string; status: string }> | undefined {
-  try {
-    const plan = usePlanStore.getState().getPlan(sessionId)
-    return plan.length ? plan.map((p) => ({ content: p.content, status: p.status })) : undefined
-  } catch {
-    return undefined
-  }
-}
-
-/** One-line "compacting context…" indicator on the live assistant area. */
-function setCompactingActivity(projectId: string, sessionId: string, on: boolean): void {
-  try {
-    const session = useAppStore
-      .getState()
-      .projects.find((p) => p.id === projectId)
-      ?.sessions.find((s) => s.id === sessionId)
-    const last = session?.messages.filter((m) => m.role === 'assistant').pop()
-    if (last) useStreamingStore.getState().setActivity(last.id, on ? i18n.t('chat.compacting') : null)
-  } catch {
-    /* cosmetic */
-  }
-}
-
-/**
- * Manually compact the active session transcript (user-triggered).
- * Returns true if compaction ran.
- */
-export async function compactSessionNow(sessionId: string): Promise<boolean> {
-  if (!sessionId) return false
-  try {
-    const project = useAppStore
-      .getState()
-      .projects.find((p) => p.sessions.some((s) => s.id === sessionId))
-    if (!project) return false
-    const entries = await loadTranscript(project.id, sessionId)
-    if (entries.length < 4) return false
-    const before = estimateTokens(entries)
-    const smart = await compactWithSummary(entries, {
-      sessionId,
-      contextWindow: DEFAULT_CONTEXT_WINDOW,
-      plan: currentPlanFor(sessionId),
-      useModel: useProviderStore.getState().smartCompaction
-    }).catch(() => null)
-    const next = smart?.compacted
-      ? smart.entries
-      : compactTranscript(entries, { keepEntries: 30, plan: currentPlanFor(sessionId) })
-    const after = estimateTokens(next)
-    if (after >= before * 0.95) {
-      // Already compact — still refresh meter
-      useUsageStore.getState().noteContext(sessionId, after, DEFAULT_CONTEXT_WINDOW, true)
-      return false
-    }
-    persistTranscript(sessionId, next, '', undefined)
-    useUsageStore.getState().noteContext(sessionId, after, DEFAULT_CONTEXT_WINDOW, true)
-    useUsageStore
-      .getState()
-      .noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.compactedManual'))
-    return true
-  } catch {
-    return false
-  }
-}
-
-/** Save a full tool output out of context; returns its id (or null). */
-async function offloadOutput(sessionId: string, content: string): Promise<string | null> {
-  const save = window.api?.outputs?.save
-  if (typeof save !== 'function') return null
-  try {
-    const r = await save(sessionId, content)
-    return r.ok && r.id ? r.id : null
-  } catch {
-    return null
-  }
-}
-
-/** Append agent-facing text to the round's last tool result (cache-friendly: no extra message). */
-function appendToLastToolResult(entries: TranscriptEntry[], text: string): void {
-  const i = entries.length - 1
-  const e = entries[i]
-  if (e && e.role === 'tool') entries[i] = { ...e, content: `${e.content}\n\n${text}` }
-}
 
 /** Frozen per session so the preamble (and the prompt cache) stays stable. */
 const profileBlockBySession = new Map<string, string>()
@@ -395,8 +238,8 @@ export async function agentLoop(
     }
     // Long-term Memory injection (local, optional)
     try {
-      if (window.api.memory?.injectBlock) {
-        const mem = await window.api.memory.injectBlock({
+      if (window.api?.memory?.injectBlock) {
+        const mem = await window.api?.memory.injectBlock({
           query: userContent.slice(0, 500),
           projectId: projectId && projectId !== '__general__' ? projectId : null
         })
@@ -525,16 +368,16 @@ export async function agentLoop(
           const files = await prefetchMentionedFiles(userContent, {
             roots,
             read: async (p) => {
-              const r = await window.api.fs.readFile(p).catch(() => null)
+              const r = await window.api?.fs?.readFile(p).catch(() => null)
               return typeof r === 'string' ? r : null
             },
             isFile: async (p) => {
-              const st = window.api.fs.stat ? await window.api.fs.stat(p).catch(() => null) : null
+              const st = window.api?.fs?.stat ? await window.api.fs.stat(p).catch(() => null) : null
               return !!st && 'isFile' in st && st.isFile && st.size <= 1_000_000
             }
           })
           for (const f of files) {
-            const r = await window.api.fs.readFile(f.path).catch(() => null)
+            const r = await window.api?.fs?.readFile(f.path).catch(() => null)
             if (typeof r === 'string') noteFileSeen(snapshotScope({ sessionId }), f.path, r)
           }
           mentioned = formatPrefetched(files)
@@ -617,7 +460,7 @@ export async function agentLoop(
       // Compaction runs at a threshold and the result is persisted, so it costs
       // exactly one cache re-prime — unlike a sliding window, which would silently
       // re-prime on every single request.
-      const contextWindow = lastDecision?.model.contextWindow || DEFAULT_CONTEXT_WINDOW
+      const contextWindow = lastDecision?.model.contextWindow || 128_000
       let tokenEst = estimateTokens(entries)
       useUsageStore.getState().noteContext(sessionId, tokenEst, contextWindow, false)
       // Gentle stage first: clear stale bulky tool results (saved as outputs
@@ -1273,9 +1116,9 @@ export async function agentLoop(
     // linger on the browser page after browser control ends.
     // Release the browser claim when this turn ends. The claim is a no-op
     // today (per-owner tabs supersede it), kept for renderer call-site compat.
-    void window.api.browser?.release?.(sessionId)?.catch?.(() => {})
+    void window.api?.browser?.release?.(sessionId)?.catch?.(() => {})
     if (get().streamingSessionIds.length <= 1) {
-      void window.api.browser?.hideCursor?.()?.catch?.(() => {})
+      void window.api?.browser?.hideCursor?.()?.catch?.(() => {})
     }
     // Epoch guard: a steer that aborted us may already have started a newer
     // turn. Clearing flags or draining the queue here would race and leave the
@@ -1306,7 +1149,7 @@ export async function agentLoop(
         })
       }
       // Auto-capture durable Memory cards from this turn (local heuristic).
-      if (!aborted && window.api.memory?.ingestTurn && entries.length > 0) {
+      if (!aborted && window.api?.memory?.ingestTurn && entries.length > 0) {
         try {
           const recent = entries
             .filter((e): e is Extract<TranscriptEntry, { role: 'user' | 'assistant' }> =>
@@ -1317,7 +1160,7 @@ export async function agentLoop(
               role: e.role,
               content: typeof e.content === 'string' ? e.content : ''
             }))
-          void window.api.memory.ingestTurn({
+          void window.api?.memory.ingestTurn({
             projectId: projectId && projectId !== '__general__' ? projectId : null,
             sessionId,
             messages: recent
@@ -1330,7 +1173,7 @@ export async function agentLoop(
             ) &&
             window.api.memory?.consolidate
           ) {
-            void window.api.memory.consolidate({
+            void window.api?.memory.consolidate({
               projectId: projectId && projectId !== '__general__' ? projectId : null,
               threshold: 0.92,
               dryRun: false
@@ -1366,15 +1209,6 @@ export async function agentLoop(
       processQueue(set, get, sessionId)
     }
   }
-}
-
-function lastAssistantText(projectId: string, sessionId: string): string {
-  const session = useAppStore
-    .getState()
-    .projects.find((p) => p.id === projectId)
-    ?.sessions.find((s) => s.id === sessionId)
-  const last = session?.messages.filter((m) => m.role === 'assistant' && m.content.trim()).pop()
-  return last?.content || ''
 }
 
 /**
@@ -1433,35 +1267,6 @@ async function continueUltraWork(
   }
   useUltraWorkStore.getState().update(sessionId, { iteration: latest.iteration + 1, lastReason: decision.reason })
   get().sendMessage(projectId, sessionId, decision.prompt || '', 'steer')
-}
-
-/**
- * Tag the last surviving assistant bubble of a turn with how long the agent
- * worked (empty tool-round placeholders are removed, so walk backwards).
- */
-export function recordTurnDuration(
-  projectId: string,
-  sessionId: string,
-  assistantIds: string[],
-  durationMs: number
-): void {
-  if (assistantIds.length === 0 || durationMs <= 0) return
-  try {
-    const session = useAppStore
-      .getState()
-      .projects.find((p) => p.id === projectId)
-      ?.sessions.find((s) => s.id === sessionId)
-    if (!session) return
-    const present = new Set(session.messages.map((m) => m.id))
-    for (let i = assistantIds.length - 1; i >= 0; i--) {
-      if (present.has(assistantIds[i])) {
-        useAppStore.getState().updateMessageDuration(projectId, sessionId, assistantIds[i], durationMs)
-        return
-      }
-    }
-  } catch {
-    /* cosmetic metadata — never break turn teardown */
-  }
 }
 
 export function processQueue(set: ChatSet, get: ChatGet, preferSessionId?: string): void {

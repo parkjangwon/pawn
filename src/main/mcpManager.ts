@@ -298,12 +298,16 @@ export async function callTool(
   }
   try {
     // Bound hang risk — a stuck MCP server must not freeze the agent turn forever.
+    let timeout: NodeJS.Timeout | undefined
     const result = await Promise.race([
       entry.client.callTool({ name: toolName, arguments: args }),
       new Promise<never>((_, reject) => {
-        setTimeout(() => reject(new Error(`MCP tool "${toolName}" timed out after 120s`)), 120_000)
+        timeout = setTimeout(() => reject(new Error(`MCP tool "${toolName}" timed out after 120s`)), 120_000)
       })
-    ])
+    ]).finally(() => {
+      // A resolved call must not leave its 120s timer alive.
+      if (timeout) clearTimeout(timeout)
+    })
     const blocks = Array.isArray(result.content) ? result.content : []
     const text = blocks
       .map((b) => (b.type === 'text' ? b.text : `[${b.type} content omitted]`))

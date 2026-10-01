@@ -242,6 +242,31 @@ export async function runSubagent(
   cancelPanelClose()
 
   let terminal = false
+  /**
+   * Shared fail exit for the loop's five terminal cases: discard the worktree
+   * without applying changes, then finish the run as failed.
+   */
+  const failFinish = async (error: string, summary = ''): Promise<SubagentResult> => {
+    const fin = await finalizeWorktree({
+      projectPath: opts.projectPath,
+      worktreePath,
+      worktreeBranch,
+      apply: 'none',
+      ok: false
+    })
+    worktreePath = undefined
+    return finish({
+      name: label,
+      ok: false,
+      summary,
+      rounds,
+      toolsUsed,
+      error,
+      isolation,
+      filesChanged: fin.filesChanged,
+      applied: false
+    })
+  }
   const finish = async (result: Omit<SubagentResult, 'agent' | 'profileSource'> & {
     agent?: string
   }): Promise<SubagentResult> => {
@@ -325,28 +350,7 @@ export async function runSubagent(
     ]
 
     while (rounds < maxRounds) {
-      if (signal.aborted) {
-        const fin = await finalizeWorktree({
-          projectPath: opts.projectPath,
-          worktreePath,
-          worktreeBranch,
-          apply: 'none',
-          ok: false
-        })
-        worktreePath = undefined
-        return finish({
-          name: label,
-          ok: false,
-          summary: 'Aborted',
-          rounds,
-          toolsUsed,
-          error: 'aborted',
-          isolation,
-          worktreePath: fin.filesChanged.length ? undefined : undefined,
-          filesChanged: fin.filesChanged,
-          applied: false
-        })
-      }
+      if (signal.aborted) return await failFinish('aborted', 'Aborted')
       rounds++
       useSubagentRunsStore.getState().tick(runId, { rounds, toolsUsed: [...toolsUsed] })
 
@@ -419,51 +423,11 @@ export async function runSubagent(
             noteProviderFailure(decision.provider.id)
           }
           excluded.add(decision.key)
-          if (attempt === MAX_ROUTE_ATTEMPTS - 1) {
-            const fin = await finalizeWorktree({
-              projectPath: opts.projectPath,
-              worktreePath,
-              worktreeBranch,
-              apply: 'none',
-              ok: false
-            })
-            worktreePath = undefined
-            return finish({
-              name: label,
-              ok: false,
-              summary: '',
-              rounds,
-              toolsUsed,
-              error: lastErr || 'All model attempts failed',
-              isolation,
-              filesChanged: fin.filesChanged,
-              applied: false
-            })
-          }
+          if (attempt === MAX_ROUTE_ATTEMPTS - 1) return await failFinish(lastErr || 'All model attempts failed')
         }
       }
 
-      if (!decision || !result) {
-        const fin = await finalizeWorktree({
-          projectPath: opts.projectPath,
-          worktreePath,
-          worktreeBranch,
-          apply: 'none',
-          ok: false
-        })
-        worktreePath = undefined
-        return finish({
-          name: label,
-          ok: false,
-          summary: '',
-          rounds,
-          toolsUsed,
-          error: lastErr || 'No model available to run subagent',
-          isolation,
-          filesChanged: fin.filesChanged,
-          applied: false
-        })
-      }
+      if (!decision || !result) return await failFinish(lastErr || 'No model available to run subagent')
 
       entries.push({
         role: 'assistant',
@@ -522,25 +486,10 @@ export async function runSubagent(
       if (sig && sig === lastSig) {
         sigRepeats++
         if (sigRepeats >= MAX_REPEATED_TOOL_ROUNDS) {
-          const fin = await finalizeWorktree({
-            projectPath: opts.projectPath,
-            worktreePath,
-            worktreeBranch,
-            apply: 'none',
-            ok: false
-          })
-          worktreePath = undefined
-          return finish({
-            name: label,
-            ok: false,
-            summary: result.text || '',
-            rounds,
-            toolsUsed,
-            error: `Tool loop detected (same calls ×${MAX_REPEATED_TOOL_ROUNDS})`,
-            isolation,
-            filesChanged: fin.filesChanged,
-            applied: false
-          })
+          return await failFinish(
+            `Tool loop detected (same calls ×${MAX_REPEATED_TOOL_ROUNDS})`,
+            result.text || ''
+          )
         }
       } else {
         lastSig = sig

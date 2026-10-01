@@ -301,8 +301,10 @@ function describeError(err: unknown, provider: DecisionProviderConfig): { error:
 // --- Service ----------------------------------------------------------------
 
 function keyHint(key: string | undefined): string | undefined {
+  // Deliberately no character reveal: the settings line only needs to say a
+  // key exists, and even 4 trailing chars shrink the keyspace for nothing.
   if (!key) return undefined
-  return key.length > 8 ? `…${key.slice(-4)}` : '…'
+  return '••••'
 }
 
 function toView(p: DecisionProviderConfig): DecisionProviderView {

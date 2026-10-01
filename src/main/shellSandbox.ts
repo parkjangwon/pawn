@@ -21,6 +21,29 @@ export type SandboxOptions = {
   jailCwd?: boolean
 }
 
+export interface ShellPolicyFloor {
+  /** User pref: sandbox must stay on. */
+  sandbox: boolean
+  /** User pref: network is allowed. */
+  network: boolean
+  /** User pref: cwd jail must stay on. */
+  jail: boolean
+}
+
+/**
+ * Intersect a caller-requested sandbox policy with the user's stored prefs.
+ * The request may tighten (enable sandbox, cut network) but never loosen
+ * below the floor — main cannot trust the renderer to relay the prefs.
+ */
+export function withSandboxPolicyFloor(requested: SandboxOptions, floor: ShellPolicyFloor): SandboxOptions {
+  return {
+    enabled: (requested.enabled !== false) || floor.sandbox,
+    network: floor.network ? requested.network !== false : false,
+    projectRoot: requested.projectRoot,
+    jailCwd: (requested.jailCwd !== false) || floor.jail
+  }
+}
+
 /** Ensure cwd resolves under projectRoot (best-effort; not a full security boundary). */
 export function jailCwd(
   cwd: string | undefined,

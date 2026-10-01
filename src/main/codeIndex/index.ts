@@ -195,8 +195,14 @@ export class CodeIndex {
       chunks: this.chunks
     }
     const tmp = this.cacheFile() + '.' + process.pid + '.tmp'
-    await fs.writeFile(tmp, JSON.stringify(data), 'utf8')
-    await fs.rename(tmp, this.cacheFile())
+    try {
+      await fs.writeFile(tmp, JSON.stringify(data), 'utf8')
+      await fs.rename(tmp, this.cacheFile())
+    } catch (err) {
+      // A failed write must not leave orphan .tmp files in the cache dir.
+      await fs.unlink(tmp).catch(() => {})
+      throw err
+    }
   }
 
   private rebuildBm25(): void {

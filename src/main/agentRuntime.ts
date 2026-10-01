@@ -16,7 +16,8 @@ import { tmpdir } from 'os'
 import { isAbsolute, join, resolve } from 'path'
 import { formatBashResult, getBashSessionManager } from './bashSession'
 import { isProtectedRemovePath } from './fsGuards'
-import type { SandboxOptions } from './shellSandbox'
+import { shellPolicyFloor } from './config'
+import { withSandboxPolicyFloor, type SandboxOptions } from './shellSandbox'
 import { formatDebugState, getDebugManager } from './debug/manager'
 import type { DebugLanguage, DebugState } from './debug/types'
 import { CodeIndex, formatSearchHits, type SearchHit } from './codeIndex/index'
@@ -59,12 +60,16 @@ function validDir(dir: unknown): string | null {
 
 function sandboxFrom(raw: unknown): SandboxOptions {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
-  return {
-    enabled: o.enabled !== false,
-    network: o.network !== false,
-    projectRoot: typeof o.projectRoot === 'string' ? o.projectRoot : undefined,
-    jailCwd: o.jailCwd !== false
-  }
+  // Same floor as the shell IPC: the stored prefs win over what the caller asks.
+  return withSandboxPolicyFloor(
+    {
+      enabled: o.enabled !== false,
+      network: o.network !== false,
+      projectRoot: typeof o.projectRoot === 'string' ? o.projectRoot : undefined,
+      jailCwd: o.jailCwd !== false
+    },
+    shellPolicyFloor()
+  )
 }
 
 function hashKey(s: string): string {

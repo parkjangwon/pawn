@@ -101,6 +101,23 @@ export function getConfigPath(): string {
   return CONFIG_PATH
 }
 
+/** User shell prefs read in main: the floor a renderer request cannot loosen. */
+export function shellPolicyFloor(): { sandbox: boolean; network: boolean; jail: boolean } {
+  try {
+    const cfg = loadConfig() as {
+      settings?: { shellSandbox?: boolean; shellNetwork?: boolean; shellCwdJail?: boolean }
+    }
+    return {
+      sandbox: cfg.settings?.shellSandbox !== false,
+      network: cfg.settings?.shellNetwork !== false,
+      jail: cfg.settings?.shellCwdJail !== false
+    }
+  } catch {
+    // Unreadable config: keep the safe defaults.
+    return { sandbox: true, network: true, jail: true }
+  }
+}
+
 export function getPawnDir(): string {
   return PAWN_DIR
 }

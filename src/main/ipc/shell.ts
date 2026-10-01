@@ -1,14 +1,28 @@
 import { homedir } from 'os'
 import { handleTrusted } from './trust'
 import { spawn, type ChildProcess } from 'child_process'
-import { planExecFile, planShellSpawn, type SandboxOptions } from '../shellSandbox'
+import {
+  planExecFile,
+  planShellSpawn,
+  withSandboxPolicyFloor,
+  type SandboxOptions
+} from '../shellSandbox'
 import { getBashSessionManager } from '../bashSession'
+import { shellPolicyFloor } from '../config'
 
 /** Agent-controlled timeout: 5s..5min, default 30s. */
 function clampTimeout(timeoutMs: unknown): number {
   return Number.isFinite(Number(timeoutMs))
     ? Math.min(300_000, Math.max(5_000, Math.floor(Number(timeoutMs))))
     : 30_000
+}
+
+/**
+ * The user's stored shell prefs (config.toml, read here in main) are the
+ * policy floor: a caller may tighten but never loosen below them.
+ */
+function withPolicyFloor(requested: SandboxOptions): SandboxOptions {
+  return withSandboxPolicyFloor(requested, shellPolicyFloor())
 }
 
 interface ExecError {
@@ -53,7 +67,8 @@ function killChild(child: ChildProcess): void {
   try {
     if (process.platform === 'win32') {
       if (child.pid) {
-        spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true })
+        const killer = spawn('taskkill', ['/pid', String(child.pid), '/T', '/F'], { windowsHide: true })
+        killer.on('error', (err) => console.error('[shell] taskkill failed:', err))
       }
     } else if (child.pid) {
       try {
@@ -352,7 +367,7 @@ export function registerShellIpc(): void {
           // Never the app process's own cwd (bundle / `/` / the repo in dev).
           typeof cwd === 'string' && cwd ? cwd : homedir(),
           clampTimeout(timeoutMs),
-          parseSandboxOpts(sandboxOpts),
+          withPolicyFloor(parseSandboxOpts(sandboxOpts)),
           sessionIdFromOpts(sandboxOpts)
         )
       } catch (err: unknown) {
@@ -373,7 +388,7 @@ export function registerShellIpc(): void {
           file,
           argList,
           typeof cwd === 'string' && cwd.length > 0 ? cwd : undefined,
-          parseSandboxOpts(sandboxOpts ?? { enabled: true, network: true })
+          withPolicyFloor(parseSandboxOpts(sandboxOpts ?? { enabled: true, network: true }))
         )
         if (!planned.ok) {
           return { stdout: '', stderr: planned.error, exitCode: 126 }
@@ -402,7 +417,7 @@ export function registerShellIpc(): void {
         const started = startBackgroundJob(
           command,
           typeof cwd === 'string' && cwd ? cwd : homedir(),
-          parseSandboxOpts(sandboxOpts),
+          withPolicyFloor(parseSandboxOpts(sandboxOpts)),
           sessionIdFromOpts(sandboxOpts)
         )
         if (started.error) return { error: started.error }

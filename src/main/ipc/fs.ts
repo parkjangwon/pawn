@@ -1,11 +1,54 @@
 import { app, ipcMain } from 'electron'
 import { handleTrusted } from './trust'
-import { isAbsolute, join, relative } from 'path'
+import { isAbsolute, join, relative, resolve, sep } from 'path'
 import { readFile, writeFile, readdir, stat, mkdir, unlink, rmdir, access } from 'fs/promises'
 import { cp, rm } from 'fs/promises'
 import { readSpreadsheet } from '../spreadsheet'
 import { contentSearch, formatContentMatches, type ContentSearchOpts } from '../contentSearch'
 import { isProtectedRemovePath, isSecretDotFile } from '../fsGuards'
+import { getPawnDir } from '../config'
+
+/**
+ * Pawn's own configuration and credential files under ~/.pawn must not be
+ * mutable through the generic fs IPC: a prompt-injected write to hooks.json
+ * or config.toml would execute or leak on the next event. Other ~/.pawn
+ * subtrees (reports, agents, outputs, profiles) stay writable.
+ */
+const SEALED_PAWN_FILES = new Set([
+  'config.toml',
+  'hooks.json',
+  'hooks-settings.json',
+  'mcp.json',
+  'telegram.json',
+  'decision.json',
+  'kiro.json',
+  'oauth-clients.json',
+  'xai.json',
+  'pawn.db',
+  'pawn.db-wal',
+  'pawn.db-shm',
+  'memory.db'
+])
+
+const SEALED_PAWN_DIRS = new Set(['connections', 'oauth'])
+
+/** True when p is a sealed file (or inside a sealed dir) under ~/.pawn. */
+export function isSealedPawnPath(p: string): boolean {
+  const pawn = resolve(getPawnDir())
+  const target = resolve(p)
+  if (target !== pawn && !target.startsWith(pawn + sep)) return false
+  const rel = relative(pawn, target)
+  const top = rel.split(sep)[0]
+  return SEALED_PAWN_FILES.has(top) || SEALED_PAWN_DIRS.has(top)
+}
+
+/** Guard for mutating handlers: reject writes into Pawn's sealed stores. */
+function rejectSealed(p: string): { error: string } | null {
+  if (isSealedPawnPath(p)) {
+    return { error: 'This path is Pawn configuration or credentials and is not writable through the file API.' }
+  }
+  return null
+}
 
 const WALK_IGNORE = new Set([
   'node_modules',
@@ -328,6 +371,8 @@ export function registerFsIpc(): void {
     const path = safePath(filePath)
     if (!path) return { error: 'Invalid path (an absolute path is required)' }
     if (typeof content !== 'string') return { error: 'Invalid content' }
+    const sealed = rejectSealed(path)
+    if (sealed) return sealed
     if (content.length > MAX_WRITE_CHARS) {
       return { error: `Content too large to write safely (${content.length} chars, max ${MAX_WRITE_CHARS})` }
     }
@@ -396,6 +441,8 @@ export function registerFsIpc(): void {
   handleTrusted('fs:delete', async (_, filePath: string) => {
     const path = safePath(filePath)
     if (!path) return { error: 'Invalid path (an absolute path is required)' }
+    const sealed = rejectSealed(path)
+    if (sealed) return sealed
     try {
       const s = await stat(path)
       if (s.isDirectory()) {
@@ -471,6 +518,8 @@ export function registerFsIpc(): void {
     const src = safePath(srcDir)
     const dest = safePath(destDir)
     if (!src || !dest) return { error: 'Invalid copy paths' }
+    const sealed = rejectSealed(dest)
+    if (sealed) return sealed
     try {
       await cp(src, dest, { recursive: true, force: true, errorOnExist: false })
       walkCache.clear()
@@ -486,6 +535,8 @@ export function registerFsIpc(): void {
     if (isProtectedRemovePath(path)) {
       return { error: `Refused to remove protected path: ${path}` }
     }
+    const sealed = rejectSealed(path)
+    if (sealed) return sealed
     try {
       await rm(path, { recursive: true, force: true })
       walkCache.clear()

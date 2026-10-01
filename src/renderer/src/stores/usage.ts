@@ -147,8 +147,8 @@ export const useUsageStore = create<UsageState>((set, get) => ({
       }
     })
 
-    window.api.db
-      .addUsage({
+    window.api?.db
+      ?.addUsage({
         id: uid(),
         sessionId,
         providerId: model.providerId,

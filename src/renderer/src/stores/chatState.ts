@@ -38,10 +38,10 @@ export function setSessionStreamingFlags(
     isStreaming: list.length > 0,
     streamingSessionId: streaming ? sessionId : list[list.length - 1] || null
   })
-  if (window.api.setSessionStreaming) {
+  if (window.api?.setSessionStreaming) {
     window.api.setSessionStreaming(sessionId, streaming)
   } else {
-    window.api.setStreaming?.(list.length > 0)
+    window.api?.setStreaming?.(list.length > 0)
   }
 }
 
@@ -55,7 +55,7 @@ export async function acquireSleepHold(): Promise<void> {
   }
   sleepHoldPrev = 'off'
   try {
-    await window.api.power?.setSleepPrevention?.('sleep')
+    await window.api?.power?.setSleepPrevention?.('sleep')
   } catch {
     sleepHoldPrev = null
   }
@@ -67,7 +67,7 @@ export function releaseSleepHold(): void {
   if (sleepHoldCount > 0 || sleepHoldPrev === null) return
   const restore = sleepHoldPrev
   sleepHoldPrev = null
-  void window.api.power?.setSleepPrevention?.(restore)?.catch?.(() => {})
+  void window.api?.power?.setSleepPrevention?.(restore)?.catch?.(() => {})
 }
 
 export function stopSessionController(sessionId: string): void {
