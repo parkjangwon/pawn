@@ -231,10 +231,11 @@ export function buildRemoteSpawn(
   return { file: 'ssh', args: [...sshArgs, '-o', 'BatchMode=yes', remote] }
 }
 
-/** Persistent-session variant: an interactive-less remote bash for BashSession. */
-export function buildRemoteShellArgs(host: SshHost): RemoteSpawnPlan {
-  const plan = buildRemoteSpawn(host, 'exec bash --noprofile --norc')
-  return plan
+/** Persistent-session variant: remote bash seeded into the session cwd. */
+export function buildRemoteShellArgs(host: SshHost, cwd: string): RemoteSpawnPlan {
+  // The ssh channel has no local cwd, so seed the remote shell into the
+  // session's (remote) project path before exec'ing bash.
+  return buildRemoteSpawn(host, 'exec bash --noprofile --norc', { cwd })
 }
 
 /** Settings "test connection": run uname -sr remotely and report. */

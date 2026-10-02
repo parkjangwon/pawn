@@ -28,6 +28,16 @@ function withPolicyFloor(requested: SandboxOptions): SandboxOptions {
   return withSandboxPolicyFloor(requested, shellPolicyFloor())
 }
 
+/** Full child environment with the remote additions (SSHPASS) merged in. */
+function mergedChildEnv(extra?: Record<string, string>): Record<string, string> | undefined {
+  if (!extra) return undefined
+  const env: Record<string, string> = {}
+  for (const [k, v] of Object.entries(process.env)) {
+    if (typeof v === 'string') env[k] = v
+  }
+  return { ...env, ...extra }
+}
+
 type RemotePlan =
   | { kind: 'local' }
   | { kind: 'remote'; file: string; args: string[]; env?: Record<string, string>; hostId: string; hostLabel: string }
@@ -247,7 +257,10 @@ export function runShellCommand(
     return Promise.resolve({ stdout: '', stderr: remote.error, exitCode: 126, killed: false, sandboxNote: 'blocked' })
   }
   if (remote.kind === 'remote') {
-    return runSpawned(remote.file, remote.args, undefined, timeoutMs, remote.env, sessionId).then((r) => ({
+    // remote.env carries additions (SSHPASS) — the child still needs the full
+    // environment (PATH for the ssh/sshpass binaries, HOME, …).
+    const childEnv = mergedChildEnv(remote.env)
+    return runSpawned(remote.file, remote.args, undefined, timeoutMs, childEnv, sessionId).then((r) => ({
       ...r,
       host: remote.hostId,
       sandboxNote: `remote=${remote.hostLabel}`
@@ -301,7 +314,7 @@ export function startBackgroundJob(
       useRemote ? remote.args : planned.plan.args,
       {
         cwd: useRemote ? undefined : planned.plan.cwd || undefined,
-        env: useRemote && remote.env ? { ...process.env, ...remote.env } : planned.plan.env,
+        env: useRemote ? mergedChildEnv(remote.env) : planned.plan.env,
         detached: !isWin,
         windowsHide: true,
         stdio: ['ignore', 'pipe', 'pipe']
@@ -441,7 +454,8 @@ export function registerShellIpc(): void {
           return { stdout: '', stderr: remote.error, exitCode: 126 }
         }
         if (remote.kind === 'remote') {
-          const r = await runSpawned(remote.file, remote.args, undefined, clampTimeout(timeoutMs), remote.env, sessionIdFromOpts(sandboxOpts))
+          const childEnv = mergedChildEnv(remote.env)
+          const r = await runSpawned(remote.file, remote.args, undefined, clampTimeout(timeoutMs), childEnv, sessionIdFromOpts(sandboxOpts))
           return { ...r, host: remote.hostId }
         }
         const planned = planExecFile(file, argList, workCwd, sandbox)

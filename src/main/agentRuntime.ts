@@ -18,6 +18,7 @@ import { formatBashResult, getBashSessionManager } from './bashSession'
 import { isProtectedRemovePath } from './fsGuards'
 import { shellPolicyFloor } from './config'
 import { withSandboxPolicyFloor, type SandboxOptions } from './shellSandbox'
+import { resolveHost } from './ssh'
 import { formatDebugState, getDebugManager } from './debug/manager'
 import type { DebugLanguage, DebugState } from './debug/types'
 import { CodeIndex, formatSearchHits, type SearchHit } from './codeIndex/index'
@@ -61,12 +62,16 @@ function validDir(dir: unknown): string | null {
 function sandboxFrom(raw: unknown): SandboxOptions {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
   // Same floor as the shell IPC: the stored prefs win over what the caller asks.
+  // hostId is carried only when configured in ~/.pawn/ssh.json — the renderer
+  // cannot invent a target.
+  const requestedHost = typeof o.hostId === 'string' ? o.hostId : undefined
   return withSandboxPolicyFloor(
     {
       enabled: o.enabled !== false,
       network: o.network !== false,
       projectRoot: typeof o.projectRoot === 'string' ? o.projectRoot : undefined,
-      jailCwd: o.jailCwd !== false
+      jailCwd: o.jailCwd !== false,
+      hostId: requestedHost && resolveHost(requestedHost) ? requestedHost : undefined
     },
     shellPolicyFloor()
   )
@@ -226,12 +231,19 @@ export function createAgentRuntime(opts: AgentRuntimeOptions) {
           if (typeof key !== 'string' || !SAFE_ID.test(key)) return { ok: false, error: 'Invalid bash session key' }
           if (typeof command !== 'string' || !command.trim()) return { ok: false, error: 'command is required' }
           const oo = (o && typeof o === 'object' ? o : {}) as Record<string, unknown>
-          const cwd = validDir(oo.cwd)
+          const sandbox = sandboxFrom(oo.sandbox)
+          // A remote target's cwd lives on the SSH host — local statSync would
+          // always fail, so only validate it as an absolute path there.
+          const cwd = sandbox.hostId
+            ? typeof oo.cwd === 'string' && isAbsolute(oo.cwd) && oo.cwd.trim()
+              ? oo.cwd
+              : null
+            : validDir(oo.cwd)
           if (!cwd) return { ok: false, error: 'A valid working directory is required' }
           const r = await getBashSessionManager().run(key, command, {
             cwd,
             timeoutMs: typeof oo.timeoutMs === 'number' ? oo.timeoutMs : undefined,
-            sandbox: sandboxFrom(oo.sandbox)
+            sandbox
           })
           return { ok: true, text: formatBashResult(r), exitCode: r.exitCode, cwd: r.cwd, timedOut: r.timedOut, restarted: r.restarted }
         } catch (err) {
@@ -241,9 +253,14 @@ export function createAgentRuntime(opts: AgentRuntimeOptions) {
       async restart(key: unknown, cwd: unknown, sandbox: unknown): Promise<Ok<{ text: string }> | Fail> {
         try {
           if (typeof key !== 'string' || !SAFE_ID.test(key)) return { ok: false, error: 'Invalid bash session key' }
-          const dir = validDir(cwd)
+          const sb = sandboxFrom(sandbox)
+          const dir = sb.hostId
+            ? typeof cwd === 'string' && isAbsolute(cwd) && cwd.trim()
+              ? cwd
+              : null
+            : validDir(cwd)
           if (!dir) return { ok: false, error: 'A valid working directory is required' }
-          await getBashSessionManager().restart(key, dir, sandboxFrom(sandbox))
+          await getBashSessionManager().restart(key, dir, sb)
           return { ok: true, text: 'Bash session restarted.' }
         } catch (err) {
           return fail(err)

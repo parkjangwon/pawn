@@ -4,7 +4,7 @@ import {
   jailCwd,
   planShellSpawn,
   sanitizeEnv
-} from '../shellSandbox'
+, withSandboxPolicyFloor } from '../shellSandbox'
 
 describe('shellSandbox', () => {
   it('detects the classic fork bomb', () => {
@@ -60,5 +60,19 @@ describe('shellSandbox', () => {
       jailCwd: true
     })
     expect(planned.ok).toBe(false)
+  })
+})
+
+describe('withSandboxPolicyFloor', () => {
+  it('carries hostId through untouched — remote routing must survive the floor', () => {
+    const out = withSandboxPolicyFloor(
+      { enabled: false, network: true, hostId: 'h123' },
+      { sandbox: true, network: true, jail: true }
+    )
+    // Sandbox/network floors still apply (renderer cannot loosen them)…
+    expect(out.enabled).toBe(true)
+    expect(out.jailCwd).toBe(true)
+    // …but the remote target must survive, or routing deactivates on the IPC path.
+    expect(out.hostId).toBe('h123')
   })
 })

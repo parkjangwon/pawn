@@ -51,7 +51,9 @@ vi.mock('child_process', () => ({
     return fake
   }),
   execFile: vi.fn(),
-  spawnSync: vi.fn(() => ({ status: 1 }))
+  spawnSync: vi.fn((cmd: string, args: string[]) =>
+    args[0] === 'sshpass' ? { status: 0 } : { status: 1 }
+  )
 }))
 
 import { runShellCommand, startBackgroundJob } from '../ipc/shell'
@@ -113,5 +115,21 @@ describe('shell remote routing', () => {
     const last = spawned[spawned.length - 1]
     expect(last.file).toBe('ssh')
     expect(last.args[last.args.length - 1]).toBe("cd '/srv/app' && npm run dev")
+  })
+
+  it('password hosts merge SSHPASS into a FULL environment (PATH must survive)', async () => {
+    // Password auth ships the secret via SSHPASS env — but the child still
+    // needs PATH to find sshpass/ssh at all (regression: env was replaced,
+    // not merged, so the spawn failed with ENOENT).
+    const added = addHost({ label: 'pw', host: 'plain.example.com', user: 'ops', auth: 'password', password: 'hunter2' })
+    if (!added.ok) throw new Error(added.error)
+    const res = await runShellCommand('uptime', '/srv', 10_000, { hostId: added.host.id })
+    expect(res.exitCode).toBe(0)
+    const last = spawned[spawned.length - 1]
+    expect(last.file).toBe('sshpass')
+    expect(JSON.stringify(last.args)).not.toContain('hunter2')
+    expect(last.opts?.env?.SSHPASS).toBe('hunter2')
+    expect(last.opts?.env?.PATH).toBe(process.env.PATH)
+    expect(res.host).toBe(added.host.id)
   })
 })

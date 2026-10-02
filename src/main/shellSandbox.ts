@@ -46,7 +46,11 @@ export function withSandboxPolicyFloor(requested: SandboxOptions, floor: ShellPo
     enabled: (requested.enabled !== false) || floor.sandbox,
     network: floor.network ? requested.network !== false : false,
     projectRoot: requested.projectRoot,
-    jailCwd: (requested.jailCwd !== false) || floor.jail
+    jailCwd: (requested.jailCwd !== false) || floor.jail,
+    // Pass-through: the remote target is not a policy knob — it is validated
+    // against ~/.pawn/ssh.json by the caller (resolveHost) and must survive
+    // the floor, or remote routing silently deactivates on the IPC path.
+    hostId: requested.hostId
   }
 }
 

@@ -108,6 +108,9 @@ export class BashSession {
   private onData: ((chunk: Buffer) => void) | null = null
   private settleCurrent: ((exitedUnexpectedly: boolean) => void) | null = null
 
+  /** Non-null when this session's bash runs on a remote host over ssh. */
+  private remoteHost: SshHost | null = null
+
   constructor(opts: { cwd: string; sandbox?: SandboxOptions; shell?: string }) {
     this.initialCwd = opts.cwd
     this._cwd = opts.cwd
@@ -148,11 +151,12 @@ export class BashSession {
     let spawnEnv: Record<string, string> = env
     let spawnCwd: string | undefined = this.initialCwd
     const host: SshHost | null = this.sandbox?.hostId ? resolveHost(this.sandbox.hostId) : null
+    this.remoteHost = host
     if (host) {
       // Remote session: a local ssh process whose channel carries the remote
       // bash. The sentinel protocol below is shell-agnostic, so it works over
       // the wire unchanged; killing the local process tears the channel down.
-      const plan = buildRemoteShellArgs(host)
+      const plan = buildRemoteShellArgs(host, this.initialCwd)
       file = plan.file
       args = plan.args
       if (plan.env) spawnEnv = { ...spawnEnv, ...plan.env }
@@ -550,9 +554,16 @@ export class BashSession {
 
       // Send the protocol line. Sourcing keeps state; </dev/null keeps the
       // command from consuming our stdin protocol stream.
-      const qf = shQuote(cmdFile)
+      // Remote sessions cannot source a LOCAL temp file (the path does not
+      // exist on the remote host), so the command ships base64-encoded over
+      // the wire and is decoded + eval'd in the remote shell — eval keeps the
+      // same shell context, so exports and $PWD tracking behave identically.
+      const b64 = Buffer.from(command, 'utf8').toString('base64')
+      const body = this.remoteHost
+        ? `eval "$(printf %s ${shQuote(b64)} | base64 -d)" < /dev/null`
+        : `. ${shQuote(cmdFile)} < /dev/null`
       const line =
-        `. ${qf} < /dev/null; __pawn_ec=$?; rm -f ${qf}; ` +
+        `${body}; __pawn_ec=$?;${this.remoteHost ? '' : ` rm -f ${shQuote(cmdFile)};`} ` +
         `printf '\\n${sentinelPrefix}%s_%s\\n' "$__pawn_ec" "$PWD"\n`
       try {
         proc.stdin.write(line)

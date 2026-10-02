@@ -127,8 +127,8 @@ describe('remote spawn builder', () => {
     const added = addHost(HOST_INPUT)
     if (!added.ok) throw new Error('host add failed')
     const host = resolveHost(added.host.id)!
-    const plan = buildRemoteShellArgs(host)
+    const plan = buildRemoteShellArgs(host, '/srv/app')
     expect(plan.file).toBe('ssh')
-    expect(plan.args[plan.args.length - 1]).toBe("exec bash --noprofile --norc")
+    expect(plan.args[plan.args.length - 1]).toBe("cd '/srv/app' && exec bash --noprofile --norc")
   })
 })
