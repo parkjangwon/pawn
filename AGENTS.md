@@ -1,6 +1,6 @@
 # PROJECT KNOWLEDGE BASE
 
-**Commit:** f6928ec · **Branch:** master · **Version:** 0.17.1
+**Commit:** b853b25 · **Branch:** master · **Version:** 0.18.0
 
 ## OVERVIEW
 Pawn is an Electron desktop AI coding agent (BYOK). The agent loop runs in the renderer. Every OS capability sits in the main process behind IPC. Stack: electron-vite 6 (beta), React 19, Zustand 5, better-sqlite3 13, Vitest 4, TypeScript strict, ESM (`"type": "module"`), Node ^20.19 || >=22.12.
