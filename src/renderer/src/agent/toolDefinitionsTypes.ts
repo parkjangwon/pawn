@@ -17,4 +17,6 @@ export interface ToolResult {
   content: string
   isError?: boolean
   diffData?: { oldText: string; newText: string; filename: string; path?: string }
+  /** SSH host id when the command executed remotely (see executionTarget). */
+  host?: string
 }

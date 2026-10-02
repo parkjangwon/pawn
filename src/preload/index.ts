@@ -287,6 +287,8 @@ const api = {
     addProject: (id: string, name: string, path: string) => ipcRenderer.invoke('db:addProject', id, name, path),
     updateProjectName: (id: string, name: string) => ipcRenderer.invoke('db:updateProjectName', id, name),
     updateProjectPaths: (id: string, paths: string) => ipcRenderer.invoke('db:updateProjectPaths', id, paths),
+    updateProjectExecutionTarget: (id: string, executionHost: string, remotePath: string) =>
+      ipcRenderer.invoke('db:updateProjectExecutionTarget', id, executionHost, remotePath),
     removeProject: (id: string) => ipcRenderer.invoke('db:removeProject', id),
     addSession: (id: string, projectId: string, title: string, path: string) => ipcRenderer.invoke('db:addSession', id, projectId, title, path),
     updateSessionTitle: (id: string, title: string) => ipcRenderer.invoke('db:updateSessionTitle', id, title),
@@ -710,6 +712,15 @@ const api = {
       ipcRenderer.on('telegram:event', handler)
       return () => ipcRenderer.removeListener('telegram:event', handler)
     }
+  },
+
+  /** SSH remote-execution hosts (Settings → Remote execution). Secrets stay in main. */
+  ssh: {
+    list: () => ipcRenderer.invoke('ssh:list'),
+    add: (input: { label?: string; host: string; user?: string; port?: number; identityFile?: string; auth?: 'key' | 'password'; password?: string }) =>
+      ipcRenderer.invoke('ssh:add', input),
+    remove: (hostId: string) => ipcRenderer.invoke('ssh:remove', hostId),
+    test: (hostId: string) => ipcRenderer.invoke('ssh:test', hostId)
   },
 
   /** Agent lifecycle hooks (Claude/Codex-compatible). */

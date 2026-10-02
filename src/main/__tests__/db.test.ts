@@ -9,7 +9,7 @@ vi.mock('../config', () => ({
   getPawnDir: () => dirHolder.dir
 }))
 
-import {
+import { updateProjectExecutionTarget,
   getDb, closeDb,
   addProject, getAllProjects, updateProjectName, updateProjectPaths, removeProject,
   addSession, getSessionsByProject, updateSessionTitle, updateSessionPath, removeSession,
@@ -55,6 +55,23 @@ describe('projects', () => {
 
     removeProject('proj-2')
     expect(getAllProjects()).toHaveLength(1)
+  })
+
+  it('stores and clears the execution target (migration + update)', () => {
+    addProject('proj-remote', 'Remote', '/local')
+    // Default: local.
+    const before = getAllProjects().find((p) => p.id === 'proj-remote')
+    expect(before?.executionHost).toBe('')
+    expect(before?.remotePath).toBe('')
+
+    updateProjectExecutionTarget('proj-remote', 'h1', '/srv/app')
+    const after = getAllProjects().find((p) => p.id === 'proj-remote')
+    expect(after?.executionHost).toBe('h1')
+    expect(after?.remotePath).toBe('/srv/app')
+
+    updateProjectExecutionTarget('proj-remote', '', '')
+    const cleared = getAllProjects().find((p) => p.id === 'proj-remote')
+    expect(cleared?.executionHost).toBe('')
   })
 })
 

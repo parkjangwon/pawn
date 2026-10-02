@@ -26,6 +26,7 @@ import { registerSkillsIpc } from './skills'
 import { registerDecisionIpc } from './decision'
 import { registerRecorderIpc } from './recorder'
 import { registerTelegramIpc } from './telegram'
+import { registerSshIpc } from './ssh'
 
 /** Register every main-process IPC handler in one place. */
 export function registerAllIpc(): void {
@@ -57,4 +58,5 @@ export function registerAllIpc(): void {
   registerDecisionIpc()
   registerRecorderIpc()
   registerTelegramIpc()
+  registerSshIpc()
 }

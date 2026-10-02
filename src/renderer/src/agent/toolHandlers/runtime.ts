@@ -6,6 +6,7 @@
  */
 
 import { resolveToolPath } from '../pathUtils'
+import { execFileFor } from '../executionTarget'
 import { useChangeLedger } from '../../stores/changeLedger'
 import { analyzeProcessOutput, formatAnalysis, markJobSeen, noteBrowserSeq } from '../runtimeWatch'
 import { findCheckpoint, listCheckpoints, markCheckpoint, planRestore } from '../checkpoints'
@@ -294,8 +295,8 @@ async function changedFiles(projectPath: string, ctx: ToolExecContext | undefine
     if (ctx?.sessionId && t.sessionId !== ctx.sessionId) continue
     for (const c of t.changes) if (c.status === 'applied' && c.path.startsWith(projectPath)) files.add(c.path)
   }
-  if (files.size === 0 && api.shell?.execFile) {
-    const r = await api.shell.execFile('git', ['diff', '--name-only', 'HEAD'], projectPath, 15_000).catch(() => null)
+  if (files.size === 0 && api.shell) {
+    const r = await execFileFor(ctx, api)('git', ['diff', '--name-only', 'HEAD'], projectPath, 15_000).catch(() => null)
     const out = r && typeof r === 'object' && 'stdout' in r ? String((r as { stdout?: string }).stdout || '') : ''
     for (const line of out.split('\n')) if (line.trim()) files.add(`${projectPath.replace(/\/$/, '')}/${line.trim()}`)
   }

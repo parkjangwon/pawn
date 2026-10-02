@@ -241,6 +241,14 @@ if (typeof window !== 'undefined' && !window.api) {
       askPermission: async () => ({ ok: true }),
       listen: async () => ({ ok: true, events: [] }),
       onEvent: () => () => {}
+    },
+
+    // Preview only: SSH hosts live in the desktop main process.
+    ssh: {
+      list: async () => ({ ok: true, hosts: [], sshpassAvailable: false }),
+      add: async () => ({ ok: false, error: 'desktop only' }),
+      remove: async () => ({ ok: false, error: 'desktop only' }),
+      test: async () => ({ ok: false })
     }
   }
 }

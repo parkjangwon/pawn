@@ -25,6 +25,8 @@ export interface ToolMeta {
   removed?: number
   /** Output size before truncation. */
   bytes?: number
+  /** SSH host id when the command executed remotely. */
+  host?: string
 }
 
 const TARGET_MAX = 160
@@ -98,6 +100,7 @@ export function buildToolMeta(call: ToolCall, result: ToolResult, durationMs?: n
   const target = primaryTarget(call.arguments)
   if (target) meta.target = target
   if (typeof result.content === 'string') meta.bytes = result.content.length
+  if (result.host) meta.host = result.host
   if (result.diffData && !result.isError) {
     meta.path = result.diffData.path || result.diffData.filename
     const { added, removed } = lineDelta(result.diffData.oldText || '', result.diffData.newText || '')

@@ -15,6 +15,7 @@ import { installSkillFromRepo } from '../skillInstaller'
 import { resolveToolPath } from '../pathUtils'
 import { usePlanStore } from '../../stores/plan'
 import { runProjectChecks } from '../runChecks'
+import { targetSandboxOpts } from '../executionTarget'
 import { searchCodebase } from '../codebaseSearch'
 import { listArtifacts, listArtifactsDir, writeArtifact, writeArtifactTo, defaultArtifactsDir } from '../artifacts'
 import { buildRepoMap } from '../repoMap'
@@ -140,7 +141,7 @@ const run_checks: ToolHandler = async (call, projectPath, _signal, ctx, api) => 
           : 'all') as 'all' | 'typecheck' | 'test' | 'lint' | 'build'
         const timeoutRaw = call.arguments.timeout !== undefined ? Number(call.arguments.timeout) : 120
         const timeout = Number.isFinite(timeoutRaw) && timeoutRaw > 0 ? timeoutRaw : 120
-        const text = await runProjectChecks(workDir, kind, timeout)
+        const text = await runProjectChecks(workDir, kind, timeout, targetSandboxOpts(ctx?.projectId))
         return { toolCallId: call.id, content: text }
       }
 

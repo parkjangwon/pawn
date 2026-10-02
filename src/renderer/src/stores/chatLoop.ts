@@ -45,6 +45,7 @@ import { learnFromCorrection } from '../agent/learning'
 import { generalWorkspaceDir } from '../utils/generalWorkspace'
 import { recordCommandCreatedFiles, takeFileBaseline } from '../agent/commandFiles'
 import { runProjectChecks } from '../agent/runChecks'
+import { targetSandboxOpts } from '../agent/executionTarget'
 import { loadProjectContext, buildProjectContextBlock } from '../agent/skills'
 import {
   route, estimateComplexity, shouldEscalate, setSessionRoute,
@@ -811,7 +812,7 @@ export async function agentLoop(
         if (canAuto && gateKind) {
           autoVerifyDone = true
           try {
-            const checkText = await runProjectChecks(toolCwd, gateKind, 90)
+            const checkText = await runProjectChecks(toolCwd, gateKind, 90, targetSandboxOpts(projectId))
             const noCmd =
               /No command for kind=|No standard check commands detected/i.test(checkText)
             if (!noCmd) {

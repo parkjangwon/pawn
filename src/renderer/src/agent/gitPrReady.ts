@@ -2,9 +2,16 @@
  * Local git "ready for PR" pack: branch, remote, status, log, diff stat, checklist.
  */
 
-export async function gitPrReady(projectPath: string, baseBranch?: string): Promise<string> {
+export async function gitPrReady(
+  projectPath: string,
+  baseBranch?: string,
+  execFileImpl?: (file: string, args: string[], cwd?: string, timeoutMs?: number) => Promise<{ stdout: string; stderr: string; exitCode: number }>
+): Promise<string> {
   const cwd = projectPath
-  const exec = (args: string[]) => window.api.shell.execFile('git', args, cwd, 30_000)
+  const exec = (args: string[]) =>
+    (execFileImpl
+      ? execFileImpl('git', args, cwd, 30_000)
+      : window.api.shell.execFile('git', args, cwd, 30_000)) as Promise<{ stdout: string; stderr: string; exitCode: number }>
 
   const [branch, status, remote, upstream, log, diffStat, revList] = await Promise.all([
     exec(['rev-parse', '--abbrev-ref', 'HEAD']),

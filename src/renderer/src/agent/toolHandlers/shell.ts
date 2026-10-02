@@ -1,6 +1,8 @@
 import { resolveToolPath } from '../pathUtils'
+import { getProjectTarget } from '../executionTarget'
 import { useProviderStore } from '../../stores/provider'
 import type { ToolHandler } from './types'
+import type { ToolExecContext } from './types'
 import { analyzeProcessOutput, formatAnalysis, markJobSeen, watchJob } from '../runtimeWatch'
 
 
@@ -11,8 +13,8 @@ import { analyzeProcessOutput, formatAnalysis, markJobSeen, watchJob } from '../
 export function shellSandboxFor(
   args: Record<string, unknown>,
   projectPath: string | undefined,
-  ctx?: { sessionId?: string }
-): { enabled: boolean; network: boolean; projectRoot?: string; jailCwd: boolean; sessionId?: string } {
+  ctx?: ToolExecContext
+): { enabled: boolean; network: boolean; projectRoot?: string; jailCwd: boolean; sessionId?: string; hostId?: string } {
   const prefs = useProviderStore.getState()
   const prefSandbox = prefs.shellSandbox !== false
   const prefNetwork = prefs.shellNetwork !== false
@@ -21,7 +23,8 @@ export function shellSandboxFor(
     network: prefNetwork ? args.network !== false : false,
     projectRoot: projectPath,
     jailCwd: prefs.shellCwdJail !== false,
-    sessionId: ctx?.sessionId
+    sessionId: ctx?.sessionId,
+    hostId: getProjectTarget(ctx?.projectId).hostId
   }
 }
 
@@ -94,6 +97,7 @@ const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
         return {
           toolCallId: call.id,
           content: output || `(exit code: ${result.exitCode})`,
+          host: result.host,
           isError: result.exitCode !== 0 || Boolean(result.killed)
         }
       }

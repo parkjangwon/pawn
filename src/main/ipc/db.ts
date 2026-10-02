@@ -1,5 +1,6 @@
 import { ipcMain } from 'electron'
 import { handleTrusted } from './trust'
+import * as ssh from '../ssh'
 import * as db from '../db'
 
 export function registerDbIpc(): void {
@@ -17,6 +18,15 @@ export function registerDbIpc(): void {
   handleTrusted('db:updateProjectPaths', async (_, id, paths) => {
     if (typeof id !== 'string') return { ok: false, error: 'Invalid id' }
     db.updateProjectPaths(id, typeof paths === 'string' ? paths : '[]')
+    return { ok: true }
+  })
+  handleTrusted('db:updateProjectExecutionTarget', async (_, id, executionHost, remotePath) => {
+    if (typeof id !== 'string') return { ok: false, error: 'Invalid id' }
+    const host = typeof executionHost === 'string' ? executionHost : ''
+    const path = typeof remotePath === 'string' ? remotePath : ''
+    // Only configured SSH hosts are accepted — '' means local.
+    if (host && !ssh.resolveHost(host)) return { ok: false, error: 'Unknown SSH host' }
+    db.updateProjectExecutionTarget(id, host, path)
     return { ok: true }
   })
   handleTrusted('db:removeProject', async (_, id) => {

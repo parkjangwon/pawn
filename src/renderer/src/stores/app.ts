@@ -32,6 +32,10 @@ export interface Project {
   id: string
   name: string
   paths: string[]
+  /** '' = execute locally; else an SSH host id from Settings → Remote execution. */
+  executionHost?: string
+  /** Repo path on the remote host, used as the tools' projectPath. */
+  remotePath?: string
   sessions: Session[]
 }
 
@@ -49,6 +53,7 @@ interface AppState {
   setActiveProject: (id: string) => void
   updateProjectName: (projectId: string, name: string) => void
   updateProjectPaths: (projectId: string, paths: string[]) => void
+  setProjectExecutionTarget: (projectId: string, executionHost: string, remotePath: string) => void
   addSession: (projectId: string, title?: string, opts?: { focus?: boolean }) => string
   /** Ensure the hidden “no project” bucket exists; returns its id (`__general__`). */
   ensureGeneralProject: () => string
@@ -127,7 +132,14 @@ export const useAppStore = create<AppState>((set, get) => ({
           createdAt: (s.createdAt as number) || Date.now(),
           messages: []
         })) as Session[]
-        return { id: p.id as string, name: p.name as string, paths, sessions }
+        return {
+          id: p.id as string,
+          name: p.name as string,
+          paths,
+          executionHost: (p.executionHost as string) || '',
+          remotePath: (p.remotePath as string) || '',
+          sessions
+        }
       }) as Project[]
       set({ projects, initialized: true })
     } catch {
@@ -174,6 +186,17 @@ export const useAppStore = create<AppState>((set, get) => ({
       projects: s.projects.map((p) => p.id === projectId ? { ...p, paths } : p)
     }))
     window.api.db.updateProjectPaths(projectId, JSON.stringify(paths)).catch(() => {})
+  },
+
+  setProjectExecutionTarget: (projectId, executionHost, remotePath) => {
+    set((s) => ({
+      projects: s.projects.map((p) =>
+        p.id === projectId ? { ...p, executionHost, remotePath } : p
+      )
+    }))
+    window.api.db
+      .updateProjectExecutionTarget(projectId, executionHost, remotePath)
+      .catch(() => {})
   },
 
   addSession: (projectId, title, opts) => {

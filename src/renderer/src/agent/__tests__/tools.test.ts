@@ -367,7 +367,8 @@ describe('search tools', () => {
     const result = await executeTool(call('git_status'), '/p')
     expect(result.content).toContain('branch: main')
     expect(result.content).toContain('M src/a.ts')
-    expect(shellMock.execFile).toHaveBeenCalledWith('git', expect.any(Array), '/p', expect.any(Number))
+    // git tools call execFile via execFileFor (5 args incl. sandboxOpts)
+    expect(shellMock.execFile).toHaveBeenCalledWith('git', expect.any(Array), '/p', expect.any(Number), undefined)
   })
 
   it('presses computer keys (legacy per-action IPC when exec is unavailable)', async () => {

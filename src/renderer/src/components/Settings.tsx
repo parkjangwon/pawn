@@ -12,6 +12,7 @@ import UsageSettingsPanel from './UsageSettingsPanel'
 import PluginsSettingsPanel from './PluginsSettingsPanel'
 import SkillStorePanel from './SkillStorePanel'
 import TelegramSettingsPanel from './TelegramSettingsPanel'
+import RemoteSettingsPanel from './RemoteSettingsPanel'
 import McpSettingsPanel from './McpSettingsPanel'
 import ConnectionsSettingsPanel from './ConnectionsSettingsPanel'
 import SystemSettingsPanel from './SystemSettingsPanel'
@@ -235,6 +236,7 @@ export default function Settings({
         {activeSection === 'mcp' && <McpSettingsPanel state={state} />}
         {activeSection === 'connections' && <ConnectionsSettingsPanel state={state} />}
         {activeSection === 'telegram' && <TelegramSettingsPanel />}
+        {activeSection === 'remote' && <RemoteSettingsPanel />}
         {activeSection === 'system' && <SystemSettingsPanel state={state} />}
         {activeSection === 'shortcuts' && <ShortcutsSettingsPanel state={state} />}
         {activeSection === 'data' && <DataSettingsPanel state={state} />}

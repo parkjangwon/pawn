@@ -91,6 +91,7 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
             {target}
           </span>
         )}
+        {meta?.host && <span className="tool-host" title={`Runs on ${meta.host}`}>{meta.host}</span>}
         {hasLineStats && (
           <span className="tool-line-stats" aria-label={t('toolMessage.lineStats', { added: meta?.added ?? 0, removed: meta?.removed ?? 0 })}>
             {(meta?.added ?? 0) > 0 && <span className="tool-added">+{meta?.added}</span>}

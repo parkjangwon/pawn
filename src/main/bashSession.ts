@@ -32,6 +32,7 @@ import {
   macNetworkOffProfile,
   type SandboxOptions
 } from './shellSandbox'
+import { buildRemoteShellArgs, resolveHost, type SshHost } from './ssh'
 
 export interface BashRunOptions {
   /** Per-command wall-clock timeout. Default 120000ms, clamped to 1000..600000. */
@@ -144,7 +145,19 @@ export class BashSession {
 
     let file: string
     let args: string[]
-    if (sandboxEnabled && networkOff && process.platform === 'darwin') {
+    let spawnEnv: Record<string, string> = env
+    let spawnCwd: string | undefined = this.initialCwd
+    const host: SshHost | null = this.sandbox?.hostId ? resolveHost(this.sandbox.hostId) : null
+    if (host) {
+      // Remote session: a local ssh process whose channel carries the remote
+      // bash. The sentinel protocol below is shell-agnostic, so it works over
+      // the wire unchanged; killing the local process tears the channel down.
+      const plan = buildRemoteShellArgs(host)
+      file = plan.file
+      args = plan.args
+      if (plan.env) spawnEnv = { ...spawnEnv, ...plan.env }
+      spawnCwd = undefined
+    } else if (sandboxEnabled && networkOff && process.platform === 'darwin') {
       file = '/usr/bin/sandbox-exec'
       args = ['-p', macNetworkOffProfile(), this.shellPath, ...bashArgs]
     } else {
@@ -153,8 +166,8 @@ export class BashSession {
     }
 
     const proc = spawn(file, args, {
-      cwd: this.initialCwd,
-      env,
+      cwd: spawnCwd,
+      env: spawnEnv,
       detached: true, // own process group => can kill the whole tree
       stdio: ['pipe', 'pipe', 'pipe']
     }) as ChildProcessWithoutNullStreams

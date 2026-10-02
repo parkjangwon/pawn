@@ -1,4 +1,5 @@
 import { checkPermission } from './toolPermission'
+import { getProjectTarget, isLocalOnlyTool } from './executionTarget'
 import { fireHook } from './hooksClient'
 import { isMcpToolName, callMcpTool } from './mcp'
 import type { ToolCall, ToolResult } from './toolDefinitionsTypes'
@@ -34,6 +35,20 @@ export async function executeTool(
 
   if (signal?.aborted) {
     return { toolCallId: call.id, content: 'Tool was not executed (run aborted).', isError: true }
+  }
+
+  // Remote execution target: refuse tools that would silently touch the wrong
+  // machine, and point every allowed tool at the remote repo path.
+  const target = getProjectTarget(ctx?.projectId)
+  if (target.hostId) {
+    if (isLocalOnlyTool(call.name)) {
+      return {
+        toolCallId: call.id,
+        content: `This project executes on host "${target.hostLabel || target.hostId}". Local file/debug tools would touch the wrong machine — use shell tools (cat, tee, sed) instead.`,
+        isError: true
+      }
+    }
+    if (projectPath && target.remotePath) projectPath = target.remotePath
   }
 
   if (call.arguments && call.arguments.__parse_error === true) {

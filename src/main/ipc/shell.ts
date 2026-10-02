@@ -2,6 +2,8 @@ import { homedir } from 'os'
 import { handleTrusted } from './trust'
 import { spawn, type ChildProcess } from 'child_process'
 import {
+  checkDangerousCommand,
+  jailCwd,
   planExecFile,
   planShellSpawn,
   withSandboxPolicyFloor,
@@ -9,6 +11,7 @@ import {
 } from '../shellSandbox'
 import { getBashSessionManager } from '../bashSession'
 import { shellPolicyFloor } from '../config'
+import { buildRemoteSpawn, resolveHost, shq } from '../ssh'
 
 /** Agent-controlled timeout: 5s..5min, default 30s. */
 function clampTimeout(timeoutMs: unknown): number {
@@ -23,6 +26,31 @@ function clampTimeout(timeoutMs: unknown): number {
  */
 function withPolicyFloor(requested: SandboxOptions): SandboxOptions {
   return withSandboxPolicyFloor(requested, shellPolicyFloor())
+}
+
+type RemotePlan =
+  | { kind: 'local' }
+  | { kind: 'remote'; file: string; args: string[]; env?: Record<string, string>; hostId: string; hostLabel: string }
+  | { kind: 'error'; error: string }
+
+/**
+ * Route a command to the project's SSH host when one is requested. The host
+ * must be configured in ~/.pawn/ssh.json (main is the source of truth); the
+ * dangerous-command denylist and the cwd jail still run before anything ships.
+ */
+function remotePlanFor(command: string, cwd: string | undefined, sandbox: SandboxOptions): RemotePlan {
+  const hostId = sandbox.hostId
+  if (!hostId) return { kind: 'local' }
+  const host = resolveHost(hostId)
+  if (!host) return { kind: 'error', error: 'Unknown SSH execution host. Configure it in Settings → Remote execution.' }
+  const danger = checkDangerousCommand(command)
+  if (danger) return { kind: 'error', error: danger }
+  if (sandbox.jailCwd !== false && sandbox.projectRoot) {
+    const j = jailCwd(cwd, sandbox.projectRoot)
+    if (!j.ok) return { kind: 'error', error: j.error }
+  }
+  const plan = buildRemoteSpawn(host, command, { cwd: cwd || undefined })
+  return { kind: 'remote', file: plan.file, args: plan.args, env: plan.env, hostId: host.id, hostLabel: host.label }
 }
 
 interface ExecError {
@@ -207,13 +235,24 @@ function runSpawned(
   })
 }
 
-function runShellCommand(
+export function runShellCommand(
   command: string,
   cwd: string | undefined,
   timeoutMs: number,
   sandbox: SandboxOptions = {},
   sessionId?: string
-): Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean; sandboxNote?: string }> {
+): Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean; sandboxNote?: string; host?: string }> {
+  const remote = remotePlanFor(command, cwd, sandbox)
+  if (remote.kind === 'error') {
+    return Promise.resolve({ stdout: '', stderr: remote.error, exitCode: 126, killed: false, sandboxNote: 'blocked' })
+  }
+  if (remote.kind === 'remote') {
+    return runSpawned(remote.file, remote.args, undefined, timeoutMs, remote.env, sessionId).then((r) => ({
+      ...r,
+      host: remote.hostId,
+      sandboxNote: `remote=${remote.hostLabel}`
+    }))
+  }
   const planned = planShellSpawn(command, cwd, sandbox)
   if (!planned.ok) {
     return Promise.resolve({
@@ -234,7 +273,7 @@ function runShellCommand(
   ).then((r) => ({ ...r, sandboxNote: planned.plan.sandboxNote }))
 }
 
-function startBackgroundJob(
+export function startBackgroundJob(
   command: string,
   cwd: string | undefined,
   sandbox: SandboxOptions = {},
@@ -245,20 +284,29 @@ function startBackgroundJob(
   if (running >= MAX_BG_JOBS) {
     return { jobId: '', error: `Too many background jobs (max ${MAX_BG_JOBS}). Kill finished ones first.` }
   }
+  const remote = remotePlanFor(command, cwd, sandbox)
+  if (remote.kind === 'error') {
+    return { jobId: '', error: remote.error }
+  }
   const planned = planShellSpawn(command, cwd, sandbox)
   if (!planned.ok) {
     return { jobId: '', error: planned.error }
   }
   const isWin = process.platform === 'win32'
+  const useRemote = remote.kind === 'remote'
   let child: ChildProcess
   try {
-    child = spawn(planned.plan.file, planned.plan.args, {
-      cwd: planned.plan.cwd || undefined,
-      env: planned.plan.env,
-      detached: !isWin,
-      windowsHide: true,
-      stdio: ['ignore', 'pipe', 'pipe']
-    })
+    child = spawn(
+      useRemote ? remote.file : planned.plan.file,
+      useRemote ? remote.args : planned.plan.args,
+      {
+        cwd: useRemote ? undefined : planned.plan.cwd || undefined,
+        env: useRemote && remote.env ? { ...process.env, ...remote.env } : planned.plan.env,
+        detached: !isWin,
+        windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe']
+      }
+    )
   } catch (err) {
     return { jobId: '', error: err instanceof Error ? err.message : String(err) }
   }
@@ -320,7 +368,9 @@ function parseSandboxOpts(raw: unknown): SandboxOptions {
     network: o.network !== false,
     projectRoot: typeof o.projectRoot === 'string' ? o.projectRoot : undefined,
     // Renderer may opt out of cwd jail; default remains on when projectRoot set.
-    jailCwd: o.jailCwd !== false && o.jail_cwd !== false
+    jailCwd: o.jailCwd !== false && o.jail_cwd !== false,
+    // Remote execution target — validated against ~/.pawn/ssh.json in main.
+    hostId: typeof o.hostId === 'string' && o.hostId ? o.hostId : undefined
   }
 }
 
@@ -384,12 +434,17 @@ export function registerShellIpc(): void {
         ? args.filter((a): a is string => typeof a === 'string')
         : []
       try {
-        const planned = planExecFile(
-          file,
-          argList,
-          typeof cwd === 'string' && cwd.length > 0 ? cwd : undefined,
-          withPolicyFloor(parseSandboxOpts(sandboxOpts ?? { enabled: true, network: true }))
-        )
+        const sandbox = withPolicyFloor(parseSandboxOpts(sandboxOpts ?? { enabled: true, network: true }))
+        const workCwd = typeof cwd === 'string' && cwd.length > 0 ? cwd : undefined
+        const remote = remotePlanFor([file, ...argList].map((a) => shq(a)).join(' '), workCwd, sandbox)
+        if (remote.kind === 'error') {
+          return { stdout: '', stderr: remote.error, exitCode: 126 }
+        }
+        if (remote.kind === 'remote') {
+          const r = await runSpawned(remote.file, remote.args, undefined, clampTimeout(timeoutMs), remote.env, sessionIdFromOpts(sandboxOpts))
+          return { ...r, host: remote.hostId }
+        }
+        const planned = planExecFile(file, argList, workCwd, sandbox)
         if (!planned.ok) {
           return { stdout: '', stderr: planned.error, exitCode: 126 }
         }

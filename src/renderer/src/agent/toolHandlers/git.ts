@@ -1,4 +1,5 @@
 import { resolveToolPath } from '../pathUtils'
+import { execFileFor } from '../executionTarget'
 import { gitPrReady } from '../gitPrReady'
 import {
   gitAdd,
@@ -8,6 +9,12 @@ import {
   gitStash
 } from '../gitWrite'
 import type { ToolHandler } from './types'
+
+
+/** git execFile bound to the project's execution target (ssh host when set). */
+function gitExec(ctx: Parameters<typeof execFileFor>[0], api: typeof window.api) {
+  return execFileFor(ctx, api)
+}
 
 function workDirOf(
   call: { arguments: Record<string, unknown> },
@@ -37,7 +44,7 @@ const git_log: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
     return { toolCallId: call.id, content: 'No project path set', isError: true }
   }
   const limit = Math.min(50, Math.max(1, Number(call.arguments.limit) || 15))
-  const result = await api.shell.execFile(
+  const result = await gitExec(_ctx, api)(
     'git',
     ['log', `-n${limit}`, '--oneline', '--decorate'],
     workDir,
@@ -53,14 +60,14 @@ const git_log: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
   return { toolCallId: call.id, content: result.stdout.trim() || '(no commits)' }
 }
 
-const git_status: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
+const git_status: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
   const workDir = workDirOf(call, projectPath)
   if (!workDir) {
     return { toolCallId: call.id, content: 'No project path set', isError: true }
   }
   const [branch, status] = await Promise.all([
-    api.shell.execFile('git', ['rev-parse', '--abbrev-ref', 'HEAD'], workDir, 15_000),
-    api.shell.execFile('git', ['status', '--short', '--branch'], workDir, 15_000)
+    gitExec(ctx, api)('git', ['rev-parse', '--abbrev-ref', 'HEAD'], workDir, 15_000),
+    gitExec(ctx, api)('git', ['status', '--short', '--branch'], workDir, 15_000)
   ])
   if (status.exitCode !== 0 && branch.exitCode !== 0) {
     return {
@@ -76,7 +83,7 @@ const git_status: ToolHandler = async (call, projectPath, _signal, _ctx, api) =>
   return { toolCallId: call.id, content: lines.join('\n') }
 }
 
-const git_diff: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
+const git_diff: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
   const workDir = workDirOf(call, projectPath)
   if (!workDir) {
     return { toolCallId: call.id, content: 'No project path set', isError: true }
@@ -89,7 +96,7 @@ const git_diff: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
     ? ['diff', '--cached', '--no-color']
     : ['diff', 'HEAD', '--no-color']
   const args = pathArg ? [...argsBase, '--', pathArg] : argsBase
-  const result = await api.shell.execFile('git', args, workDir, 30_000)
+  const result = await gitExec(ctx, api)('git', args, workDir, 30_000)
   if (result.exitCode !== 0 && !result.stdout) {
     return {
       toolCallId: call.id,
@@ -108,7 +115,7 @@ const git_diff: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
   }
 }
 
-const git_add: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
+const git_add: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
   const workDir = workDirOf(call, projectPath)
   if (!workDir) {
     return { toolCallId: call.id, content: 'No project path set', isError: true }
@@ -124,16 +131,16 @@ const git_add: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
       isError: true
     }
   }
-  const res = await gitAdd(api.shell.execFile.bind(api.shell), workDir, all ? 'all' : paths)
+  const res = await gitAdd(gitExec(ctx, api), workDir, all ? 'all' : paths)
   return { toolCallId: call.id, content: res.text, isError: !res.ok }
 }
 
-const git_commit: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
+const git_commit: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
   const workDir = workDirOf(call, projectPath)
   if (!workDir) {
     return { toolCallId: call.id, content: 'No project path set', isError: true }
   }
-  const res = await gitCommit(api.shell.execFile.bind(api.shell), workDir, {
+  const res = await gitCommit(gitExec(ctx, api), workDir, {
     message: String(call.arguments.message || ''),
     allowEmpty: Boolean(call.arguments.allow_empty),
     noVerify: Boolean(call.arguments.no_verify)
@@ -141,12 +148,12 @@ const git_commit: ToolHandler = async (call, projectPath, _signal, _ctx, api) =>
   return { toolCallId: call.id, content: res.text, isError: !res.ok }
 }
 
-const git_push: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
+const git_push: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
   const workDir = workDirOf(call, projectPath)
   if (!workDir) {
     return { toolCallId: call.id, content: 'No project path set', isError: true }
   }
-  const res = await gitPush(api.shell.execFile.bind(api.shell), workDir, {
+  const res = await gitPush(gitExec(ctx, api), workDir, {
     remote: call.arguments.remote ? String(call.arguments.remote) : undefined,
     branch: call.arguments.branch ? String(call.arguments.branch) : undefined,
     setUpstream: call.arguments.set_upstream !== false,
@@ -155,12 +162,12 @@ const git_push: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
   return { toolCallId: call.id, content: res.text, isError: !res.ok }
 }
 
-const git_branch: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
+const git_branch: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
   const workDir = workDirOf(call, projectPath)
   if (!workDir) {
     return { toolCallId: call.id, content: 'No project path set', isError: true }
   }
-  const res = await gitBranchOp(api.shell.execFile.bind(api.shell), workDir, {
+  const res = await gitBranchOp(gitExec(ctx, api), workDir, {
     name: call.arguments.name ? String(call.arguments.name) : undefined,
     create: Boolean(call.arguments.create),
     delete: Boolean(call.arguments.delete),
@@ -169,7 +176,7 @@ const git_branch: ToolHandler = async (call, projectPath, _signal, _ctx, api) =>
   return { toolCallId: call.id, content: res.text, isError: !res.ok }
 }
 
-const git_stash: ToolHandler = async (call, projectPath, _signal, _ctx, api) => {
+const git_stash: ToolHandler = async (call, projectPath, _signal, ctx, api) => {
   const workDir = workDirOf(call, projectPath)
   if (!workDir) {
     return { toolCallId: call.id, content: 'No project path set', isError: true }
@@ -178,7 +185,7 @@ const git_stash: ToolHandler = async (call, projectPath, _signal, _ctx, api) => 
   const action = (['push', 'pop', 'list', 'drop'].includes(actionRaw)
     ? actionRaw
     : 'push') as 'push' | 'pop' | 'list' | 'drop'
-  const res = await gitStash(api.shell.execFile.bind(api.shell), workDir, {
+  const res = await gitStash(gitExec(ctx, api), workDir, {
     action,
     message: call.arguments.message ? String(call.arguments.message) : undefined
   })

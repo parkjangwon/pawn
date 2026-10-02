@@ -18,6 +18,7 @@ export type SettingsSection =
   | 'mcp'
   | 'connections'
   | 'telegram'
+  | 'remote'
   | 'system'
   | 'shortcuts'
   | 'data'
@@ -66,6 +67,7 @@ export const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string
   { id: 'mcp', labelKey: 'settings.mcp', groupKey: 'settings.groups.integration', icon: 'M20 7H4a2 2 0 00-2 2v1a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM6 11h.01M20 15H4a2 2 0 00-2 2v1a2 2 0 002 2h16a2 2 0 002-2v-1a2 2 0 00-2-2zM6 19h.01' },
   { id: 'connections', labelKey: 'settings.connections', groupKey: 'settings.groups.integration', icon: 'M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1' },
   { id: 'telegram', labelKey: 'settings.telegram', groupKey: 'settings.groups.integration', searchKey: 'settings.telegramSection.search', icon: 'M22 2L11 13M22 2l-7 20-4-9-9-4 20-7' },
+  { id: 'remote', labelKey: 'settings.remote', groupKey: 'settings.groups.integration', icon: 'M5 12h14M12 5l7 7-7 7' },
   { id: 'system', labelKey: 'settings.system', groupKey: 'settings.groups.system', icon: 'M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z' },
   { id: 'shortcuts', labelKey: 'settings.shortcuts', groupKey: 'settings.groups.system', icon: 'M20 4H4a2 2 0 00-2 2v12a2 2 0 002 2h16a2 2 0 002-2V6a2 2 0 00-2-2zM7 8h10M7 12h4' },
   { id: 'data', labelKey: 'settings.data', groupKey: 'settings.groups.general', icon: 'M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4' },

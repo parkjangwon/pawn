@@ -56,6 +56,15 @@ function migrateSchema(db: Database.Database): void {
     // Wall-clock time the agent spent on the turn that ended with this message.
     db.exec('ALTER TABLE messages ADD COLUMN duration_ms INTEGER NOT NULL DEFAULT 0')
   }
+  // Per-project execution target: '' = local, else an id from ~/.pawn/ssh.json.
+  const projectCols = db.prepare('PRAGMA table_info(projects)').all() as Array<{ name: string }>
+  const pnames = new Set(projectCols.map((c) => c.name))
+  if (!pnames.has('execution_host')) {
+    db.exec("ALTER TABLE projects ADD COLUMN execution_host TEXT NOT NULL DEFAULT ''")
+  }
+  if (!pnames.has('remote_path')) {
+    db.exec("ALTER TABLE projects ADD COLUMN remote_path TEXT NOT NULL DEFAULT ''")
+  }
   db.exec(`
     CREATE TABLE IF NOT EXISTS session_plans (
       session_id TEXT PRIMARY KEY,
@@ -187,8 +196,10 @@ function initSchema(db: Database.Database): void {
 
 // --- Projects ---
 
-export function getAllProjects(): Array<{ id: string; name: string; path: string; createdAt: number }> {
-  return getDb().prepare('SELECT id, name, path, created_at as createdAt FROM projects ORDER BY created_at').all() as never[]
+export function getAllProjects(): Array<{ id: string; name: string; path: string; executionHost: string; remotePath: string; createdAt: number }> {
+  return getDb()
+    .prepare('SELECT id, name, path, execution_host as executionHost, remote_path as remotePath, created_at as createdAt FROM projects ORDER BY created_at')
+    .all() as never[]
 }
 
 export function addProject(id: string, name: string, path: string): void {
@@ -201,6 +212,10 @@ export function updateProjectName(id: string, name: string): void {
 
 export function updateProjectPaths(id: string, paths: string): void {
   getDb().prepare('UPDATE projects SET path = ? WHERE id = ?').run(paths, id)
+}
+
+export function updateProjectExecutionTarget(id: string, executionHost: string, remotePath: string): void {
+  getDb().prepare('UPDATE projects SET execution_host = ?, remote_path = ? WHERE id = ?').run(executionHost, remotePath, id)
 }
 
 export function removeProject(id: string): void {
@@ -585,7 +600,7 @@ export function getUsageSummary(sinceEpochSeconds: number): Array<{
 // Messages are NOT included here; they are loaded lazily per session via db:getMessages.
 
 export function loadFullState(): {
-  projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number }> }>
+  projects: Array<{ id: string; name: string; path: string; executionHost: string; remotePath: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number }> }>
 } {
   const projects = getAllProjects()
   const allSessions = getDb()

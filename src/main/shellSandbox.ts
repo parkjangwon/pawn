@@ -19,6 +19,12 @@ export type SandboxOptions = {
   projectRoot?: string
   /** When true (default if projectRoot set), refuse cwd outside project root. */
   jailCwd?: boolean
+  /**
+   * Remote execution target (an id from ~/.pawn/ssh.json). When set, the caller
+   * replaces the local spawn with an ssh channel; the host must be validated
+   * with resolveHost() in the main process before anything runs.
+   */
+  hostId?: string
 }
 
 export interface ShellPolicyFloor {

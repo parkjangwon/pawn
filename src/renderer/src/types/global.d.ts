@@ -18,6 +18,18 @@ declare global {
     installs: number
   }
 
+  interface SshHostDto {
+    id: string
+    label: string
+    host: string
+    user?: string
+    port?: number
+    identityFile?: string
+    auth: 'key' | 'password'
+    hasPassword: boolean
+    createdAt: number
+  }
+
   interface TelegramAllowDto {
     userId: string
     username?: string
@@ -449,6 +461,7 @@ declare global {
             network?: boolean
             projectRoot?: string
             jailCwd?: boolean
+            hostId?: string
           }
         ) => Promise<{
           stdout: string
@@ -456,6 +469,7 @@ declare global {
           exitCode: number
           killed?: boolean
           sandboxNote?: string
+          host?: string
         }>
         execFile: (
           file: string,
@@ -467,8 +481,9 @@ declare global {
             network?: boolean
             projectRoot?: string
             jailCwd?: boolean
+            hostId?: string
           }
-        ) => Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean }>
+        ) => Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean; host?: string }>
         start: (
           command: string,
           cwd?: string,
@@ -755,6 +770,7 @@ declare global {
         addProject: (id: string, name: string, path: string) => Promise<{ ok?: boolean }>
         updateProjectName: (id: string, name: string) => Promise<{ ok?: boolean }>
         updateProjectPaths: (id: string, paths: string) => Promise<{ ok?: boolean }>
+        updateProjectExecutionTarget: (id: string, executionHost: string, remotePath: string) => Promise<{ ok?: boolean; error?: string }>
         removeProject: (id: string) => Promise<{ ok?: boolean }>
         addSession: (id: string, projectId: string, title: string, path: string) => Promise<{ ok?: boolean }>
         updateSessionTitle: (id: string, title: string) => Promise<{ ok?: boolean }>
@@ -1307,6 +1323,35 @@ declare global {
       profile?: {
         get: (root: string) => Promise<{ ok: boolean; error?: string; json: string | null }>
         save: (root: string, json: string) => Promise<{ ok: boolean; error?: string }>
+      }
+      /** SSH remote-execution hosts. Secrets stay in the main process. */
+      ssh?: {
+        list: () => Promise<{
+          ok: boolean
+          hosts: Array<{
+            id: string
+            label: string
+            host: string
+            user?: string
+            port?: number
+            identityFile?: string
+            auth: 'key' | 'password'
+            hasPassword: boolean
+            createdAt: number
+          }>
+          sshpassAvailable: boolean
+        }>
+        add: (input: {
+          label?: string
+          host: string
+          user?: string
+          port?: number
+          identityFile?: string
+          auth?: 'key' | 'password'
+          password?: string
+        }) => Promise<{ ok: boolean; host?: SshHostDto; error?: string }>
+        remove: (hostId: string) => Promise<{ ok: boolean; error?: string }>
+        test: (hostId: string) => Promise<{ ok: boolean; result?: { ok: boolean; error?: string; uname?: string } }>
       }
       /** Telegram bot. Token stays in the main process. */
       telegram?: {

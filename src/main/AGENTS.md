@@ -18,7 +18,7 @@ ipc/             handleTrusted handlers (own AGENTS.md)
 connections/     github, gitlab, google, codecommit: client + *Tools.ts each
 computer/        service.ts entry; spawns native pawn-cua on macOS, xdotool/PowerShell elsewhere
 codeIndex/       BM25 + hashed embeddings, JSON cache (CACHE_VERSION)
-debug/ lsp/ kiro/ decision/ memory/ recorder/ research/ hooks/ telegram/
+debug/ lsp/ kiro/ decision/ memory/ recorder/ research/ hooks/ telegram/ ssh/
 __tests__/       35 flat tests; some domains also keep a local __tests__/
 ```
 

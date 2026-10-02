@@ -193,7 +193,19 @@ Settings → Telegram. A private bot controls this desktop agent from a direct m
 
 Code: `src/main/telegram/*`, `src/main/ipc/telegram.ts`, `src/renderer/src/stores/telegramBridge.ts`.
 
-## 12. Computer use
+## 12. Remote execution (SSH)
+
+Settings → Remote execution. A project can run its commands on another machine you reach with SSH — Tailscale MagicDNS hostnames work as plain hostnames. The agent loop, your API keys, and this app stay on this computer; only tool execution ships over an ssh channel.
+
+- Add hosts in Settings (label, user@host, port, optional identity file). Password auth is supported through the `sshpass` helper; the password is sealed with the OS keychain and never crosses IPC. Host keys are trusted on first use (`accept-new`).
+- Pick the execution target per project plus the absolute repo path on that host. Shell tools, git, run checks, persistent bash sessions, and background jobs run there. The tool row shows a host chip when a command ran remotely.
+- Local-only tools (read/write/edit_file, text_editor, apply_patch, grep/semantic/codebase_search, LSP, debugger, worktrees) are refused on remote projects — use shell tools (`cat`, `tee`, `sed`) instead. This is deliberate: they would silently touch the wrong machine.
+- The host list is the main process's source of truth: execution requests only honor configured host ids, and the dangerous-command denylist still applies before anything ships over ssh.
+- Abort and timeout kill the local ssh process, which tears the channel down (the remote command receives SIGHUP). ControlMaster multiplexes connections per user@host:port for speed.
+
+Code: `src/main/ssh.ts`, `src/main/ipc/ssh.ts`, `src/renderer/src/agent/executionTarget.ts`.
+
+## 13. Computer use
 
 macOS uses the bundled helper `pawn-cua` (Swift: ScreenCaptureKit, CGEvent, Accessibility, Vision). No Homebrew package. Grant Accessibility and Screen Recording (Settings → Agent → Computer use → Check). Esc twice stops. Coordinates are pixels of the latest screenshot and are multi-monitor aware. `return_screenshot` can ride on an action. Typing is IME-safe; long text is pasted.
 
@@ -201,7 +213,7 @@ Windows and Linux: mouse, keyboard, screenshot, clipboard via PowerShell / `xdot
 
 Headless: `pawn-headless run --computer "…"`.
 
-## 13. Headless
+## 14. Headless
 
 `npm run headless` builds `out/headless/pawn-headless.mjs`.
 
@@ -216,7 +228,7 @@ pawn-headless tasks
 
 `--permission deny` maps to `ask`. Config default is `~/.pawn/config.toml`. Keys: `PAWN_API_KEY_<PROVIDER_ID>` or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY` / `GEMINI_API_KEY`.
 
-## 14. Security invariants
+## 15. Security invariants
 
 - Renderer: `nodeIntegration: false`, `contextIsolation: true`. System calls go through `src/main/ipc/*` and `src/preload/index.ts` (`contextBridge`).
 - Memory and fetched web text are untrusted data, not instructions.
@@ -224,7 +236,7 @@ pawn-headless tasks
 - Research SSRF guards stay on. Secrets are not written to memory or recordings.
 - The Telegram bot token never reaches the renderer. DMs stay denied until a pairing code is approved on this computer.
 
-## 15. Develop
+## 16. Develop
 
 ```bash
 npm install
@@ -255,7 +267,7 @@ Contributor rules: root `CLAUDE.md`. Stack: Electron, React 19, TypeScript, elec
 
 Right panel: Terminal, Files, Git, Diff, Artifacts, Browser. `.md` files in the file viewer toggle between rendered preview and source; relative links resolve from that file's folder. Command palette `Cmd/Ctrl+K`. Automations write `~/.pawn/reports/<name>/`. A project may list several folders; the session path picks the tool cwd.
 
-## 16. Playbook
+## 17. Playbook
 
 | Ask | Do |
 |-----|----|
@@ -273,6 +285,6 @@ Right panel: Terminal, Files, Git, Diff, Artifacts, Browser. `.md` files in the 
 | Build | Node version above, `npm install`, `npm run check`. |
 | Tool denied | Permission mode, Plan mode, `PreToolUse` deny, disconnected account, tool group not loaded. |
 
-## 17. License
+## 18. License
 
 MIT. OAuth privacy: [PRIVACY.md](../../PRIVACY.md).

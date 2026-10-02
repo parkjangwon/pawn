@@ -101,7 +101,8 @@ export async function detectCheckCommands(projectPath: string): Promise<Detected
 export async function runProjectChecks(
   projectPath: string,
   kind: CheckKind = 'all',
-  timeoutSec = 120
+  timeoutSec = 120,
+  sandboxOpts?: { hostId?: string }
 ): Promise<string> {
   const cmds = await detectCheckCommands(projectPath)
   if (!cmds.length) {
@@ -136,7 +137,7 @@ export async function runProjectChecks(
 
   for (const cmd of toRun) {
     blocks.push(`## ${cmd.kind} — \`${cmd.command}\``)
-    const res = await window.api.shell.exec(cmd.command, projectPath, timeoutMs)
+    const res = await window.api.shell.exec(cmd.command, projectPath, timeoutMs, sandboxOpts)
     const ok = res.exitCode === 0
     blocks.push(`exit: ${res.exitCode}${res.killed ? ' (killed/timeout)' : ''} ${ok ? 'OK' : 'FAIL'}`)
     const out = [res.stdout, res.stderr].filter(Boolean).join('\n').trim()
