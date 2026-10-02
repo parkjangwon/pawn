@@ -196,7 +196,20 @@ export class BashSession {
       this._alive = false
       this.lastExitCode = typeof code === 'number' ? code : signal ? null : null
       // If a command is still in flight, settle it as an unexpected exit.
-      if (this.settleCurrent) this.settleCurrent(true)
+      // 'exit' can fire while the last stdio chunks are still in flight —
+      // give the streams a bounded moment to flush so a command's final
+      // output (`echo bye; exit 3`) is never lost, then settle.
+      if (!this.settleCurrent) return
+      let settled = false
+      const settle = (): void => {
+        if (settled || this.proc !== proc) return
+        settled = true
+        if (this.settleCurrent) this.settleCurrent(true)
+      }
+      proc.stdout?.once('close', settle)
+      proc.stderr?.once('close', settle)
+      const flushCap = setTimeout(settle, 100)
+      if (typeof flushCap.unref === 'function') flushCap.unref()
     })
     proc.on('error', () => {
       if (this.proc !== proc) return
