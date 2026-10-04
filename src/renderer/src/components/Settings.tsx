@@ -24,14 +24,16 @@ import { formatCombo } from '../stores/keybindings'
 import Tooltip from './Tooltip'
 import './Settings.css'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
+import { useFocusTrap } from '../utils/focusTrap'
 
 export default function Settings({
   onSidebarWidthChange,
   canGoBack,
   canGoForward,
   onGoBack,
-  onGoForward
+  onGoForward,
+  onEscape
 }: SettingsProps): React.JSX.Element {
   const state = useSettingsState({ onSidebarWidthChange })
   const [searchQuery, setSearchQuery] = useState('')
@@ -64,8 +66,35 @@ export default function Settings({
 
   const sidebarShortcut = formatCombo(keybindings['toggle-sidebar'])
 
+  // Settings is a full-screen overlay dialog: trap Tab inside, restore focus
+  // on unmount, and close on Escape — unless focus lives in a nested dialog
+  // (FileBrowser, ConfirmDialog), which owns its own Escape.
+  const pageRef = useRef<HTMLDivElement | null>(null)
+  useFocusTrap(true, pageRef, { autoFocus: false })
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return
+      const root = pageRef.current
+      if (!root) return
+      if (document.activeElement instanceof Element) {
+        const nested = document.activeElement.closest('[role="dialog"], [aria-modal="true"]')
+        if (nested && nested !== root) return
+      }
+      e.preventDefault()
+      onEscape?.()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onEscape])
+
   return (
-    <div className={`settings-page ${navOpen ? '' : 'nav-collapsed'}`}>
+    <div
+      ref={pageRef}
+      role="dialog"
+      aria-modal="true"
+      aria-label={t('settings.title')}
+      className={`settings-page ${navOpen ? '' : 'nav-collapsed'}`}
+    >
       <div className="settings-header">
         <div className="settings-header-left">
           <Tooltip label={t('settings.toggleNav')} shortcut={sidebarShortcut} placement="bottom">

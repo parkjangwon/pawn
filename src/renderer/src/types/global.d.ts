@@ -492,6 +492,8 @@ declare global {
             network?: boolean
             projectRoot?: string
             jailCwd?: boolean
+            hostId?: string
+            sessionId?: string
           }
         ) => Promise<{ jobId?: string; pid?: number; error?: string; sandboxNote?: string }>
         poll: (jobId: string) => Promise<{
@@ -1319,6 +1321,14 @@ declare global {
       outputs?: {
         save: (sessionId: string, content: string) => Promise<{ ok: boolean; error?: string; id?: string; chars?: number; lines?: number }>
         read: (id: string, opts?: Record<string, unknown>) => Promise<{ ok: boolean; error?: string; text?: string }>
+      }
+      /** UI paging over offloaded tool outputs (chat tool rows). */
+      toolOutput?: {
+        get: (
+          id: string,
+          offset?: number,
+          limit?: number
+        ) => Promise<{ ok: boolean; error?: string; content?: string; total?: number; hasMore?: boolean }>
       }
       profile?: {
         get: (root: string) => Promise<{ ok: boolean; error?: string; json: string | null }>

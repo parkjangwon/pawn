@@ -98,8 +98,8 @@
 
 /* Same inset field the other settings forms use on a dark card. */
 .app.dark .telegram-form input {
-  background: #1c1c1e;
-  border-color: #3a3a3c;
+  background: var(--bg-input);
+  border-color: var(--control-border);
 }
 
 a.telegram-link {
@@ -146,7 +146,7 @@ a.telegram-link {
 
 .telegram-code {
   font-family: var(--font-mono);
-  font-size: 18px;
+  font-size: var(--font-xl);
   letter-spacing: 0.12em;
   color: var(--text-primary);
   user-select: all;

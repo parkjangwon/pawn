@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import ConfirmDialog from './ConfirmDialog'
 import { useTranslation } from 'react-i18next'
 import { computeDiff } from '../utils/diff'
 import { useChangeLedger } from '../stores/changeLedger'
@@ -36,6 +37,10 @@ export default function DiffView({
     if (openPath) openFileInPanel(openPath)
   }
 
+  // Conflict overwrite needs explicit opt-in — same staged flow as the turn
+  // review bar, via ConfirmDialog instead of a bare window.confirm.
+  const [confirmForce, setConfirmForce] = useState<string | null>(null)
+
   const onRevert = async (): Promise<void> => {
     if (!openPath) {
       setActionMsg(t('diffView.noPath'))
@@ -44,17 +49,16 @@ export default function DiffView({
     const r = await useChangeLedger.getState().revertFile(openPath)
     if (!r.ok && r.conflict && r.conflict !== 'oversized') {
       // Changed after the agent's edit — make the user opt in to overwriting.
-      const overwrite = window.confirm(t('diffView.revertConflict'))
-      if (!overwrite) {
-        setActionMsg(t('diffView.revertCancelled'))
-        return
-      }
-      const forced = await useChangeLedger.getState().revertFile(openPath, { force: true })
-      setActionMsg(forced.ok ? t('diffView.reverted') : forced.error || t('diffView.revertFailed'))
+      setConfirmForce(openPath)
       return
     }
     setActionMsg(r.ok ? t('diffView.reverted') : t('diffView.revertFailed'))
     if (!r.ok && r.error) console.warn('[revert]', r.error)
+  }
+
+  const forceRevert = async (target: string): Promise<void> => {
+    const forced = await useChangeLedger.getState().revertFile(target, { force: true })
+    setActionMsg(forced.ok ? t('diffView.reverted') : forced.error || t('diffView.revertFailed'))
   }
 
   const onReveal = (): void => {
@@ -63,6 +67,23 @@ export default function DiffView({
 
   return (
     <div className={`diff-view ${collapsed ? 'collapsed' : ''}`}>
+      {confirmForce && (
+        <ConfirmDialog
+          title={t('diffView.revertConflictTitle')}
+          message={t('diffView.revertConflict')}
+          confirmLabel={t('diffView.revertForce')}
+          danger
+          onConfirm={() => {
+            const target = confirmForce
+            setConfirmForce(null)
+            void forceRevert(target)
+          }}
+          onCancel={() => {
+            setConfirmForce(null)
+            setActionMsg(t('diffView.revertCancelled'))
+          }}
+        />
+      )}
       <div
         className="diff-header"
         role="button"

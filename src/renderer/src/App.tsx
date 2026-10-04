@@ -16,6 +16,7 @@ import { readStoredSidebarWidth, persistSidebarWidth, clampSidebarWidth } from '
 import Sidebar from './components/Sidebar'
 import ChatArea from './components/ChatArea'
 import PermissionDialog from './components/PermissionDialog'
+import ShortcutsHelp from './components/ShortcutsHelp'
 import RightPanel from './components/RightPanel'
 import BottomTerminal from './components/BottomTerminal'
 
@@ -57,6 +58,9 @@ export default function App(): React.JSX.Element {
       window.setTimeout(() => setAppToast(null), 3200)
     }
     window.addEventListener('pawn:toast', onToast)
+    // Deep links: openSettingsSection(section) from anywhere in the renderer.
+    const onOpenSettings = (): void => setShowSettings(true)
+    window.addEventListener('pawn:open-settings', onOpenSettings)
     // "Open automations" / "Repeat this" from chat: switch views; the
     // automation view picks up a pending draft itself.
     const onOpenAutomations = (): void => {
@@ -66,6 +70,7 @@ export default function App(): React.JSX.Element {
     window.addEventListener('pawn:open-automations', onOpenAutomations)
     return () => {
       window.removeEventListener('pawn:toast', onToast)
+      window.removeEventListener('pawn:open-settings', onOpenSettings)
       window.removeEventListener('pawn:open-automations', onOpenAutomations)
     }
   }, [])
@@ -98,10 +103,7 @@ export default function App(): React.JSX.Element {
       void window.api.checkForUpdates()
         .then((r) => {
           if (!r.updateAvailable || !r.latest) return
-          // i18n may not be ready on first paint — use a simple bilingual-safe toast.
-          setAppToast(
-            `Pawn ${r.latest} → Settings → System (${r.current})`
-          )
+          setAppToast(t('app.updateAvailable', { latest: r.latest, current: r.current }))
           window.setTimeout(() => setAppToast(null), 8000)
         })
         .catch(() => {})
@@ -118,6 +120,27 @@ export default function App(): React.JSX.Element {
     void window.api.appVersion().then((v) => { if (v) setAppVersion(v) }).catch(() => {})
     return () => window.clearTimeout(resumeTimer)
   }, [])
+
+  // Unhandled promise rejections used to be console-only. Surface a throttled
+  // toast (max one per 30s) so failures are visible without spamming.
+  useEffect(() => {
+    let lastToast = 0
+    const onRejection = (e: PromiseRejectionEvent): void => {
+      const now = Date.now()
+      if (now - lastToast < 30_000) return
+      lastToast = now
+      const msg = e.reason instanceof Error ? e.reason.message : String(e.reason ?? '')
+      try {
+        window.dispatchEvent(
+          new CustomEvent('pawn:toast', { detail: { message: t('app.unexpectedError', { error: msg.slice(0, 120) }) } })
+        )
+      } catch {
+        /* ignore */
+      }
+    }
+    window.addEventListener('unhandledrejection', onRejection)
+    return () => window.removeEventListener('unhandledrejection', onRejection)
+  }, [t])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
   const toggleSidebar = useCallback(() => {
@@ -304,8 +327,8 @@ export default function App(): React.JSX.Element {
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
+        // Settings owns its own Escape (dialog semantics + nested dialogs).
         if (showCommandPalette) setShowCommandPalette(false)
-        if (showSettings) setShowSettings(false)
       } else if (e.metaKey && e.key === '[') {
         e.preventDefault()
         goBack()
@@ -317,7 +340,7 @@ export default function App(): React.JSX.Element {
 
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [showSettings, showCommandPalette, goBack, goForward])
+  }, [showCommandPalette, goBack, goForward])
 
   // Bridge for the command palette (and anything else that needs it).
   useEffect(() => {
@@ -360,7 +383,7 @@ export default function App(): React.JSX.Element {
                 onGoForward={goForward}
               />
             ) : (
-              <Suspense fallback={null}>
+              <Suspense fallback={<div className="route-loader" />}>
                 <AutomationView
                   onToggleSidebar={toggleSidebar}
                   canGoBack={canGoBack}
@@ -376,18 +399,19 @@ export default function App(): React.JSX.Element {
         <BottomTerminal />
       </div>
       {showSettings && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="route-loader" />}>
           <Settings
             onSidebarWidthChange={commitSidebarWidth}
             canGoBack={canGoBack}
             canGoForward={canGoForward}
             onGoBack={goBack}
             onGoForward={goForward}
+            onEscape={() => setShowSettings(false)}
           />
         </Suspense>
       )}
       {showCommandPalette && (
-        <Suspense fallback={null}>
+        <Suspense fallback={<div className="route-loader" />}>
           <CommandPalette
             onClose={() => setShowCommandPalette(false)}
             onOpenSettings={() => setShowSettings(true)}
@@ -396,6 +420,7 @@ export default function App(): React.JSX.Element {
         </Suspense>
       )}
       <PermissionDialog />
+      <ShortcutsHelp />
       {appVersion && <div className="app-version">v{appVersion}</div>}
     </div>
   )

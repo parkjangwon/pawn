@@ -70,7 +70,8 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
       summary.refresh()
       setShowBranches(false)
     } else {
-      setError(r.stderr || r.stdout || t('rightPanel.git.checkoutFailed'))
+      const detail = (r.stderr || r.stdout || '').trim().split('\n')[0].slice(0, 160)
+      setError(detail ? t('git.checkoutFailedDetail', { detail }) : t('rightPanel.git.checkoutFailed'))
     }
   }
 

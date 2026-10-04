@@ -99,7 +99,7 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
             </span>
             <div className="tool-batch-chips">
               {Object.entries(counts).slice(0, 4).map(([name, count]) => (
-                <span key={name} className="tool-batch-chip" title={name}>
+                <span key={name} className="tool-batch-chip" title={toolLabel(t, name).label}>
                   {toolLabel(t, name, labels).label}
                   {count > 1 ? ` ×${count}` : ''}
                 </span>

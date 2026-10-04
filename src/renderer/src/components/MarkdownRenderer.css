@@ -106,7 +106,7 @@
 .md-image-lightbox {
   position: fixed;
   inset: 0;
-  z-index: 10000;
+  z-index: var(--z-lightbox);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -141,7 +141,7 @@
   position: fixed;
   top: 14px;
   right: 14px;
-  z-index: 10001;
+  z-index: calc(var(--z-lightbox) + 1);
   width: 40px;
   height: 40px;
   display: flex;
@@ -288,7 +288,7 @@
 }
 
 .copy-btn.copied {
-  color: #10b981;
+  color: var(--success);
   border-color: rgba(16, 185, 129, 0.4);
   background: rgba(16, 185, 129, 0.1);
   font-weight: 500;

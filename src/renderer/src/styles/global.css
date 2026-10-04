@@ -15,6 +15,21 @@
   --space-lg: 16px;
   --space-xl: 24px;
   --space-2xl: 32px;
+  /* De-facto secondary steps (used widely as literal 6px/10px), now tokenized. */
+  --space-6: 6px;
+  --space-10: 10px;
+  /* Z-index scale — one ladder for every stacking context in the app. */
+  --z-under: -10;
+  --z-chrome: 10;
+  --z-sticky: 20;
+  --z-dropdown: 100;
+  --z-overlay: 500;
+  --z-modal: 1000;
+  --z-dialog: 2000;
+  --z-confirm: 3000;
+  --z-lightbox: 9000;
+  --z-toast: 10000;
+  --z-tooltip: 10001;
   --font-sans: Inter, 'Pretendard Variable', Pretendard, system-ui, 'Helvetica Neue', Helvetica, Arial, sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, monospace;
   /* Brand orange is scarce: primary CTAs and the wordmark. Not selection chrome. */
@@ -75,7 +90,7 @@ html, body, #root {
   opacity: 0.55;
   pointer-events: none;
   user-select: none;
-  z-index: 5;
+  z-index: calc(var(--z-chrome) - 5);
 }
 
 body {
@@ -96,7 +111,7 @@ body {
   top: calc(var(--titlebar-height, 0px) + 12px);
   left: 50%;
   transform: translateX(-50%);
-  z-index: 10000;
+  z-index: var(--z-toast);
   max-width: min(480px, 90vw);
   padding: 10px 16px;
   border-radius: 999px;
@@ -113,7 +128,7 @@ body {
   position: fixed;
   left: 50%;
   top: 12px;
-  z-index: 10000;
+  z-index: var(--z-toast);
   padding: 8px 14px;
   border-radius: var(--radius-sm);
   background: var(--accent, #2c2c2c);
@@ -336,6 +351,8 @@ select:focus-visible {
   --find-highlight: #f3e2c2;
   --find-highlight-active: #c08532;
   --find-highlight-active-text: #26251e;
+  /* Plan-mode accent (teal), theme-scoped for contrast on both canvases. */
+  --plan-accent: #0f766e;
 }
 
 /* Dark theme — the same warm family, inverted. Orange stays --primary. No shadows. */
@@ -371,6 +388,14 @@ select:focus-visible {
   --find-highlight: rgba(192, 133, 50, 0.35);
   --find-highlight-active: #c08532;
   --find-highlight-active-text: #1c1b17;
+  /* Plan-mode accent (teal) — light tint for dark canvas. */
+  --plan-accent: #5eead4;
+  /* Timeline pills: darker fills so var(--text-primary) on top passes contrast. */
+  --timeline-thinking: #8a5a3f;
+  --timeline-grep: #4f7a55;
+  --timeline-read: #5a759e;
+  --timeline-edit: #7a5f96;
+  --timeline-done: #8a5a1d;
 }
 
 code,
@@ -425,7 +450,7 @@ samp {
   top: 0 !important;
   width: 0 !important;
   height: 0 !important;
-  z-index: -10 !important;
+  z-index: var(--z-under) !important;
   border: 0 !important;
   padding: 0 !important;
 }
@@ -439,7 +464,7 @@ samp {
   .sidebar {
     transform: translateX(-100%);
     transition: transform 0.2s var(--ease-spring);
-    z-index: 100;
+    z-index: var(--z-dropdown);
   }
   .sidebar.open {
     transform: translateX(0);
@@ -449,7 +474,7 @@ samp {
     position: fixed;
     inset: 0;
     background: rgba(0, 0, 0, 0.4);
-    z-index: 99;
+    z-index: calc(var(--z-dropdown) - 1);
     animation: fadeIn 0.2s ease;
   }
   .workspace {
@@ -561,4 +586,38 @@ samp {
   overflow: hidden;
   text-overflow: ellipsis;
   min-width: 0;
+}
+
+/* Unify stroke icons to one width: overrides per-path strokeWidth
+   presentation attributes (CSS beats presentation attributes). */
+.app svg [stroke]:not([stroke='none']) {
+  stroke-width: 2;
+}
+
+/* React Suspense route fallback: full-size centered spinner. */
+.route-loader {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 120px;
+}
+.route-loader::after {
+  content: '';
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--text-muted);
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: route-loader-spin 0.8s linear infinite;
+}
+@keyframes route-loader-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Provider sync warning line (Settings panels). */
+.provider-sync-warn {
+  font-size: var(--font-xs);
+  color: var(--warning);
 }

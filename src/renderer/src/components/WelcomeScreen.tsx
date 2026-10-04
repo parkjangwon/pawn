@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProviderStore } from '../stores/provider'
 import { useAppStore } from '../stores/app'
+import { openSettingsSection, __providerTestOutcome } from './settingsState'
 
 export interface WelcomeSuggestion {
   icon: string
@@ -12,7 +13,6 @@ interface WelcomeScreenProps {
   activeProject: { name: string; path?: string } | undefined
   suggestions: WelcomeSuggestion[]
   onPick: (text: string) => void
-  onOpenSettings: () => void
 }
 
 const CHECKLIST_DISMISS_KEY = 'pawn-welcome-checklist-dismissed'
@@ -28,13 +28,21 @@ type ChecklistItem = {
 export default function WelcomeScreen({
   activeProject,
   suggestions,
-  onPick,
-  onOpenSettings
+  onPick
 }: WelcomeScreenProps): React.JSX.Element {
   const { t } = useTranslation()
   const providers = useProviderStore((s) => s.providers)
   const projects = useAppStore((s) => s.projects)
   const needsSetup = providers.filter((p) => p.enabled).length === 0
+  // "Add a key" is only done when a working provider exists: enabled, with a
+  // credential (or a sign-in format that needs none), and not failed by the
+  // auto-test that runs right after a preset is added.
+  const providerReady = providers.some(
+    (p) =>
+      p.enabled &&
+      __providerTestOutcome[p.id] !== 'fail' &&
+      (p.apiKey || p.apiFormat === 'kiro')
+  )
   const hasProject =
     Boolean(activeProject && activeProject.name && !String(activeProject.name).startsWith('__')) ||
     projects.some((p) => p.id !== '__general__' && Array.isArray(p.paths) && p.paths.length > 0)
@@ -74,8 +82,8 @@ export default function WelcomeScreen({
       {
         id: 'provider',
         label: t('chat.checklist.provider'),
-        done: !needsSetup,
-        action: needsSetup ? onOpenSettings : undefined,
+        done: providerReady,
+        action: providerReady ? undefined : () => openSettingsSection('providers'),
         actionLabel: t('chat.configureProviders')
       },
       {
@@ -96,14 +104,14 @@ export default function WelcomeScreen({
         action:
           githubConnected !== true
             ? () => {
-                onOpenSettings()
+                openSettingsSection('connections')
               }
             : undefined,
         actionLabel: t('chat.checklist.connectGithub')
       }
     ]
     return items
-  }, [t, needsSetup, hasProject, githubConnected, onOpenSettings, onPick])
+  }, [t, needsSetup, providerReady, hasProject, githubConnected])
 
   // Only the provider is required. Project and GitHub are optional, so once
   // a provider works the list only stays while it's still useful: on a
@@ -260,7 +268,7 @@ export default function WelcomeScreen({
           </button>
         ))}
         {needsSetup && (
-          <button className="welcome-btn primary" onClick={onOpenSettings}>
+          <button className="welcome-btn primary" onClick={() => openSettingsSection('providers')}>
             <svg
               width="16"
               height="16"

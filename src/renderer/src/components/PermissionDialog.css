@@ -7,7 +7,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 2000;
+  z-index: var(--z-dialog);
   padding: 24px;
   box-sizing: border-box;
   animation: fadeIn var(--dur-fast) var(--ease-out-soft);
@@ -130,7 +130,7 @@
 }
 
 .permission-actions button {
-  padding: 9px 16px;
+  padding: 7px 16px;
   border-radius: var(--radius-md);
   font-size: var(--font-md);
   font-weight: 500;
@@ -205,6 +205,8 @@
 
 .permission-preview {
   margin: 0 0 var(--space-lg);
+
+  position: relative;
 }
 .permission-preview .permission-details {
   margin: 0;
@@ -242,8 +244,8 @@
   background: color-mix(in srgb, var(--success, #34d399) 10%, transparent);
 }
 .pp-line.del {
-  color: var(--danger, #f87171);
-  background: color-mix(in srgb, var(--danger, #f87171) 10%, transparent);
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 .pp-more {
   display: block;
@@ -261,4 +263,36 @@
   color: var(--text-primary);
   font-size: var(--font-md);
   line-height: 1.45;
+}
+
+/* —— Copy / keyboard hint / scope note —— */
+.permission-copy-btn {
+  position: absolute;
+  top: var(--space-sm);
+  right: var(--space-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--control-bg);
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  border-radius: var(--radius-xs);
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.permission-copy-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.permission-kbd-hint {
+  margin-top: var(--space-sm);
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  text-align: right;
+}
+
+.permission-scope-note {
+  display: block;
+  font-size: var(--font-xs);
+  font-weight: 400;
+  color: var(--text-muted);
 }

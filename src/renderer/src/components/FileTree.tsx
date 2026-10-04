@@ -111,7 +111,19 @@ export default function FileTree({ rootPath }: FileTreeProps): React.JSX.Element
 
   return (
     <div className="file-tree">
-      <div className="ft-header" onClick={() => setCollapsed(!collapsed)}>
+      <div
+        className="ft-header"
+        role="button"
+        tabIndex={0}
+        aria-expanded={!collapsed}
+        onClick={() => setCollapsed(!collapsed)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault()
+            setCollapsed(!collapsed)
+          }
+        }}
+      >
         <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`ft-chevron ${collapsed ? '' : 'expanded'}`}>
           <polyline points="9 18 15 12 9 6" />
         </svg>

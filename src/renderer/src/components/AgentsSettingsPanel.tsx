@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import ConfirmDialog from './ConfirmDialog'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
@@ -136,6 +137,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [message, setMessage] = useState<string | null>(null)
+  const [pendingDelete, setPendingDelete] = useState<AgentProfile | null>(null)
   const [query, setQuery] = useState('')
 
   const [editorMode, setEditorMode] = useState<EditorMode>('closed')
@@ -285,14 +287,10 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
     }
   }
 
+  // Deletion is staged behind a ConfirmDialog; the actual work happens here.
   const handleDelete = async (p: AgentProfile): Promise<void> => {
-    if (!p.sourcePath || !isPawnAgentPath(p.sourcePath)) {
-      setError(t('settings.agentsSection.errDeleteClaude'))
-      return
-    }
-    const ok = window.confirm(t('settings.agentsSection.confirmDelete', { name: p.name }))
-    if (!ok) return
-    setError(null)
+    if (!p.sourcePath) return
+    setPendingDelete(null)
     const res = await deleteAgentProfile(p.sourcePath)
     if (!res.ok) {
       setError(res.error)
@@ -301,6 +299,14 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
     setMessage(t('settings.agentsSection.deleted', { name: p.name }))
     if (editorMode !== 'closed' && existingPath === p.sourcePath) closeEditor()
     await refresh()
+  }
+
+  const requestDelete = (p: AgentProfile): void => {
+    if (!p.sourcePath || !isPawnAgentPath(p.sourcePath)) {
+      setError(t('settings.agentsSection.errDeleteClaude'))
+      return
+    }
+    setPendingDelete(p)
   }
 
   const patchDraft = <K extends keyof AgentProfileDraft>(
@@ -351,7 +357,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
               <button
                 type="button"
                 className="agents-link-btn danger"
-                onClick={() => void handleDelete(p)}
+                onClick={() => requestDelete(p)}
               >
                 {t('settings.agentsSection.delete')}
               </button>
@@ -368,6 +374,16 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
   return (
     <div className="agents-settings">
+      {pendingDelete && (
+        <ConfirmDialog
+          title={t('settings.agentsSection.confirmDeleteTitle')}
+          message={t('settings.agentsSection.confirmDelete', { name: pendingDelete.name })}
+          confirmLabel={t('common.delete')}
+          danger
+          onConfirm={() => void handleDelete(pendingDelete)}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
       <div className="agents-settings-head">
         <div>
           <p className="settings-row-desc">{t('settings.agentsSection.desc')}</p>

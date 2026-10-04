@@ -44,7 +44,8 @@ export default function UsageSettingsPanel(): React.JSX.Element {
       const data = await api(sinceFor(range))
       setRows(Array.isArray(data) ? (data as SummaryRow[]) : [])
     } catch (e) {
-      setError(String(e))
+      const msg = e instanceof Error ? e.message : String(e)
+      setError(t('usage.loadFailed', { error: msg.slice(0, 160) }))
       setRows([])
     } finally {
       setLoading(false)

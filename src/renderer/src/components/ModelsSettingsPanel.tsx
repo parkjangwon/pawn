@@ -1,4 +1,5 @@
 import type { SettingsState } from './settingsState'
+import { openSettingsSection } from './settingsState'
 
 export default function ModelsSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -71,7 +72,16 @@ export default function ModelsSettingsPanel({ state }: { state: SettingsState })
             </div>
           )
         })}
-        {models.length === 0 && <div className="settings-empty">{t('settings.modelSection.empty')}</div>}
+        {models.length === 0 && (
+          <div className="settings-empty">
+            {t('settings.modelSection.empty')}
+            <div>
+              <button type="button" className="test-btn" onClick={() => openSettingsSection('providers')}>
+                {t('models.emptyAddProvider')}
+              </button>
+            </div>
+          </div>
+        )}
       </div>
       {showAddModel ? (
         <div className="settings-card add-form">

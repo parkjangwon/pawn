@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { usePermissionStore } from '../stores/permission'
 import { useFocusTrap } from '../utils/focusTrap'
@@ -10,6 +10,7 @@ export default function PermissionDialog(): React.JSX.Element | null {
   const dialogRef = useRef<HTMLDivElement>(null)
   const open = pending.length > 0
   useFocusTrap(open, dialogRef, { initialFocus: '.allow-btn' })
+  const [copied, setCopied] = useState(false)
 
   useEffect(() => {
     if (pending.length === 0) return
@@ -110,6 +111,23 @@ export default function PermissionDialog(): React.JSX.Element | null {
         )}
         {current.preview ? (
           <div className={`permission-preview kind-${current.preview.kind}`}>
+            <button
+              type="button"
+              className="permission-copy-btn"
+              title={t('permission.copy')}
+              aria-label={t('permission.copy')}
+              onClick={() => {
+                const text = current.preview
+                  ? `${current.preview.target || ''}\n${current.preview.lines.map((l) => (current.preview!.kind === 'edit' && l.mark ? `${l.mark} ` : '') + l.text).join('\n')}`
+                  : (current.details || current.command || '')
+                navigator.clipboard.writeText(text).then(() => {
+                  setCopied(true)
+                  window.setTimeout(() => setCopied(false), 1500)
+                }).catch(() => {})
+              }}
+            >
+              {copied ? t('permission.copied') : t('permission.copy')}
+            </button>
             {(current.preview.target || current.preview.summary) && (
               <div className="permission-preview-head">
                 {current.preview.target && (
@@ -139,6 +157,9 @@ export default function PermissionDialog(): React.JSX.Element | null {
           current.details && <pre className="permission-details">{current.details}</pre>
         )}
 
+        <div className="permission-kbd-hint" aria-hidden="true">
+          {t('permission.kbdHint')}
+        </div>
         <div className="permission-actions">
           <div className="permission-actions-secondary">
             <button
@@ -151,6 +172,7 @@ export default function PermissionDialog(): React.JSX.Element | null {
               }}
             >
               {t('permission.allowSession')}
+              <span className="permission-scope-note">{t('permission.sessionGlobalNote')}</span>
             </button>
             {pathPrefix && current.type === 'file_write' && (
               <button
@@ -169,13 +191,13 @@ export default function PermissionDialog(): React.JSX.Element | null {
               <button
                 type="button"
                 className="session-btn"
-                title={shellPrefix}
+                title={t('permission.allowSessionHint')}
                 onClick={() => {
                   addRule({ kind: 'shell_prefix', prefix: shellPrefix, scope: 'always' })
                   resolve(current.id, true)
                 }}
               >
-                {t('permission.allowShellAlways')}
+                {t('permission.alwaysCommand', { prefix: shellPrefix })}
               </button>
             )}
           </div>

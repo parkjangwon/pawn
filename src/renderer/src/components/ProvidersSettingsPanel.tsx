@@ -13,6 +13,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
     t,
     providers,
     syncResult,
+    syncFailed,
     handleSyncModels,
     syncingId,
     testResult,
@@ -24,6 +25,10 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
     setPresetKey,
     presetPicking,
     presetKey,
+    presetKeyError,
+    setPresetKeyError,
+    formError,
+    setFormError,
     handleAddFromPreset,
     showAddProvider,
     form,
@@ -48,7 +53,10 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                   {p.apiFormat} / {p.baseUrl}
                 </span>
                 {syncResult[p.id] && (
-                  <span className="settings-row-desc sync-result" title={syncResult[p.id]}>
+                  <span
+                    className={`settings-row-desc sync-result${syncFailed[p.id] ? ' provider-sync-warn' : ''}`}
+                    title={syncResult[p.id]}
+                  >
                     {syncResult[p.id]}
                   </span>
                 )}
@@ -114,7 +122,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               <button
                 key={preset.id}
                 className={`preset-chip ${isAlreadyAdded ? 'disabled' : ''} ${isRecommended ? 'recommended' : ''}`}
-                onClick={() => { setPresetPicking(preset); setPresetKey('') }}
+                onClick={() => { setPresetPicking(preset); setPresetKey(''); if (presetKeyError) setPresetKeyError('') }}
                 disabled={isAlreadyAdded}
                 style={isAlreadyAdded ? { opacity: 0.5, pointerEvents: 'none' } : undefined}
               >
@@ -132,17 +140,25 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               {presetPicking.keyHintKey ? t(presetPicking.keyHintKey) : presetPicking.keyHint}
             </div>
             {!presetPicking.localNoKey && !presetPicking.signIn && (
-              <input
-                type="password"
-                placeholder={
-                  presetPicking.optionalKey
-                    ? t('settings.providerSection.xai.keyOptional')
-                    : t('settings.providerSection.pasteApiKey')
-                }
-                value={presetKey}
-                onChange={(e) => setPresetKey(e.target.value)}
-                autoFocus
-              />
+              <>
+                <input
+                  type="password"
+                  placeholder={
+                    presetPicking.optionalKey
+                      ? t('settings.providerSection.xai.keyOptional')
+                      : t('settings.providerSection.pasteApiKey')
+                  }
+                  value={presetKey}
+                  onChange={(e) => {
+                    setPresetKey(e.target.value)
+                    if (presetKeyError) setPresetKeyError('')
+                  }}
+                  autoFocus
+                />
+                {presetKeyError && (
+                  <div className="settings-form-error" role="alert">{presetKeyError}</div>
+                )}
+              </>
             )}
             <div className="form-actions">
               <button
@@ -160,14 +176,15 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
 
       {showAddProvider ? (
         <div className="settings-card add-form" style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <input placeholder={t('settings.providerSection.namePlaceholder')} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <input placeholder={t('settings.providerSection.namePlaceholder')} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); if (formError) setFormError('') }} />
           <select value={form.apiFormat} onChange={(e) => setForm({ ...form, apiFormat: e.target.value as ApiFormat })}>
             <option value="openai">{t('settings.providerSection.openai')}</option>
             <option value="claude">{t('settings.providerSection.claude')}</option>
             <option value="kiro">Kiro</option>
           </select>
-          <input placeholder={t('settings.providerSection.baseUrlPlaceholder')} value={form.baseUrl} onChange={(e) => setForm({ ...form, baseUrl: e.target.value })} />
-          <input type="password" placeholder={t('settings.providerSection.apiKeyPlaceholder')} value={form.apiKey} onChange={(e) => setForm({ ...form, apiKey: e.target.value })} />
+          <input placeholder={t('settings.providerSection.baseUrlPlaceholder')} value={form.baseUrl} onChange={(e) => { setForm({ ...form, baseUrl: e.target.value }); if (formError) setFormError('') }} />
+          <input type="password" placeholder={t('settings.providerSection.apiKeyPlaceholder')} value={form.apiKey} onChange={(e) => { setForm({ ...form, apiKey: e.target.value }); if (formError) setFormError('') }} />
+          {formError && <div className="settings-form-error" role="alert">{formError}</div>}
           <div className="form-actions">
             <button className="btn-primary" onClick={handleAddProvider}>{t('common.save')}</button>
             <button className="btn-cancel" onClick={() => setShowAddProvider(false)}>{t('common.cancel')}</button>

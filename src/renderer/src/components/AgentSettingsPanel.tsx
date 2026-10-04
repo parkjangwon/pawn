@@ -61,6 +61,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
       <h2>{t('settings.agentSection.title')}</h2>
       <p className="settings-desc">{t('settings.agentSection.desc')}</p>
       <div className="settings-card">
+        <div className="settings-subheader">{t('settings.agentSection.groupBehavior')}</div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.agentSection.routing')}</span>
@@ -105,6 +106,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <option value="steer">{t('settings.agentSection.steer')}</option>
           </select>
         </div>
+        <div className="settings-subheader">{t('settings.agentSection.groupSafety')}</div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.agentSection.permissionMode')}</span>
@@ -168,6 +170,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="toggle-slider" />
           </label>
         </div>
+        <div className="settings-subheader">{t('settings.agentSection.groupContext')}</div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.agentSection.autoMemoryConsolidate')}</span>
@@ -202,6 +205,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="toggle-slider" />
           </label>
         </div>
+        <div className="settings-subheader">{t('settings.agentSection.groupTools')}</div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.agentSection.computerUse')}</span>

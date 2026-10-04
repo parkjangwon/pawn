@@ -136,6 +136,11 @@ describe('Node debugger (CDP)', () => {
 
 const lldbDescribe = lldbAvailable() ? describe : describe.skip
 
+// Known environment quirk: on machines whose lldb-dap comes from Xcode, the
+// "stops in a function" scenario can hang (adapter never reports stopped) and
+// time out at the 19s guard. The first breakpoint scenario passes on the same
+// machine, so the adapter wiring itself is fine — treat a failure here as
+// environment-dependent before assuming a product regression.
 lldbDescribe('C debugger (lldb-dap)', () => {
   let dir: string
   let manager: DebugManager

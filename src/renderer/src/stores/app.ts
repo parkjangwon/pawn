@@ -13,6 +13,16 @@ export interface Session {
   messages: Message[]
 }
 
+/** Structured failure info for an assistant error card (runtime-only: not persisted). */
+export interface MessageErrorInfo {
+  /** auth = bad key, rate = 429, server = 5xx, network = unreachable, generic = rest. */
+  kind: 'auth' | 'rate' | 'server' | 'network' | 'generic'
+  /** Raw provider error text, for the collapsible details block. */
+  detail: string
+  /** Settings section a fix most likely lives in. */
+  settingsTarget?: 'providers' | 'models' | 'usage'
+}
+
 export interface Message {
   id: string
   role: 'user' | 'assistant' | 'system'
@@ -26,6 +36,8 @@ export interface Message {
   durationMs?: number
   /** Tool rows only: structured record of the call (see agent/toolMeta). */
   toolMeta?: ToolMeta
+  /** Assistant only: renders the failure as an actionable error card (runtime-only). */
+  error?: MessageErrorInfo
 }
 
 export interface Project {

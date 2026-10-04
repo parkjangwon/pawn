@@ -99,7 +99,7 @@ export default function SubagentActivity({
                   {run.maxRounds ? `/${run.maxRounds}` : ''} · {elapsed(run, now)}
                   {run.lastTool && run.status === 'running' ? ` · ${run.lastTool}` : ''}
                 </span>
-                <span className={`subagent-activity-status ${sc}`}>{run.status}</span>
+                <span className={`subagent-activity-status ${sc}`}>{t(`subagents.status.${run.status}`, { defaultValue: run.status })}</span>
                 {run.status === 'running' && (
                   <button
                     type="button"

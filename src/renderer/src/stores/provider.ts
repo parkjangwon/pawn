@@ -1,4 +1,5 @@
 import { isUltraWorkSession } from './ultraWorkRegistry'
+import i18n from '../i18n'
 import { parseToolLoadingMode, type ToolLoadingMode } from '../agent/toolsets'
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
@@ -235,8 +236,17 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         autoOpenAgentsPanel: settings.autoOpenAgentsPanel !== false,
         initialized: true
       })
-    } catch {
+    } catch (err) {
       set({ initialized: true })
+      // A failed config load silently looks like first run — say so once.
+      const msg = err instanceof Error ? err.message : String(err)
+      try {
+        window.dispatchEvent(
+          new CustomEvent('pawn:toast', { detail: { message: i18n.t('settings.providerLoadFailed', { error: msg.slice(0, 120) }) } })
+        )
+      } catch {
+        /* ignore */
+      }
     }
   },
 

@@ -7,7 +7,7 @@
   position: relative;
   overflow: hidden;
   transition: height 0.2s var(--ease-spring), min-height 0.2s var(--ease-spring), opacity 0.15s ease;
-  z-index: 20;
+  z-index: var(--z-sticky);
 }
 
 .bottom-terminal.closing,
@@ -23,7 +23,7 @@
   top: 0;
   height: 6px;
   cursor: row-resize;
-  z-index: 10;
+  z-index: var(--z-chrome);
   background: transparent;
   touch-action: none;
 }

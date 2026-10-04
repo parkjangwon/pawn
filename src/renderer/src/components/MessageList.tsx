@@ -6,12 +6,24 @@ import { splitSkillAnswer } from '../agent/recordReplay'
 import ToolMessage from './ToolMessage'
 import ToolBatch from './ToolBatch'
 import SubagentActivity from './SubagentActivity'
+import LiveToolActivity from './LiveToolActivity'
+import ErrorCard from './ErrorCard'
 import { useStreamingStore } from '../stores/streaming'
 import { useChatStore } from '../stores/chat'
 import { stripDisplayImages } from '../utils/attachments'
 import { formatDuration, formatMessageTime, formatMessageTimeFull, normalizeTimestampMs } from '../utils/messageTime'
 import type { Message } from '../stores/app'
 import { openAutomationDraft } from '../stores/automationDraft'
+
+/** Localized fallback for a message whose markdown crashed the renderer. */
+function RenderErrorText({ error }: { error: Error | null }): React.JSX.Element {
+  const { t } = useTranslation()
+  return (
+    <span>
+      {t('chat.messageRenderFailed', { error: error?.message || 'render error' })}
+    </span>
+  )
+}
 
 class MessageErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -25,7 +37,7 @@ class MessageErrorBoundary extends React.Component<
     if (this.state.hasError) {
       return (
         <div className="message message-render-error" style={{ opacity: 0.8, fontSize: '12px', padding: '8px 12px' }}>
-          <span>⚠ Message content failed to render ({this.state.error?.message || 'render error'})</span>
+          <span>⚠ <RenderErrorText error={this.state.error} /></span>
         </div>
       )
     }
@@ -278,6 +290,15 @@ const MessageRow = memo(function MessageRow({
               </button>
             </div>
           </div>
+        ) : msg.error ? (
+          <ErrorCard
+            error={msg.error}
+            onRetry={
+              projectId && sessionId
+                ? () => void regenerate(projectId, sessionId, msg.id)
+                : undefined
+            }
+          />
         ) : isLive && msg.role === 'assistant' ? (
           <StreamingMarkdown text={content} />
         ) : (
@@ -488,6 +509,7 @@ export default function MessageList({
         </div>
       )}
       <SubagentActivity sessionId={sessionId} />
+      {sessionId ? <LiveToolActivity sessionId={sessionId} /> : null}
       <div ref={endRef} />
     </div>
   )

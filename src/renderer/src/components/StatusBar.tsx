@@ -30,6 +30,11 @@ export default function StatusBar(): React.JSX.Element {
   const hasSubError = useSubagentRunsStore((s) =>
     sessionId ? s.runs.slice(-5).some((r) => r.parentSessionId === sessionId && r.status === 'error') : false
   )
+  // In Auto routing the concrete model still matters (cost, capability) —
+  // surface the router's last decision instead of hiding it.
+  const lastRoute = useUsageStore((s) => (sessionId ? s.lastRoute[sessionId] : undefined))
+  const lastRouteLabel = lastRoute?.label
+  const lastRouteReason = lastRoute?.reason
 
   const enabledProviders = providers.filter((p) => p.enabled)
   const activeModel = models.find((m) => m.id === activeModelId)
@@ -98,8 +103,14 @@ export default function StatusBar(): React.JSX.Element {
               : ''}
           </span>
         )}
-        {routingMode !== 'auto' && currentModel && (
-          <span className="status-model">{currentModel.label || currentModel.modelId}</span>
+        {routingMode === 'auto' ? (
+          lastRouteLabel ? (
+            <span className="status-model" title={lastRouteReason}>{lastRouteLabel}</span>
+          ) : null
+        ) : (
+          currentModel && (
+            <span className="status-model">{currentModel.label || currentModel.modelId}</span>
+          )
         )}
         <span className="status-mode">
           {routingMode === 'auto' ? t('statusBar.auto') : t('statusBar.manual')}

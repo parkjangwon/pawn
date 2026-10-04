@@ -90,3 +90,7 @@ docs/
 .reasonix/
 .workplans/
 .pi/
+
+# Local security/tool state (session-scoped scanners, editor agents)
+.mimosa/
+.kiro/

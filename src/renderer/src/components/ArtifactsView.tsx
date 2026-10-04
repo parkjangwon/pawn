@@ -23,9 +23,15 @@ export default function ArtifactsView(): React.JSX.Element {
       // Finder/Explorer for project files; falls back to Pawn openPath for ~/.pawn reports.
       const r = await window.api.workspace?.openIn?.(path, 'finder')
       if (r && 'error' in r && r.error) {
-        await window.api.workspace?.openPath?.(path)
+        const fallback = await window.api.workspace?.openPath?.(path)
+        if (fallback && 'error' in fallback && fallback.error) throw new Error(fallback.error)
       }
-    } catch { /* ignore */ }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      window.dispatchEvent(
+        new CustomEvent('pawn:toast', { detail: { message: t('artifacts.revealFailed', { error: msg.slice(0, 120) }) } })
+      )
+    }
   }
 
   const copyPath = async (path: string): Promise<void> => {

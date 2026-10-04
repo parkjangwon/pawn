@@ -1,0 +1,105 @@
+.error-card {
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border-color));
+  border-left: 3px solid var(--danger);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--danger) 6%, var(--bg-secondary));
+  padding: var(--space-md) var(--space-lg);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-width: var(--chat-content-max);
+}
+
+.error-card-head {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  min-width: 0;
+}
+
+.error-card-icon {
+  flex: none;
+  margin-top: 2px;
+  color: var(--danger);
+}
+
+.error-card-copy {
+  min-width: 0;
+}
+
+.error-card-title {
+  font-size: var(--font-md);
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.4;
+}
+
+.error-card-hint {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.error-card-details {
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.error-card-details summary {
+  cursor: pointer;
+  user-select: none;
+  color: var(--text-muted);
+}
+
+.error-card-details summary:hover {
+  color: var(--text-secondary);
+}
+
+.error-card-details pre {
+  margin-top: var(--space-xs);
+  padding: var(--space-sm) var(--space-md);
+  max-height: 180px;
+  overflow: auto;
+  font-size: var(--font-xs);
+  line-height: 1.45;
+  color: var(--text-secondary);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-card-actions {
+  display: flex;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+}
+
+.error-card-btn {
+  border: 1px solid var(--border-strong);
+  background: var(--control-bg);
+  color: var(--text-primary);
+  font-size: var(--font-sm);
+  font-weight: 500;
+  border-radius: var(--radius-sm);
+  padding: 5px 12px;
+  cursor: pointer;
+  transition:
+    background var(--dur-fast) var(--ease-out-soft),
+    border-color var(--dur-fast) var(--ease-out-soft);
+}
+
+.error-card-btn:hover {
+  background: var(--bg-hover);
+}
+
+.error-card-btn.primary {
+  background: var(--accent);
+  color: var(--on-accent);
+  border-color: transparent;
+}
+
+.error-card-btn.primary:hover {
+  background: var(--accent-hover);
+}

@@ -388,7 +388,102 @@ export const HARD_TASKS: EvalTask[] = [
   }
 ]
 
-BUILTIN_TASKS.push(...HARD_TASKS)
+// --- Harness-discriminating tasks: multi-file consistency (rewards planning)
+// and detail-heavy specs (rewards the verify loop). Each has a reference
+// solution the self-test verifies.
+
+const MONEY_FILES: Record<string, string> = {
+  'package.json': PKG,
+  'src/money.js': "export const money = (n) => '$' + n.toFixed(2)\n",
+  'src/invoice.js':
+    "import { money } from './money.js'\n\nexport function invoiceFor(customer, total) {\n  return `${customer}: ${money(total)}`\n}\n",
+  'src/report.js':
+    "import { money } from './money.js'\n\nexport function revenueLine(amount) {\n  return `Revenue: ${money(amount)}`\n}\n",
+  'test/money.test.js':
+    "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { money } from '../src/money.js'\nimport { invoiceFor } from '../src/invoice.js'\nimport { revenueLine } from '../src/report.js'\n\ntest('formats with thousands separators', () => {\n  assert.equal(money(1234567.89), '$1,234,567.89')\n  assert.equal(money(999), '$999.00')\n  assert.equal(money(0), '$0.00')\n})\ntest('consumers show the new format', () => {\n  assert.equal(invoiceFor('ada', 1234567.89), 'ada: $1,234,567.89')\n  assert.equal(revenueLine(999), 'Revenue: $999.00')\n})\n"
+}
+
+const MONEY_CHECK = `node --input-type=module -e "
+import { money } from './src/money.js'
+const out = [money(1234567.89), money(999), money(0)]
+console.log(JSON.stringify(out))
+"`
+const MONEY_WANT = JSON.stringify(['$1,234,567.89', '$999.00', '$0.00'])
+
+const DURATION_FILES: Record<string, string> = {
+  'package.json': PKG,
+  'src/parse.js':
+    "/**\n * Parse a human duration like '90s', '5m 30s', '2h' into seconds.\n * TODO: implement — see test/parse.test.js\n */\nexport function parseDuration(spec) {\n  throw new Error('not implemented')\n}\n",
+  'test/parse.test.js':
+    "import { test } from 'node:test'\nimport assert from 'node:assert/strict'\nimport { parseDuration } from '../src/parse.js'\n\ntest('seconds', () => assert.equal(parseDuration('90s'), 90))\ntest('minutes and seconds', () => assert.equal(parseDuration('5m 30s'), 330))\ntest('hours', () => assert.equal(parseDuration('2h'), 7200))\n"
+}
+
+const DURATION_CHECK = `node --input-type=module -e "
+import { parseDuration } from './src/parse.js'
+const cases = [
+  ['1h 30m', 5400], ['30m 1h', 5400], ['1.5h', 5400], ['0m', 0],
+  ['  10s  ', 10], ['2h 3m 4s', 7384], ['', null], ['5x', null], ['abc', null]
+]
+const out = cases.map(([input, want]) => parseDuration(input) === want)
+console.log(JSON.stringify(out))
+"`
+
+const MEDIUM_TASKS: EvalTask[] = [
+  {
+    id: 'money-thousands',
+    title: 'Change a formatter and every consumer consistently (multi-file)',
+    tags: ['medium', 'feature', 'multi-file'],
+    files: MONEY_FILES,
+    prompt:
+      '`money(n)` in src/money.js formats amounts as plain dollars ("$999.00"). Change it to use thousands ' +
+      'separators ("$1,234,567.89") and make sure every consumer in src/ displays the new format. `npm test` covers the expected behaviour.',
+    check: async (ctx) => {
+      const r = await ctx.run(MONEY_CHECK, 30_000)
+      if (r.stdout.trim() !== MONEY_WANT) {
+        return { pass: false, detail: `money() → ${r.stdout.trim() || r.stderr.slice(0, 200)} (want ${MONEY_WANT})` }
+      }
+      return testsPass(ctx)
+    },
+    reference: {
+      'src/money.js':
+        "export const money = (n) => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })\n"
+    },
+    timeoutMs: 8 * 60_000
+  },
+  {
+    id: 'parse-duration-spec',
+    title: 'Implement a parser to a detailed spec (many small requirements)',
+    tags: ['medium', 'feature', 'spec'],
+    files: DURATION_FILES,
+    prompt:
+      'Implement `parseDuration(spec)` in src/parse.js: parse human duration strings into whole seconds. ' +
+      'Supported units are s, m and h; a value may combine them in any order ("30m 1h" = 5400). Values may be ' +
+      'fractional ("1.5h" = 5400). Whitespace around and between parts is allowed. Return null for anything that ' +
+      'does not parse (empty string, unknown units, non-numeric values). The basic cases are in test/parse.test.js — ' +
+      'meet the full spec above, not just the tests.',
+    check: async (ctx) => {
+      const r = await ctx.run(DURATION_CHECK, 30_000)
+      const out = r.stdout.trim()
+      let allOk = false
+      try {
+        allOk = JSON.parse(out) === true || (Array.isArray(JSON.parse(out)) && JSON.parse(out).every(Boolean))
+      } catch {
+        allOk = false
+      }
+      if (!allOk) {
+        return { pass: false, detail: `edge cases failed: ${out || r.stderr.slice(0, 200)}` }
+      }
+      return testsPass(ctx)
+    },
+    reference: {
+      'src/parse.js':
+        "/**\n * Parse a human duration like '90s', '5m 30s', '2h' into seconds.\n * Units: s/m/h, any order, fractional values allowed. Returns null on garbage.\n */\nexport function parseDuration(spec) {\n  if (typeof spec !== 'string') return null\n  const trimmed = spec.trim()\n  if (!trimmed) return null\n  const parts = trimmed.split(/\\s+/)\n  let total = 0\n  for (const part of parts) {\n    const m = /^(\\d+(?:\\.\\d+)?)(ms|s|m|h)$/.exec(part)\n    if (!m) return null\n    const value = Number(m[1])\n    const unit = m[2]\n    if (unit === 'ms') total += value / 1000\n    else if (unit === 's') total += value\n    else if (unit === 'm') total += value * 60\n    else total += value * 3600\n  }\n  return Math.round(total)\n}\n"
+    },
+    timeoutMs: 8 * 60_000
+  }
+]
+
+BUILTIN_TASKS.push(...HARD_TASKS, ...MEDIUM_TASKS)
 
 export function selectTasks(ids?: string[]): EvalTask[] {
   if (!ids?.length) return BUILTIN_TASKS

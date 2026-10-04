@@ -34,8 +34,8 @@ describe('ToolBatch', () => {
     render(<ToolBatch messages={messages} />)
     expect(screen.getByText('toolMessage.batchDone')).toBeInTheDocument()
     // Readable labels, raw id in the tooltip.
-    expect(screen.getByText('toolMessage.read ×2')).toHaveAttribute('title', 'read_file')
-    expect(screen.getByText('toolMessage.family.findFiles')).toHaveAttribute('title', 'grep_search')
+    expect(screen.getByText('toolMessage.read ×2')).toHaveAttribute('title', 'toolMessage.read')
+    expect(screen.getByText('toolMessage.family.findFiles')).toHaveAttribute('title', 'toolMessage.family.findFiles')
   })
 
   it('expands on click to display individual tool items', () => {
@@ -86,7 +86,7 @@ describe('ToolBatch', () => {
 })
 
 describe('ToolBatch chips', () => {
-  it('shows readable labels with the raw tool name as tooltip', () => {
+  it('shows readable labels with a human label as tooltip', () => {
     render(
       <ToolBatch
         messages={[
@@ -98,6 +98,6 @@ describe('ToolBatch chips', () => {
     )
     const chips = Array.from(document.querySelectorAll('.tool-batch-chip'))
     expect(chips.map((c) => c.textContent)).toEqual(['toolMessage.write', 'toolMessage.shell', 'toolMessage.family.browser'])
-    expect(chips.map((c) => c.getAttribute('title'))).toEqual(['write_file', 'shell_exec', 'browser_navigate'])
+    expect(chips.map((c) => c.getAttribute('title'))).toEqual(['toolMessage.write', 'toolMessage.shell', 'toolMessage.family.browser'])
   })
 })

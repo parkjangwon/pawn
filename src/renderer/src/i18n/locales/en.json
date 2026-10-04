@@ -1,6 +1,9 @@
 {
   "app": {
-    "name": "Pawn"
+    "name": "Pawn",
+    "updateAvailable": "Pawn {{latest}} is available (you're on {{current}}). Update in Settings → System.",
+    "initFailed": "Some settings failed to load ({{error}}). Restart Pawn if anything looks off.",
+    "unexpectedError": "Something failed: {{error}}"
   },
   "common": {
     "save": "Save",
@@ -51,7 +54,7 @@
     "waitingHint": "The agent is waiting for your answer or approval"
   },
   "chat": {
-    "placeholder": "What would you like to do?",
+    "placeholder": "Ask, build, or automate…",
     "welcome": "What can I help you with?",
     "welcomeSub": "Code, browse, automate — all in one place.",
     "send": "Send",
@@ -88,7 +91,8 @@
       "lessonLearned": "Learned from your correction: {{rule}}",
       "toolResultsCleared": "Cleared {{count}} old tool results (~{{tokens}}k tokens) to keep the context focused — full text stays available to the agent",
       "stuckRecovery": "Agent looked stuck (level {{level}}, {{action}}): {{detail}}",
-      "decisionComplexity": "Decision model rated this request {{to}} ({{pct}}%, {{model}}); the heuristic said {{from}}"
+      "decisionComplexity": "Decision model rated this request {{to}} ({{pct}}%, {{model}}); the heuristic said {{from}}",
+      "escalateOnVerifyFail": "Checks failed twice — escalating the fix to a stronger model."
     },
     "errors": {
       "noProvider": "No provider or model configured. Open Settings → Providers, then Settings → Models.",
@@ -100,7 +104,7 @@
       "toolLoop": "Tool loop detected: repeated the same calls ({{names}}) {{rounds}} rounds without progress. Stopping.",
       "maxRounds": "Stopped after {{rounds}} tool rounds without a final answer.",
       "agentError": "Agent loop error: {{error}}",
-      "emptyResponse": "The model returned an empty reply. Try again, or switch to a stronger model. (Gmail send is not supported — Google is connected for read-only tools only.)",
+      "emptyResponse": "The model returned an empty reply. Try again, or switch to a stronger model.",
       "hookBlocked": "Blocked by hook (UserPromptSubmit)",
       "sessionBudgetHit": "Stopped: this chat's spend reached ${{cost}} (cap ${{cap}}). Raise the limit in Settings → Usage, or start a new chat.",
       "dailyBudgetHit": "Stopped: today's spend reached ${{cost}} (cap ${{cap}}). Raise the limit under Settings → Usage.",
@@ -212,7 +216,54 @@
     "repeatHint": "Turn this request into an automation that runs on a schedule",
     "projectRoots": "Project folders",
     "loadingMessages": "Loading messages",
-    "exportedTo": "Exported to {{path}}"
+    "exportedTo": "Exported to {{path}}",
+    "errorCard": {
+      "titleAuth": "The provider rejected your credentials",
+      "titleRate": "The provider is rate-limiting requests",
+      "titleServer": "The provider had a temporary problem",
+      "titleNetwork": "Couldn't reach the provider",
+      "titleGeneric": "The request failed",
+      "hintAuth": "Check the API key in Settings → Providers, then retry.",
+      "hintRate": "Pawn retries automatically. You can also switch models in Settings → Models.",
+      "hintServer": "This usually clears on retry.",
+      "hintNetwork": "Check your connection, then retry.",
+      "hintGeneric": "Retry, or check Settings → Models.",
+      "retry": "Retry",
+      "details": "Show details",
+      "settings": "Open Settings"
+    },
+    "toolMessage": {
+      "aborted": "Tool was not executed (run aborted).",
+      "noResult": "Tool produced no result.",
+      "toolError": "{{name}} failed: {{message}}",
+      "outputOffloaded": "Full output is {{chars}} chars — load it below.",
+      "loadFull": "Load full output",
+      "loadMore": "Load more",
+      "fullShown": "Showing full output ({{chars}} chars)"
+    },
+    "liveTool": {
+      "title": "Running: {{label}}",
+      "running": "{{label}} — {{seconds}}s",
+      "output": "Output (last {{count}} lines)"
+    },
+    "checksRunning": "Running project checks…",
+    "messageRenderFailed": "Message content failed to render ({{error}})",
+    "verifyAsk": {
+      "question": "Edits were made this turn. Run {{kind}} to verify them?",
+      "run": "Run checks",
+      "skip": "Skip"
+    },
+    "handoff": {
+      "header": "Continuing from a previous chat. Here is the handoff:",
+      "goal": "## Original goal",
+      "state": "## Where it left off",
+      "plan": "## Plan state",
+      "files": "## Files touched",
+      "instruction": "Pick up where this left off: re-verify the current state before changing anything, finish what is unfinished, and keep the same plan unless it is wrong.",
+      "title": "Handoff — continued work",
+      "button": "Continue in a fresh chat",
+      "hint": "Start a new chat seeded with a summary of this one — fresh context, same goal."
+    }
   },
   "automation": {
     "title": "Automations",
@@ -403,7 +454,12 @@
       "sendsData": "It may send local data to a remote server.",
       "escalated": "This would have run without asking. The decision model flagged it, so Pawn is checking with you.",
       "checking": "Checking the risk…"
-    }
+    },
+    "copy": "Copy",
+    "copied": "Copied",
+    "alwaysCommand": "Always allow “{{prefix}}”",
+    "sessionGlobalNote": "Applies in every chat until Pawn restarts.",
+    "kbdHint": "Enter to allow · Esc to deny"
   },
   "statusBar": {
     "working": "Working…",
@@ -440,7 +496,6 @@
       "general": "General",
       "coding": "Coding",
       "integration": "Integration",
-      "automation": "Automation",
       "system": "System"
     },
     "telegramSection": {
@@ -570,7 +625,8 @@
       "targetLocal": "This computer",
       "remotePath": "Remote path",
       "remotePathHint": "Absolute repo path on the host",
-      "securityNote": "Commands run with the host account’s permissions. The first connection trusts the host key (accept-new)."
+      "securityNote": "Commands run with the host account’s permissions. The first connection trusts the host key (accept-new).",
+      "search": "remote ssh host execution server"
     },
     "appearanceSection": {
       "title": "Appearance",
@@ -581,7 +637,8 @@
       "languageDesc": "Select your preferred interface language",
       "chatFontSize": "Message text size",
       "chatFontSizeDesc": "Size of chat message text and code. The rest of the interface stays the same.",
-      "chatFontSizeDefault": "Default (14px)"
+      "chatFontSizeDefault": "Default (14px)",
+      "search": "theme dark light language text size font"
     },
     "providerSection": {
       "title": "Providers",
@@ -769,7 +826,12 @@
       "nativeComputerTool": "Claude native computer tool",
       "nativeComputerToolDesc": "On the Anthropic API, give Claude its own trained computer tool (batched actions, best click accuracy). Pawn's accessibility, OCR, app and menu tools stay available.",
       "nativeCodingTools": "Model-native coding tools",
-      "nativeCodingToolsDesc": "Give each model the editing tools it was trained on: Claude's text editor and persistent bash on the Anthropic API, apply_patch for GPT models. Undo, permissions and verification still apply."
+      "nativeCodingToolsDesc": "Give each model the editing tools it was trained on: Claude's text editor and persistent bash on the Anthropic API, apply_patch for GPT models. Undo, permissions and verification still apply.",
+      "search": "permission sandbox send mode compaction context budget vision fallback ultra work auto verify",
+      "groupBehavior": "Run behavior",
+      "groupSafety": "Safety & approvals",
+      "groupContext": "Context & compaction",
+      "groupTools": "Models & tools"
     },
     "agentsSection": {
       "title": "Subagents",
@@ -858,7 +920,8 @@
       "template_implementer": "Implementer",
       "template_reviewer": "Reviewer",
       "parallelHint": "When work can be split up, Pawn can run several helpers at the same time (up to six) so independent tasks finish faster. Watch them live in the chat, or open the Agents panel for full history.",
-      "applyReview": "Review before applying"
+      "applyReview": "Review before applying",
+      "confirmDeleteTitle": "Delete this agent?"
     },
     "hooksSection": {
       "title": "Hooks",
@@ -876,7 +939,8 @@
       "loaded": "Loaded hooks",
       "empty": "No hooks found. Add them under ~/.claude/settings.json or ~/.pawn/hooks.json.",
       "saved": "Saved",
-      "desktopOnly": "Hooks run in the desktop app."
+      "desktopOnly": "Hooks run in the desktop app.",
+      "search": "hooks pre post tool permission script"
     },
     "memorySection": {
       "title": "Memory (self-learning)",
@@ -901,7 +965,9 @@
       "empty": "Nothing yet. Chat normally, or say “remember this…”.",
       "forget": "Forget",
       "desktopOnly": "Memory is available in the desktop app.",
-      "pin": "Pin"
+      "pin": "Pin",
+      "search": "memory remember cards learn consolidate forget",
+      "clearConfirmTitle": "Clear all memories?"
     },
     "pluginSection": {
       "title": "Plugins",
@@ -969,7 +1035,8 @@
       "envPlaceholder": "Environment variables, one per line: KEY=value",
       "addFailed": "Couldn't add the server.",
       "templates": "Templates",
-      "templatesDesc": "One-click install common MCP servers (stdio or HTTP). Add secrets in env after install."
+      "templatesDesc": "One-click install common MCP servers (stdio or HTTP). Add secrets in env after install.",
+      "search": "mcp servers tools remote stdio http"
     },
     "dataSection": {
       "title": "Data",
@@ -1001,7 +1068,8 @@
       "keysEncrypted": "API keys are encrypted at rest with the OS keychain when available.",
       "fullBackupSafe": "Backup (no secrets)",
       "backupOkSafe": "Safe backup saved to {{path}} (API keys stripped)",
-      "backupFullConfirm": "Full backup includes API keys and connection tokens. Store the zip securely. Continue?"
+      "backupFullConfirm": "Full backup includes API keys and connection tokens. Store the zip securely. Continue?",
+      "search": "export import backup reset wipe storage"
     },
     "system": "System",
     "connectionsSection": {
@@ -1048,7 +1116,8 @@
       "writeScopesMissing": "Write scopes missing ({{scopes}}). Disconnect → Connect to enable Gmail send / Sheets write / Calendar create.",
       "writeScopesReady": "Write scopes ready",
       "finishInBrowser": "Finish signing in in your browser…",
-      "finishGoogle": "Finish Google sign-in in your browser…"
+      "finishGoogle": "Finish Google sign-in in your browser…",
+      "search": "github gitlab google connect account issues pulls calendar"
     },
     "automationSection": {
       "title": "Automations",
@@ -1108,7 +1177,8 @@
       "downloadInstall": "Download & open",
       "downloading": "Downloading installer…",
       "downloadOpened": "Installer opened: {{path}}",
-      "downloadFailed": "Download failed"
+      "downloadFailed": "Download failed",
+      "search": "updates tray quit dock sleep version diagnostics"
     },
     "shortcuts": "Shortcuts",
     "shortcutSection": {
@@ -1162,7 +1232,8 @@
       "sessionBudget": "Chat spend cap ($)",
       "sessionBudgetDesc": "Soft-stop the agent when this chat's USD cost reaches the cap. 0 = unlimited.",
       "dailyBudget": "Daily spend cap ($)",
-      "dailyBudgetDesc": "Soft-stop when today’s on-device usage reaches the cap. 0 = unlimited."
+      "dailyBudgetDesc": "Soft-stop when today’s on-device usage reaches the cap. 0 = unlimited.",
+      "search": "cost tokens budget cap spend cache usage"
     },
     "skillStore": {
       "nav": "Skill store",
@@ -1202,7 +1273,8 @@
       "next": "Next",
       "pageOf": "Page {{page}} of {{pages}}",
       "foot": "{{size}} per page. Skills are instructions the agent follows — only install ones you trust.",
-      "unavailable": "The skill store needs the desktop app."
+      "unavailable": "The skill store needs the desktop app.",
+      "search": "skill store browse install community"
     },
     "decisionModels": "Decision models",
     "decisionSection": {
@@ -1266,6 +1338,28 @@
         "routerAssist": "Judge request difficulty (for auto routing)",
         "routerAssistDesc": "When the model picker is on Auto, the decision model judges how hard each new request is. That sets the tier of chat model that answers (low, mid or high). Needs models in at least two tiers. Adds a short wait before each reply."
       }
+    },
+    "providerKeyInvalid": "That key looks too short or contains spaces — paste the full key from the provider.",
+    "providerTestTimeout": "Timed out after 15s",
+    "providerLoadFailed": "Couldn't load saved settings: {{error}}",
+    "providerFormRequired": "Name and base URL are required.",
+    "providersSection": {
+      "search": "api key test sync provider anthropic openai deepseek claude kiro"
+    },
+    "modelsSection": {
+      "search": "models add remove tier vision pricing context window sync"
+    },
+    "decisionModelsSection": {
+      "search": "typesafe decision risk rating reversible destructive"
+    },
+    "subagentsSection": {
+      "search": "subagents parallel spawn agents rounds cancel"
+    },
+    "pluginsSection": {
+      "search": "plugins skills enable disable store"
+    },
+    "shortcutsSection": {
+      "search": "shortcuts keybinding rebind keys"
     }
   },
   "projectEdit": {
@@ -1418,8 +1512,8 @@
     "close": "Close terminal"
   },
   "commandPalette": {
-    "title": "Search chats",
-    "placeholder": "Search chats…",
+    "title": "Command palette",
+    "placeholder": "Search chats, actions, projects…",
     "noResults": "No matching chats",
     "noResultsHint": "Try another keyword, or clear the search.",
     "navigate": "Navigate",
@@ -1453,7 +1547,7 @@
       "themeDark": "Use dark theme",
       "themeDarkDesc": "Switch the app to dark mode",
       "stopStreaming": "Stop generating",
-      "stopStreamingDesc": "Cancel the current model response",
+      "stopStreamingDesc": "Stop the active chat's response",
       "stopStreamingIdle": "Nothing is generating right now",
       "openSettings": "Settings",
       "openSettingsDesc": "Providers, models, connections, and more",
@@ -1467,7 +1561,9 @@
       "toggleSidebarDesc": "Show or hide the project sidebar",
       "findInChat": "Find in conversation",
       "findInChatDesc": "Search this chat and jump between matches"
-    }
+    },
+    "shortcuts": "Keyboard shortcuts",
+    "shortcutsDesc": "See every shortcut in one place"
   },
   "fileTree": {
     "loading": "Loading files…",
@@ -1589,14 +1685,19 @@
     "revertFailed": "Revert failed",
     "noPath": "No path to revert",
     "revertConflict": "This file changed after the agent edited it. Reverting will discard those later changes. Revert anyway?",
-    "revertCancelled": "Revert cancelled — file kept"
+    "revertCancelled": "Revert cancelled — file kept",
+    "revertConflictTitle": "File changed after the edit",
+    "revertForce": "Overwrite anyway"
   },
   "usage": {
     "diagnostics": {
       "cacheMiss": "Cache miss — the prefix changed or the cache expired.",
       "cachePriming": "Cache priming — writing a new prefix.",
       "cacheHit": "Good cache hit — most of the input was served from cache."
-    }
+    },
+    "filesTouched": "Files in this chat",
+    "filesTouchedEmpty": "Files the agent reads or edits show up here.",
+    "loadFailed": "Couldn't load usage: {{error}}"
   },
   "errorBoundary": {
     "title": "Something went wrong",
@@ -1707,7 +1808,13 @@
     "inlineWorking": "{{count}} agents working…",
     "inlineWorking_one": "{{count}} agent working…",
     "inlineDone": "Helpers finished",
-    "inlineDoneCount": "{{count}} done"
+    "inlineDoneCount": "{{count}} done",
+    "status": {
+      "running": "Running",
+      "ok": "Done",
+      "error": "Failed",
+      "aborted": "Stopped"
+    }
   },
   "markdown": {
     "codeLines": "{{count}} lines",
@@ -1855,5 +1962,39 @@
       "label": "Record a workflow",
       "desc": "Demonstrate a task once; Pawn writes a reusable skill"
     }
+  },
+  "composer": {
+    "needProvider": "Add an AI provider to start",
+    "addProvider": "Add provider"
+  },
+  "models": {
+    "emptyAddProvider": "Add a provider in Settings → Providers, then sync models."
+  },
+  "diff": {
+    "emptyHint": "File changes appear here after the agent edits files in this chat."
+  },
+  "files": {
+    "emptyHint": "Open a project folder to browse its files."
+  },
+  "artifacts": {
+    "revealFailed": "Couldn't reveal the file: {{error}}"
+  },
+  "errors": {
+    "boundaryReassure": "Your chats and settings are saved on this device and are safe.",
+    "boundaryCopy": "Copy details",
+    "boundaryCopied": "Copied",
+    "boundaryStack": "Technical details"
+  },
+  "kiro": {
+    "recommended": "Recommended"
+  },
+  "git": {
+    "checkoutFailedDetail": "Couldn't switch branches: {{detail}}"
+  },
+  "shortcuts": {
+    "title": "Keyboard shortcuts",
+    "groupFixed": "Fixed shortcuts",
+    "findInChat": "Find in chat",
+    "interrupt": "Interrupt the agent"
   }
 }

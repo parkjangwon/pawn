@@ -520,6 +520,11 @@ const api = {
     save: (sessionId: string, content: string) => ipcRenderer.invoke('outputs:save', sessionId, content),
     read: (id: string, opts?: Record<string, unknown>) => ipcRenderer.invoke('outputs:read', id, opts || {})
   },
+  /** UI paging over offloaded tool outputs (chat tool rows). */
+  toolOutput: {
+    get: (id: string, offset?: number, limit?: number) =>
+      ipcRenderer.invoke('toolOutput:get', id, offset, limit)
+  },
   /** Learned per-repository profile (commands, conventions, gotchas). */
   profile: {
     get: (root: string) => ipcRenderer.invoke('profile:get', root),

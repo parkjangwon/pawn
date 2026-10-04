@@ -51,11 +51,11 @@
 }
 
 .diff-stat-added {
-  color: #22c55e;
+  color: var(--success);
 }
 
 .diff-stat-removed {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .diff-body {
@@ -109,11 +109,11 @@
 }
 
 .diff-line-add .diff-line-prefix {
-  color: #22c55e;
+  color: var(--success);
 }
 
 .diff-line-remove .diff-line-prefix {
-  color: #ef4444;
+  color: var(--danger);
 }
 
 .diff-line-text {
@@ -169,7 +169,7 @@
   color: var(--accent);
 }
 .diff-action-revert {
-  color: #e55;
+  color: var(--danger);
 }
 .diff-action-msg {
   font-size: var(--font-xs);

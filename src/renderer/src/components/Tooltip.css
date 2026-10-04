@@ -1,6 +1,6 @@
 .app-tooltip {
   position: fixed;
-  z-index: 999999;
+  z-index: var(--z-tooltip);
   display: inline-flex;
   align-items: center;
   gap: 7px;

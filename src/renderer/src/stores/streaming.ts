@@ -1,22 +1,38 @@
 import { create } from 'zustand'
 
 /**
- * Live text of the assistant message currently streaming. Kept OUT of the app
- * store so per-token updates only re-render the one message row instead of
- * the whole projects tree.
- *
- * Updates are coalesced to one Zustand set per animation frame (in addition to
- * the LLM reader's own rAF) so multiple flush paths cannot thrash React.
+ * Live output of a foreground shell command currently executing in a session.
+ * Keyed by session id; never touches messages/transcripts (prompt-cache
+ * stability). `jobId` identifies the producer so a late clear from one command
+ * cannot drop another's card when two run in parallel.
  */
+export interface LiveToolState {
+  jobId: string
+  /** Human label, e.g. "Run command". */
+  label: string
+  /** Primary argument, e.g. the command line or working directory. */
+  target?: string
+  startedAt: number
+  /** Last few output lines. */
+  tail: string
+  totalLines: number
+  totalChars: number
+}
+
 interface StreamingState {
   content: Record<string, string>
   /** Live reasoning / thinking channel (shown collapsed separately). */
   thinking: Record<string, string>
   /** Live action / tool execution status (e.g. "Reading auth.ts", "Running tests"). */
   activity: Record<string, string | null>
+  /** Live tool output (streaming shell tail) keyed by session id. */
+  liveTool: Record<string, LiveToolState>
   setContent: (id: string, text: string) => void
   setThinking: (id: string, text: string) => void
   setActivity: (id: string, text: string | null) => void
+  setLiveTool: (sessionId: string, state: LiveToolState) => void
+  /** Clears only when `jobId` still owns the slot (parallel-safe). */
+  clearLiveTool: (sessionId: string, jobId: string) => void
   /** Immediate write (final flush) — bypasses rAF coalescing. */
   setContentNow: (id: string, text: string) => void
   setThinkingNow: (id: string, text: string) => void
@@ -64,6 +80,7 @@ export const useStreamingStore = create<StreamingState>((set, get) => ({
   content: {},
   thinking: {},
   activity: {},
+  liveTool: {},
 
   setContent: (id, text) => {
     if (get().content[id] === text && !pending.has(id)) return
@@ -166,6 +183,33 @@ export const useStreamingStore = create<StreamingState>((set, get) => ({
     })
   },
 
+  // Live tool output polls a few times a second — write straight through
+  // (no rAF coalescing needed at that rate, and the card is the only subscriber).
+  setLiveTool: (sessionId, state) => {
+    set((s) => {
+      const cur = s.liveTool[sessionId]
+      if (
+        cur &&
+        cur.jobId === state.jobId &&
+        cur.tail === state.tail &&
+        cur.totalLines === state.totalLines &&
+        cur.totalChars === state.totalChars
+      ) {
+        return s
+      }
+      return { liveTool: { ...s.liveTool, [sessionId]: state } }
+    })
+  },
+
+  clearLiveTool: (sessionId, jobId) => {
+    set((s) => {
+      if (s.liveTool[sessionId]?.jobId !== jobId) return s
+      const next = { ...s.liveTool }
+      delete next[sessionId]
+      return { liveTool: next }
+    })
+  },
+
   setContentNow: (id, text) => {
     pending.delete(id)
     set((s) => {
@@ -219,7 +263,7 @@ export const useStreamingStore = create<StreamingState>((set, get) => ({
       cancelAnimationFrame(rafId)
       rafId = null
     }
-    set({ content: {}, thinking: {}, activity: {} })
+    set({ content: {}, thinking: {}, activity: {}, liveTool: {} })
   }
 }))
 

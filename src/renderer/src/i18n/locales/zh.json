@@ -1,6 +1,9 @@
 {
   "app": {
-    "name": "Pawn"
+    "name": "Pawn",
+    "updateAvailable": "Pawn {{latest}} 可用（当前 {{current}}）。请在 设置 → 系统 中更新。",
+    "initFailed": "部分设置加载失败（{{error}}）。如有异常请重启 Pawn。",
+    "unexpectedError": "操作失败：{{error}}"
   },
   "common": {
     "save": "保存",
@@ -51,7 +54,7 @@
     "waitingHint": "代理正在等待你的回答或批准"
   },
   "chat": {
-    "placeholder": "写下想做的事",
+    "placeholder": "提问、构建或自动化…",
     "welcome": "有什么可以帮你的？",
     "welcomeSub": "编码、浏览、自动化 — 尽在一处。",
     "send": "发送",
@@ -88,7 +91,8 @@
       "lessonLearned": "已从你的纠正中学习：{{rule}}",
       "toolResultsCleared": "为保持上下文精简，已清理 {{count}} 条旧工具结果（约 {{tokens}}k tokens）— 代理仍可取回全文",
       "stuckRecovery": "代理似乎卡住了（第 {{level}} 级，{{action}}）：{{detail}}",
-      "decisionComplexity": "决策模型判断此请求为 {{to}}（{{pct}}%，{{model}}），启发式判断为 {{from}}"
+      "decisionComplexity": "决策模型判断此请求为 {{to}}（{{pct}}%，{{model}}），启发式判断为 {{from}}",
+      "escalateOnVerifyFail": "检查连续两次失败 — 将修复工作升级到更强的模型。"
     },
     "errors": {
       "noProvider": "未配置提供商或模型。请打开设置 → 提供商，然后设置 → 模型。",
@@ -100,7 +104,7 @@
       "toolLoop": "检测到工具循环: 相同的调用({{names}})重复了{{rounds}}轮，已停止。",
       "maxRounds": "{{rounds}}轮工具调用后仍未得到最终答案，已停止。",
       "agentError": "代理循环错误: {{error}}",
-      "emptyResponse": "模型返回了空回复。请重试，或换用更强的模型。（不支持发送邮件 — Google 连接仅为只读。）",
+      "emptyResponse": "模型返回了空回复。请重试，或切换到更强的模型。",
       "hookBlocked": "已被钩子阻止 (UserPromptSubmit)",
       "sessionBudgetHit": "已停止：此对话花费达到 ${{cost}}（上限 ${{cap}}）。请在 设置 → 用量 中提高上限，或开始新对话。",
       "dailyBudgetHit": "已停止：今日花费达到 ${{cost}}（上限 ${{cap}}）。请在 设置 → 用量 中提高上限。",
@@ -212,7 +216,54 @@
     "repeatHint": "把这个请求变成按计划自动运行的自动化",
     "projectRoots": "项目文件夹",
     "loadingMessages": "正在加载消息",
-    "exportedTo": "已导出到 {{path}}"
+    "exportedTo": "已导出到 {{path}}",
+    "errorCard": {
+      "titleAuth": "提供商拒绝了你的凭据",
+      "titleRate": "提供商正在限流",
+      "titleServer": "提供商出现临时故障",
+      "titleNetwork": "无法连接到提供商",
+      "titleGeneric": "请求失败",
+      "hintAuth": "请在 设置 → 提供商 检查 API 密钥后重试。",
+      "hintRate": "Pawn 会自动重试。你也可以在 设置 → 模型 中切换模型。",
+      "hintServer": "通常重试即可恢复。",
+      "hintNetwork": "请检查网络连接后重试。",
+      "hintGeneric": "请重试，或检查 设置 → 模型。",
+      "retry": "重试",
+      "details": "显示详情",
+      "settings": "打开设置"
+    },
+    "toolMessage": {
+      "aborted": "工具未执行（已中止）。",
+      "noResult": "工具没有返回结果。",
+      "toolError": "{{name}} 失败：{{message}}",
+      "outputOffloaded": "完整输出共 {{chars}} 字符 — 在下方加载。",
+      "loadFull": "加载完整输出",
+      "loadMore": "加载更多",
+      "fullShown": "正在显示完整输出（{{chars}} 字符）"
+    },
+    "liveTool": {
+      "title": "运行中：{{label}}",
+      "running": "{{label}} — {{seconds}}秒",
+      "output": "输出（最近 {{count}} 行）"
+    },
+    "checksRunning": "正在运行项目检查…",
+    "messageRenderFailed": "消息内容渲染失败（{{error}}）",
+    "verifyAsk": {
+      "question": "本轮修改了文件。要运行 {{kind}} 来验证吗？",
+      "run": "运行检查",
+      "skip": "跳过"
+    },
+    "handoff": {
+      "header": "从上一个聊天继续。交接摘要：",
+      "goal": "## 原始目标",
+      "state": "## 当前进度",
+      "plan": "## 计划状态",
+      "files": "## 已修改的文件",
+      "instruction": "从这里继续：在修改任何内容之前先核实当前状态，完成未完成的部分。除非计划有误，否则保持原计划。",
+      "title": "交接 — 继续工作",
+      "button": "在新聊天中继续",
+      "hint": "用此聊天的摘要开始新聊天 — 全新上下文，同一目标。"
+    }
   },
   "automation": {
     "title": "自动化",
@@ -403,7 +454,12 @@
       "sendsData": "可能会把本地数据发送到远程服务器。",
       "escalated": "这条命令原本会自动运行。决策模型认为它有风险，所以先向你确认。",
       "checking": "正在评估风险…"
-    }
+    },
+    "copy": "复制",
+    "copied": "已复制",
+    "alwaysCommand": "始终允许“{{prefix}}”",
+    "sessionGlobalNote": "在 Pawn 重启前应用于所有对话。",
+    "kbdHint": "Enter 允许 · Esc 拒绝"
   },
   "statusBar": {
     "working": "工作中…",
@@ -440,7 +496,6 @@
       "general": "通用",
       "coding": "编码",
       "integration": "集成",
-      "automation": "自动化",
       "system": "系统"
     },
     "telegramSection": {
@@ -570,7 +625,8 @@
       "targetLocal": "这台电脑",
       "remotePath": "远程路径",
       "remotePathHint": "主机上的仓库绝对路径",
-      "securityNote": "命令以主机账户权限运行。首次连接会信任主机密钥（accept-new）。"
+      "securityNote": "命令以主机账户权限运行。首次连接会信任主机密钥（accept-new）。",
+      "search": "远程 ssh 主机 执行 服务器"
     },
     "appearanceSection": {
       "title": "外观",
@@ -581,7 +637,8 @@
       "languageDesc": "选择您偏好的界面语言",
       "chatFontSize": "消息文字大小",
       "chatFontSizeDesc": "聊天消息和代码的文字大小，界面其他部分保持不变。",
-      "chatFontSizeDefault": "默认 (14px)"
+      "chatFontSizeDefault": "默认 (14px)",
+      "search": "主题 深色 浅色 语言 字号 字体"
     },
     "providerSection": {
       "title": "提供商",
@@ -769,7 +826,12 @@
       "nativeComputerTool": "Claude 原生电脑工具",
       "nativeComputerToolDesc": "在 Anthropic API 上让 Claude 使用其训练过的专用电脑工具（批量操作，点击最准确）。Pawn 的辅助功能、OCR、应用和菜单工具仍可使用。",
       "nativeCodingTools": "模型原生编码工具",
-      "nativeCodingToolsDesc": "为每个模型提供其训练时使用的编辑工具：Anthropic API 上的 Claude 使用文本编辑器和持久 bash，GPT 模型使用 apply_patch。撤销、权限和验证仍然适用。"
+      "nativeCodingToolsDesc": "为每个模型提供其训练时使用的编辑工具：Anthropic API 上的 Claude 使用文本编辑器和持久 bash，GPT 模型使用 apply_patch。撤销、权限和验证仍然适用。",
+      "search": "权限 沙盒 发送 模式 压缩 上下文 预算 视觉 回退 超级工作 自动验证",
+      "groupBehavior": "运行行为",
+      "groupSafety": "安全与批准",
+      "groupContext": "上下文与压缩",
+      "groupTools": "模型与工具"
     },
     "agentsSection": {
       "title": "子代理",
@@ -858,7 +920,8 @@
       "template_implementer": "实现",
       "template_reviewer": "评审",
       "parallelHint": "任务可以拆分时，Pawn 最多可同时运行 6 个助手，让彼此独立的工作更快完成。可在聊天中实时查看进度，完整历史请打开 Agents 面板。",
-      "applyReview": "应用前审查"
+      "applyReview": "应用前审查",
+      "confirmDeleteTitle": "要删除此代理吗？"
     },
     "hooksSection": {
       "title": "钩子",
@@ -876,7 +939,8 @@
       "loaded": "已加载钩子",
       "empty": "未找到钩子。请添加到 ~/.claude/settings.json 或 ~/.pawn/hooks.json。",
       "saved": "已保存",
-      "desktopOnly": "钩子仅在桌面应用中运行。"
+      "desktopOnly": "钩子仅在桌面应用中运行。",
+      "search": "钩子 前置 后置 工具 权限 脚本"
     },
     "memorySection": {
       "title": "记忆（自我学习）",
@@ -901,7 +965,9 @@
       "autoCapture": "自动学习",
       "autoCaptureDesc": "每轮对话后保存可复用的偏好与项目事实",
       "injectOnTurn": "每轮回忆",
-      "injectOnTurnDesc": "将匹配的记忆加入提示，供代理参考"
+      "injectOnTurnDesc": "将匹配的记忆加入提示，供代理参考",
+      "search": "记忆 记住 卡片 学习 整理 遗忘",
+      "clearConfirmTitle": "要清除所有记忆吗？"
     },
     "pluginSection": {
       "title": "插件",
@@ -969,7 +1035,8 @@
       "addFailed": "无法添加服务器。",
       "templates": "模板",
       "templatesDesc": "一键安装常用 MCP 服务（stdio 或 HTTP）。安装后可在环境变量中配置密钥。",
-      "retry": "重试"
+      "retry": "重试",
+      "search": "mcp 服务器 工具 远程 stdio http"
     },
     "dataSection": {
       "title": "数据",
@@ -1001,7 +1068,8 @@
       "keysEncrypted": "在可用时，API 密钥会用系统密钥链加密存储。",
       "fullBackupSafe": "备份（不含密钥）",
       "backupOkSafe": "安全备份已保存：{{path}}（已去除 API 密钥）",
-      "backupFullConfirm": "完整备份包含 API 密钥与连接令牌。请妥善保管 zip。继续？"
+      "backupFullConfirm": "完整备份包含 API 密钥与连接令牌。请妥善保管 zip。继续？",
+      "search": "导出 导入 备份 重置 清除 存储"
     },
     "system": "系统",
     "connectionsSection": {
@@ -1048,7 +1116,8 @@
       "writeScopesMissing": "缺少写入权限（{{scopes}}）。请断开后重新连接以启用完整访问。",
       "writeScopesReady": "写入权限已就绪",
       "finishInBrowser": "请在浏览器中完成登录…",
-      "finishGoogle": "请在浏览器中完成 Google 登录…"
+      "finishGoogle": "请在浏览器中完成 Google 登录…",
+      "search": "github・gitlab・google 连接 账号 issue PR 日历"
     },
     "automationSection": {
       "title": "自动化",
@@ -1108,7 +1177,8 @@
       "downloadInstall": "下载并打开",
       "downloading": "正在下载安装包…",
       "downloadOpened": "已打开安装包：{{path}}",
-      "downloadFailed": "下载失败"
+      "downloadFailed": "下载失败",
+      "search": "更新 托盘 退出 程序坞 睡眠 版本 诊断"
     },
     "shortcuts": "快捷键",
     "shortcutSection": {
@@ -1162,7 +1232,8 @@
       "sessionBudget": "对话花费上限 ($)",
       "sessionBudgetDesc": "当本会话 USD 费用达到上限时软停止代理。0 = 不限。",
       "dailyBudget": "每日花费上限 ($)",
-      "dailyBudgetDesc": "当今日本机用量达到上限时停止。0 = 不限。"
+      "dailyBudgetDesc": "当今日本机用量达到上限时停止。0 = 不限。",
+      "search": "成本 令牌 预算 上限 支出 缓存 用量"
     },
     "skillStore": {
       "nav": "技能商店",
@@ -1202,7 +1273,8 @@
       "next": "下一页",
       "pageOf": "第 {{page}} / {{pages}} 页",
       "foot": "每页 {{size}} 个。技能是代理遵循的指令 — 只安装你信任的技能。",
-      "unavailable": "技能商店需要桌面应用。"
+      "unavailable": "技能商店需要桌面应用。",
+      "search": "技能 商店 浏览 安装 社区"
     },
     "decisionModels": "决策模型",
     "decisionSection": {
@@ -1266,6 +1338,28 @@
         "routerAssist": "判断请求难度（用于自动路由）",
         "routerAssistDesc": "模型选择为自动时，由决策模型判断每个新请求的难度，并据此决定由哪个等级（低、中、高）的聊天模型回答。需要至少两个不同等级的模型，回复前可能会稍等片刻。"
       }
+    },
+    "providerKeyInvalid": "密钥太短或包含空格 — 请粘贴提供商提供的完整密钥。",
+    "providerTestTimeout": "15 秒后超时",
+    "providerLoadFailed": "无法加载已保存的设置：{{error}}",
+    "providerFormRequired": "名称和基础 URL 为必填项。",
+    "providersSection": {
+      "search": "api 密钥 测试 同步 提供商 Anthropic・OpenAI・DeepSeek・Claude・Kiro"
+    },
+    "modelsSection": {
+      "search": "模型 添加 删除 层级 视觉 价格 上下文 同步"
+    },
+    "decisionModelsSection": {
+      "search": "typesafe 决策 风险 评级 可逆 破坏"
+    },
+    "subagentsSection": {
+      "search": "子代理 并行 生成 代理 轮次 取消"
+    },
+    "pluginsSection": {
+      "search": "插件 技能 启用 禁用 商店"
+    },
+    "shortcutsSection": {
+      "search": "快捷键 按键绑定 重新设置"
     }
   },
   "projectEdit": {
@@ -1418,8 +1512,8 @@
     "close": "关闭终端"
   },
   "commandPalette": {
-    "title": "搜索对话",
-    "placeholder": "搜索对话…",
+    "title": "命令面板",
+    "placeholder": "搜索聊天、操作、项目…",
     "noResults": "没有匹配的对话",
     "noResultsHint": "请尝试其他关键词，或清空搜索。",
     "navigate": "移动",
@@ -1453,7 +1547,7 @@
       "themeDark": "使用深色主题",
       "themeDarkDesc": "将应用切换为深色模式",
       "stopStreaming": "停止生成",
-      "stopStreamingDesc": "取消当前模型响应",
+      "stopStreamingDesc": "停止当前聊天的响应",
       "stopStreamingIdle": "当前没有正在生成的内容",
       "openSettings": "设置",
       "openSettingsDesc": "提供商、模型、服务连接等",
@@ -1467,7 +1561,9 @@
       "openAgentsDesc": "实时查看助手进度、费用和文件变更",
       "findInChat": "在对话中查找",
       "findInChatDesc": "搜索当前对话并在匹配项之间跳转"
-    }
+    },
+    "shortcuts": "键盘快捷键",
+    "shortcutsDesc": "查看所有快捷键"
   },
   "fileTree": {
     "loading": "正在加载文件…",
@@ -1589,14 +1685,19 @@
     "revertFailed": "还原失败",
     "noPath": "无路径",
     "revertConflict": "此文件在代理修改后又被更改。撤销会丢弃之后的更改。仍要撤销吗？",
-    "revertCancelled": "已取消撤销 — 文件保持不变"
+    "revertCancelled": "已取消撤销 — 文件保持不变",
+    "revertConflictTitle": "编辑后文件已变更",
+    "revertForce": "仍然覆盖"
   },
   "usage": {
     "diagnostics": {
       "cacheMiss": "缓存未命中 — 前缀已更改或缓存已过期。",
       "cachePriming": "缓存预热 — 正在写入新前缀。",
       "cacheHit": "缓存命中良好 — 大部分输入来自缓存。"
-    }
+    },
+    "filesTouched": "本对话中的文件",
+    "filesTouchedEmpty": "代理读取或编辑过的文件会显示在这里。",
+    "loadFailed": "无法加载用量：{{error}}"
   },
   "errorBoundary": {
     "title": "出现问题",
@@ -1707,7 +1808,13 @@
     "inlineWorking": "{{count}} 个代理工作中…",
     "inlineWorking_one": "{{count}} 个代理工作中…",
     "inlineDone": "助手已完成",
-    "inlineDoneCount": "{{count}} 个已完成"
+    "inlineDoneCount": "{{count}} 个已完成",
+    "status": {
+      "running": "运行中",
+      "ok": "完成",
+      "error": "失败",
+      "aborted": "已停止"
+    }
   },
   "markdown": {
     "codeLines": "{{count}} 行",
@@ -1855,5 +1962,39 @@
       "label": "录制工作流",
       "desc": "演示一次任务，Pawn 就会写出可复用的技能"
     }
+  },
+  "composer": {
+    "needProvider": "添加 AI 提供商后即可开始对话",
+    "addProvider": "添加提供商"
+  },
+  "models": {
+    "emptyAddProvider": "请先在 设置 → 提供商 添加提供商，然后同步模型。"
+  },
+  "diff": {
+    "emptyHint": "代理在本对话中修改文件后，变更会显示在这里。"
+  },
+  "files": {
+    "emptyHint": "打开项目文件夹即可浏览文件。"
+  },
+  "artifacts": {
+    "revealFailed": "无法显示文件：{{error}}"
+  },
+  "errors": {
+    "boundaryReassure": "你的对话和设置都保存在本设备上，不会丢失。",
+    "boundaryCopy": "复制详情",
+    "boundaryCopied": "已复制",
+    "boundaryStack": "技术详情"
+  },
+  "kiro": {
+    "recommended": "推荐"
+  },
+  "git": {
+    "checkoutFailedDetail": "无法切换分支：{{detail}}"
+  },
+  "shortcuts": {
+    "title": "键盘快捷键",
+    "groupFixed": "固定快捷键",
+    "findInChat": "在对话中查找",
+    "interrupt": "中断代理"
   }
 }

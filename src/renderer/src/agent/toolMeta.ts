@@ -27,6 +27,8 @@ export interface ToolMeta {
   bytes?: number
   /** SSH host id when the command executed remotely. */
   host?: string
+  /** Full output was offloaded (`read_output`-able): id + original size. */
+  offloaded?: { id: string; chars: number }
 }
 
 const TARGET_MAX = 160
@@ -88,7 +90,12 @@ export function lineDelta(oldText: string, newText: string): { added: number; re
   return { added: d.added, removed: d.removed }
 }
 
-export function buildToolMeta(call: ToolCall, result: ToolResult, durationMs?: number): ToolMeta {
+export function buildToolMeta(
+  call: ToolCall,
+  result: ToolResult,
+  durationMs?: number,
+  offloaded?: { id: string; chars: number }
+): ToolMeta {
   const meta: ToolMeta = {
     v: 1,
     name: call.name,
@@ -97,6 +104,7 @@ export function buildToolMeta(call: ToolCall, result: ToolResult, durationMs?: n
   if (typeof durationMs === 'number' && Number.isFinite(durationMs) && durationMs >= 0) {
     meta.durationMs = Math.round(durationMs)
   }
+  if (offloaded) meta.offloaded = offloaded
   const target = primaryTarget(call.arguments)
   if (target) meta.target = target
   if (typeof result.content === 'string') meta.bytes = result.content.length

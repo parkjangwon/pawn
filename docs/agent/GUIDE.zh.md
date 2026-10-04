@@ -63,6 +63,10 @@ npm install -g @parkjangwon/pawn && pawn
 | Ultra Work | 消息开头的 `$ulw` / `$ultrawork`，或 `pawn-headless --ulw`。循环到目标被验证。句子中间的 `$`（`$5`、`$HOME`）不是开局。 |
 | 工具配给 | 约 130 个 schema。核心工具常开。可选组在记录稿里已经用过、用户文本命中该组关键词，或模型调用 `load_tools` 之后才挂上。账号组在该账号连接之前保持隐藏。设置：smart（默认）或 all。 |
 | 卡住 | 重复的相同调用、编辑空转或错误走阶梯：反省 → 更强的模型 → 另一个模型的意见 → 建议回滚 → 停下并询问。 |
+| 验证阶梯 | 文件修改后，设置 → 代理 的 done-gate（typecheck/test）会在没有模型回合的情况下运行一次：auto/yolo 静默运行，ask 通过问题卡询问一次。失败会返回给模型；**连续两轮失败会把修复回合提升一个模型层级。** |
+| 计划提醒 | 当路由判定任务为 `complex` 且会话没有计划时，循环会在编辑前要求先写 `update_plan`（软性指示，Plan Strip 显示进度）。 |
+| 视觉验证 | 当一个回合修改了 Web UI 文件（html/css/jsx/tsx/vue/svelte…）时，循环会追加一条一次性指令：对运行中的 dev 服务器截图并查看 `browser_console` 后再结束。使用模型自己的浏览器工具。 |
+| git 检查点 | 在本地 git 仓库的回合中，第一个修改文件的工具之前记录 `git stash create` + `store`（工作树不变）。失败的尝试可以通过 `git stash list` 立即回滚。 |
 | 流式 | 只读工具可以在模型还在流式输出时开始。大结果先卸下，完整压缩之前按最旧优先清掉。 |
 
 子代理硬上限是 25 轮。`parallel_agents` 接受的任务数不超过 harness 上限（默认 6）。

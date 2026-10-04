@@ -224,6 +224,15 @@ export default function CommandPalette({
         action: () => run(() => onOpenSettings())
       },
       {
+        id: 'keyboard-shortcuts',
+        label: t('commandPalette.shortcuts'),
+        description: t('commandPalette.shortcutsDesc'),
+        group: 'actions',
+        keywords: 'shortcuts keys keyboard help cheat',
+        icon: <Icon d={<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></>} />,
+        action: () => run(() => { window.dispatchEvent(new CustomEvent('pawn:shortcuts-help')) })
+      },
+      {
         id: 'stop-streaming',
         label: t('commandPalette.commands.stopStreaming'),
         description: isStreaming
@@ -232,7 +241,7 @@ export default function CommandPalette({
         group: 'actions',
         keywords: 'stop cancel abort',
         icon: <Icon d={<rect x="6" y="6" width="12" height="12" rx="1" />} />,
-        action: () => run(() => { if (isStreaming) stopStreaming() /* all sessions */ })
+        action: () => run(() => { if (isStreaming) stopStreaming(activeSessionId ?? undefined) })
       }
     ]
 

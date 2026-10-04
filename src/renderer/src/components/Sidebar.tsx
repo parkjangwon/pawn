@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import { IconChevronRight, IconFolder, IconPlus, IconX } from './icons'
 import { useChatStore } from '../stores/chat'
 import { useRoutineStore } from '../stores/routine'
 import { useQuestionStore } from '../stores/userQuestions'
@@ -351,7 +352,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
         <div className="sidebar-section">
           <div className="section-header">
             <span className="section-label">{t('sidebar.projects')}</span>
-            <button className="section-add-btn" onClick={handleAddProject} title={t('sidebar.addProject')}>
+            <button className="section-add-btn" onClick={handleAddProject} title={t('sidebar.addProject')} aria-label={t('sidebar.addProject')}>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
             </button>
           </div>
@@ -370,8 +371,8 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                   onClick={() => toggleProject(project.id)}
                   onKeyDown={(e) => activateOnKey(e, () => toggleProject(project.id))}
                 >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${isExpanded ? 'expanded' : ''}`} aria-hidden><polyline points="9 18 15 12 9 6" /></svg>
-                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="tree-folder-icon" aria-hidden><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                  <IconChevronRight size={10} className={`tree-chevron ${isExpanded ? 'expanded' : ''}`} />
+                  <IconFolder size={13} className="tree-folder-icon" />
                   <span className="tree-project-name">{project.name}</span>
                   <div className="tree-project-actions">
                     <button type="button" className="tree-action-btn" onClick={(e) => { e.stopPropagation(); addSession(project.id); if (!isExpanded) toggleProject(project.id) }} title={t('sidebar.newSession')} aria-label={t('sidebar.newSession')}>
@@ -427,7 +428,10 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                               aria-label={t('sidebar.rename')}
                             />
                           ) : (
-                            <span className="tree-session-title" title={t('sidebar.renameHint')}>
+                            <span
+                              className="tree-session-title"
+                              title={`${session.title}\n${t('sidebar.renameHint')}`}
+                            >
                               {session.title}
                             </span>
                           )}
@@ -453,14 +457,14 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
               </div>
             )
           })}
-          {userProjects.length === 0 && <div className="empty-hint">{t('sidebar.noProjects')}</div>}
+          {initialized && userProjects.length === 0 && <div className="empty-hint">{t('sidebar.noProjects')}</div>}
         </div>
 
         {/* 3. Recent */}
         {recentSessions.length > 0 && (
           <div className="sidebar-section">
             <button className="section-header recent-header" onClick={() => setRecentExpanded((v) => !v)}>
-              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`tree-chevron ${recentExpanded ? 'expanded' : ''}`}><polyline points="9 18 15 12 9 6" /></svg>
+              <IconChevronRight size={10} className={`tree-chevron ${recentExpanded ? 'expanded' : ''}`} />
               <span className="section-label">{t('sidebar.recent')}</span>
             </button>
             {recentExpanded && recentSessions.map((session) => {

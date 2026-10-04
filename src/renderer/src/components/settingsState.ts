@@ -37,6 +37,26 @@ import {
  * All Settings page state + handlers, extracted from Settings.tsx so the view
  * stays a thin presentational shell. Returns every binding the JSX needs.
  */
+
+/** Deep-link target consumed by useSettingsState when Settings opens. */
+let pendingSettingsSection: SettingsSection | null = null
+
+/**
+ * Open Settings, optionally landing on a section (e.g. 'providers'). Safe to
+ * call from anywhere in the renderer — App listens for the event and mounts
+ * the overlay; the hook consumes the pending section when it comes up.
+ */
+export function openSettingsSection(section?: SettingsSection): void {
+  pendingSettingsSection = section ?? null
+  window.dispatchEvent(new CustomEvent('pawn:open-settings'))
+}
+
+/** Last provider test outcome, readable outside Settings (welcome checklist). */
+export const __providerTestOutcome: Record<string, 'ok' | 'fail'> = {}
+
+/** Provider Test must never hang forever on a dead endpoint. */
+const TEST_TIMEOUT_MS = 15_000
+
 export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChange: (width: number) => void }) {
   // --- body (state, effects, handlers) ---
   const { t, i18n } = useTranslation()
@@ -87,14 +107,31 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   } = useProviderStore()
 
   const [activeSection, setActiveSection] = useState<SettingsSection>('appearance')
+
+  // Consume a pending deep-link on mount and while open (see openSettingsSection).
+  useEffect(() => {
+    const consume = (): void => {
+      if (pendingSettingsSection) {
+        setActiveSection(pendingSettingsSection)
+        pendingSettingsSection = null
+      }
+    }
+    consume()
+    window.addEventListener('pawn:open-settings', consume)
+    return () => window.removeEventListener('pawn:open-settings', consume)
+  }, [])
+
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [presetPicking, setPresetPicking] = useState<ProviderPreset | null>(null)
   const [presetKey, setPresetKey] = useState('')
+  const [presetKeyError, setPresetKeyError] = useState('')
+  const [formError, setFormError] = useState('')
   const [showAddModel, setShowAddModel] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
   const [testResult, setTestResult] = useState<Record<string, string>>({})
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [syncResult, setSyncResult] = useState<Record<string, string>>({})
+  const [syncFailed, setSyncFailed] = useState<Record<string, boolean>>({})
   const [form, setForm] = useState({
     name: '',
     apiFormat: 'openai' as ApiFormat,
@@ -179,15 +216,26 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     [models]
   )
 
+  /** A syntactically impossible API key (too short / whitespace) — fail fast
+   *  at setup instead of on the user's first real message. */
+  const keyLooksInvalid = (key: string): boolean => key.length < 8 || /\s/.test(key)
+
   const handleAddFromPreset = async (preset: ProviderPreset, apiKey: string): Promise<void> => {
-    if (!preset.localNoKey && !preset.signIn && !preset.optionalKey && !apiKey.trim()) return
+    const trimmedKey = apiKey.trim()
+    if (!preset.localNoKey && !preset.signIn && !preset.optionalKey) {
+      if (!trimmedKey || keyLooksInvalid(trimmedKey)) {
+        setPresetKeyError(t('settings.providerKeyInvalid'))
+        return
+      }
+    }
+    setPresetKeyError('')
     const before = useProviderStore.getState().providers.length
     addProvider({
       id: '',
       name: preset.name,
       apiFormat: preset.apiFormat,
       baseUrl: preset.baseUrl,
-      apiKey: apiKey.trim() || undefined,
+      apiKey: trimmedKey || undefined,
       enabled: true
     })
     const after = useProviderStore.getState().providers
@@ -220,6 +268,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
           }))
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
+          setSyncFailed((s) => ({ ...s, [created.id]: true }))
           setSyncResult((s) => ({
             ...s,
             [created.id]: t('settings.providerSection.syncSeedOnly', { error: msg.slice(0, 120) })
@@ -227,6 +276,11 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         } finally {
           setSyncingId(null)
         }
+      }
+      // Verify the key right away (non-blocking) so a bad key is caught at
+      // setup time, not on the user's first message.
+      if (!preset.signIn && (trimmedKey || preset.localNoKey)) {
+        void handleTestProvider(created.id).catch(() => {})
       }
     }
     setPresetPicking(null)
@@ -238,6 +292,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     setSyncResult((s) => ({ ...s, [providerId]: '' }))
     try {
       const r = await syncModelsFromProvider(providerId)
+      setSyncFailed((s) => ({ ...s, [providerId]: false }))
       setSyncResult((s) => ({
         ...s,
         [providerId]: t('settings.providerSection.syncOk', {
@@ -248,6 +303,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       }))
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
+      setSyncFailed((s) => ({ ...s, [providerId]: true }))
       setSyncResult((s) => ({
         ...s,
         [providerId]: t('settings.providerSection.syncFail', { error: msg.slice(0, 160) })
@@ -258,13 +314,22 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   }
 
   const handleAddProvider = (): void => {
-    if (!form.name.trim() || !form.baseUrl.trim()) return
+    if (!form.name.trim() || !form.baseUrl.trim()) {
+      setFormError(t('settings.providerFormRequired'))
+      return
+    }
+    const trimmedKey = form.apiKey.trim()
+    if (trimmedKey && keyLooksInvalid(trimmedKey)) {
+      setFormError(t('settings.providerKeyInvalid'))
+      return
+    }
+    setFormError('')
     addProvider({
       id: '',
       name: form.name.trim(),
       apiFormat: form.apiFormat,
       baseUrl: form.baseUrl.trim(),
-      apiKey: form.apiKey.trim() || undefined,
+      apiKey: trimmedKey || undefined,
       enabled: true
     })
     setForm({
@@ -346,18 +411,27 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   }
 
   const handleTestProvider = async (providerId: string): Promise<void> => {
-    const p = providers.find((pr) => pr.id === providerId)
+    // Read from the store, not the render closure — the auto-test fired right
+    // after add runs before this component has re-rendered with the new row.
+    const p = useProviderStore.getState().providers.find((pr) => pr.id === providerId)
     if (!p) return
     setTestingId(providerId)
     setTestResult((r) => ({ ...r, [providerId]: '' }))
+    const signal = AbortSignal.timeout(TEST_TIMEOUT_MS)
     try {
       if (p.apiFormat === 'kiro') {
-        const r = await window.api?.kiro?.models()
-        setTestResult((res) => ({ ...res, [providerId]: r?.ok ? 'OK' : `FAIL: ${(r?.error || 'Kiro unavailable').slice(0, 120)}` }))
+        const r = await Promise.race([
+          window.api?.kiro?.models(),
+          new Promise<never>((_, reject) => setTimeout(() => reject(new Error('timeout')), TEST_TIMEOUT_MS))
+        ])
+        const ok = Boolean(r?.ok)
+        __providerTestOutcome[providerId] = ok ? 'ok' : 'fail'
+        setTestResult((res) => ({ ...res, [providerId]: ok ? 'OK' : `FAIL: ${(r?.error || 'Kiro unavailable').slice(0, 120)}` }))
         return
       }
-      const modelId = pickTestModelId(providerId, models, p.apiFormat)
+      const modelId = pickTestModelId(providerId, useProviderStore.getState().models, p.apiFormat)
       if (!modelId) {
+        __providerTestOutcome[providerId] = 'fail'
         setTestResult((r) => ({ ...r, [providerId]: 'FAIL: no model' }))
         return
       }
@@ -371,23 +445,32 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         response = await fetch('/api/proxy', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ url, headers, body: JSON.stringify(body) })
+          body: JSON.stringify({ url, headers, body: JSON.stringify(body) }),
+          signal
         })
       } else {
-        response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) })
+        response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal })
       }
       if (response.ok) {
+        __providerTestOutcome[providerId] = 'ok'
         setTestResult((r) => ({ ...r, [providerId]: 'OK' }))
       } else {
         const text = await response.text().catch(() => '')
+        __providerTestOutcome[providerId] = 'fail'
         setTestResult((r) => ({
           ...r,
           [providerId]: summarizeProviderError(response.status, text)
         }))
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'ERROR'
-      setTestResult((r) => ({ ...r, [providerId]: `ERROR: ${msg.slice(0, 60)}` }))
+      __providerTestOutcome[providerId] = 'fail'
+      const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.message === 'timeout')
+      if (timedOut) {
+        setTestResult((r) => ({ ...r, [providerId]: `FAIL: ${t('settings.providerTestTimeout')}` }))
+      } else {
+        const msg = err instanceof Error ? err.message : 'ERROR'
+        setTestResult((r) => ({ ...r, [providerId]: `ERROR: ${msg.slice(0, 60)}` }))
+      }
     } finally {
       setTestingId(null)
     }
@@ -756,7 +839,8 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     shellCwdJail, setShellCwdJail, autoMemoryConsolidate, setAutoMemoryConsolidate,
     setVisionModel,
     activeSection, setActiveSection, showAddProvider, setShowAddProvider, presetPicking, setPresetPicking,
-    presetKey, setPresetKey, showAddModel, setShowAddModel, testingId, setTestingId, testResult, setTestResult,
+    presetKey, setPresetKey, presetKeyError, setPresetKeyError, formError, setFormError,
+    syncFailed, showAddModel, setShowAddModel, testingId, setTestingId, testResult, setTestResult,
     syncingId, setSyncingId, syncResult, setSyncResult, form, setForm, modelForm, setModelForm,
     homeDir, setHomeDir, loadedSkills, setLoadedSkills, skillsLoading, setSkillsLoading,
     skillScope, setSkillScope, skillSearch, setSkillSearch, disabledSkills, setDisabledSkills,

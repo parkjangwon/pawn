@@ -63,6 +63,10 @@ Main loop is in `src/renderer/src/stores/chatLoop.ts`. One user message runs unt
 | Ultra Work | `$ulw` / `$ultrawork` at the start of a message, or `pawn-headless --ulw`. Loops until the goal is verified. A `$` later in the text (`$5`, `$HOME`) is not a gambit. |
 | Tool diet | ~130 schemas. Core tools stay on. Optional groups load when the transcript already used them, the user text matches the group's keywords, or the model calls `load_tools`. Account groups stay hidden until that account is connected. Setting: smart (default) or all. |
 | Stuck | Repeated identical calls, edit thrash, or errors climb a ladder: reflect → stronger model → second opinion → rollback suggestion → stop and ask. |
+| Verify ladder | After file edits, Settings → Agent's done-gate (typecheck/test) runs once without a model round: auto/yolo silently, ask mode asks once via a question card. Failures go back to the model; **two consecutive failed rounds bump the fix round one model tier**. |
+| Planning nudge | When routing judges a task `complex` and the session has no plan, the loop asks for an `update_plan` scaffold before edits (soft instruction, Plan Strip shows progress). |
+| Visual verify | When a turn edits web UI files (html/css/jsx/tsx/vue/svelte…), the loop adds a one-shot instruction: screenshot the running dev server and read `browser_console` before finishing. Uses the model's own browser tools; skipped when it has none. |
+| Git checkpoint | Before the first file-mutating tool of a turn in a local git repo, the harness records `git stash create` + `store` (working tree untouched). A failed attempt is disposable via `git stash list`. |
 | Streaming | Read-only tools may start while the model is still streaming. Bulky results are offloaded, then cleared oldest-first before a full compaction. |
 
 Subagent hard max is 25 rounds. `parallel_agents` accepts up to the harness task cap (default 6).
@@ -282,8 +286,11 @@ Right panel: Terminal, Files, Git, Diff, Artifacts, Browser. `.md` files in the 
 | Record a workflow | macOS. Record button or `/record` → perform it → Stop → Save. Later `/<skill-name>`. |
 | Decision model | Settings → Decision models. TypeSafe key, or `ollaya serve` + `ollaya pull laya`. |
 | Headless | `npm run headless`, then `node out/headless/pawn-headless.mjs run "…"`. |
+| Long chat feels muddy | Usage popover → "Continue in a fresh chat": starts a new session seeded with a handoff (goal, progress, plan, files touched) built locally, no extra model call. "Compact context now" stays for in-place relief. |
+| Trust a risky turn | Every turn in a local git repo gets an automatic `git stash` checkpoint before the first edit — `git stash list` holds the exact pre-edit state. |
 | Build | Node version above, `npm install`, `npm run check`. |
 | Tool denied | Permission mode, Plan mode, `PreToolUse` deny, disconnected account, tool group not loaded. |
+| Measure the agent | `npm run eval` — 13 built-in tasks (bugfix/feature/refactor/runtime/spec) with objective checks and reference solutions; `node out/headless/pawn-headless.mjs tasks` lists them. |
 
 ## 18. License
 

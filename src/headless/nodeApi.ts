@@ -566,6 +566,12 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       save: (sessionId: string, content: string) => rt.outputs.save(sessionId, content),
       read: (id: string, o?: unknown) => rt.outputs.read(id, o)
     },
+    // Mirrors the preload channel of the same name (chat tool-row paging).
+    // Headless has no tool rows, but the shape stays in lockstep per the
+    // nodeApi convention so a future caller cannot silently diverge.
+    toolOutput: {
+      get: async (id: string, offset?: number, limit?: number) => rt.outputs.readRaw(id, { offset, limit })
+    },
     profile: {
       get: (root: string) => rt.profile.get(root),
       save: (root: string, json: string) => rt.profile.save(root, json)

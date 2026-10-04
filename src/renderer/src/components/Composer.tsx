@@ -8,7 +8,9 @@ import { useProviderStore } from '../stores/provider'
 import { useRecordingStore } from '../stores/recording'
 import { previewVisionTarget } from '../agent/router'
 import { useUsageStore, formatCost, formatTokens, type CacheDiagnostic } from '../stores/usage'
-import { compactSessionNow } from '../stores/chat'
+import { compactSessionNow, useChatStore } from '../stores/chat'
+import { useAppStore } from '../stores/app'
+import { openSettingsSection } from './settingsState'
 import type { Project } from '../stores/app'
 import {
   LARGE_PASTE_CHARS, MAX_ATTACHMENTS, MAX_IMAGE_BYTES, MAX_TEXT_BYTES,
@@ -107,6 +109,25 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const { showProjectPicker, setShowProjectPicker, showPermPicker, setShowPermPicker, showModelPicker, setShowModelPicker, showUsagePopover, setShowUsagePopover } = props
   const { projectPickerRef, permPickerRef, modelPickerRef, usageRef, isStreaming, onStop } = props
   const { attachments, onAddAttachment, onRemoveAttachment, onSteer } = props
+  // Never let a composed message die in a "no provider" error: with zero
+  // enabled providers the send is blocked and a fix-it chip is shown instead.
+  const noProviders = providers.filter((p) => p.enabled).length === 0
+  // Files the agent read or edited this chat — answers "what is in context"
+  // without leaving the composer.
+  const touchedFiles = useMemo(() => {
+    if (!props.activeSessionId || !props.activeProjectId) return []
+    const session = useAppStore
+      .getState()
+      .projects.find((p) => p.id === props.activeProjectId)
+      ?.sessions.find((s) => s.id === props.activeSessionId)
+    if (!session) return []
+    const seen = new Set<string>()
+    for (const m of session.messages) {
+      const p = m.toolMeta?.path
+      if (typeof p === 'string' && p) seen.add(p)
+    }
+    return [...seen].slice(-8)
+  }, [props.activeSessionId, props.activeProjectId, showUsagePopover])
 
   const addFile = (file: File): void => {
     if (file.type.startsWith('image/')) {
@@ -463,6 +484,16 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                           </>
                         )}
                         {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
+                        {touchedFiles.length > 0 && (
+                          <div className="usage-files">
+                            <div className="picker-item-label">{t('usage.filesTouched')}</div>
+                            {touchedFiles.map((f) => (
+                              <div key={f} className="usage-popover-route usage-file-row" title={f}>
+                                {f.replace(/^\/Users\/[^/]+/, '~')}
+                              </div>
+                            ))}
+                          </div>
+                        )}
                         {props.activeSessionId && (
                           <button
                             type="button"
@@ -475,6 +506,20 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                             }}
                           >
                             {compacting ? t('contextBar.compacting') : t('contextBar.compactNow')}
+                          </button>
+                        )}
+                        {props.activeSessionId && props.activeProjectId && (
+                          <button
+                            type="button"
+                            className="usage-compact-btn"
+                            title={t('chat.handoff.hint')}
+                            onClick={() => {
+                              if (!props.activeSessionId || !props.activeProjectId) return
+                              useChatStore.getState().handoffToNewSession(props.activeProjectId, props.activeSessionId)
+                              setShowUsagePopover(false)
+                            }}
+                          >
+                            {t('chat.handoff.button')}
                           </button>
                         )}
                         {sessionDiags && sessionDiags.length > 0 && (
@@ -548,7 +593,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         type="button"
                         className="steer-btn"
                         onClick={onSteer}
-                        disabled={!input.trim() && attachments.length === 0}
+                        disabled={noProviders || (!input.trim() && attachments.length === 0)}
                         title={t('contextBar.sendSteerHint')}
                         aria-label={t('contextBar.sendSteer')}
                       >
@@ -569,18 +614,32 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     </button>
                   </>
                 ) : (
-                  <button
-                    type="button"
-                    className="send-btn"
-                    onClick={() => onSend()}
-                    disabled={!input.trim() && attachments.length === 0}
-                    title={t('chat.send')}
-                    aria-label={t('chat.send')}
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
-                    </svg>
-                  </button>
+                  <>
+                    {noProviders && (
+                      <div className="composer-need-provider">
+                        <span>{t('composer.needProvider')}</span>
+                        <button
+                          type="button"
+                          className="composer-add-provider"
+                          onClick={() => openSettingsSection('providers')}
+                        >
+                          {t('composer.addProvider')}
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      className="send-btn"
+                      onClick={() => onSend()}
+                      disabled={noProviders || (!input.trim() && attachments.length === 0)}
+                      title={t('chat.send')}
+                      aria-label={t('chat.send')}
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
+                      </svg>
+                    </button>
+                  </>
                 )}
               </div>
             </div>

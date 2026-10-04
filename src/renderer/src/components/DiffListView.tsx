@@ -59,6 +59,7 @@ export default function DiffListView(): React.JSX.Element {
         </div>
         <div className="rp-diff-list">
           <div className="rp-diff-empty">{t('rightPanel.diff.empty')}</div>
+          <div className="rp-diff-empty-hint">{t('diff.emptyHint')}</div>
         </div>
       </div>
     )
@@ -108,7 +109,13 @@ export default function DiffListView(): React.JSX.Element {
                 <div className="rp-diff-item-info">
                   <div className="rp-diff-item-name">{diff.filename || 'file'}</div>
                   <div className="rp-diff-item-desc">
-                    {diff.oldText.length || 0} → {diff.newText.length || 0} chars
+                    {(() => {
+                      const a = diff.oldText ? diff.oldText.replace(/\n$/, '').split('\n').length : 0
+                      const b = diff.newText ? diff.newText.replace(/\n$/, '').split('\n').length : 0
+                      const delta = b - a
+                      const sign = delta > 0 ? '+' : ''
+                      return `${a} → ${b} lines (${sign}${delta})`
+                    })()}
                   </div>
                 </div>
               </div>

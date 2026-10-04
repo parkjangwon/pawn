@@ -51,7 +51,7 @@ describe('DiffListView', () => {
     render(<DiffListView />)
     expect(screen.getByText('rightPanel.diff.title (1)')).toBeInTheDocument()
     expect(screen.getByText('src/a.ts')).toBeInTheDocument()
-    expect(screen.getByText('3 → 3 chars')).toBeInTheDocument()
+    expect(screen.getByText('1 → 1 lines (0)')).toBeInTheDocument()
   })
 
   it('expands and collapses a diff on click', () => {

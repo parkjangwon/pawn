@@ -34,6 +34,11 @@ export function registerAgentRuntimeIpc(): void {
 
   handleTrusted('outputs:save', (_e, sessionId: unknown, content: unknown) => rt.outputs.save(sessionId, content))
   handleTrusted('outputs:read', (_e, id: unknown, opts: unknown) => rt.outputs.read(id, opts))
+  // UI-only paging accessor over offloaded outputs (chat tool rows). The
+  // model-facing read_output tool keeps using outputs:read.
+  handleTrusted('toolOutput:get', (_e, id: unknown, offset: unknown, limit: unknown) =>
+    rt.outputs.readRaw(id, { offset, limit })
+  )
 
   handleTrusted('profile:get', (_e, root: unknown) => rt.profile.get(root))
   handleTrusted('profile:save', (_e, root: unknown, json: unknown) => rt.profile.save(root, json))

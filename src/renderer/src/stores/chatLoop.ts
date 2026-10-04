@@ -18,9 +18,10 @@ import {
 // surface so the chat facade and other importers keep working.
 export { compactSessionNow, describeToolAction, recordTurnDuration } from './chatTurnHelpers'
 import {
-  checkpointSnapshot, currentMessageContent, demoteVisionPayloadsToText, loadTranscript,
+  checkpointSnapshot, classifyLlmError, currentMessageContent, demoteVisionPayloadsToText, loadTranscript,
   persistTranscript, systemError, ToolLoopCounter, toolResultCap, truncateToolResult
 } from './chatTranscript'
+import type { MessageErrorInfo } from './app'
 import { useAppStore } from './app'
 import { useChangeLedger } from './changeLedger'
 import { usePrefsStore } from './prefs'
@@ -66,7 +67,12 @@ import { fireHook } from '../agent/hooksClient'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildTranscriptText, imageAttachments, type ChatAttachment } from '../utils/attachments'
 import { useStreamingStore } from './streaming'
+import { useQuestionStore } from './userQuestions'
 import { usePlanStore } from './plan'
+
+/** Web UI file paths that justify a visual verification pass after edits. */
+const WEB_UI_FILE_RE =
+  /\.(html?|css|scss|less|jsx|tsx|vue|svelte|astro)$/i
 import { compactWithSummary } from '../agent/compaction'
 import { COMPUTER_HALT_TEXT, endsWithObservation, isComputerCall, isNativeComputerCall } from '../agent/computerToolset'
 import { decideAfterTurn, evaluateGoal, useUltraWorkStore } from './ultraWork'
@@ -106,7 +112,8 @@ export async function agentLoop(
 
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
-    systemError(projectId, sessionId, i18n.t('chat.errors.noProvider'))
+    const noProviderError: MessageErrorInfo = { kind: 'generic', detail: '', settingsTarget: 'providers' }
+    systemError(projectId, sessionId, i18n.t('chat.errors.noProvider'), noProviderError)
     if (epoch === getSessionEpoch(sessionId)) {
       setSessionStreamingFlags(set, get, sessionId, false)
       processQueue(set, get, sessionId)
@@ -131,6 +138,15 @@ export async function agentLoop(
   let turnHadCodeEdits = resumeFrom?.turnHadCodeEdits ?? false
   let turnRanChecks = resumeFrom?.turnRanChecks ?? false
   let autoVerifyDone = resumeFrom?.autoVerifyDone ?? false
+  // Verify-quality ladder: consecutive failed done-gates bump the fix round to
+  // a higher tier (weak models get unstuck; strong models never notice).
+  let verifyFailRounds = 0
+  let verifyEscalate = 0
+  // Web UI files touched this turn → one visual-verify instruction at the end.
+  const changedWebFiles = new Set<string>()
+  let visualVerifyPrompted = false
+  // Git checkpoint fires once per turn, before the first file-mutating tool.
+  let gitCheckpointDone = false
   let consecutiveToolErrors = resumeFrom?.consecutiveToolErrors ?? 0
   let emptyResponses = resumeFrom?.emptyResponses ?? 0
   let round = resumeFrom?.round ?? 0
@@ -429,6 +445,26 @@ export async function agentLoop(
       }
     }
 
+    // Complex task with no plan yet → require a written plan before edits.
+    // Weak models skid when they start patching files without a scaffold; the
+    // plan strip also gives the user an early veto. Soft instruction (one
+    // transcript note), not a tool lock — speed still wins ties.
+    if (
+      complexity === 'complex' &&
+      useProviderStore.getState().agentModeFor(sessionId) === 'build' &&
+      usePlanStore.getState().getPlan(sessionId).length === 0 &&
+      !signal.aborted
+    ) {
+      entries.push({
+        role: 'user',
+        content:
+          '<planning>\nThis task looks complex. Before editing any file, call update_plan with a short ' +
+          'plan (3-6 steps, concrete files/outcomes) and keep it updated as you go. Work through it ' +
+          'step by step; if the task turns out simpler than expected, shrink the plan rather than ' +
+          'skipping it.\n</planning>'
+      })
+    }
+
     // Persist immediately so a crash mid-first-LLM-call can still resume.
     checkpointSnapshot({
       projectId,
@@ -516,7 +552,7 @@ export async function agentLoop(
           .noteContext(sessionId, estimateTokens(entries), contextWindow, true)
       }
 
-      const escalate = shouldEscalate({ consecutiveToolErrors, round, emptyResponses }) + stuckEscalate
+      const escalate = shouldEscalate({ consecutiveToolErrors, round, emptyResponses }) + stuckEscalate + verifyEscalate
       const excluded = new Set<string>()
       let transientFailures = 0
       let result: LlmResult | null = null
@@ -531,14 +567,17 @@ export async function agentLoop(
         if (signal.aborted || permissionModeNow === 'ask' || early.has(tc.id)) return
         const eff = effectiveToolName(tc)
         if (TOOL_SAFETY[eff] !== 'safe' || NEEDS_APPROVAL_IN_AUTO.has(eff)) return
-        early.set(tc.id, {
-          started: Date.now(),
-          promise: executeTool(tc, turnToolCwd, signal, { sessionId, projectId }).catch((err) => ({
-            toolCallId: tc.id,
-            content: `Tool error (${tc.name}): ${String(err)}`,
-            isError: true
-          }))
-        })
+          early.set(tc.id, {
+            started: Date.now(),
+            promise: executeTool(tc, turnToolCwd, signal, { sessionId, projectId }).catch((err) => ({
+              toolCallId: tc.id,
+              content: i18n.t('chat.toolMessage.toolError', {
+                name: tc.name,
+                message: String(err).replace(/^Error: /, '').slice(0, 300)
+              }),
+              isError: true
+            }))
+          })
       }
 
       // Try up to MAX_ROUTE_ATTEMPTS distinct models before failing the turn.
@@ -726,7 +765,12 @@ export async function agentLoop(
           excluded.add(decision.key)
           result = null
           if (attempt === MAX_ROUTE_ATTEMPTS - 1) {
-            systemError(projectId, sessionId, i18n.t('chat.errors.allAttemptsFailed', { error: message }))
+            systemError(
+              projectId,
+              sessionId,
+              i18n.t('chat.errors.allAttemptsFailed', { error: message }),
+              classifyLlmError(message)
+            )
           }
         }
       }
@@ -742,9 +786,17 @@ export async function agentLoop(
                 : code === 'no_vision_models'
                   ? 'chat.errors.noVisionModel'
                   : 'chat.errors.noVisionModel'
-          systemError(projectId, sessionId, i18n.t(detailKey))
+          systemError(projectId, sessionId, i18n.t(detailKey), {
+            kind: 'generic',
+            detail: '',
+            settingsTarget: 'models'
+          })
         } else {
-          systemError(projectId, sessionId, i18n.t('chat.errors.noUsableModel'))
+          systemError(projectId, sessionId, i18n.t('chat.errors.noUsableModel'), {
+            kind: 'generic',
+            detail: '',
+            settingsTarget: 'models'
+          })
         }
         break
       }
@@ -794,8 +846,9 @@ export async function agentLoop(
       if (!hasTools) {
         // Free local power: after code edits, run typecheck once without the model
         // asking. Green → surface OK and stop (no extra LLM round). Fail → feed
-        // results back and continue so the agent can fix. Only auto/yolo (ask would
-        // spam permission prompts). No paid services.
+        // results back and continue so the agent can fix. Auto/yolo run it
+        // silently; ask mode asks once via the question card (never spams
+        // permission prompts). No paid services.
         const { permissionMode: perm } = useProviderStore.getState()
         const doneGate = effectiveDoneGate(useProviderStore.getState().doneGate, harnessMode)
         const agentMode = useProviderStore.getState().agentModeFor(sessionId)
@@ -803,15 +856,18 @@ export async function agentLoop(
         const canAuto =
           agentMode === 'build' &&
           gateKind != null &&
-          (perm === 'auto' || perm === 'yolo') &&
           !!toolCwd &&
           turnHadCodeEdits &&
           !turnRanChecks &&
           !autoVerifyDone &&
           !signal.aborted
-        if (canAuto && gateKind) {
+        if (canAuto && gateKind && perm !== 'ask') {
           autoVerifyDone = true
           try {
+            // Up to 90s of silent checking reads as a hang — label the wait.
+            if (lastAssistantMsgId) {
+              useStreamingStore.getState().setActivity(lastAssistantMsgId, i18n.t('chat.checksRunning'))
+            }
             const checkText = await runProjectChecks(toolCwd, gateKind, 90, targetSandboxOpts(projectId))
             const noCmd =
               /No command for kind=|No standard check commands detected/i.test(checkText)
@@ -825,6 +881,18 @@ export async function agentLoop(
                 createdAt: Date.now()
               })
               if (failed) {
+                // Same gate failing twice in a row means the current tier is
+                // stuck on these errors — spend one tier step on the fix round.
+                verifyFailRounds++
+                const needEscalate = verifyFailRounds >= 2 ? 1 : 0
+                if (needEscalate) {
+                  useUsageStore.getState().noteDiagnostic(
+                    sessionId,
+                    'info',
+                    i18n.t('chat.diagnostics.escalateOnVerifyFail')
+                  )
+                }
+                verifyEscalate = needEscalate
                 entries.push({
                   role: 'user',
                   content:
@@ -838,7 +906,94 @@ export async function agentLoop(
             }
           } catch {
             // done-gate optional — do not block the turn
+          } finally {
+            if (lastAssistantMsgId) {
+              useStreamingStore.getState().setActivity(lastAssistantMsgId, null)
+            }
           }
+        } else if (canAuto && gateKind && perm === 'ask') {
+          // Ask mode: the verify loop is exactly what weak models need most, so
+          // offer it as a single question instead of silently skipping.
+          autoVerifyDone = true
+          try {
+            const answer = await useQuestionStore.getState().ask(
+              {
+                sessionId,
+                kind: 'question',
+                question: i18n.t('chat.verifyAsk.question', { kind: gateKind }),
+                options: [
+                  { label: i18n.t('chat.verifyAsk.run') },
+                  { label: i18n.t('chat.verifyAsk.skip') }
+                ],
+                multiSelect: false,
+                allowOther: false
+              },
+              signal
+            )
+            const runLabel = i18n.t('chat.verifyAsk.run')
+            if (!answer.aborted && !answer.dismissed && answer.selected.includes(runLabel)) {
+              if (lastAssistantMsgId) {
+                useStreamingStore.getState().setActivity(lastAssistantMsgId, i18n.t('chat.checksRunning'))
+              }
+              const checkText = await runProjectChecks(toolCwd, gateKind, 90, targetSandboxOpts(projectId))
+              const noCmd =
+                /No command for kind=|No standard check commands detected/i.test(checkText)
+              if (!noCmd) {
+                const failed = /\bFAIL\b|exit: (?!0)\d+/.test(checkText)
+                const sysId = `${Date.now()}-auto-${gateKind}`
+                useAppStore.getState().addMessage(projectId, sessionId, {
+                  id: sysId,
+                  role: 'system',
+                  content: `[auto_verify ${gateKind}]\n${checkText.slice(0, 12_000)}`,
+                  createdAt: Date.now()
+                })
+                if (failed) {
+                  verifyFailRounds++
+                  verifyEscalate = verifyFailRounds >= 2 ? 1 : 0
+                  entries.push({
+                    role: 'user',
+                    content:
+                      `<auto_verify kind="${gateKind}">\n${checkText.slice(0, 12_000)}\n</auto_verify>\n` +
+                      `${gateKind} failed after your edits. Fix the errors with tools, then finish.`
+                  })
+                  turnRanChecks = true
+                  persistTranscript(sessionId, entries, decision.key, decision.tier)
+                  continue
+                }
+              }
+            }
+          } catch {
+            // question UI unavailable (headless) — skip silently
+          } finally {
+            if (lastAssistantMsgId) {
+              useStreamingStore.getState().setActivity(lastAssistantMsgId, null)
+            }
+          }
+        }
+        // Visual verify: UI files changed → have the model confirm the page
+        // actually renders (the #1 vibe-coding failure is "looks done but is
+        // broken"). Instruction-only; the model uses its existing browser
+        // tools, so ask mode stays in control of the tools. Fired once per
+        // turn; if the model has no way to check, it says so in one line.
+        if (
+          agentMode === 'build' &&
+          turnHadCodeEdits &&
+          !signal.aborted &&
+          !visualVerifyPrompted &&
+          changedWebFiles.size > 0
+        ) {
+          visualVerifyPrompted = true
+          entries.push({
+            role: 'user',
+            content:
+              `<visual_verify>\nUI files were changed in this turn (${[...changedWebFiles].slice(0, 6).join(', ')}). ` +
+              `Before finishing: if a dev server for this project is already running, navigate to it with browser_navigate; ` +
+              `otherwise skip silently. Take a screenshot (browser_screenshot or computer_screenshot) and check the page ` +
+              `renders correctly — no blank page, no layout collapse. Read browser_console for errors. ` +
+              `Fix what is broken. If no server is running, say so in one line and finish.\n</visual_verify>`
+          })
+          persistTranscript(sessionId, entries, decision.key, decision.tier)
+          continue
         }
         persistTranscript(sessionId, entries, decision.key, decision.tier)
         break
@@ -867,6 +1022,39 @@ export async function agentLoop(
         // Model-native tools classify as the Pawn tool they act as (a text
         // editor "view" is a read and may run in parallel).
         (TOOL_SAFETY[effectiveToolName(tc)] === 'safe' || early.has(tc.id) ? safe : risky).push(tc)
+      }
+
+      // Git checkpoint: before the first file-mutating tool of the turn, record
+      // a stash entry WITHOUT touching the working tree (stash create + store).
+      // A failed attempt becomes disposable — `git stash list` holds the exact
+      // pre-edit state. Local git repos only; best-effort by design.
+      if (
+        !gitCheckpointDone &&
+        toolCwd &&
+        result.toolCalls.some((tc) => isFileMutation(tc)) &&
+        !signal.aborted
+      ) {
+        gitCheckpointDone = true
+        const project = useAppStore.getState().projects.find((p) => p.id === projectId)
+        if (!project?.executionHost) {
+          void (async (): Promise<void> => {
+            try {
+              const inside = await window.api.shell.execFile('git', ['rev-parse', '--is-inside-work-tree'], toolCwd)
+              if (inside.exitCode !== 0 || !inside.stdout.trim().startsWith('true')) return
+              const created = await window.api.shell.execFile(
+                'git',
+                ['stash', 'create', `pawn-turn ${new Date().toISOString().slice(0, 16)}`],
+                toolCwd
+              )
+              const sha = created.stdout.trim()
+              if (created.exitCode === 0 && /^[0-9a-f]{10,}$/.test(sha)) {
+                await window.api.shell.execFile('git', ['stash', 'store', '-m', `pawn-turn ${userContent.slice(0, 40)}`, sha], toolCwd)
+              }
+            } catch {
+              // checkpoint is optional
+            }
+          })()
+        }
       }
 
       const resultsById = new Map<string, ToolResult>()
@@ -926,23 +1114,32 @@ export async function agentLoop(
         const raw = resultsById.get(tc.id) ?? {
           toolCallId: tc.id,
           content: signal.aborted
-            ? 'Tool was not executed (run aborted).'
-            : 'Tool produced no result.',
+            ? i18n.t('chat.toolMessage.aborted')
+            : i18n.t('chat.toolMessage.noResult'),
           isError: true
         }
         if (raw.isError) roundErrors++
         const cap = toolResultCap(tc.name, harness.toolResultScale)
         let truncated = truncateToolResult(raw, tc.name, cap)
         // Too long for context: keep the full text retrievable (read_output).
+        // The model-facing note stays in the transcript; the UI row gets the
+        // same pointer as structured toolMeta.offloaded and renders a
+        // localized, paged view of the saved output instead.
+        let offloaded: { id: string; chars: number } | undefined
         if (truncated !== raw.content && raw.content.length > cap) {
           const id = await offloadOutput(sessionId, raw.content)
           if (id) {
+            offloaded = { id, chars: raw.content.length }
             truncated += `\n[full output: ${raw.content.length.toLocaleString('en-US')} chars saved — read_output {"id":"${id}"} to page, grep or tail it]`
           }
         }
 
         if (!raw.isError && isFileMutation(tc)) {
           turnHadCodeEdits = true
+          // Track web UI edits for the visual-verify instruction.
+          const changedPath: string | undefined =
+            raw.diffData?.path || (typeof tc.arguments.path === 'string' ? tc.arguments.path : undefined)
+          if (changedPath && WEB_UI_FILE_RE.test(changedPath)) changedWebFiles.add(changedPath)
         }
         if (tc.name.startsWith('browser_')) turnUsedBrowser = true
         // Learn which project commands work (repo profile).
@@ -964,12 +1161,17 @@ export async function agentLoop(
         }
 
         const toolMsgId = `${Date.now()}-tool-${tc.id}`
+        // The row the user sees never contains the model-facing read_output
+        // note; paging UI is driven by toolMeta.offloaded instead.
+        const rowSource = offloaded
+          ? truncated.replace(/\n\[full output: [^\]]*\]$/, '')
+          : truncated
         useAppStore.getState().addMessage(projectId, sessionId, {
           id: toolMsgId,
           role: 'system',
-          content: formatToolMessageContent(tc.name, raw.isError === true, truncated, raw.diffData),
+          content: formatToolMessageContent(tc.name, raw.isError === true, rowSource, raw.diffData),
           createdAt: Date.now(),
-          toolMeta: buildToolMeta(tc, raw, durationsById.get(tc.id))
+          toolMeta: buildToolMeta(tc, raw, durationsById.get(tc.id), offloaded)
         })
 
         entries.push({

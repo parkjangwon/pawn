@@ -1,6 +1,9 @@
 {
   "app": {
-    "name": "Pawn"
+    "name": "Pawn",
+    "updateAvailable": "Pawn {{latest}} が利用可能です（現在 {{current}}）。設定 → システムから更新してください。",
+    "initFailed": "一部の設定を読み込めませんでした（{{error}}）。問題があれば Pawn を再起動してください。",
+    "unexpectedError": "処理に失敗しました: {{error}}"
   },
   "common": {
     "save": "保存",
@@ -51,7 +54,7 @@
     "waitingHint": "エージェントが回答または承認を待っています"
   },
   "chat": {
-    "placeholder": "やりたいことを書いてください",
+    "placeholder": "質問・構築・自動化…",
     "welcome": "お手伝いできることはありますか？",
     "welcomeSub": "コーディング、ブラウジング、自動化 — すべてここで。",
     "send": "送信",
@@ -88,7 +91,8 @@
       "lessonLearned": "修正内容を学習しました: {{rule}}",
       "toolResultsCleared": "コンテキストを保つため古いツール結果 {{count}} 件（約 {{tokens}}k トークン）を整理しました — 全文はエージェントが再取得できます",
       "stuckRecovery": "エージェントが行き詰まっているようです（段階 {{level}}、{{action}}）: {{detail}}",
-      "decisionComplexity": "意思決定モデルはこのリクエストを {{to}} と判定しました（{{pct}}%、{{model}}）。ヒューリスティック: {{from}}"
+      "decisionComplexity": "意思決定モデルはこのリクエストを {{to}} と判定しました（{{pct}}%、{{model}}）。ヒューリスティック: {{from}}",
+      "escalateOnVerifyFail": "チェックが2回連続で失敗 — 修正をより強いモデルに引き継ぎます。"
     },
     "errors": {
       "noProvider": "プロバイダーまたはモデルが設定されていません。設定 → プロバイダー、設定 → モデルで追加してください。",
@@ -100,7 +104,7 @@
       "toolLoop": "ツールループを検出: 同じ呼び出し({{names}})が{{rounds}}ラウンド繰り返されたため停止します。",
       "maxRounds": "最終回答なしで{{rounds}}ラウンド後に停止しました。",
       "agentError": "エージェントループエラー: {{error}}",
-      "emptyResponse": "モデルが空の応答を返しました。再試行するか、より強いモデルに切り替えてください。（メール送信は非対応 — Google 連携は読み取り専用です。）",
+      "emptyResponse": "モデルが空の返信を返しました。再試行するか、より強いモデルに切り替えてください。",
       "hookBlocked": "フックによりブロックされました (UserPromptSubmit)",
       "sessionBudgetHit": "停止: このチャットの費用が ${{cost}} に達しました（上限 ${{cap}}）。設定 → 使用量 で上限を上げるか、新しいチャットを始めてください。",
       "dailyBudgetHit": "停止: 本日の費用が ${{cost}} に達しました（上限 ${{cap}}）。設定 → 使用量 で上限を上げてください。",
@@ -212,7 +216,54 @@
     "repeatHint": "この依頼を決まった時間に自動実行するようにします",
     "projectRoots": "プロジェクトフォルダ",
     "loadingMessages": "メッセージを読み込み中",
-    "exportedTo": "{{path}} に書き出しました"
+    "exportedTo": "{{path}} に書き出しました",
+    "errorCard": {
+      "titleAuth": "プロバイダが認証情報を拒否しました",
+      "titleRate": "プロバイダがレート制限中です",
+      "titleServer": "プロバイダに一時的な問題が発生しています",
+      "titleNetwork": "プロバイダに接続できません",
+      "titleGeneric": "リクエストが失敗しました",
+      "hintAuth": "設定 → プロバイダで API キーを確認してから再試行してください。",
+      "hintRate": "Pawn は自動的に再試行します。設定 → モデルでモデルを切り替えることもできます。",
+      "hintServer": "通常は再試行で解決します。",
+      "hintNetwork": "接続を確認してから再試行してください。",
+      "hintGeneric": "再試行するか、設定 → モデルを確認してください。",
+      "retry": "再試行",
+      "details": "詳細を表示",
+      "settings": "設定を開く"
+    },
+    "toolMessage": {
+      "aborted": "ツールは実行されませんでした（中断）。",
+      "noResult": "ツールは結果を返しませんでした。",
+      "toolError": "{{name}} 失敗: {{message}}",
+      "outputOffloaded": "全出力は {{chars}} 文字です — 下で読み込んでください。",
+      "loadFull": "全出力を読み込む",
+      "loadMore": "さらに読み込む",
+      "fullShown": "全出力を表示中（{{chars}} 文字）"
+    },
+    "liveTool": {
+      "title": "実行中: {{label}}",
+      "running": "{{label}} — {{seconds}}秒",
+      "output": "出力（直近 {{count}} 行）"
+    },
+    "checksRunning": "プロジェクトチェックを実行中…",
+    "messageRenderFailed": "メッセージの描画に失敗しました（{{error}}）",
+    "verifyAsk": {
+      "question": "このターンでファイルを編集しました。{{kind}} を実行して確認しますか？",
+      "run": "チェックを実行",
+      "skip": "スキップ"
+    },
+    "handoff": {
+      "header": "前のチャットからの続きです。引き継ぎメモ：",
+      "goal": "## 元の目標",
+      "state": "## 現在の進捗",
+      "plan": "## プランの状態",
+      "files": "## 変更したファイル",
+      "instruction": "ここから再開してください：何かを変える前にまず現状を確認し、未完了の部分を完了させてください。プランが誤っている場合だけ変更してください。",
+      "title": "引き継ぎ — 作業を続行",
+      "button": "新しいチャットで続行",
+      "hint": "このチャットの要約で新しいチャットを開始 — 新しいコンテキスト、同じ目標。"
+    }
   },
   "automation": {
     "title": "自動化",
@@ -403,7 +454,12 @@
       "sendsData": "ローカルのデータをリモートサーバーに送る可能性があります。",
       "escalated": "本来は確認なしで実行されるコマンドです。意思決定モデルが危険と判断したため、確認しています。",
       "checking": "危険度を確認中…"
-    }
+    },
+    "copy": "コピー",
+    "copied": "コピーしました",
+    "alwaysCommand": "「{{prefix}}」を常に許可",
+    "sessionGlobalNote": "Pawn を再起動するまですべてのチャットに適用されます。",
+    "kbdHint": "Enter で許可 · Esc で拒否"
   },
   "statusBar": {
     "working": "処理中…",
@@ -440,7 +496,6 @@
       "general": "一般",
       "coding": "コーディング",
       "integration": "統合",
-      "automation": "自動化",
       "system": "システム"
     },
     "telegramSection": {
@@ -570,7 +625,8 @@
       "targetLocal": "このコンピュータ",
       "remotePath": "リモートパス",
       "remotePathHint": "ホスト上のリポジトリの絶対パス",
-      "securityNote": "コマンドはホストアカウントの権限で実行されます。最初の接続でホスト鍵を信頼します（accept-new）。"
+      "securityNote": "コマンドはホストアカウントの権限で実行されます。最初の接続でホスト鍵を信頼します（accept-new）。",
+      "search": "リモート ssh ホスト 実行 サーバー"
     },
     "appearanceSection": {
       "title": "外観",
@@ -581,7 +637,8 @@
       "languageDesc": "希望のインターフェース言語を選択",
       "chatFontSize": "メッセージの文字サイズ",
       "chatFontSizeDesc": "チャットメッセージとコードの文字サイズです。その他の画面要素は変わりません。",
-      "chatFontSizeDefault": "標準 (14px)"
+      "chatFontSizeDefault": "標準 (14px)",
+      "search": "テーマ ダーク ライト 言語 文字サイズ フォント"
     },
     "providerSection": {
       "title": "プロバイダー",
@@ -769,7 +826,12 @@
       "nativeComputerTool": "Claude ネイティブのコンピューターツール",
       "nativeComputerToolDesc": "Anthropic API で Claude に学習済みの専用コンピューターツールを使わせます（まとめて実行、最も正確なクリック）。Pawn のアクセシビリティ・OCR・アプリ・メニューツールも引き続き使えます。",
       "nativeCodingTools": "モデルネイティブのコーディングツール",
-      "nativeCodingToolsDesc": "各モデルが学習した編集ツールをそのまま使わせます：Anthropic API の Claude にはテキストエディタと永続 bash、GPT モデルには apply_patch。取り消し・権限・検証はそのまま有効です。"
+      "nativeCodingToolsDesc": "各モデルが学習した編集ツールをそのまま使わせます：Anthropic API の Claude にはテキストエディタと永続 bash、GPT モデルには apply_patch。取り消し・権限・検証はそのまま有効です。",
+      "search": "権限 サンドボックス 送信 モード 圧縮 コンテキスト 予算 ビジョン フォールバック ウルトラワーク 自動検証",
+      "groupBehavior": "実行動作",
+      "groupSafety": "安全性と承認",
+      "groupContext": "コンテキストと圧縮",
+      "groupTools": "モデルとツール"
     },
     "agentsSection": {
       "title": "サブエージェント",
@@ -858,7 +920,8 @@
       "template_implementer": "実装",
       "template_reviewer": "レビュー",
       "parallelHint": "仕事を分けられるときは、ヘルパーを同時に最大 6 体まで動かせます。独立した作業がより早く終わります。進捗はチャットでライブ確認でき、履歴は Agents パネルで確認できます。",
-      "applyReview": "適用前に確認"
+      "applyReview": "適用前に確認",
+      "confirmDeleteTitle": "このエージェントを削除しますか？"
     },
     "hooksSection": {
       "title": "フック",
@@ -876,7 +939,8 @@
       "loaded": "読み込み済みフック",
       "empty": "フックがありません。.claude/settings.json または ~/.pawn/hooks.json に追加してください。",
       "saved": "保存しました",
-      "desktopOnly": "フックはデスクトップアプリで動作します。"
+      "desktopOnly": "フックはデスクトップアプリで動作します。",
+      "search": "フック 前後 ツール 権限 スクリプト"
     },
     "memorySection": {
       "title": "メモリ（自己学習）",
@@ -901,7 +965,9 @@
       "autoCapture": "自動で学習",
       "autoCaptureDesc": "各会話の後、長く使う好みやプロジェクトの事実を保存します",
       "injectOnTurn": "毎回思い出す",
-      "injectOnTurnDesc": "合う記憶をプロンプトに入れてエージェントが参照します"
+      "injectOnTurnDesc": "合う記憶をプロンプトに入れてエージェントが参照します",
+      "search": "メモリ 記憶 カード 学習 統合 忘却",
+      "clearConfirmTitle": "すべてのメモリを消去しますか？"
     },
     "pluginSection": {
       "title": "プラグイン",
@@ -969,7 +1035,8 @@
       "addFailed": "サーバーを追加できませんでした。",
       "templates": "テンプレート",
       "templatesDesc": "よく使われるMCPサーバー（stdio/HTTP）をワンクリックでインストールします。必要なシークレットはインストール後に環境変数に追加してください。",
-      "retry": "再試行"
+      "retry": "再試行",
+      "search": "mcp サーバー ツール リモート stdio http"
     },
     "dataSection": {
       "title": "データ",
@@ -1001,7 +1068,8 @@
       "keysEncrypted": "API キーは可能なら OS キーチェーンで暗号化して保存します。",
       "fullBackupSafe": "バックアップ（秘密情報なし）",
       "backupOkSafe": "安全バックアップ保存: {{path}}（APIキー除去）",
-      "backupFullConfirm": "フルバックアップには API キーと接続トークンが含まれます。zip を安全に保管してください。続けますか？"
+      "backupFullConfirm": "フルバックアップには API キーと接続トークンが含まれます。zip を安全に保管してください。続けますか？",
+      "search": "エクスポート インポート バックアップ リセット 消去 ストレージ"
     },
     "system": "システム",
     "connectionsSection": {
@@ -1048,7 +1116,8 @@
       "writeScopesMissing": "書き込み権限が不足しています（{{scopes}}）。再接続して有効化してください。",
       "writeScopesReady": "書き込み権限が有効です",
       "finishInBrowser": "ブラウザでサインインを完了してください…",
-      "finishGoogle": "ブラウザで Google サインインを完了してください…"
+      "finishGoogle": "ブラウザで Google サインインを完了してください…",
+      "search": "github・gitlab・google 接続 アカウント イシュー プル カレンダー"
     },
     "automationSection": {
       "title": "オートメーション",
@@ -1108,7 +1177,8 @@
       "downloadInstall": "ダウンロードして開く",
       "downloading": "インストーラをダウンロード中…",
       "downloadOpened": "インストーラを開きました: {{path}}",
-      "downloadFailed": "ダウンロード失敗"
+      "downloadFailed": "ダウンロード失敗",
+      "search": "アップデート トレイ 終了 ドック スリープ バージョン 診断"
     },
     "shortcuts": "ショートカット",
     "shortcutSection": {
@@ -1162,7 +1232,8 @@
       "sessionBudget": "チャットの費用上限 ($)",
       "sessionBudgetDesc": "このセッションの USD 費用が上限に達するとエージェントをソフト停止します。0 = 無制限。",
       "dailyBudget": "日次費用上限 ($)",
-      "dailyBudgetDesc": "本日の端末利用が上限に達すると停止します。0 = 無制限。"
+      "dailyBudgetDesc": "本日の端末利用が上限に達すると停止します。0 = 無制限。",
+      "search": "コスト トークン 予算 上限 支出 キャッシュ 使用量"
     },
     "skillStore": {
       "nav": "スキルストア",
@@ -1202,7 +1273,8 @@
       "next": "次へ",
       "pageOf": "{{page}} / {{pages}} ページ",
       "foot": "1 ページ {{size}} 件。スキルはエージェントが従う指示です — 信頼できるものだけをインストールしてください。",
-      "unavailable": "スキルストアはデスクトップアプリで利用できます。"
+      "unavailable": "スキルストアはデスクトップアプリで利用できます。",
+      "search": "スキル ストア 検索 インストール コミュニティ"
     },
     "decisionModels": "意思決定モデル",
     "decisionSection": {
@@ -1266,6 +1338,28 @@
         "routerAssist": "リクエストの難易度判定（自動ルーティング用）",
         "routerAssistDesc": "モデル選択が自動のとき、新しいリクエストの難しさを意思決定モデルが判定し、回答するチャットモデルの等級（低・中・高）を決めます。等級の異なるモデルが2つ以上必要で、応答前に少し待つことがあります。"
       }
+    },
+    "providerKeyInvalid": "キーが短すぎるか空白を含んでいます — プロバイダ発行の完全なキーを貼り付けてください。",
+    "providerTestTimeout": "15秒でタイムアウト",
+    "providerLoadFailed": "保存済み設定を読み込めませんでした: {{error}}",
+    "providerFormRequired": "名前とベース URL は必須です。",
+    "providersSection": {
+      "search": "apiキー テスト 同期 プロバイダ Anthropic・OpenAI・DeepSeek・Claude・Kiro"
+    },
+    "modelsSection": {
+      "search": "モデル 追加 削除 ティア ビジョン 価格 コンテキスト 同期"
+    },
+    "decisionModelsSection": {
+      "search": "タイプセーフ 決定 リスク 評価 可逆 破壊"
+    },
+    "subagentsSection": {
+      "search": "サブエージェント 並列 生成 エージェント ラウンド キャンセル"
+    },
+    "pluginsSection": {
+      "search": "プラグイン スキル 有効 無効 ストア"
+    },
+    "shortcutsSection": {
+      "search": "ショートカット キーバインド 再設定"
     }
   },
   "projectEdit": {
@@ -1418,8 +1512,8 @@
     "close": "ターミナルを閉じる"
   },
   "commandPalette": {
-    "title": "チャットを検索",
-    "placeholder": "チャットを検索…",
+    "title": "コマンドパレット",
+    "placeholder": "チャット・操作・プロジェクトを検索…",
     "noResults": "一致するチャットがありません",
     "noResultsHint": "別のキーワードで試すか、検索をクリアしてください。",
     "navigate": "移動",
@@ -1453,7 +1547,7 @@
       "themeDark": "ダークテーマ",
       "themeDarkDesc": "アプリをダークモードにする",
       "stopStreaming": "生成を停止",
-      "stopStreamingDesc": "現在のモデル応答をキャンセル",
+      "stopStreamingDesc": "このチャットの応答を停止します",
       "stopStreamingIdle": "生成中の応答はありません",
       "openSettings": "設定",
       "openSettingsDesc": "プロバイダー、モデル、サービス連携など",
@@ -1467,7 +1561,9 @@
       "openAgentsDesc": "ヘルパーの進捗・コスト・ファイル変更を確認",
       "findInChat": "会話内を検索",
       "findInChatDesc": "このチャットを検索して一致箇所を移動"
-    }
+    },
+    "shortcuts": "キーボードショートカット",
+    "shortcutsDesc": "すべてのショートカットを一覧で確認"
   },
   "fileTree": {
     "loading": "ファイルを読み込み中…",
@@ -1589,14 +1685,19 @@
     "revertFailed": "失敗しました",
     "noPath": "パスがありません",
     "revertConflict": "エージェントの編集後にこのファイルは変更されています。元に戻すと後の変更は失われます。それでも元に戻しますか？",
-    "revertCancelled": "取り消しました — ファイルは保持されます"
+    "revertCancelled": "取り消しました — ファイルは保持されます",
+    "revertConflictTitle": "編集後にファイルが変更されています",
+    "revertForce": "強制的に上書き"
   },
   "usage": {
     "diagnostics": {
       "cacheMiss": "キャッシュミス — プレフィックスが変更されたかキャッシュが期限切れです。",
       "cachePriming": "キャッシュのプライミング — 新しいプレフィックスを記録中です。",
       "cacheHit": "良好なキャッシュヒット — 入力の大部分がキャッシュから提供されました。"
-    }
+    },
+    "filesTouched": "このチャットのファイル",
+    "filesTouchedEmpty": "エージェントが読み書きしたファイルがここに表示されます。",
+    "loadFailed": "使用量を読み込めませんでした: {{error}}"
   },
   "errorBoundary": {
     "title": "問題が発生しました",
@@ -1707,7 +1808,13 @@
     "inlineWorking": "エージェント {{count}} 件が作業中…",
     "inlineWorking_one": "エージェント {{count}} 件が作業中…",
     "inlineDone": "ヘルパー完了",
-    "inlineDoneCount": "{{count}}件完了"
+    "inlineDoneCount": "{{count}}件完了",
+    "status": {
+      "running": "実行中",
+      "ok": "完了",
+      "error": "失敗",
+      "aborted": "停止"
+    }
   },
   "markdown": {
     "codeLines": "{{count}} 行",
@@ -1855,5 +1962,39 @@
       "label": "ワークフローを録画",
       "desc": "作業を一度実演すると、Pawn が再利用できるスキルを書きます"
     }
+  },
+  "composer": {
+    "needProvider": "チャットを始めるには AI プロバイダを追加してください",
+    "addProvider": "プロバイダを追加"
+  },
+  "models": {
+    "emptyAddProvider": "設定 → プロバイダでプロバイダを追加し、モデルを同期してください。"
+  },
+  "diff": {
+    "emptyHint": "エージェントがこのチャットでファイルを編集すると、変更がここに表示されます。"
+  },
+  "files": {
+    "emptyHint": "プロジェクトフォルダを開くとファイルを閲覧できます。"
+  },
+  "artifacts": {
+    "revealFailed": "ファイルを表示できません: {{error}}"
+  },
+  "errors": {
+    "boundaryReassure": "チャットと設定はこのデバイスに保存されており、安全です。",
+    "boundaryCopy": "詳細をコピー",
+    "boundaryCopied": "コピーしました",
+    "boundaryStack": "技術的詳細"
+  },
+  "kiro": {
+    "recommended": "推奨"
+  },
+  "git": {
+    "checkoutFailedDetail": "ブランチを切り替えられませんでした: {{detail}}"
+  },
+  "shortcuts": {
+    "title": "キーボードショートカット",
+    "groupFixed": "固定ショートカット",
+    "findInChat": "チャット内を検索",
+    "interrupt": "エージェントを中断"
   }
 }

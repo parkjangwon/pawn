@@ -8,6 +8,10 @@ import { displayTarget, formatToolDuration, type ToolMeta } from '../agent/toolM
 import { toolLabel } from './toolLabels'
 import { timelineStage } from './timelineStage'
 
+/** Legacy rows embed the model-facing offload note in the content itself. */
+const LEGACY_NOTE_RE = /\[full output: ([\d,]+) chars saved[^\]]*\]\s*$/
+const PAGE_CHUNK = 16_000
+
 interface ToolMessageProps {
   content: string
   /** Structured record (new rows); older rows fall back to parsing `content`. */
@@ -18,6 +22,8 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
   const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(true)
   const [showAll, setShowAll] = useState(false)
+  const [paged, setPaged] = useState<{ content: string; total: number; hasMore: boolean } | null>(null)
+  const [paging, setPaging] = useState(false)
 
   // A __DIFF__: JSON marker (or the legacy block) carries the diff for DiffView.
   const diff = parseDiffMarker(content)
@@ -27,6 +33,42 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
   const diffNew = diff?.newText || ''
   const displayContentBase = stripDiffMarker(content)
 
+  // Offloaded output: structured on new rows (toolMeta.offloaded); legacy rows
+  // carry the note inline — detect it and hide it from the visible body (the
+  // note is a model instruction, not user copy).
+  const noteMatch = !meta?.offloaded ? content.match(LEGACY_NOTE_RE) : null
+  const offloaded = meta?.offloaded ?? (noteMatch
+    ? {
+        id: content.match(/"id":"([^"]+)"/)?.[1] ?? '',
+        chars: Number((noteMatch[1] || '').replace(/,/g, '')) || 0
+      }
+    : undefined)
+  const visibleBase = noteMatch
+    ? displayContentBase.replace(LEGACY_NOTE_RE, '')
+    : displayContentBase
+
+  const loadOutputPage = async (offset: number, append: boolean): Promise<void> => {
+    if (!offloaded?.id) return
+    setPaging(true)
+    try {
+      const r = await window.api?.toolOutput?.get?.(offloaded.id, offset, PAGE_CHUNK)
+      if (r?.ok && typeof r.content === 'string') {
+        const chunk = r.content
+        const total = typeof r.total === 'number' ? r.total : offloaded.chars
+        const more = Boolean(r.hasMore)
+        setPaged((prev) => ({
+          content: prev && append ? prev.content + chunk : chunk,
+          total,
+          hasMore: more
+        }))
+      }
+    } catch {
+      /* keep current view */
+    } finally {
+      setPaging(false)
+    }
+  }
+
   const firstLine = content.split('\n')[0] || ''
   const toolMatch = firstLine.match(/\[Tool: (\w+)\] (\w+)/)
   const toolName = meta?.name || toolMatch?.[1] || firstLine.match(/\[Tool: (\w+)\]/)?.[1] || 'tool'
@@ -35,7 +77,7 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
   const isRunning = toolStatus === 'running'
 
   // Remaining content after first line
-  const remaining = displayContentBase.split('\n').slice(1).join('\n').trim()
+  const remaining = visibleBase.split('\n').slice(1).join('\n').trim()
   const truncated = remaining.length > 300 && !showAll
   const displayContent = showAll ? remaining : remaining.slice(0, 300)
 
@@ -132,6 +174,28 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
             <button className="tool-show-more" onClick={() => setShowAll(false)}>
               {t('toolMessage.showLess')}
             </button>
+          )}
+          {offloaded && !paged && (
+            <div className="tool-output-offloaded">
+              <span className="tool-output-note">
+                {t('chat.toolMessage.outputOffloaded', { chars: offloaded.chars })}
+              </span>
+              <button className="tool-show-more" disabled={paging || !offloaded.id} onClick={() => void loadOutputPage(0, false)}>
+                {paging ? '…' : t('chat.toolMessage.loadFull')}
+              </button>
+            </div>
+          )}
+          {paged && (
+            <>
+              <pre className="tool-message-content tool-output-paged">{paged.content}</pre>
+              {paged.hasMore ? (
+                <button className="tool-show-more" disabled={paging} onClick={() => void loadOutputPage(paged.content.length, true)}>
+                  {paging ? '…' : t('chat.toolMessage.loadMore')}
+                </button>
+              ) : (
+                <span className="tool-output-total">{t('chat.toolMessage.fullShown', { chars: paged.total })}</span>
+              )}
+            </>
           )}
         </div>
       )}

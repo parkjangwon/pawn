@@ -2,6 +2,8 @@ import { useUltraWorkStore } from './ultraWork'
 import { create } from 'zustand'
 import { useAppStore } from './app'
 import { usePermissionStore } from './permission'
+import { usePlanStore } from './plan'
+import { useChangeLedger } from './changeLedger'
 import { clearSessionRoute, refreshMeasuredPricing } from '../agent/router'
 import {
   displayUserIndex,
@@ -70,6 +72,12 @@ export interface ChatState {
   isSessionStreaming: (sessionId: string) => boolean
   /** After cold start: resume incomplete turns from durable checkpoints. */
   resumeInterruptedTurns: () => Promise<number>
+  /**
+   * Start a fresh session in the same project seeded with a deterministic
+   * handoff document (goal, plan, touched files, last summary). Context
+   * hygiene beats compaction once a chat is long and messy.
+   */
+  handoffToNewSession: (projectId: string, sessionId: string) => string | null
 }
 
 export const useChatStore = create<ChatState>((set, get) => ({
@@ -274,6 +282,61 @@ export const useChatStore = create<ChatState>((set, get) => ({
       started++
     }
     return started
+  },
+
+  handoffToNewSession: (projectId, sessionId) => {
+    const app = useAppStore.getState()
+    const project = app.projects.find((p) => p.id === projectId)
+    const session = project?.sessions.find((s) => s.id === sessionId)
+    if (!project || !session) return null
+    if (get().streamingSessionIds.includes(sessionId)) {
+      get().stopStreaming(sessionId)
+    }
+
+    // --- Assemble the handoff document from local state (no LLM call) ---
+    const lastUser = [...session.messages].reverse().find((m) => m.role === 'user')
+    const lastAssistant = [...session.messages]
+      .reverse()
+      .find((m) => m.role === 'assistant' && m.content.trim().length > 80)
+    const plan = usePlanStore.getState().getPlan(sessionId)
+    const turn = useChangeLedger.getState().latestTurn(sessionId)
+    const files = [...new Set((turn?.changes ?? []).map((c) => c.rel || c.path))].slice(0, 12)
+    if (!lastUser && plan.length === 0 && files.length === 0) return null
+
+    const lines: string[] = []
+    lines.push(i18n.t('chat.handoff.header'))
+    if (lastUser) {
+      lines.push('')
+      lines.push(i18n.t('chat.handoff.goal'))
+      lines.push(stripDisplayImages(lastUser.content).trim().slice(0, 600))
+    }
+    if (lastAssistant) {
+      lines.push('')
+      lines.push(i18n.t('chat.handoff.state'))
+      lines.push(lastAssistant.content.trim().slice(0, 800))
+    }
+    if (plan.length > 0) {
+      lines.push('')
+      lines.push(i18n.t('chat.handoff.plan'))
+      for (const item of plan) {
+        const mark = item.status === 'done' ? 'x' : item.status === 'in_progress' ? '~' : ' '
+        lines.push(`- [${mark}] ${item.content}`)
+      }
+    }
+    if (files.length > 0) {
+      lines.push('')
+      lines.push(i18n.t('chat.handoff.files'))
+      for (const f of files) lines.push(`- ${f}`)
+    }
+    lines.push('')
+    lines.push(i18n.t('chat.handoff.instruction'))
+    const doc = lines.join('\n')
+
+    const newId = app.addSession(projectId, i18n.t('chat.handoff.title'))
+    // Fire-and-forget from the caller's perspective: the turn runs in the new
+    // session like any other send.
+    get().sendMessage(projectId, newId, doc, 'steer')
+    return newId
   }
 }))
 

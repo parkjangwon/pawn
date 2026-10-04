@@ -121,6 +121,11 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
               <button type="button" className="btn-primary" disabled={busy} onClick={() => void startDevice('builder-id')}>
                 {t('settings.providerSection.kiro.builderId')}
               </button>
+              <span
+                style={{ fontSize: 'var(--font-xs)', color: 'var(--success)', fontWeight: 600, alignSelf: 'center' }}
+              >
+                ✓ {t('kiro.recommended')}
+              </span>
               <button type="button" className="test-btn" disabled={busy} onClick={() => setForm(form === 'idc' ? null : 'idc')}>
                 {t('settings.providerSection.kiro.idc')}
               </button>

@@ -15,6 +15,7 @@ import { MarkdownBaseDirContext } from './LocalFileLinks'
 import { gambitTrigger, matchGambits } from '../agent/gambits'
 import { generalWorkspaceDir, generalWorkspaceDirSync } from '../utils/generalWorkspace'
 import Composer from './Composer'
+import { openSettingsSection } from './settingsState'
 import PlanStrip from './PlanStrip'
 import TurnReviewBar from './TurnReviewBar'
 import ConfirmDialog from './ConfirmDialog'
@@ -842,6 +843,12 @@ export default function ChatArea({
   const handleSend = async (mode: 'queue' | 'steer' = defaultSendMode): Promise<void> => {
     if (!input.trim() && attachments.length === 0) return
     if (sendingRef.current) return
+    // Block the send (and keep the composed text) when nothing can answer it —
+    // the composer chip and this gate route the user straight to Providers.
+    if (providers.filter((p) => p.enabled).length === 0) {
+      openSettingsSection('providers')
+      return
+    }
     sendingRef.current = true
 
     let projectId = activeProjectId
@@ -1210,7 +1217,6 @@ export default function ChatArea({
             activeProject={activeProject?.id === '__general__' ? undefined : activeProject}
             suggestions={suggestions}
             onPick={(text) => { setInput(text); setTrigger(null) }}
-            onOpenSettings={onOpenSettings}
           />
         ) : (
           <>

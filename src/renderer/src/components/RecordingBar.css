@@ -12,14 +12,14 @@
   display: none;
 }
 .rec-slot:not(:empty) {
-  margin-bottom: 10px;
+  margin-bottom: var(--space-10);
 }
 
 .rec-card {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-lg);
   background: var(--bg-elevated, var(--bg-primary));
-  padding: 10px 12px;
+  padding: var(--space-10) 12px;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -123,7 +123,7 @@
 .rec-field input {
   width: 100%;
   box-sizing: border-box;
-  padding: 7px 10px;
+  padding: 7px var(--space-10);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
@@ -144,7 +144,7 @@
   padding: 0;
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 6px;
+  gap: var(--space-6);
 }
 .rec-sources legend {
   font-size: var(--font-sm);
@@ -155,7 +155,7 @@
   display: flex;
   gap: 8px;
   align-items: flex-start;
-  padding: 8px 10px;
+  padding: 8px var(--space-10);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-secondary);
@@ -215,7 +215,7 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-6);
   padding: 5px 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -255,7 +255,7 @@
 .rec-stop {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-6);
 }
 .rec-start .rec-dot {
   background: #fff;
@@ -288,7 +288,7 @@
 
 /* Skill draft card inside an assistant message. */
 .skill-card {
-  margin: 10px 0;
+  margin: var(--space-10) 0;
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--accent) 4%, var(--bg-secondary));
@@ -330,11 +330,11 @@
 .skill-card-inputs {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-6);
   font-size: var(--font-xs);
 }
 .skill-card-inputs code {
-  padding: 1px 6px;
+  padding: 1px var(--space-6);
   border-radius: var(--radius-xs);
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -342,7 +342,7 @@
 .skill-card-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-6);
   align-items: center;
 }
 .skill-card-actions .rec-spacer {
@@ -357,7 +357,7 @@
   max-height: 360px;
   overflow: auto;
   margin: 0;
-  padding: 10px 12px;
+  padding: var(--space-10) 12px;
   border-radius: var(--radius-sm);
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
@@ -369,7 +369,7 @@
 .skill-run-form {
   display: grid;
   grid-template-columns: minmax(90px, max-content) 1fr;
-  gap: 6px 10px;
+  gap: var(--space-6) var(--space-10);
   align-items: center;
   font-size: var(--font-sm);
 }

@@ -52,7 +52,9 @@ docs/agent/      GUIDE.md (+ ko/ja/zh)
 - Test hooks are prefixed `__` (`__resetToolsetsForTests`, ...) and exported from prod modules.
 - Local state lives under `~/.pawn`. `config.toml` is read with smol-toml; arrays replace wholesale on save.
 - There is no ESLint or Prettier. The quality gate is `typecheck -> test -> build`.
-- No emojis in the UI; use SVG icons (CONTRIBUTING).
+- UI copy comes from i18n in all four locales (en/ko/ja/zh, parity + voice enforced by `i18n/__tests__`); Korean stays 해요체, ja/zh must not contain 3+ consecutive English words.
+- Design tokens are enforced by `styles/__tests__/designTokens.test.ts`: z-index only via `--z-*`, status colors only via `--success/--danger/--warning/--primary` (never raw hex). `settings.<id>` nav keys are plain strings — group sub-keys live at `settings.<id>Section.*`.
+- No emojis in the UI; use SVG icons (CONTRIBUTING). Shared glyphs come from `components/icons.tsx`; do not re-inline duplicated paths in new code.
 
 ## ANTI-PATTERNS (THIS PROJECT)
 - Never set `nodeIntegration: true` or disable `contextIsolation`, and never run Node or native modules in the renderer.

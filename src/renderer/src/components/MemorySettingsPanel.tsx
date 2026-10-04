@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import ConfirmDialog from './ConfirmDialog'
 
 interface MemoryItem {
   id: string
@@ -98,9 +99,11 @@ export default function MemorySettingsPanel(): React.JSX.Element {
     void refresh()
   }
 
+  const [confirmClear, setConfirmClear] = useState(false)
+
   const clearAll = async () => {
     if (!window.api.memory?.clear) return
-    if (!window.confirm(t('settings.memorySection.clearConfirm'))) return
+    setConfirmClear(false)
     setBusy(true)
     try {
       await window.api.memory.clear({})
@@ -150,7 +153,18 @@ export default function MemorySettingsPanel(): React.JSX.Element {
   }
 
   return (
-    <div className="memory-settings">
+    <>
+      {confirmClear && (
+        <ConfirmDialog
+          title={t('settings.memorySection.clearConfirmTitle')}
+          message={t('settings.memorySection.clearConfirm')}
+          confirmLabel={t('common.delete')}
+          danger
+          onConfirm={() => void clearAll()}
+          onCancel={() => setConfirmClear(false)}
+        />
+      )}
+      <div className="memory-settings">
       <div className="settings-card">
         <div className="settings-row">
           <div className="settings-row-info">
@@ -215,7 +229,7 @@ export default function MemorySettingsPanel(): React.JSX.Element {
           <button type="button" className="test-btn" onClick={() => void importJson()}>
             {t('settings.memorySection.import')}
           </button>
-          <button type="button" className="test-btn" onClick={() => void clearAll()} disabled={busy || total === 0}>
+          <button type="button" className="test-btn" onClick={() => setConfirmClear(true)} disabled={busy || total === 0}>
             {t('settings.memorySection.clearAll')}
           </button>
         </div>
@@ -281,5 +295,6 @@ export default function MemorySettingsPanel(): React.JSX.Element {
         )}
       </div>
     </div>
+    </>
   )
 }

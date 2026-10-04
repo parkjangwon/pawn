@@ -1,0 +1,85 @@
+/* Live shell-output card (LiveToolActivity) — a compact per-session card that
+   streams the tail of a running foreground command. Static styling only: no
+   pulsing animations, so it is safe under prefers-reduced-motion. */
+
+.live-tool-activity {
+  margin: 6px 0;
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--timeline-thinking, var(--accent));
+  border-radius: var(--radius-sm);
+  background: var(--bg-elevated, var(--bg-secondary));
+  overflow: hidden;
+  font-size: var(--font-sm);
+}
+
+.live-tool-activity-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 10px;
+  min-width: 0;
+}
+
+.live-tool-activity-dot {
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--timeline-thinking, var(--accent));
+}
+
+.live-tool-activity-title {
+  flex-shrink: 0;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.live-tool-activity-target {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.live-tool-activity-elapsed {
+  margin-left: auto;
+  flex-shrink: 0;
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.live-tool-activity-tail {
+  margin: 0;
+  padding: 6px 10px;
+  border-top: 1px solid var(--border-color);
+  max-height: 140px;
+  overflow-y: auto;
+  font-family: var(--font-mono);
+  font-size: var(--font-xs);
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--text-secondary);
+  background: var(--bg-input, transparent);
+}
+
+.live-tool-activity-foot {
+  padding: 4px 10px 6px;
+  border-top: 1px solid var(--border-color);
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .live-tool-activity,
+  .live-tool-activity-tail {
+    /* No animation is defined here by design; keep transitions off too. */
+    transition: none;
+    animation: none;
+  }
+}

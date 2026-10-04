@@ -120,12 +120,12 @@
 }
 
 .subagent-activity-dot.ok {
-  background: #3fb950;
+  background: var(--success);
 }
 
 .subagent-activity-dot.error,
 .subagent-activity-dot.aborted {
-  background: #f85149;
+  background: var(--danger);
 }
 
 .subagent-activity-name {
@@ -158,12 +158,12 @@
 }
 
 .subagent-activity-status.ok {
-  color: #3fb950;
+  color: var(--success);
 }
 
 .subagent-activity-status.error,
 .subagent-activity-status.aborted {
-  color: #f85149;
+  color: var(--danger);
 }
 
 .subagent-activity-stop {

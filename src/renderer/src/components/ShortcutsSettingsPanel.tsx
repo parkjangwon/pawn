@@ -16,6 +16,11 @@ export default function ShortcutsSettingsPanel({ state }: { state: SettingsState
     <div className="settings-section">
       <h2>{t('settings.shortcutSection.title')}</h2>
       <p className="settings-desc">{t('settings.shortcutSection.desc')}</p>
+      <div>
+        <button type="button" className="test-btn" onClick={() => window.dispatchEvent(new CustomEvent('pawn:shortcuts-help'))}>
+          {t('commandPalette.shortcuts')}
+        </button>
+      </div>
       <div className="settings-card">
         {KEYBINDING_IDS.map((id) => {
           const conflict = comboConflict(id)

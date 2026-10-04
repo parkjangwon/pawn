@@ -71,7 +71,8 @@
 .timeline-pill-edit { background: var(--timeline-edit); }
 .timeline-pill-done {
   background: var(--timeline-done);
-  color: var(--on-primary);
+  /* Ink on amber: white text was 3.2:1 in light theme (WCAG 1.4.3). */
+  color: var(--text-primary);
 }
 
 /* One-line summary: label · target · +/- · duration · status */
@@ -130,13 +131,13 @@
 
 .tool-status.ok {
   background: var(--timeline-done);
-  color: var(--on-primary);
+  color: var(--text-primary);
   border-radius: 999px;
 }
 
 .tool-status.error {
   background: rgba(239, 68, 68, 0.12);
-  color: var(--danger, #ef4444);
+  color: var(--danger);
 }
 
 .tool-status.running {
@@ -152,8 +153,8 @@
 }
 
 .app.dark .tool-status.error {
-  background: rgba(255, 107, 107, 0.18);
-  color: #ff8a8a;
+  background: color-mix(in srgb, var(--danger) 18%, transparent);
+  color: var(--danger);
 }
 
 .app.dark .tool-status.running {
@@ -224,7 +225,7 @@
 }
 
 .tool-message.tool-structure-warn {
-  border-color: color-mix(in srgb, #f59e0b 55%, var(--border-color));
+  border-color: color-mix(in srgb, var(--warning) 55%, var(--border-color));
 }
 
 .tool-message.tool-subagent {
@@ -235,8 +236,8 @@
   font-size: var(--font-xs);
   padding: 0 5px;
   border-radius: var(--radius-xs);
-  background: color-mix(in srgb, #f59e0b 22%, transparent);
-  color: #d97706;
+  background: color-mix(in srgb, var(--warning) 22%, transparent);
+  color: var(--warning);
   font-weight: 600;
 }
 
@@ -253,4 +254,28 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 140px;
+}
+
+/* —— Offloaded output paging —— */
+.tool-output-offloaded {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  flex-wrap: wrap;
+  margin-top: var(--space-xs);
+}
+
+.tool-output-note {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
+}
+
+.tool-output-paged {
+  max-height: 320px;
+  overflow: auto;
+}
+
+.tool-output-total {
+  font-size: var(--font-xs);
+  color: var(--text-muted);
 }

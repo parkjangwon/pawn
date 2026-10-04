@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { useProviderStore } from '../stores/provider'
 import type { SettingsState } from './settingsState'
+import ConfirmDialog from './ConfirmDialog'
 
 export default function DataSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -14,9 +16,51 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
     setBackupMsg,
     pawnPaths
   } = state
+  // Destructive backup/restore actions confirm through a styled dialog.
+  const [confirmAction, setConfirmAction] = useState<'backup' | 'restore' | null>(null)
 
   return (
     <div className="settings-section">
+      {confirmAction && (
+        <ConfirmDialog
+          title={
+            confirmAction === 'backup'
+              ? t('settings.dataSection.fullBackup')
+              : t('settings.dataSection.import')
+          }
+          message={
+            confirmAction === 'backup'
+              ? t('settings.dataSection.backupFullConfirm')
+              : t('settings.dataSection.restoreConfirm')
+          }
+          confirmLabel={confirmAction === 'backup' ? t('settings.dataSection.fullBackup') : t('settings.dataSection.import')}
+          danger={confirmAction === 'restore'}
+          onCancel={() => setConfirmAction(null)}
+          onConfirm={() => {
+            const action = confirmAction
+            setConfirmAction(null)
+            if (action === 'backup') {
+              void window.api.exportBackup?.({ excludeSecrets: false }).then((r) => {
+                if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
+                else if (r.ok && r.path)
+                  setBackupMsg(t('settings.dataSection.backupOk', { path: r.path }))
+                else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
+              }).catch(() => setBackupMsg(t('settings.dataSection.backupFailed')))
+            } else if (action === 'restore') {
+              void window.api.importBackup?.().then((r) => {
+                if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
+                else if (r.ok)
+                  setBackupMsg(
+                    t('settings.dataSection.restoreOk', {
+                      path: r.backupOfPrevious || ''
+                    })
+                  )
+                else setBackupMsg(r.error || t('settings.dataSection.restoreFailed'))
+              }).catch(() => setBackupMsg(t('settings.dataSection.restoreFailed')))
+            }
+          }}
+        />
+      )}
       <h2>{t('settings.dataSection.title')}</h2>
       <p className="settings-desc">{t('settings.dataSection.desc')}</p>
       <div className="settings-card">
@@ -138,13 +182,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
                   setBackupMsg(t('settings.dataSection.desktopOnly'))
                   return
                 }
-                if (!window.confirm(t('settings.dataSection.backupFullConfirm'))) return
-                void window.api.exportBackup({ excludeSecrets: false }).then((r) => {
-                  if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
-                  else if (r.ok && r.path)
-                    setBackupMsg(t('settings.dataSection.backupOk', { path: r.path }))
-                  else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
-                }).catch(() => setBackupMsg(t('settings.dataSection.backupFailed')))
+                setConfirmAction('backup')
               }}
             >
               {t('settings.dataSection.fullBackup')}
@@ -156,17 +194,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
                   setBackupMsg(t('settings.dataSection.desktopOnly'))
                   return
                 }
-                if (!window.confirm(t('settings.dataSection.restoreConfirm'))) return
-                void window.api.importBackup().then((r) => {
-                  if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
-                  else if (r.ok)
-                    setBackupMsg(
-                      t('settings.dataSection.restoreOk', {
-                        path: r.backupOfPrevious || ''
-                      })
-                    )
-                  else setBackupMsg(r.error || t('settings.dataSection.restoreFailed'))
-                }).catch(() => setBackupMsg(t('settings.dataSection.restoreFailed')))
+                setConfirmAction('restore')
               }}
             >
               {t('settings.dataSection.restoreBackup')}

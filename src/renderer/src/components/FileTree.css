@@ -75,7 +75,7 @@
 }
 
 .ft-dir .ft-icon {
-  color: #3b82f6;
+  color: var(--text-secondary);
 }
 
 .ft-name {

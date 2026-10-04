@@ -20,7 +20,7 @@
   backdrop-filter: blur(8px);
   position: sticky;
   top: 0;
-  z-index: 2;
+  z-index: var(--z-sticky);
   /* Keep the header at its natural height even on short panels — the run list
      below is the only part that scrolls. */
   flex-shrink: 0;
@@ -30,13 +30,13 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .subagents-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--space-10);
 }
 
 .subagents-title-icon {
@@ -68,7 +68,7 @@
 .subagents-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  gap: var(--space-6);
   align-items: center;
 }
 
@@ -84,13 +84,13 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
-  padding: 8px 10px;
+  padding: 8px var(--space-10);
   min-width: 0;
 }
 
 .subagents-stat-val {
   display: block;
-  font-size: 15px;
+  font-size: var(--font-lg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -102,11 +102,11 @@
 }
 
 .subagents-stat-val.ok {
-  color: #3ecf8e;
+  color: var(--success);
 }
 
 .subagents-stat-val.fail {
-  color: #e55;
+  color: var(--danger);
 }
 
 .subagents-stat-val.cost {
@@ -148,12 +148,12 @@
   left: 50%;
   top: 72px;
   transform: translateX(-50%);
-  z-index: 5;
+  z-index: calc(var(--z-sticky) + 5);
   background: color-mix(in srgb, var(--bg-secondary) 92%, var(--accent));
   border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--border-color));
   color: var(--text-primary);
   font-size: var(--font-sm);
-  padding: 6px 14px;
+  padding: var(--space-6) 14px;
   border-radius: 999px;
   box-shadow: 0 6px 18px color-mix(in srgb, #000 12%, transparent);
   animation: subagent-expand 0.16s ease;
@@ -180,7 +180,7 @@
   background: transparent;
   color: var(--text-secondary);
   font-size: var(--font-xs);
-  padding: 5px 10px;
+  padding: 5px var(--space-10);
   cursor: pointer;
   transition: background 0.15s ease, color 0.15s ease;
 }
@@ -216,12 +216,12 @@
 }
 
 .subagents-btn.danger {
-  color: #e55;
-  border-color: color-mix(in srgb, #e55 40%, var(--border-color));
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border-color));
 }
 
 .subagents-btn.danger:hover {
-  background: color-mix(in srgb, #e55 10%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
 .subagents-empty {
@@ -241,14 +241,14 @@
   border-radius: var(--radius-lg);
   display: grid;
   place-items: center;
-  font-size: 18px;
+  font-size: var(--font-xl);
   color: var(--accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border: 1px solid color-mix(in srgb, var(--accent) 25%, var(--border-color));
 }
 
 .subagents-empty-title {
-  margin: 0 0 6px;
+  margin: 0 0 var(--space-6);
   font-size: var(--font-lg);
   font-weight: 600;
   color: var(--text-primary);
@@ -265,7 +265,7 @@
 
 .subagents-empty-tips li {
   position: relative;
-  padding: 6px 0 6px 16px;
+  padding: var(--space-6) 0 var(--space-6) 16px;
   border-top: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
 }
 
@@ -280,7 +280,7 @@
 .subagents-list {
   list-style: none;
   margin: 0;
-  padding: 10px;
+  padding: var(--space-10);
   overflow: auto;
   flex: 1;
   min-height: 0;
@@ -309,11 +309,11 @@
 }
 
 .subagents-card.status-ok {
-  border-color: color-mix(in srgb, #3ecf8e 35%, var(--border-color));
+  border-color: color-mix(in srgb, var(--success) 35%, var(--border-color));
 }
 
 .subagents-card.status-error {
-  border-color: color-mix(in srgb, #e55 40%, var(--border-color));
+  border-color: color-mix(in srgb, var(--danger) 40%, var(--border-color));
 }
 
 .subagents-card-progress {
@@ -353,7 +353,7 @@
   color: var(--text-primary);
   border-radius: 999px;
   font-size: var(--font-xs);
-  padding: 3px 10px;
+  padding: 3px var(--space-10);
   cursor: pointer;
 }
 
@@ -371,7 +371,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 6px 8px;
+  gap: var(--space-6) 8px;
   padding: 11px 12px;
   border: none;
   background: transparent;
@@ -396,15 +396,15 @@
 }
 
 .subagents-dot.ok {
-  background: #3ecf8e;
+  background: var(--success);
 }
 
 .subagents-dot.error {
-  background: #e55;
+  background: var(--danger);
 }
 
 .subagents-dot.aborted {
-  background: #c9a227;
+  background: var(--warning);
 }
 
 @keyframes subagent-pulse {
@@ -444,13 +444,13 @@
 }
 
 .subagents-chip.ok {
-  background: color-mix(in srgb, #3ecf8e 18%, transparent);
-  color: #2a9d5c;
+  background: color-mix(in srgb, var(--success) 18%, transparent);
+  color: var(--success);
 }
 
 .subagents-chip.warn {
-  background: color-mix(in srgb, #c9a227 20%, transparent);
-  color: #b8860b;
+  background: color-mix(in srgb, var(--warning) 20%, transparent);
+  color: var(--warning);
 }
 
 .subagents-meta {
@@ -475,30 +475,30 @@
 }
 
 .subagents-status-label.ok {
-  color: #3ecf8e;
+  color: var(--success);
 }
 
 .subagents-status-label.error {
-  color: #e55;
+  color: var(--danger);
 }
 
 .subagents-cancel {
   position: absolute;
   top: 8px;
   right: 8px;
-  border: 1px solid color-mix(in srgb, #e55 35%, var(--border-color));
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border-color));
   background: var(--bg-primary);
-  color: #e55;
+  color: var(--danger);
   border-radius: 999px;
   font-size: var(--font-xs);
-  padding: 3px 10px;
+  padding: 3px var(--space-10);
   cursor: pointer;
-  z-index: 1;
+  z-index: var(--z-chrome);
   transition: background 0.15s ease;
 }
 
 .subagents-cancel:hover {
-  background: color-mix(in srgb, #e55 12%, transparent);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
 }
 
 .subagents-card-body {
@@ -533,14 +533,14 @@
 
 .subagents-body-label {
   display: inline-block;
-  margin-right: 6px;
+  margin-right: var(--space-6);
   font-size: var(--font-xs);
   color: var(--text-secondary);
   font-weight: 600;
 }
 
 .subagents-prompt {
-  padding: 8px 10px;
+  padding: 8px var(--space-10);
   border-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--bg-primary) 80%, transparent);
   border: 1px solid color-mix(in srgb, var(--border-color) 70%, transparent);
@@ -555,16 +555,16 @@
 }
 
 .subagents-conflicts {
-  color: #b8860b;
+  color: var(--warning);
 }
 
 .subagents-error {
-  color: #e55;
+  color: var(--danger);
 }
 
 .subagents-summary {
   margin: 8px 0 0;
-  padding: 10px;
+  padding: var(--space-10);
   max-height: 240px;
   overflow: auto;
   background: var(--bg-primary);

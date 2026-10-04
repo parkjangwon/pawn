@@ -461,7 +461,8 @@ export function createAgentRuntime(opts: AgentRuntimeOptions) {
           return fail(err)
         }
       },
-      async read(id: unknown, o?: unknown): Promise<Ok<{ text: string }> | Fail> {
+      /** Resolve an output id to its full text (file-backed or in-memory). */
+      async loadOutput(id: unknown): Promise<Ok<{ text: string }> | Fail> {
         if (typeof id !== 'string' || !/^out_[0-9a-f]{8}$/.test(id)) return { ok: false, error: 'Unknown output id' }
         try {
           let full: string | undefined
@@ -483,10 +484,30 @@ export function createAgentRuntime(opts: AgentRuntimeOptions) {
             full = mem
           }
           if (full === undefined) return { ok: false, error: `Output ${id} not found (outputs are kept 7 days).` }
-          return { ok: true, text: readOutputSlice(full, (o && typeof o === 'object' ? o : {}) as OutputReadOptions) }
+          return { ok: true, text: full }
         } catch (err) {
           return fail(err)
         }
+      },
+      async read(id: unknown, o?: unknown): Promise<Ok<{ text: string }> | Fail> {
+        const loaded = await this.loadOutput(id)
+        if (!loaded.ok) return loaded
+        return { ok: true, text: readOutputSlice(loaded.text, (o && typeof o === 'object' ? o : {}) as OutputReadOptions) }
+      },
+      /**
+       * Raw char-window accessor for the UI's output paging (tool rows show a
+       * truncated view and fetch the rest in chunks). Unlike `read`, this
+       * returns verbatim text — no line numbers, no formatting.
+       */
+      async readRaw(id: unknown, o?: unknown): Promise<Ok<{ content: string; total: number; hasMore: boolean }> | Fail> {
+        const loaded = await this.loadOutput(id)
+        if (!loaded.ok) return loaded
+        const full = loaded.text
+        const offset = Math.max(0, Math.floor(Number((o as { offset?: unknown } | undefined)?.offset) || 0))
+        const limit = Math.max(1, Math.min(100_000, Math.floor(Number((o as { limit?: unknown } | undefined)?.limit) || 8000)))
+        const start = Math.min(offset, full.length)
+        const content = full.slice(start, start + limit)
+        return { ok: true, content, total: full.length, hasMore: start + content.length < full.length }
       }
     },
 

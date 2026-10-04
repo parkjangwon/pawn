@@ -74,9 +74,9 @@
 
 .perm-always-remove {
   flex-shrink: 0;
-  border: 1px solid color-mix(in srgb, #e55 35%, var(--border-color));
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border-color));
   background: transparent;
-  color: #e55;
+  color: var(--danger);
   border-radius: 999px;
   font-size: var(--font-xs);
   padding: 4px 10px;
@@ -84,7 +84,7 @@
 }
 
 .perm-always-remove:hover {
-  background: color-mix(in srgb, #e55 10%, transparent);
+  background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 
 .perm-session-block {
