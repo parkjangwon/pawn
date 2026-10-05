@@ -41,6 +41,10 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
     addSession,
     openNewChat,
     removeSession,
+    archiveSession,
+    unarchiveSession,
+    deleteArchivedSession,
+    archivedSessions,
     setActiveSession,
     updateSessionTitle,
     updateProjectName
@@ -64,6 +68,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
 
   const [expandedProjects, setExpandedProjects] = useState<Set<string>>(new Set())
   const [recentExpanded, setRecentExpanded] = useState(false)
+  const [archivedExpanded, setArchivedExpanded] = useState(false)
   const [showProjectDialog, setShowProjectDialog] = useState(false)
   const [editingProjectId, setEditingProjectId] = useState<string | undefined>(undefined)
   const [pinnedSessions, setPinnedSessions] = useState<Set<string>>(new Set())
@@ -87,7 +92,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
       if (!loadedSessions.has(session.id)) void loadMessages(projectId, session.id)
     }
   }, [initialized])
-  const [confirmDelete, setConfirmDelete] = useState<{ type: 'project' | 'session'; id: string; projectId?: string; name: string } | null>(null)
+  const [confirmDelete, setConfirmDelete] = useState<{ type: 'project' | 'session' | 'archivedSession'; id: string; projectId?: string; name: string } | null>(null)
 
   // New chat stays in the project on screen (General when none) — the composer
   // chip switches project or "Work without project" before the first send.
@@ -138,6 +143,37 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
     setConfirmDelete({ type: 'session', id: sessionId, projectId, name: session?.title || t('sidebar.session') })
   }
 
+  // Soft-delete: out of every list, restorable from the archive section.
+  // Streaming is deliberately left running — archiving is bookkeeping, not abort.
+  const handleArchiveSession = (e: React.MouseEvent, projectId: string, sessionId: string): void => {
+    e.stopPropagation()
+    archiveSession(projectId, sessionId)
+    setPinnedSessions((prev) => {
+      if (!prev.has(sessionId)) return prev
+      const next = new Set(prev)
+      next.delete(sessionId)
+      try { localStorage.setItem('pawn-pinned-sessions', JSON.stringify([...next])) } catch {}
+      return next
+    })
+  }
+
+  // Restore puts the chat back in its project without yanking the view;
+  // clicking the row restores and opens it.
+  const handleRestoreSession = (sessionId: string, open: boolean): void => {
+    const info = archivedSessions.find((a) => a.id === sessionId)
+    unarchiveSession(sessionId)
+    if (open && info) {
+      onMainViewChange('chat')
+      setActiveProject(info.projectId)
+      setActiveSession(sessionId)
+    }
+  }
+
+  const handleDeleteArchivedSession = (sessionId: string): void => {
+    const info = archivedSessions.find((a) => a.id === sessionId)
+    setConfirmDelete({ type: 'archivedSession', id: sessionId, name: info?.title || t('sidebar.session') })
+  }
+
   const handleConfirmDelete = (): void => {
     if (!confirmDelete) return
     // A deleted session/project can no longer receive the turn's tool
@@ -162,6 +198,9 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
         try { localStorage.setItem('pawn-pinned-sessions', JSON.stringify([...next])) } catch {}
         return next
       })
+    } else if (confirmDelete.type === 'archivedSession') {
+      if (streamingSessionIds.includes(confirmDelete.id)) stopStreaming(confirmDelete.id)
+      deleteArchivedSession(confirmDelete.id)
     }
     setConfirmDelete(null)
   }
@@ -176,6 +215,19 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
       return next
     })
   }
+
+  // Shared archive row-action (soft delete). Hover target like pin/delete.
+  const renderArchiveButton = (projectId: string, sessionId: string): React.ReactNode => (
+    <button
+      type="button"
+      className="tree-action-btn"
+      onClick={(e) => handleArchiveSession(e, projectId, sessionId)}
+      title={t('sidebar.archive')}
+      aria-label={t('sidebar.archive')}
+    >
+      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></svg>
+    </button>
+  )
 
   // Pinned sessions across all projects
   const pinnedItems = projects.flatMap((p) =>
@@ -338,6 +390,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                   <span className="item-title">{session.title}</span>
                   {renderSessionMeta(sessionMeta(session), true)}
                   <div className="sidebar-item-actions">
+                    {renderArchiveButton(session.projectId, session.id)}
                     <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
                       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                     </button>
@@ -440,6 +493,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                             <button type="button" className="tree-action-btn pin" onClick={(e) => togglePin(e, session.id)} title={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')} aria-label={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')}>
                               <svg width="9" height="9" viewBox="0 0 24 24" fill={pinnedSessions.has(session.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
                             </button>
+                            {renderArchiveButton(project.id, session.id)}
                             <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, project.id, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
                               <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                             </button>
@@ -487,6 +541,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                 <span className="item-title">{session.title}</span>
                 {renderSessionMeta(sessionMeta(session), true)}
                 <div className="sidebar-item-actions">
+                  {renderArchiveButton(session.projectId, session.id)}
                   <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                   </button>
@@ -494,6 +549,55 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
               </div>
               )
             })}
+          </div>
+        )}
+
+        {/* 4. Archived — soft-deleted chats, restorable until really deleted */}
+        {archivedSessions.length > 0 && (
+          <div className="sidebar-section">
+            <button
+              className="section-header recent-header"
+              onClick={() => setArchivedExpanded((v) => !v)}
+              aria-expanded={archivedExpanded}
+            >
+              <IconChevronRight size={10} className={`tree-chevron ${archivedExpanded ? 'expanded' : ''}`} />
+              <span className="section-label">{t('sidebar.archived')}</span>
+              <span className="tree-empty">{archivedSessions.length}</span>
+            </button>
+            {archivedExpanded && archivedSessions.map((a) => (
+              <div
+                key={a.id}
+                className="sidebar-item"
+                role="button"
+                tabIndex={0}
+                onClick={() => handleRestoreSession(a.id, true)}
+                onKeyDown={(e) => activateOnKey(e, () => handleRestoreSession(a.id, true))}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></svg>
+                <span className="item-title" title={a.title}>{a.title}</span>
+                {a.projectId !== GENERAL_PROJECT_ID && <span className="session-preview">{a.projectName}</span>}
+                <div className="sidebar-item-actions">
+                  <button
+                    type="button"
+                    className="tree-action-btn"
+                    onClick={(e) => { e.stopPropagation(); handleRestoreSession(a.id, false) }}
+                    title={t('sidebar.restore')}
+                    aria-label={t('sidebar.restore')}
+                  >
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="tree-action-btn delete"
+                    onClick={(e) => { e.stopPropagation(); handleDeleteArchivedSession(a.id) }}
+                    title={t('common.delete')}
+                    aria-label={t('common.delete')}
+                  >
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                  </button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </div>
@@ -516,7 +620,13 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
       {confirmDelete && (
         <ConfirmDialog
           title={`${confirmDelete.name} ${t('common.delete')}`}
-          message={confirmDelete.type === 'project' ? t('sidebar.deleteProjectConfirm') : t('sidebar.deleteSessionConfirm')}
+          message={
+            confirmDelete.type === 'project'
+              ? t('sidebar.deleteProjectConfirm')
+              : confirmDelete.type === 'archivedSession'
+                ? t('sidebar.deleteArchivedConfirm')
+                : t('sidebar.deleteSessionConfirm')
+          }
           confirmLabel={t('confirmDialog.confirm')}
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmDelete(null)}

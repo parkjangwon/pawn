@@ -56,6 +56,15 @@ export function registerDbIpc(): void {
     db.removeSession(id)
     return { ok: true }
   })
+  handleTrusted('db:setSessionArchived', async (_, id, archivedAt) => {
+    if (typeof id !== 'string') return { ok: false, error: 'Invalid id' }
+    // null restores the session; anything else archives at that epoch ms.
+    db.setSessionArchived(id, typeof archivedAt === 'number' ? archivedAt : null)
+    return { ok: true }
+  })
+  handleTrusted('db:listArchivedSessions', async () => {
+    return { ok: true, sessions: db.listArchivedSessions() }
+  })
   handleTrusted('db:addMessage', async (_, id, sessionId, role, content, meta?) => {
     if (typeof id !== 'string' || typeof sessionId !== 'string') {
       return { ok: false, error: 'Invalid message args' }

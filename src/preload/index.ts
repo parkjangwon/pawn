@@ -299,6 +299,9 @@ const api = {
     updateSessionTitle: (id: string, title: string) => ipcRenderer.invoke('db:updateSessionTitle', id, title),
     updateSessionPath: (id: string, path: string) => ipcRenderer.invoke('db:updateSessionPath', id, path),
     removeSession: (id: string) => ipcRenderer.invoke('db:removeSession', id),
+    setSessionArchived: (id: string, archivedAt: number | null) =>
+      ipcRenderer.invoke('db:setSessionArchived', id, archivedAt),
+    listArchivedSessions: () => ipcRenderer.invoke('db:listArchivedSessions'),
     addMessage: (
       id: string,
       sessionId: string,

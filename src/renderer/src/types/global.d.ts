@@ -779,6 +779,8 @@ declare global {
         updateSessionTitle: (id: string, title: string) => Promise<{ ok?: boolean }>
         updateSessionPath: (id: string, path: string) => Promise<{ ok?: boolean }>
         removeSession: (id: string) => Promise<{ ok?: boolean }>
+        setSessionArchived: (id: string, archivedAt: number | null) => Promise<{ ok?: boolean }>
+        listArchivedSessions: () => Promise<{ ok?: boolean; sessions?: Array<{ id: string; projectId: string; projectName: string; title: string; createdAt: number; archivedAt: number }> }>
         addMessage: (
           id: string,
           sessionId: string,

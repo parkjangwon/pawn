@@ -51,7 +51,11 @@
     "searchResults": "검색 결과",
     "noSearchResults": "일치하는 채팅이 없어요",
     "waiting": "응답 대기",
-    "waitingHint": "에이전트가 답변이나 승인을 기다리고 있어요"
+    "waitingHint": "에이전트가 답변이나 승인을 기다리고 있어요",
+    "archive": "보관",
+    "archived": "보관됨",
+    "restore": "복원",
+    "deleteArchivedConfirm": "보관된 이 채팅을 완전히 삭제할까요? 되돌릴 수 없어요."
   },
   "chat": {
     "placeholder": "물어보거나, 만들거나, 자동화하세요…",
@@ -1663,7 +1667,8 @@
       "actions": "빠른 액션",
       "projects": "프로젝트",
       "navigation": "화면 · 외관",
-      "recent": "최근 사용"
+      "recent": "최근 사용",
+      "settings": "설정"
     },
     "commands": {
       "newSession": "새 채팅",

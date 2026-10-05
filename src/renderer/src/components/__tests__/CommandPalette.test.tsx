@@ -145,7 +145,9 @@ describe('CommandPalette — fuzzy search and recent actions', () => {
   it('remembers executed actions and lists them under Recently used', () => {
     const onOpenSettings = vi.fn()
     const { unmount } = render(<CommandPalette onClose={vi.fn()} onOpenSettings={onOpenSettings} />)
-    fireEvent.change(screen.getByPlaceholderText('commandPalette.placeholder'), { target: { value: 'settings' } })
+    // 'preferences' matches the settings action's keywords uniquely: a bare
+    // 'settings' now also hits every settings-section deep link.
+    fireEvent.change(screen.getByPlaceholderText('commandPalette.placeholder'), { target: { value: 'preferences' } })
     fireEvent.keyDown(window, { key: 'Enter' })
     expect(onOpenSettings).toHaveBeenCalled()
     expect(JSON.parse(localStorage.getItem('pawn-cp-recent') || '[]')).toEqual(['open-settings'])

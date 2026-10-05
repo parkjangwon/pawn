@@ -60,16 +60,29 @@ describe('translation quality', () => {
     expect(titleCase.map(([k, v]) => `${k}=${v}`)).toEqual([])
   })
 
+  // Proper nouns and literal commands that are correct as-is in CJK copy.
+  const brandTerms = /^(Claude Code|OpenAI Agents|IAM Identity Center|AWS Builder ID|AWS CodeCommit|User Settings|Personal Access Token|Secret Access Key|Access Key ID|Kiro CLI|GitHub Releases|Command Code|OpenCode Go|Xiaomi MiMo|Token Plan API|Google Docs|ULTRA WORK|Git diff|git diff HEAD|GitLab Personal Access Token|IAM Access Key|brew install|apt install|apt-get install|npm install|pip install)/
+  const stripNonProse = (v: string): string =>
+    v.replace(/\{\{\w+\}\}|https?:\/\/\S+|~\/\S+|`[^`]*`|\b[\w.-]+\.(json|md|toml)\b/g, '')
+  const latinRun = (t: string): string | undefined =>
+    t.match(/\b[A-Za-z]{3,}\b(?:\s+[A-Za-z]{2,}\b){2,}/)?.[0]
+
   it('no English sentences left in Japanese or Chinese', () => {
-    const brands = /^(Claude Code|OpenAI Agents|IAM Identity Center|AWS Builder ID|AWS CodeCommit|User Settings|Personal Access Token|Secret Access Key|Access Key ID|Kiro CLI|GitHub Releases|Command Code|OpenCode Go|Xiaomi MiMo|Token Plan API|Google Docs|ULTRA WORK|Git diff|git diff HEAD)/
     for (const lang of ['ja', 'zh'] as const) {
       const left = Object.entries(F[lang]).filter(([key, v]) => {
-        const t = v.replace(/\{\{\w+\}\}|https?:\/\/\S+|~\/\S+|`[^`]*`|\b[\w.-]+\.(json|md|toml)\b/g, '')
-        const m = /\b[A-Za-z]{3,}\b(?:\s+[A-Za-z]{2,}\b){2,}/.exec(t)
-        return m && !brands.test(m[0]) && F.en[key] !== undefined
+        const m = latinRun(stripNonProse(v))
+        return m && !brandTerms.test(m) && F.en[key] !== undefined
       })
       expect(left.map(([k, v]) => `${k}=${v}`), lang).toEqual([])
     }
+  })
+
+  it('no English sentences left in Korean either', () => {
+    const left = Object.entries(F.ko).filter(([key, v]) => {
+      const m = latinRun(stripNonProse(v))
+      return m && !brandTerms.test(m) && F.en[key] !== undefined
+    })
+    expect(left.map(([k, v]) => `${k}=${v}`)).toEqual([])
   })
 })
 

@@ -119,7 +119,13 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
 
       {open && (
         <div className="git-chip-popover">
-          <button className="git-popover-branch" onClick={toggleBranches} disabled={busy}>
+          <button
+            className="git-popover-branch"
+            onClick={toggleBranches}
+            disabled={busy}
+            aria-expanded={showBranches}
+            aria-label={`${t('rightPanel.git.branch')}: ${summary.branch}`}
+          >
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{BRANCH_ICON_PATH}</svg>
             <span className="git-popover-branch-name">{summary.branch}</span>
             <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`git-popover-chevron ${showBranches ? 'expanded' : ''}`}>

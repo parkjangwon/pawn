@@ -51,7 +51,11 @@
     "searchResults": "Search results",
     "noSearchResults": "No matching chats",
     "waiting": "Waiting",
-    "waitingHint": "The agent is waiting for your answer or approval"
+    "waitingHint": "The agent is waiting for your answer or approval",
+    "archive": "Archive",
+    "archived": "Archived",
+    "restore": "Restore",
+    "deleteArchivedConfirm": "Permanently delete this archived chat? This can't be undone."
   },
   "chat": {
     "placeholder": "Ask, build, or automate…",
@@ -1663,7 +1667,8 @@
       "actions": "Quick actions",
       "projects": "Projects",
       "navigation": "View & appearance",
-      "recent": "Recently used"
+      "recent": "Recently used",
+      "settings": "Settings"
     },
     "commands": {
       "newSession": "New chat",

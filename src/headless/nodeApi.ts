@@ -355,6 +355,9 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
     loadAll: async () => ({ projects: [] }),
     getMessages: async () => [],
     searchSessions: async () => [],
+    // Headless has no archived-list UI, but the shape stays in lockstep with
+    // the desktop preload so renderer code can't silently diverge.
+    listArchivedSessions: async () => ({ ok: true, sessions: [] }),
     getTranscript: async (sessionId: string) => transcripts.get(sessionId) ?? null,
     saveTranscript: async (sessionId: string, json: string) => {
       transcripts.set(sessionId, json)
@@ -389,7 +392,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
     'addProject', 'removeProject', 'updateProjectName', 'updateProjectPaths', 'addSession', 'removeSession',
     'updateSessionTitle', 'updateSessionPath', 'addMessage', 'updateMessageContent', 'updateMessageMeta',
     'deleteMessage', 'clearMessages', 'saveTurnCheckpoint', 'clearTurnCheckpoint', 'saveChangeLedgerTurn',
-    'deleteChangeLedgerTurn', 'deleteChangeLedgerForSession'
+    'deleteChangeLedgerForSession', 'setSessionArchived'
   ]) {
     ;(db as Record<string, unknown>)[m] = ok
   }

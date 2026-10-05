@@ -51,6 +51,16 @@ export interface Project {
   sessions: Session[]
 }
 
+/** A soft-deleted chat: out of every list, restorable until really deleted. */
+export interface ArchivedSession {
+  id: string
+  projectId: string
+  projectName: string
+  title: string
+  createdAt: number
+  archivedAt: number
+}
+
 interface AppState {
   projects: Project[]
   activeProjectId: string | null
@@ -59,6 +69,8 @@ interface AppState {
   loadedSessions: Set<string>
   /** Sessions with an in-flight message fetch (for skeleton UI). */
   loadingSessions: Set<string>
+  /** Archived (soft-deleted) chats, newest archive first. */
+  archivedSessions: ArchivedSession[]
   init: () => Promise<void>
   addProject: (name: string, paths: string[], id?: string) => void
   removeProject: (id: string) => void
@@ -82,6 +94,12 @@ interface AppState {
    */
   openNewChat: () => void
   removeSession: (projectId: string, sessionId: string) => void
+  /** Soft-delete: out of every list, restorable from the sidebar archive. */
+  archiveSession: (projectId: string, sessionId: string) => void
+  /** Put an archived chat back into its project. */
+  unarchiveSession: (sessionId: string) => void
+  /** Permanently delete an archived chat (ask first — this one is final). */
+  deleteArchivedSession: (sessionId: string) => void
   setActiveSession: (id: string | null) => void
   loadMessages: (projectId: string, sessionId: string) => Promise<void>
   addMessage: (projectId: string, sessionId: string, message: Message) => void
@@ -127,6 +145,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   initialized: false,
   loadedSessions: new Set<string>(),
   loadingSessions: new Set<string>(),
+  archivedSessions: [],
 
   init: async () => {
     if (get().initialized) return
@@ -153,7 +172,12 @@ export const useAppStore = create<AppState>((set, get) => ({
           sessions
         }
       }) as Project[]
-      set({ projects, initialized: true })
+      const archived = await window.api.db.listArchivedSessions?.()
+      set({
+        projects,
+        archivedSessions: (archived?.sessions || []) as ArchivedSession[],
+        initialized: true
+      })
     } catch {
       set({ initialized: true })
     }
@@ -264,6 +288,71 @@ export const useAppStore = create<AppState>((set, get) => ({
         loadedSessions: next
       }
     })
+    window.api.db.removeSession(sessionId).catch(() => {})
+  },
+
+  archiveSession: (projectId, sessionId) => {
+    const project = get().projects.find((p) => p.id === projectId)
+    const session = project?.sessions.find((s) => s.id === sessionId)
+    if (!project || !session) return
+    const archivedAt = Date.now()
+    set((s) => {
+      const loaded = new Set(s.loadedSessions)
+      loaded.delete(sessionId)
+      return {
+        projects: s.projects.map((p) =>
+          p.id === projectId ? { ...p, sessions: p.sessions.filter((ss) => ss.id !== sessionId) } : p
+        ),
+        archivedSessions: [
+          {
+            id: sessionId,
+            projectId,
+            projectName: project.name,
+            title: session.title,
+            createdAt: session.createdAt,
+            archivedAt
+          },
+          ...s.archivedSessions
+        ],
+        // Archiving the open chat falls back to a blank composer: the chat is
+        // out of every list, so leaving it active would strand the composer.
+        activeSessionId: s.activeSessionId === sessionId ? null : s.activeSessionId,
+        loadedSessions: loaded
+      }
+    })
+    window.api.db.setSessionArchived?.(sessionId, archivedAt)?.catch?.(() => {})
+  },
+
+  unarchiveSession: (sessionId) => {
+    const info = get().archivedSessions.find((a) => a.id === sessionId)
+    if (!info) return
+    set((s) => {
+      // Archived rows cascade with their project, so projectId is live; if it
+      // somehow vanished, keep the row archived rather than orphaning it.
+      const target = s.projects.find((p) => p.id === info.projectId)
+      if (!target) return { archivedSessions: s.archivedSessions.filter((a) => a.id !== sessionId) }
+      const restored: Session = {
+        id: info.id,
+        title: info.title,
+        path: '',
+        createdAt: info.createdAt,
+        messages: []
+      }
+      return {
+        projects: s.projects.map((p) =>
+          p.id === target.id ? { ...p, sessions: [...p.sessions, restored] } : p
+        ),
+        archivedSessions: s.archivedSessions.filter((a) => a.id !== sessionId)
+      }
+    })
+    window.api.db.setSessionArchived?.(sessionId, null)?.catch?.(() => {})
+  },
+
+  deleteArchivedSession: (sessionId) => {
+    useUsageStore.getState().reset(sessionId)
+    set((s) => ({
+      archivedSessions: s.archivedSessions.filter((a) => a.id !== sessionId)
+    }))
     window.api.db.removeSession(sessionId).catch(() => {})
   },
 

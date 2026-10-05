@@ -11,6 +11,8 @@ const dbMock = {
   updateProjectPaths: vi.fn(),
   addSession: vi.fn(),
   removeSession: vi.fn(),
+  setSessionArchived: vi.fn(),
+  listArchivedSessions: vi.fn(),
   getMessages: vi.fn(),
   addMessage: vi.fn(),
   updateMessageContent: vi.fn(),
@@ -28,16 +30,18 @@ beforeEach(() => {
     activeProjectId: null,
     activeSessionId: null,
     initialized: false,
-    loadedSessions: new Set()
+    loadedSessions: new Set(),
+    archivedSessions: []
   })
   for (const fn of Object.values(dbMock)) fn.mockClear()
   dbMock.loadAll.mockResolvedValue({ projects: [] })
+  dbMock.listArchivedSessions.mockResolvedValue({ ok: true, sessions: [] })
   dbMock.getMessages.mockResolvedValue([])
   dbMock.getUsageBySession.mockResolvedValue([])
   for (const fn of [
     dbMock.addProject, dbMock.removeProject, dbMock.updateProjectName, dbMock.updateProjectPaths,
     dbMock.addSession, dbMock.removeSession, dbMock.addMessage, dbMock.updateMessageContent,
-    dbMock.deleteMessage, dbMock.clearMessages, dbMock.updateSessionTitle
+    dbMock.deleteMessage, dbMock.clearMessages, dbMock.updateSessionTitle, dbMock.setSessionArchived
   ]) {
     fn.mockResolvedValue({ ok: true })
   }
@@ -236,6 +240,49 @@ describe('message actions', () => {
     await __flushDbWriteQueueForTests()
     expect(useAppStore.getState().projects[0].sessions[0].messages).toHaveLength(0)
     expect(dbMock.clearMessages).toHaveBeenCalledWith(sessionId)
+  })
+})
+
+describe('archiving sessions', () => {
+  it('archives: out of the project, into the archive list, active id cleared', () => {
+    useAppStore.getState().addProject('P', ['/p'], 'p1')
+    const sessionId = useAppStore.getState().addSession('p1', 'Chat A')
+    useAppStore.getState().archiveSession('p1', sessionId)
+
+    const state = useAppStore.getState()
+    expect(state.projects[0].sessions).toHaveLength(0)
+    expect(state.activeSessionId).toBeNull()
+    expect(state.archivedSessions).toHaveLength(1)
+    expect(state.archivedSessions[0]).toMatchObject({ id: sessionId, projectId: 'p1', projectName: 'P', title: 'Chat A' })
+    expect(dbMock.setSessionArchived).toHaveBeenCalledTimes(1)
+    expect(dbMock.setSessionArchived.mock.calls[0][0]).toBe(sessionId)
+    expect(typeof dbMock.setSessionArchived.mock.calls[0][1]).toBe('number')
+  })
+
+  it('unarchives back into the same project and clears the flag', () => {
+    useAppStore.getState().addProject('P', ['/p'], 'p1')
+    const sessionId = useAppStore.getState().addSession('p1', 'Chat A')
+    useAppStore.getState().archiveSession('p1', sessionId)
+    dbMock.setSessionArchived.mockClear()
+
+    useAppStore.getState().unarchiveSession(sessionId)
+    const state = useAppStore.getState()
+    expect(state.archivedSessions).toHaveLength(0)
+    expect(state.projects[0].sessions.map((s) => ({ id: s.id, title: s.title }))).toEqual([
+      { id: sessionId, title: 'Chat A' }
+    ])
+    expect(state.activeSessionId).toBeNull()
+    expect(dbMock.setSessionArchived).toHaveBeenCalledWith(sessionId, null)
+  })
+
+  it('deleting an archived chat is final and hits removeSession', () => {
+    useAppStore.getState().addProject('P', ['/p'], 'p1')
+    const sessionId = useAppStore.getState().addSession('p1', 'Chat A')
+    useAppStore.getState().archiveSession('p1', sessionId)
+
+    useAppStore.getState().deleteArchivedSession(sessionId)
+    expect(useAppStore.getState().archivedSessions).toHaveLength(0)
+    expect(dbMock.removeSession).toHaveBeenCalledWith(sessionId)
   })
 })
 

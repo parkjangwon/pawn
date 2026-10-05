@@ -65,6 +65,11 @@ function migrateSchema(db: Database.Database): void {
   if (!pnames.has('remote_path')) {
     db.exec("ALTER TABLE projects ADD COLUMN remote_path TEXT NOT NULL DEFAULT ''")
   }
+  // Soft-deleted (archived) chats: NULL = active, else the archive epoch ms.
+  const sessionCols = db.prepare('PRAGMA table_info(sessions)').all() as Array<{ name: string }>
+  if (!sessionCols.some((c) => c.name === 'archived_at')) {
+    db.exec('ALTER TABLE sessions ADD COLUMN archived_at INTEGER')
+  }
   db.exec(`
     CREATE TABLE IF NOT EXISTS session_plans (
       session_id TEXT PRIMARY KEY,
@@ -225,7 +230,7 @@ export function removeProject(id: string): void {
 // --- Sessions ---
 
 export function getSessionsByProject(projectId: string): Array<{ id: string; title: string; path: string; createdAt: number }> {
-  return getDb().prepare('SELECT id, title, path, created_at as createdAt FROM sessions WHERE project_id = ? ORDER BY created_at DESC').all(projectId) as never[]
+  return getDb().prepare('SELECT id, title, path, created_at as createdAt FROM sessions WHERE project_id = ? AND archived_at IS NULL ORDER BY created_at DESC').all(projectId) as never[]
 }
 
 export function addSession(id: string, projectId: string, title: string, path: string): void {
@@ -238,6 +243,32 @@ export function updateSessionTitle(id: string, title: string): void {
 
 export function updateSessionPath(id: string, path: string): void {
   getDb().prepare('UPDATE sessions SET path = ? WHERE id = ?').run(path || null, id)
+}
+
+/** NULL = active; a timestamp = archived (hidden from lists, restorable). */
+export function setSessionArchived(id: string, archivedAt: number | null): void {
+  getDb().prepare('UPDATE sessions SET archived_at = ? WHERE id = ?').run(archivedAt, id)
+}
+
+export interface ArchivedSessionRow {
+  id: string
+  projectId: string
+  projectName: string
+  title: string
+  createdAt: number
+  archivedAt: number
+}
+
+export function listArchivedSessions(): ArchivedSessionRow[] {
+  return getDb()
+    .prepare(
+      `SELECT s.id, s.project_id as projectId, p.name as projectName,
+              s.title, s.created_at as createdAt, s.archived_at as archivedAt
+         FROM sessions s JOIN projects p ON p.id = s.project_id
+        WHERE s.archived_at IS NOT NULL
+        ORDER BY s.archived_at DESC`
+    )
+    .all() as ArchivedSessionRow[]
 }
 
 export function removeSession(id: string): void {
@@ -292,7 +323,7 @@ export function searchSessions(query: string): Array<{
                ORDER BY m.created_at DESC LIMIT 1) as snippet
        FROM sessions s
        LEFT JOIN messages m ON m.session_id = s.id
-       WHERE s.title LIKE ? ESCAPE '\\' OR m.content LIKE ? ESCAPE '\\'
+       WHERE s.archived_at IS NULL AND (s.title LIKE ? ESCAPE '\\' OR m.content LIKE ? ESCAPE '\\')
        ORDER BY s.created_at DESC`
     )
     .all(like, like, like) as Array<{
@@ -604,7 +635,7 @@ export function loadFullState(): {
 } {
   const projects = getAllProjects()
   const allSessions = getDb()
-    .prepare('SELECT id, project_id as projectId, title, path, created_at as createdAt FROM sessions ORDER BY created_at DESC')
+    .prepare('SELECT id, project_id as projectId, title, path, created_at as createdAt FROM sessions WHERE archived_at IS NULL ORDER BY created_at DESC')
     .all() as Array<{ id: string; projectId: string; title: string; path: string; createdAt: number }>
   const sessionsByProj = new Map<string, Array<{ id: string; title: string; path: string; createdAt: number }>>()
   for (const s of allSessions) {

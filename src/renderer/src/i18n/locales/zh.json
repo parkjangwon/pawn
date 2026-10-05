@@ -51,7 +51,11 @@
     "searchResults": "搜索结果",
     "noSearchResults": "没有匹配的对话",
     "waiting": "等待回复",
-    "waitingHint": "代理正在等待你的回答或批准"
+    "waitingHint": "代理正在等待你的回答或批准",
+    "archive": "归档",
+    "archived": "已归档",
+    "restore": "恢复",
+    "deleteArchivedConfirm": "确定永久删除此已归档对话吗？此操作无法撤销。"
   },
   "chat": {
     "placeholder": "提问、构建或自动化…",
@@ -1663,7 +1667,8 @@
       "navigation": "界面与外观",
       "sessions": "最近会话",
       "projects": "项目",
-      "recent": "最近使用"
+      "recent": "最近使用",
+      "settings": "设置"
     },
     "commands": {
       "newSession": "新对话",

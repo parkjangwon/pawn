@@ -9,10 +9,11 @@ import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { useFocusTrap } from '../utils/focusTrap'
 import { fuzzyMatchRanges, scoreFields } from '../utils/fuzzyMatch'
 import { reloadMods } from '../agent/mods'
-import { openPluginsExtensions } from './settingsState'
+import { openPluginsExtensions, openSettingsSection } from './settingsState'
+import { SECTIONS } from './settingsMeta'
 import './CommandPalette.css'
 
-type GroupId = 'recent' | 'actions' | 'navigation' | 'sessions' | 'projects'
+type GroupId = 'recent' | 'actions' | 'navigation' | 'sessions' | 'projects' | 'settings'
 
 interface Command {
   id: string
@@ -32,7 +33,7 @@ interface CommandPaletteProps {
 }
 
 const GENERAL_ID = '__general__'
-const GROUP_ORDER: GroupId[] = ['sessions', 'recent', 'actions', 'projects', 'navigation']
+const GROUP_ORDER: GroupId[] = ['sessions', 'recent', 'actions', 'projects', 'navigation', 'settings']
 const MAX_SESSIONS = 14
 const MAX_PROJECTS = 20
 const RECENT_KEY = 'pawn-cp-recent'
@@ -398,7 +399,22 @@ export default function CommandPalette({
       })
     }))
 
-    return [...sessions, ...actions, ...projectCmds, ...navigation]
+    // Every settings section, deep-linked: fuzzy search jumps straight to the
+    // pane instead of opening Settings and scrolling the nav.
+    const settingsCmds: Command[] = SECTIONS.map((s) => ({
+      id: `settings-${s.id}`,
+      label: t(s.labelKey),
+      description: t(s.groupKey),
+      group: 'settings' as GroupId,
+      keywords: s.searchKey ? t(s.searchKey) : '',
+      icon: <Icon d={<path d={s.icon} />} />,
+      action: () => run(() => {
+        openSettingsSection(s.id)
+        onOpenSettings()
+      })
+    }))
+
+    return [...sessions, ...actions, ...projectCmds, ...navigation, ...settingsCmds]
   }, [
     projects, keybindings, t, run, onMainViewChange, onOpenSettings, openNewChat,
     stopStreaming, isStreaming, theme, toggleTheme, setTheme, setActiveProject, setActiveSession,
