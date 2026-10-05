@@ -1,4 +1,4 @@
-import { mkdtempSync, mkdirSync, writeFileSync, rmSync } from 'fs'
+import { mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -112,6 +112,12 @@ describe('mods validate / discover', () => {
     expect(report.hooks.some((h) => h.includes('tool.call'))).toBe(true)
     expect(report.hooks.some((h) => h.includes('command.run'))).toBe(true)
     expect(report.calls).toContain('$.command.register')
+  })
+
+  it('loads the TypeScript compiler through require, not a static ESM import', () => {
+    const src = readFileSync(new URL('../mods/load.ts', import.meta.url), 'utf8')
+    expect(src).not.toMatch(/^import\s+.+\s+from\s+['"]typescript['"]/m)
+    expect(src).toContain('createRequire')
   })
 
   it('strips light TypeScript from hooks modules', () => {

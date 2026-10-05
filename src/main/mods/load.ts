@@ -1,7 +1,37 @@
+import { createRequire } from 'module'
 import { readFileSync } from 'fs'
 import { extname } from 'path'
-import ts from 'typescript'
 import type { DiscoveredMod, ModModuleSource } from './types'
+
+type TsCompiler = {
+  transpileModule: (
+    source: string,
+    options: {
+      compilerOptions: { target: number; module: number; isolatedModules: boolean }
+      reportDiagnostics: boolean
+    }
+  ) => { outputText?: string }
+  ScriptTarget: { ES2022: number }
+  ModuleKind: { ESNext: number }
+}
+
+let compiler: TsCompiler | null | undefined
+
+/**
+ * Load the compiler as CommonJS. A static import is inlined into the ESM main
+ * bundle, and TypeScript's filesystem probe then throws `__filename is not defined`
+ * before the app window opens.
+ */
+function typescriptCompiler(): TsCompiler | null {
+  if (compiler !== undefined) return compiler
+  try {
+    const require = createRequire(import.meta.url)
+    compiler = require('typescript') as TsCompiler
+  } catch {
+    compiler = null
+  }
+  return compiler
+}
 
 /**
  * Turn a hooks module into JavaScript.
@@ -9,6 +39,8 @@ import type { DiscoveredMod, ModModuleSource } from './types'
  */
 export function stripTypeScript(source: string): string {
   try {
+    const ts = typescriptCompiler()
+    if (!ts) return stripTypeScriptRegex(source)
     const out = ts.transpileModule(source, {
       compilerOptions: {
         target: ts.ScriptTarget.ES2022,
