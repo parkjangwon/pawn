@@ -9,6 +9,8 @@ import { useProviderStore } from '../stores/provider'
 import { isNativeComputerCall, nativeCallToAction } from './computerToolset'
 import { effectiveToolName } from './toolIdentity'
 import { currentPolicy, toToolResult } from './toolHandlers/computer'
+import { getModRuntime } from './mods'
+import { useModsUiStore } from './mods/uiStore'
 
 export type { ToolExecContext } from './toolHandlers'
 export { compileGlob, matchesGlob } from './globMatch'
@@ -59,63 +61,164 @@ export async function executeTool(
     }
   }
 
-  if (!signal?.aborted) {
-    const pre = await fireHook({
-      event: 'PreToolUse',
-      sessionId: ctx?.sessionId,
-      projectPath: projectPath || null,
-      cwd: projectPath || undefined,
-      payload: {
-        tool_name: call.name,
-        tool_use_id: call.id,
-        tool_input: call.arguments
-      }
+  // Mods `tool.call` runs before settings PreToolUse / permission / execution
+  // (Claude Code order). A mod may deny, answer with `{ result }`, or call next.
+  const runtime = getModRuntime()
+  if (ctx?.sessionId) {
+    runtime.setContext({
+      sessionId: ctx.sessionId,
+      cwd: projectPath || '',
+      projectPath: projectPath || null
     })
-    if (pre.decision === 'deny') {
-      return {
-        toolCallId: call.id,
-        content: `Blocked by hook (PreToolUse): ${pre.reason || call.name}`,
-        isError: true
-      }
-    }
-  }
-
-  // Native Claude computer tool: permission + plan checks use computer_<action>.
-  const native = isNativeComputerCall(call)
-  const permName = effectiveToolName(call)
-  const agentMode = useProviderStore.getState().agentModeFor(ctx?.sessionId)
-  if (!isToolAllowedInAgentMode(permName, agentMode)) {
-    return { toolCallId: call.id, content: planModeBlockMessage(permName), isError: true }
-  }
-
-  const permitted = await checkPermission(permName, native ? nativeCallToAction(call).args : call.arguments, signal, projectPath, {
-    sessionId: ctx?.sessionId,
-    cwd: projectPath
-  })
-  if (!permitted) {
-    return { toolCallId: call.id, content: `Permission denied: ${call.name}`, isError: true }
-  }
-  // Permission dialog can take a while; abort may land while the user is choosing.
-  if (signal?.aborted) {
-    return { toolCallId: call.id, content: 'Tool was not executed (run aborted).', isError: true }
   }
 
   try {
-    let result: ToolResult
-    if (native) {
-      result = await executeNativeComputer(call, api)
-    } else if (isMcpToolName(call.name)) {
-      result = await callMcpTool(call.id, call.name, call.arguments, projectPath)
-    } else {
-      const handler = TOOL_HANDLERS[call.name]
-      if (!handler) {
-        result = { toolCallId: call.id, content: `Unknown tool: ${call.name}`, isError: true }
-      } else {
-        result = await handler(call, projectPath, signal, ctx, api)
+    const modOut = await runtime.emitToolCall(
+      call.name,
+      { ...(call.arguments || {}), tool_use_id: call.id },
+      async () => {
+        if (!signal?.aborted) {
+          const pre = await fireHook({
+            event: 'PreToolUse',
+            sessionId: ctx?.sessionId,
+            projectPath: projectPath || null,
+            cwd: projectPath || undefined,
+            payload: {
+              tool_name: call.name,
+              tool_use_id: call.id,
+              tool_input: call.arguments
+            }
+          })
+          if (pre.decision === 'deny') {
+            const blocked: ToolResult = {
+              toolCallId: call.id,
+              content: `Blocked by hook (PreToolUse): ${pre.reason || call.name}`,
+              isError: true
+            }
+            return { result: blocked.content, isError: true, toolResult: blocked }
+          }
+        }
+
+        const native = isNativeComputerCall(call)
+        const permName = effectiveToolName(call)
+        const agentMode = useProviderStore.getState().agentModeFor(ctx?.sessionId)
+        if (!isToolAllowedInAgentMode(permName, agentMode)) {
+          const blocked: ToolResult = {
+            toolCallId: call.id,
+            content: planModeBlockMessage(permName),
+            isError: true
+          }
+          return { result: blocked.content, isError: true, toolResult: blocked }
+        }
+
+        const check = await runtime.emit(
+          'tool.check',
+          { tool: call.name, ...(call.arguments || {}) },
+          async () => {
+            const permitted = await checkPermission(
+              permName,
+              native ? nativeCallToAction(call).args : call.arguments,
+              signal,
+              projectPath,
+              { sessionId: ctx?.sessionId, cwd: projectPath }
+            )
+            return { decision: permitted ? 'allow' : 'deny' }
+          },
+          signal
+        )
+        const decision =
+          check && typeof check === 'object' && 'decision' in check
+            ? String((check as { decision: string }).decision)
+            : 'deny'
+        if (decision === 'deny') {
+          const blocked: ToolResult = {
+            toolCallId: call.id,
+            content: `Permission denied: ${call.name}`,
+            isError: true
+          }
+          return { result: blocked.content, isError: true, toolResult: blocked }
+        }
+        if (signal?.aborted) {
+          const blocked: ToolResult = {
+            toolCallId: call.id,
+            content: 'Tool was not executed (run aborted).',
+            isError: true
+          }
+          return { result: blocked.content, isError: true, toolResult: blocked }
+        }
+
+        let result: ToolResult
+        const modTool = runtime.getTools().find((t) => t.fullName === call.name)
+        if (modTool) {
+          if (typeof modTool.handler !== 'function') {
+            result = {
+              toolCallId: call.id,
+              content: `Mod tool ${call.name} is registered without a handler.`,
+              isError: true
+            }
+          } else {
+            try {
+              const raw = await modTool.handler({ ...(call.arguments || {}) })
+              const content =
+                typeof raw === 'string' ? raw : raw == null ? '' : JSON.stringify(raw)
+              result = { toolCallId: call.id, content, isError: false }
+            } catch (err) {
+              result = {
+                toolCallId: call.id,
+                content: err instanceof Error ? err.message : String(err),
+                isError: true
+              }
+            }
+          }
+        } else if (native) {
+          result = await executeNativeComputer(call, api)
+        } else if (isMcpToolName(call.name)) {
+          result = await callMcpTool(call.id, call.name, call.arguments, projectPath)
+        } else {
+          const handler = TOOL_HANDLERS[call.name]
+          if (!handler) {
+            result = { toolCallId: call.id, content: `Unknown tool: ${call.name}`, isError: true }
+          } else {
+            result = await handler(call, projectPath, signal, ctx, api)
+          }
+        }
+        void runtime.refreshSpinnerSuffix().catch(() => {})
+        return { result: result.content, isError: result.isError, toolResult: result }
+      },
+      signal
+    )
+
+    if (modOut.deny) {
+      const plugin = modOut.plugin || 'extension'
+      useModsUiStore.getState().pushNotice(plugin, modOut.deny, 'block')
+      return {
+        toolCallId: call.id,
+        content: `Blocked by extension (${plugin}): ${modOut.deny}`,
+        isError: true,
+        mod: { plugin, action: 'blocked' }
       }
     }
+
+    if (modOut.handled) {
+      const plugin = modOut.plugin || 'extension'
+      useModsUiStore.getState().pushNotice(plugin, `Answered ${call.name}`, 'answer')
+      return {
+        toolCallId: call.id,
+        content: modOut.result || '',
+        isError: modOut.isError === true,
+        mod: { plugin, action: 'answered' }
+      }
+    }
+
+    const result: ToolResult =
+      modOut.core?.toolResult ||
+      ({
+        toolCallId: call.id,
+        content: modOut.result || '',
+        isError: modOut.isError === true
+      } as ToolResult)
+
     if (signal?.aborted && !result.isError) {
-      // Tool finished after Stop — still report completion but mark soft-abort.
       return {
         ...result,
         content: `${result.content}\n(note: run was aborted after this tool finished)`

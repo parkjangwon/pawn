@@ -10,6 +10,7 @@ import LiveToolActivity from './LiveToolActivity'
 import ErrorCard from './ErrorCard'
 import { useStreamingStore } from '../stores/streaming'
 import { useChatStore } from '../stores/chat'
+import { useModsUiStore } from '../agent/mods/uiStore'
 import { stripDisplayImages } from '../utils/attachments'
 import { formatDuration, formatMessageTime, formatMessageTimeFull, normalizeTimestampMs } from '../utils/messageTime'
 import type { Message } from '../stores/app'
@@ -102,6 +103,7 @@ function ThinkingBlock({
   const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [elapsed, setElapsed] = useState(0)
+  const spinnerSuffix = useModsUiStore((s) => s.spinnerSuffix)
   useEffect(() => {
     if (!live) return
     setElapsed(0)
@@ -111,9 +113,17 @@ function ThinkingBlock({
   if (!text?.trim()) return null
   if (live) {
     return (
-      <div className="message-thinking live one-line">
+      <div className="message-thinking live one-line" aria-live="polite">
         <span className="message-thinking-spinner" aria-hidden="true" />
-        <span className="message-thinking-label">{t('chat.thinkingLive')}</span>
+        <span className="message-thinking-label">
+          {t('chat.thinkingLive')}
+          {spinnerSuffix ? (
+            <span className="message-thinking-mod-suffix" title={t('chat.mods.spinnerSuffixHint')}>
+              {' · '}
+              {spinnerSuffix}
+            </span>
+          ) : null}
+        </span>
         <span className="message-thinking-elapsed">{elapsed}s</span>
       </div>
     )
@@ -251,7 +261,14 @@ const MessageRow = memo(function MessageRow({
     >
       {!continuation && (
         <div className="message-role">
-          {msg.role === 'user' ? t('chat.you') : t('chat.assistant')}
+          {msg.role === 'user' ? t('chat.you') : msg.id.startsWith('mod-') ? (
+            <>
+              {t('chat.mods.replyRole')}
+              {msg.modelLabel ? <span className="message-mod-badge">{msg.modelLabel}</span> : null}
+            </>
+          ) : (
+            t('chat.assistant')
+          )}
         </div>
       )}
       <div className="message-body">

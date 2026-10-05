@@ -6,6 +6,8 @@ export interface TriggerItem {
   label: string
   description?: string
   hint?: string
+  /** Optional section header — rendered when it changes between items. */
+  group?: string
   icon?: React.ReactNode
   action?: () => void
   insert?: string
@@ -23,7 +25,17 @@ interface TriggerMenuProps {
   onHover: (index: number) => void
 }
 
-export default function TriggerMenu({ open, trigger, items, selectedIndex, loading, emptyText, title, onSelect, onHover }: TriggerMenuProps): React.JSX.Element | null {
+export default function TriggerMenu({
+  open,
+  trigger,
+  items,
+  selectedIndex,
+  loading,
+  emptyText,
+  title,
+  onSelect,
+  onHover
+}: TriggerMenuProps): React.JSX.Element | null {
   const listRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -34,6 +46,8 @@ export default function TriggerMenu({ open, trigger, items, selectedIndex, loadi
 
   if (!open) return null
 
+  let lastGroup = ''
+
   return (
     <div className="trigger-menu" role="listbox">
       <div className="trigger-menu-head">
@@ -43,25 +57,35 @@ export default function TriggerMenu({ open, trigger, items, selectedIndex, loadi
       <div className="trigger-menu-list" ref={listRef}>
         {loading && <div className="trigger-menu-empty">{emptyText}</div>}
         {!loading && items.length === 0 && <div className="trigger-menu-empty">{emptyText}</div>}
-        {!loading && items.map((it, i) => (
-          <button
-            key={it.id}
-            type="button"
-            data-idx={i}
-            role="option"
-            aria-selected={i === selectedIndex}
-            className={`trigger-item ${i === selectedIndex ? 'selected' : ''}`}
-            onMouseEnter={() => onHover(i)}
-            onMouseDown={(e) => { e.preventDefault(); onSelect(it) }}
-          >
-            {it.icon && <span className="trigger-item-icon">{it.icon}</span>}
-            <span className="trigger-item-body">
-              <span className="trigger-item-label">{it.label}</span>
-              {it.description && <span className="trigger-item-desc">{it.description}</span>}
-            </span>
-            {it.hint && <span className="trigger-item-hint">{it.hint}</span>}
-          </button>
-        ))}
+        {!loading &&
+          items.map((it, i) => {
+            const showGroup = Boolean(it.group && it.group !== lastGroup)
+            if (it.group) lastGroup = it.group
+            return (
+              <div key={it.id}>
+                {showGroup && <div className="trigger-group-label">{it.group}</div>}
+                <button
+                  type="button"
+                  data-idx={i}
+                  role="option"
+                  aria-selected={i === selectedIndex}
+                  className={`trigger-item ${i === selectedIndex ? 'selected' : ''}`}
+                  onMouseEnter={() => onHover(i)}
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    onSelect(it)
+                  }}
+                >
+                  {it.icon && <span className="trigger-item-icon">{it.icon}</span>}
+                  <span className="trigger-item-body">
+                    <span className="trigger-item-label">{it.label}</span>
+                    {it.description && <span className="trigger-item-desc">{it.description}</span>}
+                  </span>
+                  {it.hint && <span className="trigger-item-hint">{it.hint}</span>}
+                </button>
+              </div>
+            )
+          })}
       </div>
     </div>
   )

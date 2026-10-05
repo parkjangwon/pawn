@@ -19,6 +19,8 @@ export type SandboxOptions = {
   projectRoot?: string
   /** When true (default if projectRoot set), refuse cwd outside project root. */
   jailCwd?: boolean
+  /** Merged after the sandbox allowlist. Mods use this for `$.env.set`. */
+  extraEnv?: Record<string, string>
   /**
    * Remote execution target (an id from ~/.pawn/ssh.json). When set, the caller
    * replaces the local spawn with an ssh channel; the host must be validated
@@ -50,7 +52,8 @@ export function withSandboxPolicyFloor(requested: SandboxOptions, floor: ShellPo
     // Pass-through: the remote target is not a policy knob — it is validated
     // against ~/.pawn/ssh.json by the caller (resolveHost) and must survive
     // the floor, or remote routing silently deactivates on the IPC path.
-    hostId: requested.hostId
+    hostId: requested.hostId,
+    extraEnv: requested.extraEnv
   }
 }
 
@@ -293,6 +296,11 @@ export function planExecFile(
     safeCwd = j.cwd
   }
   const env = enabled ? sanitizeEnv(process.env) : ({ ...process.env } as Record<string, string>)
+  if (opts.extraEnv) {
+    for (const [k, v] of Object.entries(opts.extraEnv)) {
+      if (typeof v === 'string') env[k] = v
+    }
+  }
   return {
     ok: true,
     plan: {

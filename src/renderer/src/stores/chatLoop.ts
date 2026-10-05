@@ -64,6 +64,8 @@ import {
   effectiveAutoMemoryConsolidate, effectiveDoneGate, harnessPreamble, harnessProfile
 } from '../agent/harnessMode'
 import { fireHook } from '../agent/hooksClient'
+import { ensureModsLoaded, getModRuntime } from '../agent/mods'
+import { applyPromptRewrite, MOD_PROMPT_CAP } from '../agent/mods/runtime'
 import { filterEnabledSkills } from '../utils/skillVisibility'
 import { buildTranscriptText, imageAttachments, type ChatAttachment } from '../utils/attachments'
 import { useStreamingStore } from './streaming'
@@ -154,6 +156,7 @@ export async function agentLoop(
   let userMessageAppended = resumeFrom?.userMessageAppended ?? false
   /** completed | aborted | failed — failed leaves checkpoint for cold resume. */
   let turnEnd: 'completed' | 'aborted' | 'failed' = 'completed'
+  let modTurnOpen = false
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -333,6 +336,24 @@ export async function agentLoop(
     // Skip UserPromptSubmit on resume (prompt already accepted before crash).
     if (!resumeFrom) {
       try {
+        // Claude Code mods: load hooks modules, then prompt.submit / classic SessionStart.
+        await ensureModsLoaded({
+          sessionId,
+          cwd: cwd || projectPath || '',
+          projectPath: projectPath || null,
+          submitPrompt: (text, asUser) => {
+            const body = asUser ? text : `[mod] ${text}`
+            void get().sendMessage?.(projectId, sessionId, body, 'queue')
+          },
+          abortTurn: () => {
+            try {
+              sessionControllers.get(sessionId)?.abort()
+            } catch {
+              /* ignore */
+            }
+          }
+        })
+        const mods = getModRuntime()
         const isFresh = entries.filter((e) => e.role === 'user' || e.role === 'assistant').length === 0
         if (isFresh) {
           const start = await fireHook({
@@ -348,6 +369,16 @@ export async function agentLoop(
               '--- Hook context ---\n' +
               start.additionalContext.join('\n')
           }
+        }
+        const seen =
+          userContent.length > MOD_PROMPT_CAP ? userContent.slice(0, MOD_PROMPT_CAP) : userContent
+        const modPrompt = await mods.emitPromptSubmit(seen)
+        if (modPrompt.drop) {
+          systemError(projectId, sessionId, modPrompt.drop)
+          return
+        }
+        if (typeof modPrompt.text === 'string') {
+          userContent = applyPromptRewrite(userContent, modPrompt.text)
         }
         const submit = await fireHook({
           event: 'UserPromptSubmit',
@@ -370,6 +401,8 @@ export async function agentLoop(
             '--- Hook context ---\n' +
             submit.additionalContext.join('\n')
         }
+        await mods.emit('turn.start', { sessionId }, async (e) => e)
+        modTurnOpen = true
       } catch {
         /* hooks optional */
       }
@@ -540,6 +573,9 @@ export async function agentLoop(
           ? compacted.entries
           : compactTranscript(entries, { keepEntries: 30, plan: currentPlanFor(sessionId), notes: getNotes(sessionId) })
         persistTranscript(sessionId, entries, lastDecision?.key || '', lastDecision?.tier)
+        void getModRuntime()
+          .emit('session.compact', { sessionId }, async (e) => e)
+          .catch(() => {})
         useUsageStore
           .getState()
           .noteDiagnostic(
@@ -1309,6 +1345,12 @@ export async function agentLoop(
     const aborted = signal.aborted
     if (aborted) turnEnd = 'aborted'
     else if (turnEnd !== 'failed') turnEnd = 'completed'
+    if (modTurnOpen) {
+      modTurnOpen = false
+      void getModRuntime()
+        .emit('turn.complete', { sessionId, status: turnEnd }, async (e) => e)
+        .catch(() => {})
+    }
     useChangeLedger.getState().endTurn()
     releaseSleepHold()
     if (entries.some((e) => e.role === 'tool' && e.name.startsWith('computer_'))) {

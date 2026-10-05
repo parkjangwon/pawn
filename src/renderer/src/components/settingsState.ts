@@ -41,6 +41,9 @@ import {
 /** Deep-link target consumed by useSettingsState when Settings opens. */
 let pendingSettingsSection: SettingsSection | null = null
 
+/** Plugins panel tab deep-link (skills vs mods). */
+let pendingPluginsTab: 'skills' | 'extensions' | null = null
+
 /**
  * Open Settings, optionally landing on a section (e.g. 'providers'). Safe to
  * call from anywhere in the renderer — App listens for the event and mounts
@@ -49,6 +52,18 @@ let pendingSettingsSection: SettingsSection | null = null
 export function openSettingsSection(section?: SettingsSection): void {
   pendingSettingsSection = section ?? null
   window.dispatchEvent(new CustomEvent('pawn:open-settings'))
+}
+
+/** Open Settings → Plugins → Mods tab. */
+export function openPluginsExtensions(): void {
+  pendingPluginsTab = 'extensions'
+  openSettingsSection('plugins')
+}
+
+export function consumePendingPluginsTab(): 'skills' | 'extensions' | null {
+  const tab = pendingPluginsTab
+  pendingPluginsTab = null
+  return tab
 }
 
 /** Last provider test outcome, readable outside Settings (welcome checklist). */

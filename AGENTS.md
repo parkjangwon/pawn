@@ -1,6 +1,6 @@
 # PROJECT KNOWLEDGE BASE
 
-**Commit:** b853b25 · **Branch:** master · **Version:** 0.18.0
+**Commit:** 7ba0552 · **Branch:** master · **Version:** 0.20.0
 
 ## OVERVIEW
 Pawn is an Electron desktop AI coding agent (BYOK). The agent loop runs in the renderer. Every OS capability sits in the main process behind IPC. Stack: electron-vite 6 (beta), React 19, Zustand 5, better-sqlite3 13, Vitest 4, TypeScript strict, ESM (`"type": "module"`), Node ^20.19 || >=22.12.
@@ -31,6 +31,7 @@ docs/agent/      GUIDE.md (+ ko/ja/zh)
 | Task | Location |
 |------|----------|
 | New agent tool | `agent/toolDefs/<domain>.ts` + `agent/toolHandlers/<domain>.ts` + `agent/toolPermission.ts` (TOOL_SAFETY) |
+| Claude Code–compatible mod | `docs/agent/MODS.md` · `src/main/mods/*` + `src/renderer/src/agent/mods/*` + Settings → Plugins → Mods; sample `examples/mods/first-mod/` |
 | New IPC channel | `src/main/ipc/<domain>.ts` (handleTrusted) + `registerAllIpc` + `src/preload/index.ts` + `types/global.d.ts` |
 | Agent turn loop | `src/renderer/src/stores/chatLoop.ts` (`agentLoop`) |
 | LLM transport / retries | `src/renderer/src/agent/llm.ts` |

@@ -114,7 +114,12 @@ const api = {
       args: string[],
       cwd?: string,
       timeoutMs?: number,
-      sandbox?: { enabled?: boolean; network?: boolean; projectRoot?: string }
+      sandbox?: {
+        enabled?: boolean
+        network?: boolean
+        projectRoot?: string
+        extraEnv?: Record<string, string>
+      }
     ) => ipcRenderer.invoke('shell:execFile', file, args, cwd, timeoutMs, sandbox),
     start: (
       command: string,
@@ -741,6 +746,23 @@ const api = {
       cwd?: string
       payload?: Record<string, unknown>
     }) => ipcRenderer.invoke('hooks:run', input || {})
+  },
+
+  /** Claude Code–compatible mods (in-process JS/TS hooks modules). */
+  mods: {
+    settings: () => ipcRenderer.invoke('mods:settings'),
+    setSettings: (partial: Record<string, unknown>) =>
+      ipcRenderer.invoke('mods:setSettings', partial),
+    list: (projectPath?: string | null) => ipcRenderer.invoke('mods:list', projectPath ?? null),
+    loadSources: (projectPath?: string | null) =>
+      ipcRenderer.invoke('mods:loadSources', projectPath ?? null),
+    validate: (path: string) => ipcRenderer.invoke('mods:validate', path),
+    installExample: () => ipcRenderer.invoke('mods:installExample'),
+    envSnapshot: () => ipcRenderer.invoke('mods:envSnapshot'),
+    http: (
+      url: string,
+      init?: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }
+    ) => ipcRenderer.invoke('mods:http', url, init || {})
   }
 }
 

@@ -41,6 +41,8 @@ npm install -g @parkjangwon/pawn && pawn
 | `pawn.db` | 프로젝트, 세션, 메시지, 트랜스크립트, 사용량, 루틴. WAL. 트랜스크립트는 UI 메시지와 분리해 프롬프트 캐시 접두를 유지합니다. |
 | `memory.db` | 장기 기억. FTS5 + 로컬 해시 임베딩. |
 | `hooks.json` / `hooks-settings.json` | 사용자 훅과 마스터 스위치. |
+| `mods-settings.json` | mods 전체 스위치, 버전에 묶인 동의, 끈 플러그인, 추가 폴더, 실행 순서(`pluginOrder`). [MODS.ko.md](./MODS.ko.md). |
+| `mods/` | 사용자가 설치한 mods. |
 | `config.toml` | 앱 설정. |
 | `mcp.json` | Pawn이 관리하는 MCP 서버. |
 | `decision.json` | 결정 모델. 키는 `safeStorage`로 봉인, 파일 모드 `0600`. |
@@ -111,7 +113,7 @@ npm install -g @parkjangwon/pawn && pawn
 
 `research_report`는 주제를 계획하고, 병렬 워커(각자 탭, `web_*`와 `browser_*` 혼합)를 돌린 뒤 출처를 중복 제거하고, 읽기 도구와 `write_artifact`만 가진 합성기가 보고서를 씁니다. 프로젝트 에이전트 파일이 도구를 넓혀도 이 합성기 프로필은 좁게 유지됩니다.
 
-## 7. 스킬, 훅, MCP
+## 7. 스킬, 훅, 모드, MCP
 
 | 스킬 | 위치 |
 |------|------|
@@ -123,6 +125,8 @@ npm install -g @parkjangwon/pawn && pawn
 
 스킬은 `load_skill` 전까지 카탈로그 한 줄입니다. 함께 읽는 파일: `CLAUDE.md`, `CLAUDE.local.md`, `.claude/rules/*.md`, Codex `.agent/`, `~/.agents/AGENTS.md`. UI: 설정 → 플러그인.
 
+### 설정 훅 (셸 / HTTP)
+
 훅은 출처를 합칩니다. 같은 명령이나 URL은 중복을 제거합니다. `PreToolUse` 거부는 `yolo`에서도 거부입니다.
 
 | 출처 | 경로 |
@@ -132,7 +136,21 @@ npm install -g @parkjangwon/pawn && pawn
 | Pawn 사용자 | `~/.pawn/hooks.json` |
 | Pawn 프로젝트 | `<project>/.pawn/hooks.json` |
 
-이벤트: `SessionStart`, `UserPromptSubmit` (막을 수 있음), `PreToolUse` (거부할 수 있음), `PermissionRequest`, `PostToolUse` (참고), `Stop`. 핸들러 `type`은 `command` (stdin JSON) 또는 `http` (POST JSON)입니다. 매처는 Claude 별칭을 받습니다 (`Bash` → `shell_exec`, `Write` / `Edit` → write/edit). UI: 설정 → 에이전트 → 훅. 훅은 메인 프로세스에서만 돕니다.
+이벤트: `SessionStart`, `UserPromptSubmit` (막을 수 있음), `PreToolUse` (거부할 수 있음), `PermissionRequest`, `PostToolUse` (참고), `Stop`. 핸들러 `type`은 `command` (stdin JSON) 또는 `http` (POST JSON)입니다. 매처는 Claude 별칭을 받습니다 (`Bash` → `shell_exec`, `Write` / `Edit` → write/edit). UI: 설정 → 훅. 훅은 메인 프로세스에서만 돕니다.
+
+### mods (Claude Code 호환)
+
+`hooks/hooks.json`의 `modules`가 있는 플러그인이 mod예요. `register(on)`을 내보내고 에이전트 프로세스 안에서 돌아요. 설정 훅이 아니에요. 작성법, 동의, 이벤트, UI, `$` API는 **[MODS.ko.md](./MODS.ko.md)**에 있어요.
+
+| 항목 | 경로 / 메모 |
+|------|-------------|
+| 매니페스트 | `.claude-plugin/plugin.json` (또는 `.pawn-plugin/plugin.json`) |
+| 훅 매니페스트 | `hooks/hooks.json`의 `"modules": ["./register.js"]` |
+| 설치 | `~/.pawn/mods/<name>/`, 추가 폴더, 프로젝트 `.claude/plugins/`, Claude 설치분은 스캔을 켠 때만 |
+| 설정 | `~/.pawn/mods-settings.json`. 동의는 `{ name, version }`. `pluginOrder`는 같은 티어 안의 실행 순서예요. 버전이 바뀌면 다시 검토해요. |
+| 샘플 | `examples/mods/first-mod/` |
+
+UI: 설정 → 플러그인 → mods. 채팅에는 칩과 개입 기록이 나와요. 칩 메뉴는 mod가 둘 이상 같은 이벤트를 들으면 충돌을 보여주고, 순서를 바꿀 수 있어요. 개입 기록에 충돌 줄이 남는 것은 `tool.call`이나 `prompt.submit`이 그렇게 돌 때예요. `AbovePrompt`는 mod마다 띠가 하나씩이에요. 이벤트, 동의, `$` API는 [MODS.ko.md](./MODS.ko.md). `tool.call`은 설정 `PreToolUse`보다 먼저예요. mods를 꺼도 스킬과 MCP는 남아요.
 
 MCP 탐색은 stdio이고, id가 겹치면 프로젝트가 사용자를 이깁니다.
 

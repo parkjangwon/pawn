@@ -8,6 +8,8 @@ import { useThemeStore } from '../stores/theme'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { useFocusTrap } from '../utils/focusTrap'
 import { fuzzyMatchRanges, scoreFields } from '../utils/fuzzyMatch'
+import { reloadMods } from '../agent/mods'
+import { openPluginsExtensions } from './settingsState'
 import './CommandPalette.css'
 
 type GroupId = 'recent' | 'actions' | 'navigation' | 'sessions' | 'projects'
@@ -222,6 +224,37 @@ export default function CommandPalette({
         keywords: 'preferences config connections',
         icon: <Icon d={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>} />,
         action: () => run(() => onOpenSettings())
+      },
+      {
+        id: 'mods-reload',
+        label: t('commandPalette.commands.modsReload'),
+        description: t('commandPalette.commands.modsReloadDesc'),
+        group: 'actions',
+        keywords: 'mods extensions hooks reload plugin in-app',
+        icon: <Icon d={<><path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 3h6v3h-6v-3z" /></>} />,
+        action: () =>
+          run(() => {
+            const project = projects.find((p) => p.id === activeProjectId)
+            const cwd = getEffectiveProjectPath(project, activeSessionId) || ''
+            void reloadMods({
+              sessionId: activeSessionId || 'palette',
+              cwd,
+              projectPath: cwd || null
+            }).catch(() => {})
+          })
+      },
+      {
+        id: 'mods-settings',
+        label: t('commandPalette.commands.modsSettings'),
+        description: t('commandPalette.commands.modsSettingsDesc'),
+        group: 'actions',
+        keywords: 'mods extensions settings plugins consent',
+        icon: <Icon d={<><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" /></>} />,
+        action: () =>
+          run(() => {
+            openPluginsExtensions()
+            onOpenSettings()
+          })
       },
       {
         id: 'keyboard-shortcuts',

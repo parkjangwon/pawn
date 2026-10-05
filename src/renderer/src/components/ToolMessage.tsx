@@ -141,6 +141,18 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
           </span>
         )}
         {structureWarn && <span className="tool-badge-warn" title={t('toolMessage.structureHint')}>{t('toolMessage.structure')}</span>}
+        {meta?.mod && (
+          <span
+            className={`tool-mod-badge ${meta.mod.action}`}
+            title={
+              meta.mod.action === 'blocked'
+                ? t('chat.mods.toolBlocked', { plugin: meta.mod.plugin })
+                : t('chat.mods.toolAnswered', { plugin: meta.mod.plugin })
+            }
+          >
+            {meta.mod.plugin}
+          </span>
+        )}
         {duration && <span className="tool-duration">{duration}</span>}
         <span
           className={`tool-status ${isRunning ? 'running' : isError ? 'error' : 'ok'}`}

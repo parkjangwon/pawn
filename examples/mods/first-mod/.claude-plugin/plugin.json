@@ -1,0 +1,6 @@
+{
+  "name": "first-mod",
+  "version": "0.1.0",
+  "description": "Counts tool calls, shows a band above the prompt, and adds /tally plus a ping tool",
+  "author": { "name": "Pawn" }
+}

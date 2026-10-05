@@ -111,7 +111,7 @@ npm install -g @parkjangwon/pawn && pawn
 
 `research_report` は主題を計画し、並列ワーカー（各自のタブ、`web_*` と `browser_*` を混ぜる）を走らせ、出典の重複を除き、読み取りツールと `write_artifact` だけを持つ合成器がレポートを書きます。プロジェクトのエージェントファイルがツールを広げても、この合成器のプロファイルは狭いままです。
 
-## 7. スキル、フック、MCP
+## 7. スキル、フック、mods、MCP
 
 | スキル | 場所 |
 |--------|------|
@@ -133,6 +133,12 @@ npm install -g @parkjangwon/pawn && pawn
 | Pawn プロジェクト | `<project>/.pawn/hooks.json` |
 
 イベント: `SessionStart`、`UserPromptSubmit`（止められる）、`PreToolUse`（拒否できる）、`PermissionRequest`、`PostToolUse`（参考）、`Stop`。ハンドラ `type` は `command`（stdin JSON）または `http`（POST JSON）。マッチャは Claude の別名を受けます（`Bash` → `shell_exec`、`Write` / `Edit` → write/edit）。UI: 設定 → エージェント → フック。フックはメインプロセスだけで動きます。
+
+### mods（Claude Code 互換）
+
+`hooks/hooks.json` の `modules` があるプラグインが mod です。`register(on)` を出し、エージェントプロセスの中で動きます。設定フックではありません。書き方、同意、イベント、UI、`$` API は **[MODS.ja.md](./MODS.ja.md)**。
+
+UI は設定 → プラグイン → mods。チャットにはチップと介入ログが出ます。チップのメニューは、複数が同じイベントを聞くと競合を出し、順番を変えられます。介入ログに競合行が残るのは `tool.call` か `prompt.submit` がそう動いたときです。`AbovePrompt` は mod ごとに帯が一つです。イベント、同意、`$` API は [MODS.ja.md](./MODS.ja.md)。`tool.call` は設定の `PreToolUse` より前です。mods を切ってもスキルと MCP は残ります。サンプルは `examples/mods/first-mod/`。
 
 MCP の探索は stdio で、id が衝突するとプロジェクトがユーザーに勝ちます。
 

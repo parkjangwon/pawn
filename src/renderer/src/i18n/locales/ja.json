@@ -148,7 +148,10 @@
       "build": "build",
       "buildDesc": "ビルドモードに切り替え（すべてのツール）",
       "issuePr": "issue-pr",
-      "issuePrDesc": "課題を修正して PR を準備"
+      "issuePrDesc": "課題を修正して PR を準備",
+      "groupBuiltin": "組み込み",
+      "groupMods": "mods",
+      "groupSkills": "スキル"
     },
     "mention": {
       "title": "ファイルとフォルダ",
@@ -263,6 +266,50 @@
       "title": "引き継ぎ — 作業を続行",
       "button": "新しいチャットで続行",
       "hint": "このチャットの要約で新しいチャットを開始 — 新しいコンテキスト、同じ目標。"
+    },
+    "mods": {
+      "activeTitle": "有効な mods",
+      "replyRole": "mods",
+      "spinnerSuffixHint": "mods が付けた状態テキスト",
+      "paneHint": "{{plugin}} が開いたパネル",
+      "paneEmpty": "{{plugin}} がパネルを開きましたが、中身はまだありません。",
+      "chipOne": "{{name}} が動作中",
+      "chipMany": "mods {{count}} 件が動作中",
+      "menuTitle": "このチャットの mods",
+      "toggle": "オン",
+      "commands": "コマンド",
+      "openSettings": "mods を管理",
+      "abovePrompt": "mods のプロンプト帯",
+      "welcomeHint": "ここから mods を試せます。\nサンプルは一度押すだけで入ります。",
+      "welcomeCta": "mods を開く",
+      "toolBlocked": "{{plugin}} がこのツールを止めました。",
+      "toolAnswered": "{{plugin}} がこのツールに代わりに答えました。",
+      "conflicts": "フック競合",
+      "timeline": "介入ログ",
+      "clearTimeline": "ログを消去",
+      "conflictLine": "{{plugins}} が同じ{{event}}に掛かっています。",
+      "earlier": "先に",
+      "later": "後に",
+      "moveEarlier": "{{name}} を先に実行",
+      "moveLater": "{{name}} を後に実行",
+      "timelinePress": "{{label}} を押しました。",
+      "timelineInput": "{{label}} に入力しました。",
+      "timelineSelect": "{{label}} を選びました。",
+      "toggleNamed": "{{name}} をオン",
+      "commandToast": "{{plugin}} · {{text}}",
+      "events": {
+        "sessionStart": "チャット開始",
+        "sessionEnd": "チャット終了",
+        "sessionCompact": "要約",
+        "turnComplete": "応答完了",
+        "toolCall": "ツール呼び出し",
+        "promptSubmit": "プロンプト",
+        "commandRun": "コマンド",
+        "uiRender": "画面",
+        "uiPress": "ボタン",
+        "uiInput": "入力",
+        "uiSelect": "選択"
+      }
     }
   },
   "automation": {
@@ -942,6 +989,81 @@
       "desktopOnly": "フックはデスクトップアプリで動作します。",
       "search": "フック 前後 ツール 権限 スクリプト"
     },
+    "modsSection": {
+      "title": "mods",
+      "desc": "チャット中にツール呼び出し・プロンプト・画面描画を観察したり応答できるローカルスクリプトです。有効にする前に権限を確認してください。",
+      "trustTitle": "あなたの権限で実行されます",
+      "trustBody": "サンドボックスはありません。\nフックと呼び出しを確認したうえで、信頼できるコードだけを有効にしてください。",
+      "enabled": "mods を実行",
+      "enabledDesc": "オフでもファイルは残りますが、実行はしません。\nスキルと MCP はそのままです。",
+      "readClaude": "Claude プラグインも走査",
+      "readClaudeDesc": "インストール済みのフックモジュールも読み込みます。\n初期状態ではオフです。信頼できるときだけオンにしてください。",
+      "readClaudeConfirm": "Claude Code プラグインから mods を探しますか？許可したあと、あなたの権限で動きます。",
+      "active": "このチャット",
+      "noneActive": "このチャットで有効な mods はまだありません",
+      "reload": "再読込",
+      "reloaded": "再読込しました",
+      "saved": "保存しました",
+      "saveFailed": "設定を保存できませんでした",
+      "validateFailed": "この mods を検証できませんでした",
+      "onboarding": "mods を追加",
+      "onboardingDesc": "サンプルを入れるか、フックモジュールがあるフォルダを選びます。",
+      "installExample": "サンプル mods を入れる",
+      "exampleInstalled": "サンプルを入れました — 許可するには確認してください",
+      "exampleFailed": "サンプルを入れられませんでした",
+      "browseDir": "フォルダを選択",
+      "pluginDirs": "追加フォルダ",
+      "pluginDirsDesc": "追加で走査する絶対パスです。",
+      "pluginDirPlaceholder": "/path/to/my-mod",
+      "addDir": "追加",
+      "noDirs": "追加フォルダはありません。",
+      "installed": "インストール済み",
+      "installedDesc": "ユーザーフォルダ、追加フォルダ、このプロジェクトから読み込みます。",
+      "empty": "まだありません。サンプルを入れるかフォルダを選んでください。",
+      "needsReview": "要確認",
+      "running": "実行中",
+      "review": "確認",
+      "consentTitle": "「{{name}}」を許可しますか？",
+      "consentBody": "この mods はプロセス内であなたの権限で動きます。許可前にフック内容を確認してください。",
+      "consentHooks": "購読するイベント",
+      "consentCalls": "呼びうる API",
+      "consentWarn": "あとからオフにできます。信頼できないコードはファイル読み取りやコマンド実行ができます。",
+      "consentAllow": "許可して有効化",
+      "commandHint": "mods コマンド",
+      "desktopOnly": "mods はデスクトップアプリで動作します。",
+      "search": "mods フック モジュール register プラグインディレクトリ tool.call 同意",
+      "activeSection": "このチャットで実行中",
+      "activeSectionDesc": "開いているチャットに読み込まれた mods です。",
+      "revoke": "許可を取り消す",
+      "consentAdvanced": "技術的なフックと呼び出しを表示",
+      "cap": {
+        "tools": "ツールを横取り",
+        "files": "ファイルの読み書き",
+        "process": "シェルコマンド実行",
+        "network": "ネットワーク要求",
+        "commands": "スラッシュコマンド登録",
+        "ui": "チャット UI 変更",
+        "prompt": "プロンプト書き換え",
+        "store": "ローカルデータ保存",
+        "none": "特別な権限は検出されませんでした"
+      },
+      "needsReconsent": "更新あり — 再確認",
+      "reReview": "更新を確認",
+      "versionLabel": "バージョン {{version}}",
+      "risk": {
+        "low": "低",
+        "medium": "中",
+        "high": "高"
+      },
+      "sessionEmpty": "このチャットで動いている mods はありません。",
+      "sessionRunning": "このチャットで {{names}} を実行中です。",
+      "scan": {
+        "lead": "次の場所から探します。",
+        "extra": "追加したフォルダ",
+        "claude": "スキャンをオンにしたときのインストール",
+        "project": "このプロジェクトの"
+      }
+    },
     "memorySection": {
       "title": "メモリ（自己学習）",
       "desc": "この端末だけの長期知識です。オンにすると会話から好みや事実を学び、次のターンで自動で思い出します。APIキーやパスワードは保存しません。",
@@ -971,7 +1093,7 @@
     },
     "pluginSection": {
       "title": "プラグイン",
-      "desc": "プラグインと統合を管理",
+      "desc": "スキル・文脈ソース、およびチャット中に動く mods を管理します。",
       "contextTitle": "Claude互換コンテキスト",
       "contextApplied": "コンテキストブロック {{count}} 件を注入 · 有効なスキル {{enabled}}/{{total}}",
       "contextApplied_one": "コンテキストブロック {{count}} 件を注入 · 有効なスキル {{enabled}}/{{total}}",
@@ -1008,7 +1130,11 @@
       "claudeMdDesc": "プロジェクトレベルのCLAUDE.mdファイルのパス",
       "agentDir": "エージェントディレクトリ",
       "agentDirDesc": "エージェント固有の設定ディレクトリ",
-      "auto": "自動検出"
+      "auto": "自動検出",
+      "tabsLabel": "プラグイン領域",
+      "tabSkills": "スキルと文脈",
+      "tabExtensions": "mods",
+      "search": "プラグイン スキル 有効 無効 ストア mods フック 同意"
     },
     "mcpSection": {
       "title": "MCP",
@@ -1208,6 +1334,7 @@
     "automations": "オートメーション",
     "memory": "メモリ",
     "hooks": "フック",
+    "mods": "mods",
     "subagents": "サブエージェント",
     "usage": "使用量",
     "usageSection": {
@@ -1356,7 +1483,7 @@
       "search": "サブエージェント 並列 生成 エージェント ラウンド キャンセル"
     },
     "pluginsSection": {
-      "search": "プラグイン スキル 有効 無効 ストア"
+      "search": "プラグイン スキル 有効 無効 ストア mods フック 同意"
     },
     "shortcutsSection": {
       "search": "ショートカット キーバインド 再設定"
@@ -1560,7 +1687,11 @@
       "openAgents": "Agents パネルを開く",
       "openAgentsDesc": "ヘルパーの進捗・コスト・ファイル変更を確認",
       "findInChat": "会話内を検索",
-      "findInChatDesc": "このチャットを検索して一致箇所を移動"
+      "findInChatDesc": "このチャットを検索して一致箇所を移動",
+      "modsReload": "mods を再読込",
+      "modsReloadDesc": "このチャットの mods を再走査して読み込みます",
+      "modsSettings": "mods の設定",
+      "modsSettingsDesc": "ローカル mods を確認・許可・無効化"
     },
     "shortcuts": "キーボードショートカット",
     "shortcutsDesc": "すべてのショートカットを一覧で確認"

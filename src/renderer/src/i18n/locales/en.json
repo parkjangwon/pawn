@@ -148,7 +148,10 @@
       "build": "build",
       "buildDesc": "Switch to Build mode (full tools)",
       "issuePr": "issue-pr",
-      "issuePrDesc": "Fix an issue and prepare a PR (#42 or URL)"
+      "issuePrDesc": "Fix an issue and prepare a PR (#42 or URL)",
+      "groupBuiltin": "Built-in",
+      "groupMods": "Mods",
+      "groupSkills": "Skills"
     },
     "mention": {
       "title": "Files & folders",
@@ -263,6 +266,50 @@
       "title": "Handoff — continued work",
       "button": "Continue in a fresh chat",
       "hint": "Start a new chat seeded with a summary of this one — fresh context, same goal."
+    },
+    "mods": {
+      "activeTitle": "Active mods",
+      "replyRole": "Mod",
+      "spinnerSuffixHint": "Status text from a mod",
+      "paneHint": "Panel opened by {{plugin}}",
+      "paneEmpty": "{{plugin}} opened a panel, but there is nothing to show yet.",
+      "chipOne": "{{name}} active",
+      "chipMany": "{{count}} mods active",
+      "menuTitle": "Mods in this chat",
+      "toggle": "On",
+      "commands": "Commands",
+      "openSettings": "Manage mods",
+      "abovePrompt": "Mod prompt band",
+      "welcomeHint": "You can try a mod from here.\nThe sample installs in one click.",
+      "welcomeCta": "Open mods",
+      "toolBlocked": "{{plugin}} blocked this tool.",
+      "toolAnswered": "{{plugin}} answered this tool.",
+      "conflicts": "Hook conflicts",
+      "timeline": "Intervention log",
+      "clearTimeline": "Clear log",
+      "conflictLine": "{{plugins}} share the same {{event}}.",
+      "earlier": "Sooner",
+      "later": "Later",
+      "moveEarlier": "Run {{name}} sooner",
+      "moveLater": "Run {{name}} later",
+      "timelinePress": "Pressed {{label}}.",
+      "timelineInput": "Edited {{label}}.",
+      "timelineSelect": "Chose {{label}}.",
+      "toggleNamed": "Turn {{name}} on",
+      "commandToast": "{{plugin}} · {{text}}",
+      "events": {
+        "sessionStart": "Session start",
+        "sessionEnd": "Chat end",
+        "sessionCompact": "Compaction",
+        "turnComplete": "Turn done",
+        "toolCall": "Tool call",
+        "promptSubmit": "Prompt",
+        "commandRun": "Command",
+        "uiRender": "Screen",
+        "uiPress": "Button",
+        "uiInput": "Input",
+        "uiSelect": "Choice"
+      }
     }
   },
   "automation": {
@@ -942,6 +989,81 @@
       "desktopOnly": "Hooks run in the desktop app.",
       "search": "hooks pre post tool permission script"
     },
+    "modsSection": {
+      "title": "Mods",
+      "desc": "Trusted local scripts that can observe or answer tool calls, prompts, and UI draws while you chat. Review capabilities before enabling.",
+      "trustTitle": "Runs with your full permissions",
+      "trustBody": "There is no sandbox.\nReview the events and APIs, then enable only code you trust.",
+      "enabled": "Run mods",
+      "enabledDesc": "When off, installed mods stay on disk but do not run.\nSkills and MCP stay available.",
+      "readClaude": "Also scan Claude plugins",
+      "readClaudeDesc": "Also load hook modules from Claude installs.\nOff by default. Turn it on only if you trust those plugins.",
+      "readClaudeConfirm": "Scan Claude Code plugins for mods? They run with your full permissions after you allow each one.",
+      "active": "This chat",
+      "noneActive": "No mods are active in this chat yet",
+      "reload": "Reload",
+      "reloaded": "Reloaded",
+      "saved": "Saved",
+      "saveFailed": "Could not save settings",
+      "validateFailed": "Could not validate this mod",
+      "onboarding": "Add a mod",
+      "onboardingDesc": "Install the sample, or pick a folder that already has a hooks module.",
+      "installExample": "Install sample mod",
+      "exampleInstalled": "Sample installed — review it to allow",
+      "exampleFailed": "Could not install the sample",
+      "browseDir": "Choose folder",
+      "pluginDirs": "Extra folders",
+      "pluginDirsDesc": "Additional directories to scan (absolute paths).",
+      "pluginDirPlaceholder": "/path/to/my-mod",
+      "addDir": "Add",
+      "noDirs": "No extra folders.",
+      "installed": "Installed",
+      "installedDesc": "Loaded from your folder, extra folders, and this project.",
+      "empty": "Nothing here yet. Install the sample or choose a folder.",
+      "needsReview": "Needs review",
+      "running": "Running",
+      "review": "Review",
+      "consentTitle": "Allow “{{name}}”?",
+      "consentBody": "This mod runs in-process with your account permissions. Check what it hooks before allowing.",
+      "consentHooks": "Events it listens for",
+      "consentCalls": "APIs it may call",
+      "consentWarn": "You can turn it off later. Untrusted code can read files and run commands.",
+      "consentAllow": "Allow and enable",
+      "commandHint": "Mod command",
+      "desktopOnly": "Mods run in the desktop app.",
+      "search": "mods extensions hooks module register plugin-dir tool.call consent",
+      "activeSection": "Running in this chat",
+      "activeSectionDesc": "Mods loaded for the open chat.",
+      "revoke": "Revoke",
+      "consentAdvanced": "Show technical hooks & calls",
+      "cap": {
+        "tools": "Intercept tools",
+        "files": "Read or write files",
+        "process": "Run shell commands",
+        "network": "Make network requests",
+        "commands": "Register slash commands",
+        "ui": "Change chat UI",
+        "prompt": "Rewrite prompts",
+        "store": "Save local data",
+        "none": "No special capabilities detected"
+      },
+      "needsReconsent": "Updated — review again",
+      "reReview": "Review update",
+      "versionLabel": "Version {{version}}",
+      "risk": {
+        "low": "Lower risk",
+        "medium": "Medium risk",
+        "high": "Higher risk"
+      },
+      "sessionEmpty": "No mods are running in this chat.",
+      "sessionRunning": "{{names}} is running in this chat.",
+      "scan": {
+        "lead": "Mods are picked up from these places.",
+        "extra": "Folders you add",
+        "claude": "Claude installs, when scanning is on",
+        "project": "This project’s"
+      }
+    },
     "memorySection": {
       "title": "Memory (self-learning)",
       "desc": "Long-term knowledge on this device only. When on, the agent learns preferences and project facts, recalls them automatically, and never stores API keys or passwords.",
@@ -971,7 +1093,7 @@
     },
     "pluginSection": {
       "title": "Plugins",
-      "desc": "Manage plugins and integrations",
+      "desc": "Skills, context sources, and mods that run while you chat.",
       "contextTitle": "Claude-compatible context",
       "contextApplied": "Injected {{count}} context blocks · Enabled skills {{enabled}}/{{total}}",
       "contextApplied_one": "Injected {{count}} context block · Enabled skills {{enabled}}/{{total}}",
@@ -1008,7 +1130,11 @@
       "claudeMdDesc": "Path to project-level CLAUDE.md file",
       "agentDir": "Agent folder",
       "agentDirDesc": "Directory for agent-specific configuration",
-      "auto": "Auto-detect"
+      "auto": "Auto-detect",
+      "tabsLabel": "Plugin areas",
+      "tabSkills": "Skills & context",
+      "tabExtensions": "Mods",
+      "search": "plugins skills enable disable store mods hooks consent"
     },
     "mcpSection": {
       "title": "MCP",
@@ -1208,6 +1334,7 @@
     "automations": "Automations",
     "memory": "Memory",
     "hooks": "Hooks",
+    "mods": "Mods",
     "subagents": "Subagents",
     "usage": "Usage",
     "usageSection": {
@@ -1356,7 +1483,7 @@
       "search": "subagents parallel spawn agents rounds cancel"
     },
     "pluginsSection": {
-      "search": "plugins skills enable disable store"
+      "search": "plugins skills enable disable store mods hooks consent"
     },
     "shortcutsSection": {
       "search": "shortcuts keybinding rebind keys"
@@ -1560,7 +1687,11 @@
       "toggleSidebar": "Toggle sidebar",
       "toggleSidebarDesc": "Show or hide the project sidebar",
       "findInChat": "Find in conversation",
-      "findInChatDesc": "Search this chat and jump between matches"
+      "findInChatDesc": "Search this chat and jump between matches",
+      "modsReload": "Reload mods",
+      "modsReloadDesc": "Re-scan and reload mods for this chat",
+      "modsSettings": "Mods settings",
+      "modsSettingsDesc": "Review, allow, or disable local mods"
     },
     "shortcuts": "Keyboard shortcuts",
     "shortcutsDesc": "See every shortcut in one place"

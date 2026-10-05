@@ -241,6 +241,21 @@
   font-weight: 600;
 }
 
+.tool-mod-badge {
+  flex-shrink: 0;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: 999px;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+}
+
+.tool-mod-badge.blocked {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 14%, transparent);
+}
+
 .tool-host {
   flex-shrink: 0;
   padding: 1px 6px;

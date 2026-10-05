@@ -482,6 +482,7 @@ declare global {
             projectRoot?: string
             jailCwd?: boolean
             hostId?: string
+            extraEnv?: Record<string, string>
           }
         ) => Promise<{ stdout: string; stderr: string; exitCode: number; killed?: boolean; host?: string }>
         start: (
@@ -1159,6 +1160,114 @@ declare global {
           additionalContext: string[]
           ran: number
           errors: string[]
+        }>
+      }
+      /** Claude Code–compatible mods (in-process JS/TS hooks modules). */
+      mods?: {
+        settings: () => Promise<{
+          enabled: boolean
+          disableAllHooks: boolean
+          disabledPlugins: string[]
+          consentedPlugins: Array<{ name: string; version: string }> | null
+          pluginDirs: string[]
+          readClaudePlugins: boolean
+          pluginOrder: string[]
+        }>
+        setSettings: (partial: {
+          enabled?: boolean
+          disableAllHooks?: boolean
+          disabledPlugins?: string[]
+          consentedPlugins?: Array<{ name: string; version: string }> | null
+          pluginDirs?: string[]
+          readClaudePlugins?: boolean
+          pluginOrder?: string[]
+        }) => Promise<{
+          enabled: boolean
+          disableAllHooks: boolean
+          disabledPlugins: string[]
+          consentedPlugins: Array<{ name: string; version: string }> | null
+          pluginDirs: string[]
+          readClaudePlugins: boolean
+          pluginOrder: string[]
+        }>
+        list: (projectPath?: string | null) => Promise<{
+          ok: boolean
+          mods: Array<{
+            id: string
+            name: string
+            version: string
+            description: string
+            root: string
+            source: string
+            enabled: boolean
+            consented: boolean
+            consentStale: boolean
+            tier: string
+          }>
+        }>
+        loadSources: (projectPath?: string | null) => Promise<{
+          ok: boolean
+          settings?: {
+            enabled: boolean
+            disableAllHooks: boolean
+            disabledPlugins: string[]
+            consentedPlugins: Array<{ name: string; version: string }> | null
+            pluginDirs: string[]
+            readClaudePlugins: boolean
+            pluginOrder: string[]
+          }
+          mods?: Array<{
+            id: string
+            name: string
+            version: string
+            description: string
+            root: string
+            source: string
+            enabled: boolean
+            consented: boolean
+            consentStale: boolean
+            tier: string
+            moduleRelative: string
+            userConfig: Record<string, unknown>
+          }>
+          sources?: Array<{
+            id: string
+            name: string
+            root: string
+            tier: string
+            source: string
+            language: string
+            userConfig: Record<string, unknown>
+          }>
+        }>
+        validate: (path: string) => Promise<{
+          ok: boolean
+          report: {
+            ok: boolean
+            hooks: string[]
+            calls: string[]
+            envReads: string[]
+            envWrites: string[]
+            findings: Array<{ severity: string; message: string; file?: string }>
+          }
+          text: string
+        }>
+        installExample: () => Promise<{
+          ok: boolean
+          path?: string
+          error?: string
+          existed?: boolean
+        }>
+        envSnapshot: () => Promise<{ ok: boolean; values: Record<string, string> }>
+        http: (
+          url: string,
+          init?: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }
+        ) => Promise<{
+          status: number
+          ok: boolean
+          headers: Record<string, string>
+          text: string
+          error?: string
         }>
       }
       /** Language servers (tsserver, pyright, gopls, rust-analyzer) run in main. */

@@ -1,0 +1,454 @@
+.mods-chrome {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 0 var(--space-16) 8px;
+  word-break: keep-all;
+  line-break: strict;
+}
+
+.mods-chrome-chip-wrap {
+  position: relative;
+  align-self: flex-start;
+}
+
+.mods-chrome-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  padding: 4px 10px;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+  font-size: var(--font-xs);
+  cursor: pointer;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mods-chrome-chip:hover,
+.mods-chrome-chip[aria-expanded='true'] {
+  color: var(--text-primary);
+  border-color: var(--accent);
+}
+
+.mods-chrome-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+.mods-chrome-menu {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: var(--z-dropdown);
+  width: min(320px, 80vw);
+  max-height: 360px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-primary);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.22);
+}
+
+.mods-chrome-menu-head {
+  padding: 4px 6px 6px;
+  font-size: var(--font-xs);
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.mods-chrome-menu-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.mods-chrome-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+}
+
+.mods-chrome-menu-row:hover {
+  background: var(--bg-hover);
+}
+
+.mods-chrome-menu-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mods-chrome-menu-info strong {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+}
+
+.mods-chrome-menu-info span {
+  font-size: 10px;
+  color: var(--text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mods-chrome-mini-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.mods-chrome-menu-cmds {
+  margin-top: 4px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 4px;
+}
+
+.mods-chrome-cmd {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 6px;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.mods-chrome-cmd code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.mods-chrome-menu-settings {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 7px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: var(--font-xs);
+  cursor: pointer;
+}
+
+.mods-chrome-status {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mods-chrome-status-toggle,
+.mods-chrome-status-row,
+.mods-chrome-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  text-align: left;
+  width: 100%;
+  cursor: pointer;
+}
+
+.mods-chrome-status-row {
+  cursor: default;
+}
+
+.mods-chrome-status-preview {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mods-chrome-notice {
+  cursor: default;
+}
+
+.mods-chrome-notice.block {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--danger) 8%, var(--bg-secondary));
+}
+
+.mods-chrome-notice.answer {
+  border-color: color-mix(in srgb, var(--primary) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-secondary));
+}
+
+.mods-chrome-notice-text {
+  flex: 1;
+  min-width: 0;
+  line-height: 1.45;
+  white-space: pre-wrap;
+}
+
+.mods-chrome-origin {
+  flex-shrink: 0;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 14%, transparent);
+  color: var(--primary);
+  font-weight: 600;
+  font-size: 10px;
+}
+
+.mods-chrome-dismiss {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border: none;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+}
+
+.mods-chrome-dismiss:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.mods-chrome-above,
+.mods-chrome-pane {
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  overflow: hidden;
+}
+
+.mods-chrome-above {
+  padding: 8px 10px;
+  font-size: var(--font-sm);
+  color: var(--text-secondary);
+}
+
+.mods-chrome-pane-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-color);
+  font-size: var(--font-xs);
+}
+
+.mods-chrome-pane-head strong {
+  flex: 1;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.mods-chrome-pane-body {
+  padding: 8px 10px;
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+  max-height: 180px;
+  overflow: auto;
+}
+
+.mods-chrome-pane-empty {
+  color: var(--text-muted);
+}
+
+.mods-chrome-toast-stack {
+  position: fixed;
+  right: 16px;
+  bottom: 16px;
+  z-index: var(--z-toast);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(340px, calc(100vw - 32px));
+  pointer-events: none;
+}
+
+.mods-chrome-toast {
+  pointer-events: auto;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+  font-size: var(--font-xs);
+  color: var(--text-secondary);
+}
+
+.mod-tree-box {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mod-tree-text,
+.mod-tree-markdown,
+.mod-tree-code {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.mod-tree-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.mod-tree-link {
+  color: var(--primary);
+}
+
+.mod-tree-button {
+  display: inline-flex;
+  padding: 4px 10px;
+  border-radius: var(--radius-xs);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  font-size: 11px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.mod-tree-button:hover:not(:disabled) {
+  border-color: var(--accent);
+}
+
+.mod-tree-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mod-tree-input,
+.mod-tree-select {
+  display: block;
+  width: 100%;
+  max-width: 280px;
+  margin: 4px 0;
+  padding: 5px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-size: var(--font-xs);
+}
+
+.mods-chrome-conflicts .mods-chrome-status-preview {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  line-height: 1.45;
+}
+
+.mods-chrome-conflict-line {
+  margin: 0;
+  padding: 4px 6px;
+  font-size: var(--font-xs);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.mods-chrome-order {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0 6px 6px;
+}
+
+.mods-chrome-order-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--font-xs);
+}
+
+.mods-chrome-order-item button {
+  border: 1px solid var(--border-color);
+  background: var(--bg-primary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  padding: 2px 6px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.mods-chrome-order-item button:hover {
+  color: var(--text-primary);
+  border-color: var(--primary);
+}
+
+.mods-chrome-above + .mods-chrome-above {
+  margin-top: 6px;
+}
+
+.mods-chrome-conflicts {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border-color));
+  background: color-mix(in srgb, var(--warning) 8%, var(--bg-secondary));
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.mods-chrome-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.mods-chrome-timeline-list {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 200px;
+  overflow: auto;
+}
+
+.mods-chrome-timeline-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
+
+.mods-chrome-timeline-row.conflict {
+  border-color: color-mix(in srgb, var(--warning) 35%, var(--border-color));
+}
+
+.mods-chrome-timeline-row.block {
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border-color));
+}
+
+.mods-chrome-timeline-row time {
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}

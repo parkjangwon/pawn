@@ -160,6 +160,11 @@ export async function compactSessionNow(sessionId: string): Promise<boolean> {
       return false
     }
     persistTranscript(sessionId, next, '', undefined)
+    void import('../agent/mods')
+      .then(({ getModRuntime }) =>
+        getModRuntime().emit('session.compact', { sessionId }, async (e) => e)
+      )
+      .catch(() => {})
     useUsageStore.getState().noteContext(sessionId, after, DEFAULT_CONTEXT_WINDOW, true)
     useUsageStore
       .getState()

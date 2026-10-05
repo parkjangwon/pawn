@@ -1,7 +1,14 @@
+import { useEffect, useState } from 'react'
 import { skillSummary } from '../agent/skills'
 import { isSkillEnabled } from '../utils/skillVisibility'
+import { getModRuntime, useModsUiStore } from '../agent/mods'
 import type { SettingsSkillScope } from './settingsMeta'
 import type { SettingsState } from './settingsState'
+import { consumePendingPluginsTab } from './settingsState'
+import ModsSettingsPanel from './ModsSettingsPanel'
+import './ModsSettingsPanel.css'
+
+type PluginsTab = 'skills' | 'extensions'
 
 export default function PluginsSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -21,80 +28,122 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
     toggleSkill
   } = state
 
+  const [tab, setTab] = useState<PluginsTab>(() => consumePendingPluginsTab() || 'skills')
+  const runtimeGeneration = useModsUiStore((s) => s.runtimeGeneration)
+  const activeCount = (() => {
+    void runtimeGeneration
+    return getModRuntime().getActiveMods().length
+  })()
+
+  useEffect(() => {
+    const pending = consumePendingPluginsTab()
+    if (pending) setTab(pending)
+  }, [])
+
   return (
     <div className="settings-section">
       <h2>{t('settings.pluginSection.title')}</h2>
       <p className="settings-desc">{t('settings.pluginSection.desc')}</p>
-      <div className="settings-card">
-        <div className="plugin-context-head">
-          <span className="settings-row-label">{t('settings.pluginSection.contextTitle')}</span>
-          <span className="settings-row-desc">
-            {t('settings.pluginSection.contextApplied', {
-              count: contextAdditionCount,
-              enabled: enabledSkillCount,
-              total: loadedSkills.length
-            })}
-          </span>
-        </div>
-        <div className="plugin-context-list">
-          {contextSignals.map((signal) => (
-            <div key={signal.id} className="plugin-context-item">
-              <div className="plugin-context-main">
-                <span className="plugin-context-label">{t(`settings.pluginSection.sources.${signal.id}`)}</span>
-                <span className="plugin-context-path">{signal.path || t('settings.pluginSection.noProjectPath')}</span>
+
+      <div className="plugins-tabs" role="tablist" aria-label={t('settings.pluginSection.tabsLabel')}>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'skills'}
+          className={`plugins-tab ${tab === 'skills' ? 'active' : ''}`}
+          onClick={() => setTab('skills')}
+        >
+          {t('settings.pluginSection.tabSkills')}
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={tab === 'extensions'}
+          className={`plugins-tab ${tab === 'extensions' ? 'active' : ''}`}
+          onClick={() => setTab('extensions')}
+        >
+          {t('settings.pluginSection.tabExtensions')}
+          {activeCount > 0 && <span className="plugins-tab-badge">{activeCount}</span>}
+        </button>
+      </div>
+
+      {tab === 'extensions' ? (
+        <ModsSettingsPanel embedded />
+      ) : (
+        <div className="settings-card">
+          <div className="plugin-context-head">
+            <span className="settings-row-label">{t('settings.pluginSection.contextTitle')}</span>
+            <span className="settings-row-desc">
+              {t('settings.pluginSection.contextApplied', {
+                count: contextAdditionCount,
+                enabled: enabledSkillCount,
+                total: loadedSkills.length
+              })}
+            </span>
+          </div>
+          <div className="plugin-context-list">
+            {contextSignals.map((signal) => (
+              <div key={signal.id} className="plugin-context-item">
+                <div className="plugin-context-main">
+                  <span className="plugin-context-label">{t(`settings.pluginSection.sources.${signal.id}`)}</span>
+                  <span className="plugin-context-path">{signal.path || t('settings.pluginSection.noProjectPath')}</span>
+                </div>
+                <span className={`plugin-context-status ${signal.detected ? 'ok' : 'off'}`}>
+                  {signal.detected ? t('settings.pluginSection.detected') : t('settings.pluginSection.missing')}
+                  {signal.details ? ` (${signal.details})` : ''}
+                </span>
               </div>
-              <span className={`plugin-context-status ${signal.detected ? 'ok' : 'off'}`}>
-                {signal.detected ? t('settings.pluginSection.detected') : t('settings.pluginSection.missing')}
-                {signal.details ? ` (${signal.details})` : ''}
-              </span>
-            </div>
-          ))}
-        </div>
-        <div className="plugin-toolbar">
-          <div className="plugin-scope-toggle" role="tablist" aria-label={t('settings.pluginSection.scopeLabel')}>
-            {(['all', 'project', 'device', 'builtin'] as SettingsSkillScope[]).map((scope) => (
-              <button
-                key={scope}
-                role="tab"
-                aria-selected={skillScope === scope}
-                className={`plugin-scope-btn ${skillScope === scope ? 'active' : ''}`}
-                onClick={() => setSkillScope(scope)}
-              >
-                {t(`settings.pluginSection.scope.${scope}`)} ({scopeCounts[scope]})
-              </button>
             ))}
           </div>
-          <input
-            className="plugin-search-input"
-            value={skillSearch}
-            onChange={(e) => setSkillSearch(e.target.value)}
-            placeholder={t('settings.pluginSection.searchPlaceholder')}
-          />
-        </div>
-        {skillsLoading && <div className="settings-empty">{t('common.loading')}</div>}
-        {!skillsLoading && visibleSkills.length === 0 && <div className="settings-empty">{t('settings.pluginSection.emptySkills')}</div>}
-        {!skillsLoading && visibleSkills.map((skill) => {
-          const enabled = isSkillEnabled(skill.name, disabledSkills)
-          return (
-            <div key={`${skill.kind}:${skill.source}`} className="settings-row">
-              <div className="settings-row-info">
-                <span className="settings-row-label">
-                  {skill.name}
-                  <span className="plugin-kind">{t(`settings.pluginSection.kind.${skill.kind}`)}</span>
-                </span>
-                <span className="settings-row-desc">{skillSummary(skill) || skill.source}</span>
-                <span className="plugin-source">{skill.source}</span>
-              </div>
-              <div className="settings-row-actions">
-                <label className="toggle-switch">
-                  <input type="checkbox" checked={enabled} onChange={() => toggleSkill(skill.name)} />
-                  <span className="toggle-slider" />
-                </label>
-              </div>
+          <div className="plugin-toolbar">
+            <div className="plugin-scope-toggle" role="tablist" aria-label={t('settings.pluginSection.scopeLabel')}>
+              {(['all', 'project', 'device', 'builtin'] as SettingsSkillScope[]).map((scope) => (
+                <button
+                  key={scope}
+                  role="tab"
+                  aria-selected={skillScope === scope}
+                  className={`plugin-scope-btn ${skillScope === scope ? 'active' : ''}`}
+                  onClick={() => setSkillScope(scope)}
+                >
+                  {t(`settings.pluginSection.scope.${scope}`)} ({scopeCounts[scope]})
+                </button>
+              ))}
             </div>
-          )
-        })}
-      </div>
+            <input
+              className="plugin-search-input"
+              value={skillSearch}
+              onChange={(e) => setSkillSearch(e.target.value)}
+              placeholder={t('settings.pluginSection.searchPlaceholder')}
+            />
+          </div>
+          {skillsLoading && <div className="settings-empty">{t('common.loading')}</div>}
+          {!skillsLoading && visibleSkills.length === 0 && (
+            <div className="settings-empty">{t('settings.pluginSection.emptySkills')}</div>
+          )}
+          {!skillsLoading &&
+            visibleSkills.map((skill) => {
+              const enabled = isSkillEnabled(skill.name, disabledSkills)
+              return (
+                <div key={`${skill.kind}:${skill.source}`} className="settings-row">
+                  <div className="settings-row-info">
+                    <span className="settings-row-label">
+                      {skill.name}
+                      <span className="plugin-kind">{t(`settings.pluginSection.kind.${skill.kind}`)}</span>
+                    </span>
+                    <span className="settings-row-desc">{skillSummary(skill) || skill.source}</span>
+                    <span className="plugin-source">{skill.source}</span>
+                  </div>
+                  <div className="settings-row-actions">
+                    <label className="toggle-switch">
+                      <input type="checkbox" checked={enabled} onChange={() => toggleSkill(skill.name)} />
+                      <span className="toggle-slider" />
+                    </label>
+                  </div>
+                </div>
+              )
+            })}
+        </div>
+      )}
     </div>
   )
 }

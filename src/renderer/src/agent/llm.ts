@@ -6,6 +6,7 @@ import { useAppStore } from '../stores/app'
 import { useStreamingStore } from '../stores/streaming'
 import { useProviderStore } from '../stores/provider'
 import { toolsToClaude, toolsToOpenAI, getMcpToolDefinitions, type ToolCall } from './tools'
+import { getModToolDefinitions } from './mods/catalog'
 import { NATIVE_DUPLICATES, claudeComputerVersion, planNativeComputer } from './computerToolset'
 import { noteComputerModel, shotPolicyFor } from './toolHandlers/computer'
 import { planApplyPatch, planClaudeNativeTools } from './nativeTools'
@@ -140,6 +141,10 @@ export interface LlmRequest {
   toolDenylist?: string[]
   /** Plain completion: no tools at all (e.g. drafting a skill from a recording). */
   noTools?: boolean
+  /** Skip chat transcript and streaming-store writes (mod `$.model.complete`). */
+  quiet?: boolean
+  /** Caps provider max_tokens when set. */
+  maxTokens?: number
   /** Harness mode override (subagents pass the parent session's mode). */
   harnessMode?: HarnessMode
   /**
@@ -178,6 +183,21 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   // tokens or bloated prompts on later text turns.
   const sendable = stripStaleVisionPayloads(sanitizeForSend(req.entries))
   const mcpTools = projectPath && !req.noTools ? await getMcpToolDefinitions(projectPath) : []
+  const extraTools = [...mcpTools]
+  if (!req.noTools) {
+    const seen = new Set(extraTools.map((t) => t.name))
+    for (const tool of getModToolDefinitions()) {
+      if (seen.has(tool.name)) continue
+      seen.add(tool.name)
+      extraTools.push(tool)
+    }
+  }
+  const quiet = req.quiet === true
+  const capTokens = (n: number): number => {
+    const requested = req.maxTokens
+    if (typeof requested !== 'number' || !Number.isFinite(requested) || requested <= 0) return n
+    return Math.max(1, Math.min(n, Math.floor(requested)))
+  }
 
   let url: string
   let body: Record<string, unknown>
@@ -207,7 +227,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   if (provider.apiFormat === 'kiro') {
     // Kiro (CodeWhisperer protocol): the main process holds the credentials
     // and streams normalized events back; here we only build the request.
-    const openAITools = openAIToolsWithPatch(toolsToOpenAI(mcpTools, toolListOpts), model.modelId)
+    const openAITools = openAIToolsWithPatch(toolsToOpenAI(extraTools, toolListOpts), model.modelId)
     kiroBuild = buildKiroRequest({
       entries: sendable,
       systemText: [...systemLayers, joinPreamble(projectPreamble, openAITools.note)].filter(Boolean).join('\n\n'),
@@ -222,7 +242,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     body = kiroBuild.body
   } else if (provider.apiFormat === 'claude' || deepSeekAnthropic) {
     const budget = claudeThinkingBudget(userEffort, harnessMode)
-    const claudeTools = await claudeToolsWithNative(toolsToClaude(mcpTools, toolListOpts), provider, model.modelId, headers)
+    const claudeTools = await claudeToolsWithNative(toolsToClaude(extraTools, toolListOpts), provider, model.modelId, headers)
 
     // DeepSeek Anthropic base: https://api.deepseek.com/anthropic (+ /messages)
     url = deepSeekAnthropic
@@ -243,11 +263,11 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     body = {
       model: model.modelId,
       // Coding turns need headroom; DeepSeek ignores budget_tokens on Anthropic path.
-      max_tokens: deepSeekModel
+      max_tokens: capTokens(deepSeekModel
         ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort: dsEffort, complexity })
         : budget
           ? budget + 16_384
-          : 16_384,
+          : 16_384),
       stream: true,
       ...(deepSeekAnthropic
         ? dsAnth
@@ -274,7 +294,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     if (/xiaomimimo\.com/i.test(provider.baseUrl || '')) {
       headers['api-key'] = token
     }
-    const openAITools = openAIToolsWithPatch(toolsToOpenAI(mcpTools, toolListOpts), model.modelId)
+    const openAITools = openAIToolsWithPatch(toolsToOpenAI(extraTools, toolListOpts), model.modelId)
     const deepSeekExtras = deepSeekChatBodyExtras({
       modelId: model.modelId,
       reasoningEffort: dsEffort,
@@ -286,9 +306,9 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
       // Required for usage + prompt_cache_hit_tokens on DeepSeek streams.
       stream_options: { include_usage: true },
       // DeepSeek: CoT counts toward max_tokens (thinking mode). API max output 384K.
-      max_tokens: deepSeekModel
+      max_tokens: capTokens(deepSeekModel
         ? deepSeekMaxTokens({ modelId: model.modelId, reasoningEffort: dsEffort, complexity })
-        : 16_384,
+        : 16_384),
       tools: openAITools.tools,
       ...(reasoningEffort && reasoningEffort !== 'auto' && supportsReasoningEffort(model.modelId)
         ? { reasoning_effort: reasoningEffort }
@@ -377,6 +397,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   const applyFlush = (display: string, think: string): void => {
     lastFlushed = display
     lastThinkingFlushed = think
+    if (quiet) return
     useStreamingStore.getState().setContent(assistantMsgId, display)
     if (think) useStreamingStore.getState().setThinking(assistantMsgId, think)
   }
@@ -442,6 +463,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     lastFlushed = display || lastFlushed
     lastThinkingFlushed = think || lastThinkingFlushed
     const finalText = lastFlushed || display || fullText
+    if (quiet) return
     useStreamingStore.getState().setContentNow(assistantMsgId, finalText)
     if (lastThinkingFlushed) {
       useStreamingStore.getState().setThinkingNow(assistantMsgId, lastThinkingFlushed)

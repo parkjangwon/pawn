@@ -148,7 +148,10 @@
       "build": "build",
       "buildDesc": "실행 모드로 전환 (전체 도구)",
       "issuePr": "issue-pr",
-      "issuePrDesc": "이슈 수정 후 PR 준비 (#42 또는 URL)"
+      "issuePrDesc": "이슈 수정 후 PR 준비 (#42 또는 URL)",
+      "groupBuiltin": "기본",
+      "groupMods": "mods",
+      "groupSkills": "스킬"
     },
     "mention": {
       "title": "파일 및 폴더",
@@ -263,6 +266,50 @@
       "title": "인계 — 이어서 작업",
       "button": "새 채팅에서 이어하기",
       "hint": "이 채팅의 요약으로 새 채팅을 시작해요 — 새 컨텍스트, 같은 목표."
+    },
+    "mods": {
+      "activeTitle": "켜진 mods",
+      "replyRole": "mods",
+      "spinnerSuffixHint": "mods가 붙인 상태 문구",
+      "paneHint": "{{plugin}}이(가) 연 패널",
+      "paneEmpty": "{{plugin}} — 패널은 열렸지만 보여줄 내용이 없어요.",
+      "chipOne": "{{name}} 실행 중",
+      "chipMany": "mods {{count}}개 실행 중",
+      "menuTitle": "이 채팅의 mods",
+      "toggle": "켜짐",
+      "commands": "명령",
+      "openSettings": "mods 관리",
+      "abovePrompt": "mods 프롬프트 영역",
+      "welcomeHint": "mods를 잠깐 써 볼 수 있어요.\n예제는 한 번만 누르면 설치돼요.",
+      "welcomeCta": "mods 열기",
+      "toolBlocked": "{{plugin}} — 이 도구를 막았어요.",
+      "toolAnswered": "{{plugin}} — 이 도구에 대신 답했어요.",
+      "conflicts": "훅 충돌",
+      "timeline": "개입 기록",
+      "clearTimeline": "기록 지우기",
+      "conflictLine": "{{plugins}} — 같은 {{event}}에 걸려 있어요.",
+      "earlier": "먼저",
+      "later": "나중",
+      "moveEarlier": "{{name}} 먼저 실행",
+      "moveLater": "{{name}} 나중에 실행",
+      "timelinePress": "{{label}}을(를) 눌렀어요.",
+      "timelineInput": "{{label}}에 입력했어요.",
+      "timelineSelect": "{{label}}을(를) 골랐어요.",
+      "toggleNamed": "{{name}} 켜기",
+      "commandToast": "{{plugin}} · {{text}}",
+      "events": {
+        "sessionStart": "채팅 시작",
+        "sessionEnd": "채팅 끝",
+        "sessionCompact": "요약",
+        "turnComplete": "응답 끝",
+        "toolCall": "도구 호출",
+        "promptSubmit": "프롬프트",
+        "commandRun": "명령",
+        "uiRender": "화면",
+        "uiPress": "버튼",
+        "uiInput": "입력",
+        "uiSelect": "선택"
+      }
     }
   },
   "automation": {
@@ -942,6 +989,81 @@
       "desktopOnly": "훅은 데스크톱 앱에서만 동작해요.",
       "search": "훅 사전 사후 도구 권한 스크립트"
     },
+    "modsSection": {
+      "title": "mods",
+      "desc": "채팅 중에 도구 호출·프롬프트·화면 그리기를 관찰하거나 직접 처리할 수 있는 로컬 스크립트예요. 켜기 전에 권한을 확인하세요.",
+      "trustTitle": "내 계정 권한으로 실행돼요",
+      "trustBody": "샌드박스가 없어요.\n가로채는 이벤트와 호출 API를 확인한 뒤에만, 신뢰하는 코드를 켜세요.",
+      "enabled": "mods 실행",
+      "enabledDesc": "끄면 설치분은 디스크에 남지만 실행되지 않아요.\n스킬과 MCP는 그대로예요.",
+      "readClaude": "Claude 플러그인도 스캔",
+      "readClaudeDesc": "Claude Code에 설치된 훅 모듈도 불러와요.\n기본은 꺼져 있어요. 믿을 수 있을 때만 켜세요.",
+      "readClaudeConfirm": "Claude Code 플러그인에서 mods를 찾을까요? 각각 허용한 뒤에야 내 권한으로 실행돼요.",
+      "active": "이 채팅",
+      "noneActive": "이 채팅에서 아직 켜진 mods가 없어요",
+      "reload": "다시 불러오기",
+      "reloaded": "다시 불러왔어요",
+      "saved": "저장됨",
+      "saveFailed": "설정을 저장하지 못했어요",
+      "validateFailed": "이 mods를 검사하지 못했어요",
+      "onboarding": "mods를 넣어 보세요",
+      "onboardingDesc": "예제를 설치하거나, 훅 모듈이 있는 폴더를 고르세요.",
+      "installExample": "예제 mods 설치",
+      "exampleInstalled": "예제를 설치했어요 — 허용하려면 검토하세요",
+      "exampleFailed": "예제를 설치하지 못했어요",
+      "browseDir": "폴더 선택",
+      "pluginDirs": "추가 폴더",
+      "pluginDirsDesc": "추가로 스캔할 절대 경로예요.",
+      "pluginDirPlaceholder": "/path/to/my-mod",
+      "addDir": "추가",
+      "noDirs": "추가 폴더가 없어요.",
+      "installed": "설치됨",
+      "installedDesc": "사용자 폴더, 추가 폴더, 이 프로젝트에서 불러와요.",
+      "empty": "아직 없어요. 예제를 설치하거나 폴더를 선택하세요.",
+      "needsReview": "검토 필요",
+      "running": "실행 중",
+      "review": "검토",
+      "consentTitle": "“{{name}}”을(를) 허용할까요?",
+      "consentBody": "이 mods는 프로세스 안에서 내 계정 권한으로 실행돼요. 허용하기 전에 가로채는 항목을 확인하세요.",
+      "consentHooks": "듣는 이벤트",
+      "consentCalls": "호출할 수 있는 API",
+      "consentWarn": "나중에 끌 수 있어요. 신뢰하지 않는 코드는 파일을 읽고 명령을 실행할 수 있어요.",
+      "consentAllow": "허용하고 켜기",
+      "commandHint": "mods 명령",
+      "desktopOnly": "mods는 데스크톱 앱에서만 동작해요.",
+      "search": "mods 훅 모듈 register 플러그인 디렉터리 tool.call 동의",
+      "activeSection": "이 채팅에서 실행 중",
+      "activeSectionDesc": "지금 열린 채팅에 불러온 mods예요.",
+      "revoke": "동의 철회",
+      "consentAdvanced": "기술 훅·호출 보기",
+      "cap": {
+        "tools": "도구 가로채기",
+        "files": "파일 읽기·쓰기",
+        "process": "셸 명령 실행",
+        "network": "네트워크 요청",
+        "commands": "슬래시 명령 등록",
+        "ui": "채팅 UI 변경",
+        "prompt": "프롬프트 다시 쓰기",
+        "store": "로컬 데이터 저장",
+        "none": "특별한 권한이 감지되지 않았어요"
+      },
+      "needsReconsent": "업데이트됨 — 다시 검토",
+      "reReview": "업데이트 검토",
+      "versionLabel": "버전 {{version}}",
+      "risk": {
+        "low": "낮음",
+        "medium": "보통",
+        "high": "높음"
+      },
+      "sessionEmpty": "이 채팅에서 켜진 mods가 없어요.",
+      "sessionRunning": "이 채팅에서 {{names}}을(를) 실행 중이에요.",
+      "scan": {
+        "lead": "이 위치에서 찾아요.",
+        "extra": "추가한 폴더",
+        "claude": "Claude 설치분 (스캔을 켠 경우)",
+        "project": "이 프로젝트의"
+      }
+    },
     "memorySection": {
       "title": "메모리 (자가 학습)",
       "desc": "이 기기에만 남는 장기 기억이에요. 켜 두면 대화에서 선호와 프로젝트 정보를 스스로 배우고 다음에 떠올려요. API 키나 비밀번호는 저장하지 않아요.",
@@ -971,7 +1093,7 @@
     },
     "pluginSection": {
       "title": "플러그인",
-      "desc": "플러그인 및 통합 관리",
+      "desc": "스킬·맥락 출처, 그리고 채팅 중에 돌아가는 mods를 관리해요.",
       "contextTitle": "Claude 호환 컨텍스트",
       "contextApplied": "컨텍스트 블록 {{count}}개 적용 · 켜진 스킬 {{enabled}}/{{total}}",
       "contextApplied_one": "컨텍스트 블록 {{count}}개 적용 · 켜진 스킬 {{enabled}}/{{total}}",
@@ -1008,7 +1130,11 @@
       "claudeMdDesc": "프로젝트 수준 CLAUDE.md 파일 경로",
       "agentDir": "에이전트 디렉토리",
       "agentDirDesc": "에이전트별 설정 디렉토리",
-      "auto": "자동 감지"
+      "auto": "자동 감지",
+      "tabsLabel": "플러그인 영역",
+      "tabSkills": "스킬·맥락",
+      "tabExtensions": "mods",
+      "search": "플러그인 스킬 켜기 끄기 스토어 mods 훅 동의"
     },
     "mcpSection": {
       "title": "MCP",
@@ -1208,6 +1334,7 @@
     "automations": "자동화",
     "memory": "메모리",
     "hooks": "훅",
+    "mods": "mods",
     "subagents": "서브에이전트",
     "usage": "사용량",
     "usageSection": {
@@ -1356,7 +1483,7 @@
       "search": "서브에이전트 병렬 생성 에이전트 라운드 취소"
     },
     "pluginsSection": {
-      "search": "플러그인 스킬 활성화 비활성화 스토어"
+      "search": "플러그인 스킬 켜기 끄기 스토어 mods 훅 동의"
     },
     "shortcutsSection": {
       "search": "단축키 키 바인딩 재설정"
@@ -1560,7 +1687,11 @@
       "openAgents": "Agents 패널 열기",
       "openAgentsDesc": "에이전트 진행 상황·비용·파일 변경을 실시간으로 봐요",
       "findInChat": "대화에서 찾기",
-      "findInChatDesc": "현재 대화를 검색하고 결과 사이를 이동"
+      "findInChatDesc": "현재 대화를 검색하고 결과 사이를 이동",
+      "modsReload": "mods 다시 불러오기",
+      "modsReloadDesc": "이 채팅의 mods를 다시 스캔하고 불러와요",
+      "modsSettings": "mods 설정",
+      "modsSettingsDesc": "로컬 mods를 검토·허용·끄기"
     },
     "shortcuts": "키보드 단축키",
     "shortcutsDesc": "모든 단축키 한곳에서 보기"

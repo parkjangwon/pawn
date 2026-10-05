@@ -383,8 +383,23 @@ function parseSandboxOpts(raw: unknown): SandboxOptions {
     // Renderer may opt out of cwd jail; default remains on when projectRoot set.
     jailCwd: o.jailCwd !== false && o.jail_cwd !== false,
     // Remote execution target — validated against ~/.pawn/ssh.json in main.
-    hostId: typeof o.hostId === 'string' && o.hostId ? o.hostId : undefined
+    hostId: typeof o.hostId === 'string' && o.hostId ? o.hostId : undefined,
+    extraEnv: pickExtraEnv(o.extraEnv)
   }
+}
+
+function pickExtraEnv(raw: unknown): Record<string, string> | undefined {
+  if (!raw || typeof raw !== 'object') return undefined
+  const out: Record<string, string> = {}
+  let n = 0
+  for (const [k, v] of Object.entries(raw as Record<string, unknown>)) {
+    if (n >= 32) break
+    if (!/^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(k)) continue
+    if (typeof v !== 'string' || v.length > 8192 || /[\r\n\0]/.test(v)) continue
+    out[k] = v
+    n++
+  }
+  return n ? out : undefined
 }
 
 function sessionIdFromOpts(raw: unknown): string | undefined {
@@ -454,7 +469,7 @@ export function registerShellIpc(): void {
           return { stdout: '', stderr: remote.error, exitCode: 126 }
         }
         if (remote.kind === 'remote') {
-          const childEnv = mergedChildEnv(remote.env)
+          const childEnv = mergedChildEnv({ ...(remote.env || {}), ...(sandbox.extraEnv || {}) })
           const r = await runSpawned(remote.file, remote.args, undefined, clampTimeout(timeoutMs), childEnv, sessionIdFromOpts(sandboxOpts))
           return { ...r, host: remote.hostId }
         }

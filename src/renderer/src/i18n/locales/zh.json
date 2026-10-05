@@ -148,7 +148,10 @@
       "build": "build",
       "buildDesc": "切换到执行模式（完整工具）",
       "issuePr": "issue-pr",
-      "issuePrDesc": "修复 Issue 并准备 PR"
+      "issuePrDesc": "修复 Issue 并准备 PR",
+      "groupBuiltin": "内置",
+      "groupMods": "mods",
+      "groupSkills": "技能"
     },
     "mention": {
       "title": "文件与文件夹",
@@ -263,6 +266,50 @@
       "title": "交接 — 继续工作",
       "button": "在新聊天中继续",
       "hint": "用此聊天的摘要开始新聊天 — 全新上下文，同一目标。"
+    },
+    "mods": {
+      "activeTitle": "正在运行的 mods",
+      "replyRole": "mods",
+      "spinnerSuffixHint": "来自 mods 的状态文字",
+      "paneHint": "{{plugin}} 打开的面板",
+      "paneEmpty": "{{plugin}} 打开了面板，但还没有可显示的内容。",
+      "chipOne": "{{name}} 运行中",
+      "chipMany": "{{count}} 个 mods 运行中",
+      "menuTitle": "此聊天中的 mods",
+      "toggle": "开",
+      "commands": "命令",
+      "openSettings": "管理 mods",
+      "abovePrompt": "mods 提示区域",
+      "welcomeHint": "可以在这里试一次 mods。\n示例点一次就能装上。",
+      "welcomeCta": "打开 mods",
+      "toolBlocked": "{{plugin}} 拦住了这个工具。",
+      "toolAnswered": "{{plugin}} 替这个工具作了回答。",
+      "conflicts": "钩子冲突",
+      "timeline": "干预记录",
+      "clearTimeline": "清空记录",
+      "conflictLine": "{{plugins}} 挂在同一个{{event}}上。",
+      "earlier": "提前",
+      "later": "延后",
+      "moveEarlier": "提前运行 {{name}}",
+      "moveLater": "延后运行 {{name}}",
+      "timelinePress": "按下了 {{label}}。",
+      "timelineInput": "填写了 {{label}}。",
+      "timelineSelect": "选择了 {{label}}。",
+      "toggleNamed": "打开 {{name}}",
+      "commandToast": "{{plugin}} · {{text}}",
+      "events": {
+        "sessionStart": "聊天开始",
+        "sessionEnd": "聊天结束",
+        "sessionCompact": "摘要",
+        "turnComplete": "回合结束",
+        "toolCall": "工具调用",
+        "promptSubmit": "提示",
+        "commandRun": "命令",
+        "uiRender": "界面",
+        "uiPress": "按钮",
+        "uiInput": "输入",
+        "uiSelect": "选择"
+      }
     }
   },
   "automation": {
@@ -942,6 +989,81 @@
       "desktopOnly": "钩子仅在桌面应用中运行。",
       "search": "钩子 前置 后置 工具 权限 脚本"
     },
+    "modsSection": {
+      "title": "mods",
+      "desc": "可在对话中观察或处理工具调用、提示与界面绘制的本地脚本。启用前请先查看权限。",
+      "trustTitle": "以你的完整权限运行",
+      "trustBody": "没有沙箱。\n请先查看挂钩的事件与调用，再只启用你信任的代码。",
+      "enabled": "运行 mods",
+      "enabledDesc": "关闭后安装项仍留在磁盘，但不会运行。\n技能与 MCP 不受影响。",
+      "readClaude": "同时扫描 Claude 插件",
+      "readClaudeDesc": "也会加载已安装的钩子模块。\n默认关闭，只在你信任这些插件时打开。",
+      "readClaudeConfirm": "要从 Claude Code 插件中查找 mods 吗？你允许后才会以你的权限运行。",
+      "active": "当前对话",
+      "noneActive": "此对话尚未激活任何 mods",
+      "reload": "重新加载",
+      "reloaded": "已重新加载",
+      "saved": "已保存",
+      "saveFailed": "无法保存设置",
+      "validateFailed": "无法验证此 mods",
+      "onboarding": "添加一个 mods",
+      "onboardingDesc": "安装示例，或选择已有钩子模块的文件夹。",
+      "installExample": "安装示例 mods",
+      "exampleInstalled": "示例已安装 — 请审阅后允许",
+      "exampleFailed": "无法安装示例",
+      "browseDir": "选择文件夹",
+      "pluginDirs": "额外文件夹",
+      "pluginDirsDesc": "额外扫描的绝对路径。",
+      "pluginDirPlaceholder": "/path/to/my-mod",
+      "addDir": "添加",
+      "noDirs": "暂无额外文件夹。",
+      "installed": "已安装",
+      "installedDesc": "从用户文件夹、额外文件夹和本项目加载。",
+      "empty": "还没有内容。请安装示例或选择文件夹。",
+      "needsReview": "待审阅",
+      "running": "运行中",
+      "review": "审阅",
+      "consentTitle": "允许“{{name}}”？",
+      "consentBody": "此 mods 会在进程内以你的账户权限运行。允许前请先查看它挂钩的内容。",
+      "consentHooks": "监听的事件",
+      "consentCalls": "可能调用的 API",
+      "consentWarn": "之后可以关闭。不信任的代码可读文件并执行命令。",
+      "consentAllow": "允许并启用",
+      "commandHint": "mods 命令",
+      "desktopOnly": "mods 仅在桌面应用中运行。",
+      "search": "mods 钩子 模块 register 插件目录 tool.call 同意",
+      "activeSection": "当前对话中运行",
+      "activeSectionDesc": "已加载到当前打开对话的 mods。",
+      "revoke": "撤销同意",
+      "consentAdvanced": "显示技术钩子与调用",
+      "cap": {
+        "tools": "拦截工具",
+        "files": "读写文件",
+        "process": "运行 shell 命令",
+        "network": "发起网络请求",
+        "commands": "注册斜杠命令",
+        "ui": "更改对话界面",
+        "prompt": "改写提示",
+        "store": "保存本地数据",
+        "none": "未检测到特殊权限"
+      },
+      "needsReconsent": "已更新 — 请重新审核",
+      "reReview": "审核更新",
+      "versionLabel": "版本 {{version}}",
+      "risk": {
+        "low": "较低风险",
+        "medium": "中等风险",
+        "high": "较高风险"
+      },
+      "sessionEmpty": "此聊天没有正在运行的 mods。",
+      "sessionRunning": "此聊天正在运行 {{names}}。",
+      "scan": {
+        "lead": "会从这些位置查找。",
+        "extra": "你添加的文件夹",
+        "claude": "开启扫描时的安装项",
+        "project": "本项目的"
+      }
+    },
     "memorySection": {
       "title": "记忆（自我学习）",
       "desc": "仅保存在本机的长期知识。开启后会从对话中学习偏好与项目事实，并在后续自动回忆。不会保存 API 密钥或密码。",
@@ -971,7 +1093,7 @@
     },
     "pluginSection": {
       "title": "插件",
-      "desc": "管理插件和集成",
+      "desc": "管理技能、上下文来源，以及对话中运行的 mods。",
       "contextTitle": "Claude 兼容上下文",
       "contextApplied": "已注入 {{count}} 个上下文块 · 已启用技能 {{enabled}}/{{total}}",
       "contextApplied_one": "已注入 {{count}} 个上下文块 · 已启用技能 {{enabled}}/{{total}}",
@@ -1008,7 +1130,11 @@
       "claudeMdDesc": "项目级CLAUDE.md文件路径",
       "agentDir": "代理目录",
       "agentDirDesc": "代理特定配置的目录",
-      "auto": "自动检测"
+      "auto": "自动检测",
+      "tabsLabel": "插件区域",
+      "tabSkills": "技能与上下文",
+      "tabExtensions": "mods",
+      "search": "插件 技能 启用 禁用 商店 mods 钩子 同意"
     },
     "mcpSection": {
       "title": "MCP",
@@ -1208,6 +1334,7 @@
     "automations": "自动化",
     "memory": "记忆",
     "hooks": "钩子",
+    "mods": "mods",
     "subagents": "子代理",
     "usage": "用量",
     "usageSection": {
@@ -1356,7 +1483,7 @@
       "search": "子代理 并行 生成 代理 轮次 取消"
     },
     "pluginsSection": {
-      "search": "插件 技能 启用 禁用 商店"
+      "search": "插件 技能 启用 禁用 商店 mods 钩子 同意"
     },
     "shortcutsSection": {
       "search": "快捷键 按键绑定 重新设置"
@@ -1560,7 +1687,11 @@
       "openAgents": "打开 Agents 面板",
       "openAgentsDesc": "实时查看助手进度、费用和文件变更",
       "findInChat": "在对话中查找",
-      "findInChatDesc": "搜索当前对话并在匹配项之间跳转"
+      "findInChatDesc": "搜索当前对话并在匹配项之间跳转",
+      "modsReload": "重新加载 mods",
+      "modsReloadDesc": "重新扫描并加载此对话的 mods",
+      "modsSettings": "mods 设置",
+      "modsSettingsDesc": "审阅、允许或关闭本地 mods"
     },
     "shortcuts": "键盘快捷键",
     "shortcutsDesc": "查看所有快捷键"

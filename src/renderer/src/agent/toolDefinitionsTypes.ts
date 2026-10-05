@@ -19,4 +19,6 @@ export interface ToolResult {
   diffData?: { oldText: string; newText: string; filename: string; path?: string }
   /** SSH host id when the command executed remotely (see executionTarget). */
   host?: string
+  /** When a mod denied or answered the tool before core ran. */
+  mod?: { plugin: string; action: 'blocked' | 'answered' }
 }

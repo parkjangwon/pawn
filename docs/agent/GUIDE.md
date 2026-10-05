@@ -41,6 +41,8 @@ Installer cache: `~/.pawn/installers/`. In-app check: Settings → System. Node 
 | `pawn.db` | Projects, sessions, messages, transcripts, usage, routines. WAL. Transcripts stay separate from UI messages so prompt-cache prefixes hold. |
 | `memory.db` | Long-term memory. FTS5 + local hash embeddings. |
 | `hooks.json` / `hooks-settings.json` | User hooks, and the master switch. |
+| `mods-settings.json` | Mods master switch, versioned consent, disabled plugins, plugin directories, run order (`pluginOrder`). See [MODS.md](./MODS.md). |
+| `mods/` | User-installed Claude Code–compatible mods. |
 | `config.toml` | App settings. |
 | `mcp.json` | Pawn-managed MCP servers. |
 | `decision.json` | Decision-model provider. Keys sealed with `safeStorage`, file mode `0600`. |
@@ -111,7 +113,7 @@ Names are the contract. Schemas live in `src/renderer/src/agent/toolDefs/`.
 
 `research_report` plans the topic, runs parallel workers (each in its own tab, mixing `web_*` and `browser_*`), dedups sources, then a synthesizer with only read tools plus `write_artifact` writes the report. That synthesizer profile stays narrow even if a project agent file would widen it.
 
-## 7. Skills, hooks, MCP
+## 7. Skills, hooks, mods, MCP
 
 | Skills | Where |
 |--------|--------|
@@ -123,6 +125,8 @@ Names are the contract. Schemas live in `src/renderer/src/agent/toolDefs/`.
 
 A skill is a catalog line until `load_skill`. Also loaded: `CLAUDE.md`, `CLAUDE.local.md`, `.claude/rules/*.md`, Codex `.agent/`, `~/.agents/AGENTS.md`. UI: Settings → Plugins.
 
+### Settings hooks (shell / HTTP)
+
 Hooks merge across sources. Same command or URL is deduped. A `PreToolUse` deny still denies in `yolo`.
 
 | Source | Path |
@@ -132,7 +136,21 @@ Hooks merge across sources. Same command or URL is deduped. A `PreToolUse` deny 
 | Pawn user | `~/.pawn/hooks.json` |
 | Pawn project | `<project>/.pawn/hooks.json` |
 
-Events: `SessionStart`, `UserPromptSubmit` (may block), `PreToolUse` (may deny), `PermissionRequest`, `PostToolUse` (advisory), `Stop`. Handler `type` is `command` (stdin JSON) or `http` (POST JSON). Matchers accept Claude aliases (`Bash` → `shell_exec`, `Write` / `Edit` → write/edit). UI: Settings → Agent → Hooks. Hooks run in the main process only.
+Events: `SessionStart`, `UserPromptSubmit` (may block), `PreToolUse` (may deny), `PermissionRequest`, `PostToolUse` (advisory), `Stop`. Handler `type` is `command` (stdin JSON) or `http` (POST JSON). Matchers accept Claude aliases (`Bash` → `shell_exec`, `Write` / `Edit` → write/edit). UI: Settings → Hooks. Hooks run in the main process only.
+
+### Mods (Claude Code–compatible)
+
+A mod is a plugin with `hooks/hooks.json` → `modules`. It exports `register(on)` and runs in the agent process. It is not a settings hook. Full authoring, consent, events, UI, and the `$` API: **[MODS.md](./MODS.md)**.
+
+| Piece | Path / note |
+|-------|-------------|
+| Manifest | `.claude-plugin/plugin.json` (or `.pawn-plugin/plugin.json`) |
+| Hooks manifest | `hooks/hooks.json` with `"modules": ["./register.js"]` |
+| Install | `~/.pawn/mods/<name>/`, extra folders, project `.claude/plugins/`, Claude installs only if scan is on |
+| Settings | `~/.pawn/mods-settings.json`. Consent is `{ name, version }`. `pluginOrder` is run order within a tier. A new version needs review again. |
+| Sample | `examples/mods/first-mod/` |
+
+UI: Settings → Plugins → Mods. Chat shows a chip and an intervention log. The chip menu lists a conflict for any event two mods both listen to, and can reorder them. The log records a conflict when `tool.call` or `prompt.submit` runs that way. Each `AbovePrompt` mod gets its own band. Events, consent, and the `$` API: [MODS.md](./MODS.md). `tool.call` runs before settings `PreToolUse`. Turning mods off does not unload skills or MCP.
 
 MCP discovery, stdio, first match wins on id collision with project overriding user:
 

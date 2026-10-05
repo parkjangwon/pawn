@@ -14,6 +14,7 @@ import { registerConnectionsIpc } from './connections'
 import { registerResearchIpc } from './research'
 import { registerMemoryIpc } from './memory'
 import { registerHooksIpc } from './hooks'
+import { registerModsIpc } from './mods'
 import { registerWorktreeIpc } from './worktree'
 import { registerLspIpc } from './lsp'
 import { registerAgentRuntimeIpc } from './agentRuntime'
@@ -46,6 +47,7 @@ export function registerAllIpc(): void {
   registerResearchIpc()
   registerMemoryIpc()
   registerHooksIpc()
+  registerModsIpc()
   registerWorktreeIpc()
   registerLspIpc()
   registerAgentRuntimeIpc()

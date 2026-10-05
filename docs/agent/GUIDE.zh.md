@@ -111,7 +111,7 @@ npm install -g @parkjangwon/pawn && pawn
 
 `research_report` 规划题目，跑并行工人（各自一个标签，混合 `web_*` 和 `browser_*`），去重来源，然后一个只有读取工具加 `write_artifact` 的合成器写报告。即使项目代理文件想放宽工具，这个合成器配置也保持窄。
 
-## 7. 技能、钩子、MCP
+## 7. 技能、钩子、mods、MCP
 
 | 技能 | 位置 |
 |------|------|
@@ -133,6 +133,12 @@ npm install -g @parkjangwon/pawn && pawn
 | Pawn 项目 | `<project>/.pawn/hooks.json` |
 
 事件：`SessionStart`、`UserPromptSubmit`（可以阻断）、`PreToolUse`（可以拒绝）、`PermissionRequest`、`PostToolUse`（参考）、`Stop`。处理程序 `type` 为 `command`（stdin JSON）或 `http`（POST JSON）。匹配器接受 Claude 别名（`Bash` → `shell_exec`，`Write` / `Edit` → write/edit）。界面：设置 → 代理 → 钩子。钩子只在主进程运行。
+
+### mods（兼容 Claude Code）
+
+`hooks/hooks.json` 含 `modules` 的插件才是 mod。它导出 `register(on)`，在代理进程内运行。这不是设置钩子。写法、同意、事件、界面和 `$` API 见 **[MODS.zh.md](./MODS.zh.md)**。
+
+界面是设置 → 插件 → mods。聊天里有芯片和干预记录。多个 mod 监听同一事件时，芯片菜单会列出冲突并可以调整顺序。干预记录只在 `tool.call` 或 `prompt.submit` 这样运行时留下冲突行。每个 `AbovePrompt` 的 mod 各有一条。事件、同意和 `$` API 见 [MODS.zh.md](./MODS.zh.md)。`tool.call` 早于设置里的 `PreToolUse`。关掉 mods 不会卸下技能或 MCP。示例在 `examples/mods/first-mod/`。
 
 MCP 发现走 stdio。id 冲突时项目覆盖用户：
 

@@ -29,6 +29,8 @@ export interface ToolMeta {
   host?: string
   /** Full output was offloaded (`read_output`-able): id + original size. */
   offloaded?: { id: string; chars: number }
+  /** Mod that blocked or answered this tool call. */
+  mod?: { plugin: string; action: 'blocked' | 'answered' }
 }
 
 const TARGET_MAX = 160
@@ -105,6 +107,7 @@ export function buildToolMeta(
     meta.durationMs = Math.round(durationMs)
   }
   if (offloaded) meta.offloaded = offloaded
+  if (result.mod) meta.mod = result.mod
   const target = primaryTarget(call.arguments)
   if (target) meta.target = target
   if (typeof result.content === 'string') meta.bytes = result.content.length

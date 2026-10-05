@@ -25,6 +25,16 @@ import { readKiroCliLogin, readKiroIdeLogin, type KiroCredentials, type SqliteOp
 import { createDecisionService } from '../main/decision/service'
 import { emptyDecisionConfig, type DecisionConfig } from '../main/decision/types'
 import { createRequire } from 'module'
+import {
+  getModsSettings,
+  listModsSummary,
+  loadEnabledModSources,
+  discoverMods,
+  setModsSettings,
+  validateModPath,
+  formatValidateReport
+} from '../main/mods'
+import { modHttpFetch } from '../main/mods/http'
 
 export interface HeadlessConfig {
   settings?: Record<string, unknown>
@@ -598,6 +608,63 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
         log(`[notify] ${title}: ${body}`)
         return { ok: true }
       }
+    },
+    mods: {
+      settings: async () => getModsSettings(),
+      setSettings: async (partial: Record<string, unknown>) => setModsSettings(partial || {}),
+      list: async (projectPath?: string | null) => ({
+        ok: true,
+        mods: listModsSummary(projectPath ?? null)
+      }),
+      loadSources: async (projectPath?: string | null) => {
+        const settings = getModsSettings()
+        const mods = discoverMods({ projectPath: projectPath ?? null, settings })
+        const sources = loadEnabledModSources(mods)
+        return {
+          ok: true,
+          settings,
+          mods: mods.map((m) => ({
+            id: m.id,
+            name: m.name,
+            version: m.version,
+            description: m.description,
+            root: m.root,
+            source: m.source,
+            enabled: m.enabled,
+            consented: m.consented,
+            consentStale: m.consentStale,
+            tier: m.tier,
+            moduleRelative: m.moduleRelative,
+            userConfig: m.userConfig
+          })),
+          sources: sources.map((s) => ({
+            id: s.mod.id,
+            name: s.mod.name,
+            root: s.mod.root,
+            tier: s.mod.tier,
+            source: s.source,
+            language: s.language,
+            userConfig: s.mod.userConfig
+          }))
+        }
+      },
+      validate: async (path: string) => {
+        const report = validateModPath(typeof path === 'string' ? path : '')
+        return { ok: report.ok, report, text: formatValidateReport(report) }
+      },
+      envSnapshot: async () => {
+        const values: Record<string, string> = {}
+        for (const [k, v] of Object.entries(process.env)) {
+          if (typeof v === 'string' && /^[A-Za-z_][A-Za-z0-9_]{0,127}$/.test(k)) {
+            values[k] = v.length > 32_768 ? v.slice(0, 32_768) : v
+          }
+        }
+        return { ok: true, values }
+      },
+      http: async (
+        url: string,
+        init?: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }
+      ) => modHttpFetch(url, init)
     },
     setStreaming: () => {},
     setSessionStreaming: () => {}

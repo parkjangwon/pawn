@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useProviderStore } from '../stores/provider'
 import { useAppStore } from '../stores/app'
-import { openSettingsSection, __providerTestOutcome } from './settingsState'
+import { openSettingsSection, openPluginsExtensions, __providerTestOutcome } from './settingsState'
 
 export interface WelcomeSuggestion {
   icon: string
@@ -71,6 +71,23 @@ export default function WelcomeScreen({
       })
       .catch(() => {
         if (!cancelled) setGithubConnected(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const [hasExtension, setHasExtension] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    void window.api?.mods
+      ?.list(null)
+      .then((res) => {
+        if (!cancelled) setHasExtension(Boolean(res?.mods?.some((m) => m.enabled || m.consented)))
+      })
+      .catch(() => {
+        if (!cancelled) setHasExtension(false)
       })
     return () => {
       cancelled = true
@@ -156,6 +173,19 @@ export default function WelcomeScreen({
           : t('chat.welcome')}
       </h1>
       {!activeProject && <p>{t('chat.welcomeSub')}</p>}
+
+      {providerReady && !hasExtension && (
+        <div className="welcome-mod-cta">
+          <p>{t('chat.mods.welcomeHint')}</p>
+          <button
+            type="button"
+            className="welcome-mod-cta-btn"
+            onClick={() => openPluginsExtensions()}
+          >
+            {t('chat.mods.welcomeCta')}
+          </button>
+        </div>
+      )}
 
       {showChecklist && (
         <div className="welcome-checklist" role="region" aria-label={t('chat.checklist.title')}>

@@ -39,6 +39,8 @@ import {
   pushPromptHistory
 } from '../utils/promptHistory'
 import { buildIssuePrPlaybook, parseIssuePrArg, prefetchIssueContext } from '../agent/issueWorkflow'
+import { ensureModsLoaded, getModRuntime } from '../agent/mods'
+import ModsChrome from './ModsChrome'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -596,9 +598,13 @@ export default function ChatArea({
     const ic = (d: React.ReactNode): React.ReactNode => (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
     )
+    const builtinGroup = t('chat.slash.groupBuiltin')
+    const modsGroup = t('chat.slash.groupMods')
+    const skillsGroup = t('chat.slash.groupSkills')
     return [
       {
         id: 'new', label: t('chat.slash.new'), description: t('chat.slash.newDesc'),
+        group: builtinGroup,
         icon: ic(<><path d="M12 5v14" /><path d="M5 12h14" /></>),
         action: () => {
           // Same as sidebar "New chat": blank chat in the project on screen.
@@ -607,36 +613,43 @@ export default function ChatArea({
       },
       {
         id: 'clear', label: t('chat.slash.clear'), description: t('chat.slash.clearDesc'),
+        group: builtinGroup,
         icon: ic(<><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></>),
         action: () => { if (activeProjectId && activeSessionId) setShowClearConfirm(true) }
       },
       {
         id: 'model', label: t('chat.slash.model'), description: t('chat.slash.modelDesc'),
+        group: builtinGroup,
         icon: ic(<><circle cx="12" cy="12" r="3" /><path d="M12 2v3" /><path d="M12 19v3" /><path d="M2 12h3" /><path d="M19 12h3" /></>),
         action: () => { setShowModelPicker(true); setShowPermPicker(false) }
       },
       {
         id: 'theme', label: t('chat.slash.theme'), description: t('chat.slash.themeDesc'),
+        group: builtinGroup,
         icon: ic(<><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.9 4.9l1.4 1.4" /><path d="M17.7 17.7l1.4 1.4" /><path d="M2 12h2" /><path d="M20 12h2" /></>),
         action: () => toggleTheme()
       },
       {
         id: 'settings', label: t('chat.slash.settings'), description: t('chat.slash.settingsDesc'),
+        group: builtinGroup,
         icon: ic(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>),
         action: () => onOpenSettings()
       },
       {
         id: 'export', label: t('chat.slash.export'), description: t('chat.slash.exportDesc'),
+        group: builtinGroup,
         icon: ic(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>),
         action: () => handleExport()
       },
       {
         id: 'plan', label: t('chat.slash.plan'), description: t('chat.slash.planDesc'),
+        group: builtinGroup,
         icon: ic(<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><path d="M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2" /></>),
         action: () => setAgentMode('plan', activeSessionId)
       },
       {
         id: 'build', label: t('chat.slash.build'), description: t('chat.slash.buildDesc'),
+        group: builtinGroup,
         icon: ic(<><path d="M12 19V5M5 12l7-7 7 7" /></>),
         action: () => setAgentMode('build', activeSessionId)
       },
@@ -644,6 +657,7 @@ export default function ChatArea({
         id: 'ultra-work',
         label: t('ultraWork.slashLabel'),
         description: t('ultraWork.slashDesc'),
+        group: builtinGroup,
         hint: '$ulw',
         icon: ic(<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
         insert: '/ultra-work '
@@ -654,6 +668,7 @@ export default function ChatArea({
               id: 'record',
               label: t('record.slash.label'),
               description: t('record.slash.desc'),
+              group: builtinGroup,
               icon: ic(<><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" fill="currentColor" /></>),
               action: () => useRecordingStore.getState().openSetup({ projectId: activeProjectId ?? undefined, sessionId: activeSessionId ?? undefined })
             }
@@ -663,9 +678,19 @@ export default function ChatArea({
         id: 'issue-pr',
         label: t('chat.slash.issuePr'),
         description: t('chat.slash.issuePrDesc'),
+        group: builtinGroup,
         icon: ic(<><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></>),
         insert: '/issue-pr '
       },
+      ...getModRuntime().getCommands().map((cmd) => ({
+        id: `mod-cmd:${cmd.plugin}:${cmd.name}`,
+        label: cmd.name,
+        description: cmd.description || t('settings.modsSection.commandHint'),
+        group: modsGroup,
+        hint: cmd.argumentHint || cmd.plugin,
+        insert: `/${cmd.name} `,
+        icon: ic(<><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" /></>)
+      })),
       ...skills
         .filter((s) => !['new', 'clear', 'model', 'theme', 'settings', 'export', 'plan', 'build', 'issue-pr', 'ultra-work', 'ulw', 'record'].includes(s.name.toLowerCase()))
         .map((s) => {
@@ -675,6 +700,7 @@ export default function ChatArea({
           id: `skill:${s.name}`,
           label: s.name,
           description: firstLine,
+          group: skillsGroup,
           hint: s.kind === 'command' || s.kind === 'plugin' || s.kind === 'agent' ? s.kind : 'skill',
           insert: `/${s.name} `,
           icon: ic(<><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" /><path d="M19 14l.7 1.9L21.5 17l-1.8.7L19 19.5l-.7-1.8L16.5 17l1.8-.7z" /></>)
@@ -863,6 +889,55 @@ export default function ChatArea({
     }
     const typedPrompt = ultra ? ultra.goal : input.trim()
     const sendAttachments = attachments
+
+    // Mod slash commands (`/tally`, …) — handled in-process, no Claude turn.
+    const modCmdMatch = typedPrompt.match(/^\/([A-Za-z0-9_-]+)(?:\s+([\s\S]*))?$/)
+    if (modCmdMatch && !ultra) {
+      const cmdName = modCmdMatch[1]
+      const cmdArgs = (modCmdMatch[2] || '').trim()
+      const cwdForMods =
+        (activeProjectId && projects.find((p) => p.id === activeProjectId)?.paths?.[0]) || ''
+      await ensureModsLoaded({
+        sessionId: activeSessionId || 'pending',
+        cwd: cwdForMods,
+        projectPath: cwdForMods || null
+      }).catch(() => [])
+      const runtime = getModRuntime()
+      if (runtime.getCommands().some((c) => c.name === cmdName)) {
+        setInput('')
+        setAttachments([])
+        setTrigger(null)
+        setHistoryIndex(-1)
+        historyDraftRef.current = ''
+        if (textareaRef.current) textareaRef.current.style.height = 'auto'
+        try {
+          const answer = await runtime.emitCommandRun(cmdName, cmdArgs)
+          const plugin = runtime.getCommands().find((c) => c.name === cmdName)?.plugin || 'mod'
+          const text = (answer.text || '').trim()
+          if (text && activeProjectId && activeSessionId) {
+            useAppStore.getState().addMessage(activeProjectId, activeSessionId, {
+              id: `mod-${Date.now()}`,
+              role: 'assistant',
+              content: text,
+              createdAt: Date.now(),
+              modelLabel: plugin
+            })
+          } else if (text) {
+            window.dispatchEvent(new CustomEvent('pawn:toast', { detail: { message: t('chat.mods.commandToast', { plugin, text }) } }))
+          }
+        } catch (err) {
+          window.dispatchEvent(
+            new CustomEvent('pawn:toast', {
+              detail: { message: err instanceof Error ? err.message : String(err) }
+            })
+          )
+        } finally {
+          sendingRef.current = false
+        }
+        return
+      }
+    }
+
     // Clear composer immediately so a second Enter cannot re-send the same text
     // while we await @mention / git expansion.
     setInput('')
@@ -1276,6 +1351,7 @@ export default function ChatArea({
       <RecordingBar sessionId={activeSessionId} />
       <UltraWorkBanner sessionId={activeSessionId} />
       <PlanStrip sessionId={activeSessionId} />
+      <ModsChrome onOpenSettings={onOpenSettings} />
       <div className="question-card-slot">
         <QuestionCard sessionId={activeSessionId} />
       </div>
