@@ -48,7 +48,7 @@ export default function LiveToolActivity({ sessionId }: LiveToolActivityProps): 
         </span>
         {live.target && <span className="live-tool-activity-target">{live.target}</span>}
         <span className="live-tool-activity-elapsed">
-          {t('chat.liveTool.running', { label: live.label, seconds })}
+          {t('chat.liveTool.running', { seconds })}
         </span>
       </div>
       <pre ref={preRef} className="live-tool-activity-tail">

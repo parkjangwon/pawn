@@ -3,7 +3,12 @@
    pulsing animations, so it is safe under prefers-reduced-motion. */
 
 .live-tool-activity {
-  margin: 6px 0;
+  /* Same column as .message, inset by the message padding so the card
+     lines up with tool rows instead of spanning the whole pane. */
+  width: calc(100% - 2 * var(--space-xl));
+  max-width: calc(var(--chat-content-max, 720px) - 2 * var(--space-xl));
+  margin: 6px auto;
+  box-sizing: border-box;
   border: 1px solid var(--border-color);
   border-left: 3px solid var(--timeline-thinking, var(--accent));
   border-radius: var(--radius-sm);
@@ -30,6 +35,7 @@
 
 .live-tool-activity-title {
   flex-shrink: 0;
+  white-space: nowrap;
   font-weight: 600;
   color: var(--text-primary);
 }

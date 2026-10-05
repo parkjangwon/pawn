@@ -1,4 +1,5 @@
 .tool-message {
+  min-width: 0;
   margin: 4px 0;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border-color);
@@ -26,6 +27,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 10px;
+  min-width: 0;
   cursor: pointer;
   user-select: none;
 }
@@ -56,6 +58,7 @@
 
 .timeline-pill {
   flex-shrink: 0;
+  white-space: nowrap;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -77,6 +80,7 @@
 
 /* One-line summary: label · target · +/- · duration · status */
 .tool-target {
+  flex: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -117,16 +121,14 @@
 
 .tool-status {
   margin-left: auto;
+  flex-shrink: 0;
   font-size: var(--font-xs);
   padding: 1px 6px;
   border-radius: var(--radius-xs);
   font-weight: 600;
   letter-spacing: 0.3px;
-  /* The status word must never wrap (CJK breaks per character: 완/료).
-     When the row runs out of room, shrink and ellipsize instead. */
+  /* The status word stays whole. The command beside it ellipsizes. */
   white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .tool-status.ok {

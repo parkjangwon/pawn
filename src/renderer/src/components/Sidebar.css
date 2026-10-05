@@ -85,6 +85,7 @@ body.resizing-sidebar .settings-sidebar {
 .sidebar-logo {
   font-size: var(--font-lg);
   font-weight: 400;
+  line-height: 1;
   color: var(--primary);
   letter-spacing: -0.02em;
 }
@@ -493,7 +494,11 @@ body.resizing-sidebar .settings-sidebar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 12px var(--space-md);
+  /* Fixed box so the wordmark stays put when the row's only child is the
+     logo (Settings) versus logo + a 28px icon button (main sidebar). */
+  box-sizing: border-box;
+  height: 52px;
+  padding: 0 var(--space-md);
   flex-shrink: 0;
 }
 

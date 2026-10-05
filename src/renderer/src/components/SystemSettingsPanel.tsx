@@ -1,4 +1,7 @@
 import type { SettingsState } from './settingsState'
+import { IconGitHub } from './icons'
+
+const REPO_URL = 'https://github.com/parkjangwon/pawn'
 
 export default function SystemSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -178,6 +181,25 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
               {t('settings.systemSection.downloadInstall')}
             </button>
           </div>
+        </div>
+        <div className="settings-row">
+          <div className="settings-row-info">
+            <span className="settings-row-label settings-row-label-icon">
+              <IconGitHub size={16} />
+              {t('settings.systemSection.openGitHub')}
+            </span>
+            <span className="settings-row-desc">{t('settings.systemSection.openGitHubDesc')}</span>
+          </div>
+          <button
+            type="button"
+            className="btn-action btn-with-icon"
+            onClick={() => {
+              window.api?.browser?.open?.(REPO_URL)?.catch?.(() => {})
+            }}
+          >
+            <IconGitHub size={14} />
+            {t('settings.systemSection.openGitHubAction')}
+          </button>
         </div>
       </div>
     </div>

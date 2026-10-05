@@ -296,6 +296,12 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-primary);
 }
 
+.settings-row-label-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .settings-row-desc {
   font-size: var(--font-sm);
   color: var(--text-muted);
@@ -1196,6 +1202,12 @@ body.resizing-sidebar .settings-resizer::after {
   border-color: #a1a1aa;
   color: var(--text-primary);
   background: var(--bg-hover);
+}
+
+.btn-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .btn-action {

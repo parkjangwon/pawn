@@ -2,7 +2,11 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 0 var(--space-16) 8px;
+  width: 100%;
+  max-width: var(--chat-content-max, 720px);
+  margin: 0 auto;
+  box-sizing: border-box;
+  padding: 0 0 8px;
   word-break: keep-all;
   line-break: strict;
 }

@@ -246,7 +246,7 @@
     },
     "liveTool": {
       "title": "Running: {{label}}",
-      "running": "{{label}} — {{seconds}}s",
+      "running": "{{seconds}}s",
       "output": "Output (last {{count}} lines)"
     },
     "checksRunning": "Running project checks…",
@@ -1296,6 +1296,9 @@
       "checkUpdatesOnLaunchDesc": "Quietly compare with GitHub Releases when Pawn starts",
       "checkUpdates": "Check for updates",
       "checkUpdatesDesc": "Compare this build with the latest GitHub release",
+      "openGitHub": "GitHub",
+      "openGitHubDesc": "Source, releases, and issues",
+      "openGitHubAction": "Open",
       "checking": "Checking…",
       "updateAvailable": "Update available: {{latest}} (you have {{current}})",
       "upToDate": "You’re up to date ({{current}})",
@@ -1304,7 +1307,7 @@
       "downloading": "Downloading installer…",
       "downloadOpened": "Installer opened: {{path}}",
       "downloadFailed": "Download failed",
-      "search": "updates tray quit dock sleep version diagnostics"
+      "search": "updates tray quit dock sleep version diagnostics github repository"
     },
     "shortcuts": "Shortcuts",
     "shortcutSection": {
@@ -1762,7 +1765,7 @@
     "filesChanged_one": "{{count}} file",
     "zoom": "Zoom",
     "uiSnapshot": "Read UI",
-    "findOnScreen": "Find on screen",
+    "findOnScreen": "Find screen",
     "ocr": "Read text",
     "apps": "Apps",
     "windows": "Windows",
@@ -1770,8 +1773,8 @@
     "openItem": "Open",
     "computerStatus": "Computer status",
     "patch": "Apply patch",
-    "waitJob": "Wait for job",
-    "readOutput": "Read saved output",
+    "waitJob": "Await job",
+    "readOutput": "Saved output",
     "notes": "Working notes",
     "checkpoint": "Checkpoint",
     "restore": "Restore checkpoint",
@@ -1783,7 +1786,7 @@
     "secondOpinion": "Second opinion",
     "family": {
       "webSearch": "Web search",
-      "webRead": "Read web page",
+      "webRead": "Web page",
       "browser": "Browser",
       "spreadsheet": "Spreadsheet",
       "email": "Email",
@@ -1793,7 +1796,7 @@
       "memory": "Memory",
       "document": "Save document",
       "codeIntel": "Code lookup",
-      "findFiles": "Find in files",
+      "findFiles": "Find files",
       "question": "Ask you",
       "checks": "Run checks",
       "app": "Pawn setting",

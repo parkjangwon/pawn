@@ -25,6 +25,7 @@
 
 .tool-batch-header {
   width: 100%;
+  min-width: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -83,6 +84,7 @@
 }
 
 .tool-batch-title {
+  flex-shrink: 0;
   font-weight: 500;
   color: var(--text-primary);
   white-space: nowrap;
@@ -95,7 +97,7 @@
   align-items: center;
   gap: 4px;
   overflow: hidden;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   height: 18px;
   min-width: 0;
 }
