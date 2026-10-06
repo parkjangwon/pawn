@@ -1,7 +1,7 @@
 import { createRequire } from 'module'
 import { readFileSync } from 'fs'
 import { extname } from 'path'
-import type { DiscoveredMod, ModModuleSource } from './types'
+import type { DiscoveredMod, ModMultiSource } from './types'
 
 type TsCompiler = {
   transpileModule: (
@@ -76,23 +76,26 @@ function stripTypeScriptRegex(source: string): string {
   return s
 }
 
-export function loadModSource(mod: DiscoveredMod): ModModuleSource {
-  const raw = readFileSync(mod.modulePath, 'utf-8')
-  const ext = extname(mod.modulePath).toLowerCase()
-  const isTs = ext === '.ts' || ext === '.mts' || ext === '.cts' || ext === '.tsx'
-  return {
-    mod,
-    source: isTs ? stripTypeScript(raw) : raw,
-    language: isTs ? 'ts' : 'js'
+export function loadModSources(mod: DiscoveredMod): ModMultiSource {
+  const sources: string[] = []
+  let language: 'js' | 'ts' = 'js'
+  for (const modulePath of mod.modulePaths) {
+    const raw = readFileSync(modulePath, 'utf-8')
+    const ext = extname(modulePath).toLowerCase()
+    const isTs = ext === '.ts' || ext === '.mts' || ext === '.cts' || ext === '.tsx'
+    if (isTs) language = 'ts'
+    sources.push(isTs ? stripTypeScript(raw) : raw)
   }
+  if (sources.length === 0) throw new Error(`no readable hooks module in ${mod.root}`)
+  return { mod, sources, language }
 }
 
-export function loadEnabledModSources(mods: DiscoveredMod[]): ModModuleSource[] {
-  const out: ModModuleSource[] = []
+export function loadEnabledModSources(mods: DiscoveredMod[]): ModMultiSource[] {
+  const out: ModMultiSource[] = []
   for (const mod of mods) {
     if (!mod.enabled) continue
     try {
-      out.push(loadModSource(mod))
+      out.push(loadModSources(mod))
     } catch {
       /* skip unreadable */
     }

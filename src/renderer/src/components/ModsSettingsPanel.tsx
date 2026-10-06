@@ -216,6 +216,16 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
     return new Set(getModRuntime().getActiveMods().map((m) => m.name))
   }, [runtimeGeneration])
 
+  /** Mods that were consented but failed while loading (import error, hang). */
+  const loadErrors = useMemo(() => {
+    void runtimeGeneration
+    const map = new Map<string, string>()
+    for (const m of getModRuntime().getLoaded()) {
+      if (m.error) map.set(m.name, m.error)
+    }
+    return map
+  }, [runtimeGeneration])
+
   const activeMods = mods.filter((m) => m.enabled || activeNames.has(m.name))
   const installedMods = mods
 
@@ -358,6 +368,7 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
                 busy={busy}
                 masterOn={masterOn}
                 showRevoke={mod.consented}
+                loadError={loadErrors.get(mod.name)}
                 onReview={() => void openConsent(mod)}
                 onToggle={(on) => void togglePlugin(mod, on)}
                 onRevoke={() => void revokeConsent(mod)}
@@ -486,6 +497,7 @@ function ModRowView({
   busy,
   masterOn,
   showRevoke,
+  loadError,
   onReview,
   onToggle,
   onRevoke,
@@ -495,6 +507,7 @@ function ModRowView({
   busy: boolean
   masterOn: boolean
   showRevoke?: boolean
+  loadError?: string
   onReview: () => void
   onToggle: (on: boolean) => void
   onRevoke: () => void
@@ -520,6 +533,11 @@ function ModRowView({
             <span className="mods-badge review">{t('settings.modsSection.needsReview')}</span>
           )}
           {mod.enabled && <span className="mods-badge on">{t('settings.modsSection.running')}</span>}
+          {loadError && (
+            <span className="mods-badge fail" title={loadError}>
+              {t('settings.modsSection.loadFailed')}
+            </span>
+          )}
         </div>
       </div>
       <div className="mods-tile-actions">

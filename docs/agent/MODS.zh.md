@@ -20,7 +20,7 @@ my-mod/
 
 `plugin.json` 需要 `name`。`version` 和 `description` 会显示在设置里。同意绑定的是这个版本。
 
-入口可以是 `.js`、`.mjs` 或 `.ts`。TypeScript 会在 import 之前用编译器去掉类型。没有 `modules` 的插件不会成为 mod。
+入口可以是 `.js`、`.mjs` 或 `.ts`。TypeScript 会在 import 之前用编译器去掉类型。列表里的每个模块都会按顺序加载，且都必须导出 `register`。没有 `modules` 的插件不会成为 mod。
 
 示例：`examples/mods/first-mod/`。
 
@@ -59,7 +59,7 @@ my-mod/
 
 允许后，该版本写入 `consentedPlugins`，名字会从 `disabledPlugins` 去掉。撤回同意会删掉条目并关闭该名字。
 
-静态检查是对目录调用 `mods.validate`（钩子列表、`$` 调用、未知事件名）。不在 `src/main/mods/validate.ts` 的 `KNOWN_EVENTS` 里的名字是错误。这份名单比应用实际发出的事件更宽。实际发出的是第 5 节。
+静态检查是对目录调用 `mods.validate`（钩子列表、`$` 调用、未知事件名）。不在 `src/main/mods/validate.ts` 的 `KNOWN_EVENTS` 里的名字是错误。这份名单比应用实际发出的事件更宽。被接受但实际不会发出的事件会在检查结果里给出警告。实际发出的是第 5 节。
 
 ## 4. `register(on)`
 
@@ -133,7 +133,7 @@ export function register(on) {
 | `$.http.fetch(url, init)` | 仅 `http` / `https`。`init` 为 `method`、`headers`、`body`、`timeoutMs`（默认 30 秒，最长 120 秒）。4xx 和 5xx 也返回 `{ status, ok, headers, text }`。非法 URL 或其他协议会抛错。风险为高。 |
 | `$.store.*` | 本机上按 mod 分开的键值。 |
 | `$.clock.now` / `sleep` / `after` / `every` | 计时器。用 `after` / `every` 返回的句柄取消。 |
-| `$.env.get` / `set` | `get` 先读加载时捕获的应用环境，再读这个 mod 写入的值。`set` 只作用于这个 mod 和之后的 `$.process.run`。不改应用进程的环境。 |
+| `$.env.get` / `set` | `get` 先读加载时捕获的应用环境，再读这个 mod 写入的值。快照只在 mod 源码引用 `$.env` 时才会采集。`set` 只作用于这个 mod 和之后的 `$.process.run`。不改应用进程的环境。 |
 | `$.model.complete({ prompt, system, model, maxTokens, timeoutMs })` | 用路由到的模型，或已配置的 `model`，做一次补全。不写入聊天记录。空提示、未知模型或空回答返回 `{ isAnswered: false, reason }`。`timeoutMs` 默认 60 秒，上限 180 秒。`maxTokens` 只降低提供方的输出上限。 |
 | `$.turn.abort()` | 停止当前轮。 |
 | `$.ui.log` | 本轮留在内存里。聊天界面不绘制它。 |

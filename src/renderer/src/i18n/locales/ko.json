@@ -1026,6 +1026,7 @@
       "empty": "아직 없어요. 예제를 설치하거나 폴더를 선택하세요.",
       "needsReview": "검토 필요",
       "running": "실행 중",
+      "loadFailed": "로드 실패",
       "review": "검토",
       "consentTitle": "“{{name}}”을(를) 허용할까요?",
       "consentBody": "이 mods는 프로세스 안에서 내 계정 권한으로 실행돼요. 허용하기 전에 가로채는 항목을 확인하세요.",

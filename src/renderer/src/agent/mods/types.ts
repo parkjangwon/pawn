@@ -51,6 +51,8 @@ export interface LoadedModInfo {
   description?: string
   hooks: string[]
   calls: string[]
+  /** First failure seen while loading (import error, missing register, hang). */
+  error?: string
 }
 
 export interface ModCommandReg {

@@ -869,9 +869,24 @@ export default function ChatArea({
   const handleSend = async (mode: 'queue' | 'steer' = defaultSendMode): Promise<void> => {
     if (!input.trim() && attachments.length === 0) return
     if (sendingRef.current) return
+    // Mod slash commands run in-process with no model, so they pass even
+    // before any provider is configured. Mods load lazily, so a cold chat
+    // must load them before the command list can answer.
+    let typedIsModCommand = false
+    if (input.trim().startsWith('/')) {
+      const cwdForMods =
+        (activeProjectId && projects.find((p) => p.id === activeProjectId)?.paths?.[0]) || ''
+      await ensureModsLoaded({
+        sessionId: activeSessionId || 'pending',
+        cwd: cwdForMods,
+        projectPath: cwdForMods || null
+      }).catch(() => [])
+      const m = input.trim().match(/^\/([A-Za-z0-9_-]+)(?:\s+([\s\S]*))?$/)
+      typedIsModCommand = !!m && getModRuntime().getCommands().some((c) => c.name === m[1])
+    }
     // Block the send (and keep the composed text) when nothing can answer it —
     // the composer chip and this gate route the user straight to Providers.
-    if (providers.filter((p) => p.enabled).length === 0) {
+    if (providers.filter((p) => p.enabled).length === 0 && !typedIsModCommand) {
       openSettingsSection('providers')
       return
     }

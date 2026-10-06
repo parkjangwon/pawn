@@ -34,7 +34,7 @@ my-mod/
 }
 ```
 
-진입점은 `.js`, `.mjs`, `.ts`예요. TypeScript는 import 전에 컴파일러로 지워요. `modules`가 없는 플러그인은 그냥 플러그인이에요. mod가 되지 않아요.
+진입점은 `.js`, `.mjs`, `.ts`예요. TypeScript는 import 전에 컴파일러로 지워요. 목록의 모든 모듈이 순서대로 불리고, 각각 `register`를 내보내야 해요. `modules`가 없는 플러그인은 그냥 플러그인이에요. mod가 되지 않아요.
 
 예제: `examples/mods/first-mod/`.
 
@@ -73,7 +73,7 @@ mods는 샌드박스가 없어요. 파일, 셸, 네트워크, 채팅을 내 계�
 
 허용하면 그 버전이 `consentedPlugins`에 들어가고, 이름은 `disabledPlugins`에서 빠져요. 동의를 철회하면 항목을 지우고 그 이름을 꺼요.
 
-정적 검사: 앱이 폴더에 `mods.validate`를 호출해요 (훅 목록, `$` 호출, 모르는 이벤트 이름). `src/main/mods/validate.ts`의 `KNOWN_EVENTS`에 없는 이름은 오류예요. 그 목록은 앱이 실제로 발생시키는 이벤트보다 넓어요. 발생시키는 목록은 5절이에요.
+정적 검사: 앱이 폴더에 `mods.validate`를 호출해요 (훅 목록, `$` 호출, 모르는 이벤트 이름). `src/main/mods/validate.ts`의 `KNOWN_EVENTS`에 없는 이름은 오류예요. 그 목록은 앱이 실제로 발생시키는 이벤트보다 넓어요. 허용되지만 실제로는 발생하지 않는 이벤트는 검사 결과에 경고로 표시돼요. 발생시키는 목록은 5절이에요.
 
 ## 4. `register(on)`
 
@@ -182,7 +182,7 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 | `$.http.fetch(url, init)` | `http`/`https`만. `init`은 `method`, `headers`, `body`, `timeoutMs`(기본 30초, 최대 120초). 4xx와 5xx도 `{ status, ok, headers, text }`로 돌아와요. 잘못된 URL이나 다른 스킴은 예외예요. 위험이 높음이에요. |
 | `$.store.get` / `set` / `delete` / `keys` | 이 기기의 mod별 키-값. |
 | `$.clock.now` / `sleep` / `after` / `every` | 타이머. `after` / `every`가 돌려준 핸들로 취소해요. |
-| `$.env.get` / `set` | `get`은 불러올 때 잡은 앱 환경, 그다음 이 mod가 넣은 값이에요. `set`은 이 mod와 이후 `$.process.run`에만 적용돼요. 앱 프로세스 환경은 바꾸지 않아요. |
+| `$.env.get` / `set` | `get`은 불러올 때 잡은 앱 환경, 그다음 이 mod가 넣은 값이에요. 스냅샷은 mod 소스가 `$.env`를 쓸 때만 잡아요. `set`은 이 mod와 이후 `$.process.run`에만 적용돼요. 앱 프로세스 환경은 바꾸지 않아요. |
 | `$.model.complete({ prompt, system, model, maxTokens, timeoutMs })` | 라우팅된 모델, 또는 설정된 `model`로 완성 한 번. 채팅 기록에는 안 써요. 빈 프롬프트, 없는 모델, 빈 답은 `{ isAnswered: false, reason }`이에요. `timeoutMs` 기본은 60초, 상한은 180초예요. `maxTokens`는 프로바이더 출력 상한을 낮추기만 해요. |
 | `$.turn.abort()` | 현재 턴을 멈춰요. |
 | `$.ui.log` | 이 채팅 동안 메모리에만 남아요. 채팅 화면에는 안 그려요. |

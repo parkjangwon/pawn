@@ -45,7 +45,7 @@ function listDirs(root: string): string[] {
 
 const MODULE_EXTS = ['.js', '.mjs', '.cjs', '.jsx', '.ts', '.mts', '.cts', '.tsx']
 
-function resolveModule(hooksDir: string, rel: string): { abs: string; relative: string } | null {
+export function resolveModule(hooksDir: string, rel: string): { abs: string; relative: string } | null {
   const cleaned = rel.replace(/^\.\//, '')
   const abs = resolve(hooksDir, cleaned)
   if (existsSync(abs) && statSync(abs).isFile()) {
@@ -75,8 +75,18 @@ export function inspectModDir(
   if (!name) return null
 
   const hooksDir = join(root, 'hooks')
-  const resolved = resolveModule(hooksDir, hooksJson.modules[0])
-  if (!resolved) return null
+  const first = resolveModule(hooksDir, hooksJson.modules[0])
+  if (!first) return null
+
+  const paths: string[] = [first.abs]
+  const relatives: string[] = [first.relative]
+  for (let i = 1; i < hooksJson.modules.length; i++) {
+    const extra = resolveModule(hooksDir, hooksJson.modules[i])
+    if (extra && !paths.includes(extra.abs)) {
+      paths.push(extra.abs)
+      relatives.push(extra.relative)
+    }
+  }
 
   return {
     id: `${name}@${meta.source}`,
@@ -84,8 +94,10 @@ export function inspectModDir(
     version: manifest?.version || '0.0.0',
     description: manifest?.description || hooksJson.description || '',
     root,
-    modulePath: resolved.abs,
-    moduleRelative: resolved.relative,
+    modulePath: first.abs,
+    moduleRelative: first.relative,
+    modulePaths: paths,
+    moduleRelatives: relatives,
     tier: meta.tier,
     source: meta.source,
     enabled: meta.enabled,

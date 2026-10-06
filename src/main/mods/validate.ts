@@ -1,6 +1,6 @@
 import { existsSync, readFileSync } from 'fs'
 import { basename, dirname, join } from 'path'
-import { inspectModDir } from './discover'
+import { inspectModDir, resolveModule } from './discover'
 import type { ModValidateFinding, ModValidateReport } from './types'
 
 /** Known Claude Code / Pawn mod events (subset; unknown names are errors). */
@@ -78,17 +78,40 @@ const KNOWN_EVENTS = new Set([
   'store.set'
 ])
 
+/** The events Pawn actually emits today (MODS.md §5). Others get a warning. */
+const EMITTED_EVENTS = new Set([
+  'session.start',
+  'session.end',
+  'session.compact',
+  'prompt.submit',
+  'turn.start',
+  'turn.complete',
+  'tool.call',
+  'tool.check',
+  'command.run',
+  'ui.render',
+  'ui.press',
+  'ui.input',
+  'ui.select'
+])
+
 function matcherLabel(raw: string | undefined): string {
   if (!raw) return ''
   const trimmed = raw.trim()
   if (!trimmed || trimmed === '{}') return ''
-  try {
-    const obj = Function(`"use strict"; return (${trimmed})`)() as Record<string, unknown>
-    const parts = Object.entries(obj).map(([k, v]) => `${k}=${String(v)}`)
-    return parts.length ? `{${parts.join(',')}}` : ''
-  } catch {
-    return trimmed.replace(/\s+/g, '')
+  // Static only: this runs before consent, so plugin source must never be
+  // evaluated here. Accept flat `{ key: literal }` pairs for display.
+  if (!/^\{[\s\S]*\}$/.test(trimmed)) return trimmed.replace(/\s+/g, '')
+  const body = trimmed.slice(1, -1)
+  const pairRe =
+    /(?:['"]?)([A-Za-z_][\w]*)(?:['"]?)\s*:\s*(?:'([^'\\]*)'|"([^"\\]*)"|(-?\d+(?:\.\d+)?)|true|false|null)/g
+  const parts: string[] = []
+  let m: RegExpExecArray | null
+  while ((m = pairRe.exec(body))) {
+    const value = m[2] ?? m[3] ?? m[4] ?? m[0].slice(m[0].indexOf(':') + 1).trim()
+    parts.push(`${m[1]}=${value}`)
   }
+  return parts.length ? `{${parts.join(',')}}` : trimmed.replace(/\s+/g, '')
 }
 
 /**
@@ -147,83 +170,106 @@ export function validateModDirectory(dir: string): ModValidateReport {
     return { ok: false, hooks: [], calls: [], envReads: [], envWrites: [], findings }
   }
 
-  let source = ''
+  // Every hooks.json entry must resolve; each resolvable module is checked.
+  const wanted: string[] = []
   try {
-    source = readFileSync(mod.modulePath, 'utf-8')
-  } catch (err) {
-    findings.push({
-      severity: 'error',
-      message: `Cannot read hooks module: ${err instanceof Error ? err.message : String(err)}`,
-      file: mod.moduleRelative
-    })
-    return {
-      ok: false,
-      mod: { name: mod.name, root: mod.root, moduleRelative: mod.moduleRelative },
-      hooks: [],
-      calls: [],
-      envReads: [],
-      envWrites: [],
-      findings
+    const hj = JSON.parse(readFileSync(join(root, 'hooks', 'hooks.json'), 'utf-8')) as {
+      modules?: unknown
     }
+    if (Array.isArray(hj.modules)) wanted.push(...hj.modules.map((x) => String(x)))
+  } catch {
+    /* inspectModDir already guaranteed a readable hooks.json */
   }
-
-  if (/\brequire\s*\(/.test(source)) {
-    findings.push({
-      severity: 'error',
-      message: 'Use import declarations; require() is not allowed in a hooks module',
-      file: mod.moduleRelative
-    })
-  }
-  if (/\bimport\s*\(/.test(source)) {
-    findings.push({
-      severity: 'error',
-      message: 'a dynamic import(); a hooks module imports its own files with an import declaration',
-      file: mod.moduleRelative
-    })
-  }
-
-  const hooks: string[] = []
-  const onRe = /\bon\s*\(\s*['"]([^'"]+)['"]\s*(?:,\s*(\{[\s\S]*?\})\s*)?,/g
-  let m: RegExpExecArray | null
-  while ((m = onRe.exec(source))) {
-    const event = m[1]
-    if (!KNOWN_EVENTS.has(event) && !event.startsWith('classic.')) {
+  for (const entry of wanted) {
+    if (!resolveModule(join(root, 'hooks'), entry)) {
       findings.push({
         severity: 'error',
-        message: `"${event}" is not an event`,
-        file: mod.moduleRelative
+        message: `hooks module not found: ${entry}`,
+        file: 'hooks/hooks.json'
       })
     }
-    const filter = matcherLabel(m[2])
-    hooks.push(filter ? `${event}${filter}` : event)
   }
 
-  if (!/\bexport\s+(async\s+)?function\s+register\b|\bexport\s*\{[^}]*\bregister\b/.test(source)) {
-    findings.push({
-      severity: 'error',
-      message: 'Hooks module must export function register(on, options?)',
-      file: mod.moduleRelative
-    })
-  }
-
+  const hooks = new Set<string>()
   const calls = new Set<string>()
-  const callRe = /\$\.([a-zA-Z_][\w]*)\.([a-zA-Z_][\w]*)/g
-  while ((m = callRe.exec(source))) {
-    calls.add(`$.${m[1]}.${m[2]}`)
-  }
-
   const envReads = new Set<string>()
   const envWrites = new Set<string>()
+
+  const onRe = /\bon\s*\(\s*['"]([^'"]+)['"]\s*(?:,\s*(\{[\s\S]*?\})\s*)?,/g
+  const callRe = /\$\.([a-zA-Z_][\w]*)\.([a-zA-Z_][\w]*)/g
   const envGetRe = /\$\.env\.get\(\s*['"]([^'"]+)['"]/g
-  while ((m = envGetRe.exec(source))) envReads.add(m[1])
   const envSetRe = /\$\.env\.set\(\s*['"]([^'"]+)['"]/g
-  while ((m = envSetRe.exec(source))) envWrites.add(m[1])
+
+  mod.modulePaths.forEach((modulePath, i) => {
+    const relative = mod.moduleRelatives[i] || modulePath
+    let source = ''
+    try {
+      source = readFileSync(modulePath, 'utf-8')
+    } catch (err) {
+      findings.push({
+        severity: 'error',
+        message: `Cannot read hooks module: ${err instanceof Error ? err.message : String(err)}`,
+        file: relative
+      })
+      return
+    }
+
+    if (/\brequire\s*\(/.test(source)) {
+      findings.push({
+        severity: 'error',
+        message: 'Use import declarations; require() is not allowed in a hooks module',
+        file: relative
+      })
+    }
+    if (/\bimport\s*\(/.test(source)) {
+      findings.push({
+        severity: 'error',
+        message: 'Dynamic import() is not allowed; keep the hooks module self-contained',
+        file: relative
+      })
+    }
+
+    let m: RegExpExecArray | null
+    while ((m = onRe.exec(source))) {
+      const event = m[1]
+      if (!KNOWN_EVENTS.has(event) && !event.startsWith('classic.')) {
+        findings.push({
+          severity: 'error',
+          message: `"${event}" is not an event`,
+          file: relative
+        })
+      }
+      if (!EMITTED_EVENTS.has(event)) {
+        findings.push({
+          severity: 'warning',
+          message: `"${event}" is accepted but Pawn never emits it today (see MODS.md §5)`,
+          file: relative
+        })
+      }
+      const filter = matcherLabel(m[2])
+      hooks.add(filter ? `${event}${filter}` : event)
+    }
+
+    if (!/\bexport\s+(async\s+)?function\s+register\b|\bexport\s*\{[^}]*\bregister\b/.test(source)) {
+      findings.push({
+        severity: 'error',
+        message: 'Hooks module must export function register(on, options?)',
+        file: relative
+      })
+    }
+
+    while ((m = callRe.exec(source))) {
+      calls.add(`$.${m[1]}.${m[2]}`)
+    }
+    while ((m = envGetRe.exec(source))) envReads.add(m[1])
+    while ((m = envSetRe.exec(source))) envWrites.add(m[1])
+  })
 
   const errors = findings.filter((f) => f.severity === 'error')
   return {
     ok: errors.length === 0,
     mod: { name: mod.name, root: mod.root, moduleRelative: mod.moduleRelative },
-    hooks: Array.from(new Set(hooks)),
+    hooks: Array.from(hooks),
     calls: Array.from(calls).sort(),
     envReads: Array.from(envReads).sort(),
     envWrites: Array.from(envWrites).sort(),

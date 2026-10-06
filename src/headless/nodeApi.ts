@@ -645,7 +645,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
             name: s.mod.name,
             root: s.mod.root,
             tier: s.mod.tier,
-            source: s.source,
+            sources: s.sources,
             language: s.language,
             userConfig: s.mod.userConfig
           }))

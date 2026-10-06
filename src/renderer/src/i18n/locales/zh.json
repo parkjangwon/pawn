@@ -1026,6 +1026,7 @@
       "empty": "还没有内容。请安装示例或选择文件夹。",
       "needsReview": "待审阅",
       "running": "运行中",
+      "loadFailed": "加载失败",
       "review": "审阅",
       "consentTitle": "允许“{{name}}”？",
       "consentBody": "此 mods 会在进程内以你的账户权限运行。允许前请先查看它挂钩的内容。",

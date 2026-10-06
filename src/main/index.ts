@@ -23,6 +23,7 @@ import { closeMemoryDb } from './memory'
 import { installAppMenu } from './appMenu'
 import { setAppLanguage } from './appLanguage'
 import { loadConfig } from './config'
+import { DEV_CSP, PROD_CSP } from './csp'
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err)
@@ -68,9 +69,7 @@ const boot = (): void => {
       callback({
         responseHeaders: {
           ...details.responseHeaders,
-          'Content-Security-Policy': [
-            "default-src 'self' 'unsafe-inline' http://localhost:* http://127.0.0.1:* ws://localhost:*; script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; style-src 'self' 'unsafe-inline' http://localhost:*; img-src 'self' data: blob: http://localhost:*; font-src 'self' http://localhost:*; connect-src 'self' https: http://localhost:* ws://localhost:*;"
-          ]
+          'Content-Security-Policy': [DEV_CSP]
         }
       })
       return
@@ -78,10 +77,8 @@ const boot = (): void => {
     callback({
       responseHeaders: {
         ...details.responseHeaders,
-        'Content-Security-Policy': [
-          // No remote img-src: a markdown image URL is a zero-click exfil channel.
-          "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: http://localhost:* http://127.0.0.1:*;"
-        ]
+        // No remote img-src: a markdown image URL is a zero-click exfil channel.
+        'Content-Security-Policy': [PROD_CSP]
       }
     })
   })

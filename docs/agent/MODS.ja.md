@@ -20,7 +20,7 @@ my-mod/
 
 `plugin.json` には `name` が必要です。`version` と `description` は設定に出ます。同意はこの版に結び付きます。
 
-入口は `.js`、`.mjs`、`.ts` です。TypeScript は import の前に TypeScript コンパイラで消します。`modules` が無いプラグインは mod になりません。
+入口は `.js`、`.mjs`、`.ts` です。TypeScript は import の前に TypeScript コンパイラで消します。リストの全モジュールを順に読み込み、それぞれが `register` を出す必要があります。`modules` が無いプラグインは mod になりません。
 
 例: `examples/mods/first-mod/`。
 
@@ -59,7 +59,7 @@ my-mod/
 
 許可するとその版が `consentedPlugins` に入り、名前は `disabledPlugins` から外れます。同意を取り消すと項目を消し、その名前をオフにします。
 
-静的検査はディレクトリに対する `mods.validate` です（フック一覧、`$` 呼び出し、未知のイベント名）。`src/main/mods/validate.ts` の `KNOWN_EVENTS` に無い名前はエラーです。その集合は、アプリが発火するイベントより広いです。発火するのは第5節です。
+静的検査はディレクトリに対する `mods.validate` です（フック一覧、`$` 呼び出し、未知のイベント名）。`src/main/mods/validate.ts` の `KNOWN_EVENTS` に無い名前はエラーです。その集合は、アプリが発火するイベントより広いです。受け付けられても発火しないイベントは、検査結果に警告として出ます。発火するのは第5節です。
 
 ## 4. `register(on)`
 
@@ -133,7 +133,7 @@ export function register(on) {
 | `$.http.fetch(url, init)` | `http` / `https` のみ。`init` は `method`、`headers`、`body`、`timeoutMs`（既定 30 秒、最大 120 秒）。4xx と 5xx も `{ status, ok, headers, text }`。不正な URL や他のスキームは例外。危険度は高。 |
 | `$.store.*` | この端末の mod ごとのキー値。 |
 | `$.clock.now` / `sleep` / `after` / `every` | タイマー。`after` と `every` のハンドルでキャンセル。 |
-| `$.env.get` / `set` | `get` は読み込み時のアプリ環境、その後この mod が入れた値。`set` はこの mod と後の `$.process.run` だけ。アプリプロセスの環境は変えない。 |
+| `$.env.get` / `set` | `get` は読み込み時のアプリ環境、その後この mod が入れた値。スナップショットは mod ソースが `$.env` を使うときだけ取る。`set` はこの mod と後の `$.process.run` だけ。アプリプロセスの環境は変えない。 |
 | `$.model.complete({ prompt, system, model, maxTokens, timeoutMs })` | 経路選択されたモデル、または設定済みの `model` で一回。チャットには書かない。空のプロンプト、未知のモデル、空の答えは `{ isAnswered: false, reason }`。`timeoutMs` は既定 60 秒、上限 180 秒。`maxTokens` は出力上限を下げるだけ。 |
 | `$.turn.abort()` | いまのターンを止める。 |
 | `$.ui.log` | セッション中メモリに残す。チャット画面には出さない。 |

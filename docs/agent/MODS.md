@@ -34,7 +34,7 @@ my-mod/
 }
 ```
 
-The entry may be `.js`, `.mjs`, or `.ts`. TypeScript is compiled with the TypeScript compiler before import. A plugin without `modules` stays a normal plugin and is not a mod.
+The entry may be `.js`, `.mjs`, or `.ts`. TypeScript is compiled with the TypeScript compiler before import. Every entry in the list is loaded in order and each must export `register`. A plugin without `modules` stays a normal plugin and is not a mod.
 
 Sample: `examples/mods/first-mod/`.
 
@@ -73,7 +73,7 @@ Before a mod loads, Settings shows a review dialog:
 
 Allow writes that exact version into `consentedPlugins` and removes the name from `disabledPlugins`. Revoke deletes the consent entry and disables the name.
 
-Static check: the app calls `mods.validate` on the directory (hooks list, `$` calls, unknown event names). A name outside `KNOWN_EVENTS` in `src/main/mods/validate.ts` is an error. That set is wider than the events the app emits. Section 5 is the emitted set.
+Static check: the app calls `mods.validate` on the directory (hooks list, `$` calls, unknown event names). A name outside `KNOWN_EVENTS` in `src/main/mods/validate.ts` is an error. That set is wider than the events the app emits: an accepted event that Pawn never emits is a warning in the report. Section 5 is the emitted set.
 
 ## 4. `register(on)`
 
@@ -182,7 +182,7 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 | `$.http.fetch(url, init)` | `http`/`https` only. `init` is `method`, `headers`, `body`, `timeoutMs` (default 30s, maximum 120s). 4xx and 5xx return `{ status, ok, headers, text }`. A bad URL or another scheme throws. High risk. |
 | `$.store.get` / `set` / `delete` / `keys` | Per-mod key-value store on this device. |
 | `$.clock.now` / `sleep` / `after` / `every` | Timers. Cancel the handle `after` / `every` return. |
-| `$.env.get` / `set` | `get` reads the app environment captured at load, then values this mod set. `set` applies to this mod and to later `$.process.run`. It does not change the app process environment. |
+| `$.env.get` / `set` | `get` reads the app environment captured at load, then values this mod set. The snapshot is taken only when a mod's source references `$.env`. `set` applies to this mod and to later `$.process.run`. It does not change the app process environment. |
 | `$.model.complete({ prompt, system, model, maxTokens, timeoutMs })` | One completion on the routed model, or on `model` when that id is configured. It does not write into the chat. An empty prompt, an unknown model, or an empty answer returns `{ isAnswered: false, reason }`. `timeoutMs` defaults to 60s and caps at 180s. `maxTokens` only lowers the provider output cap. |
 | `$.turn.abort()` | Stops the current turn. |
 | `$.ui.log` | Kept in memory for the session. The chat chrome does not draw it. |

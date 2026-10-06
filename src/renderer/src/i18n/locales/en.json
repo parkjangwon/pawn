@@ -1026,6 +1026,7 @@
       "empty": "Nothing here yet. Install the sample or choose a folder.",
       "needsReview": "Needs review",
       "running": "Running",
+      "loadFailed": "Failed to load",
       "review": "Review",
       "consentTitle": "Allow “{{name}}”?",
       "consentBody": "This mod runs in-process with your account permissions. Check what it hooks before allowing.",

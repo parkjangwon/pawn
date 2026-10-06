@@ -57,7 +57,7 @@ describe('ModRuntime (Claude Code first-mod)', () => {
         name: 'first-mod',
         root: '/tmp/first-mod',
         tier: 'user',
-        source: firstModSource()
+        sources: [firstModSource()]
       }
     ])
 
@@ -83,11 +83,13 @@ describe('ModRuntime (Claude Code first-mod)', () => {
         name: 'guard',
         root: '/tmp/guard',
         tier: 'user',
-        source: [
+        sources: [
+        [
           'export function register(on) {',
           "  on('tool.call', { tool: 'shell_exec' }, async () => ({ deny: 'no shells' }))",
           '}'
         ].join('\n')
+        ]
       }
     ])
     let ran = false
@@ -107,13 +109,13 @@ describe('ModRuntime (Claude Code first-mod)', () => {
         name: 'trim',
         root: '/tmp/trim',
         tier: 'user',
-        source: withDollar(
+        sources: [withDollar(
           [
             'export function register(on) {',
             "  on('prompt.submit', async (__API__, e, next) => next({ ...e, text: e.text.trim() }))",
             '}'
           ].join('\n')
-        )
+        )]
       }
     ])
     const out = await rt.emitPromptSubmit('  hello  ')
@@ -128,7 +130,7 @@ describe('ModRuntime (Claude Code first-mod)', () => {
         name: 'alpha',
         root: '/tmp/alpha',
         tier: 'user',
-        source: withDollar(
+        sources: [withDollar(
           [
             'let n = 1',
             'export function register(on) {',
@@ -151,18 +153,20 @@ describe('ModRuntime (Claude Code first-mod)', () => {
             '  })',
             '}'
           ].join('\n')
-        )
+        )]
       },
       {
         id: 'b@test',
         name: 'beta',
         root: '/tmp/beta',
         tier: 'user',
-        source: [
+        sources: [
+        [
           'export function register(on) {',
           "  on('tool.call', async (api, e, next) => next(e))",
           '}'
         ].join('\n')
+        ]
       }
     ])
 
@@ -200,7 +204,7 @@ describe('ModRuntime (Claude Code first-mod)', () => {
         name: 'tools',
         root: '/tmp/tools',
         tier: 'user',
-        source: withDollar(
+        sources: [withDollar(
           [
             'export function register(on) {',
             "  on('session.start', async (__API__, e, next) => {",
@@ -215,7 +219,7 @@ describe('ModRuntime (Claude Code first-mod)', () => {
             "  on('command.run', { command: 'env' }, async (__API__) => ({ text: __API__.env.get('MOD_NOTE') || '' }))",
             '}'
           ].join('\n')
-        )
+        )]
       }
     ])
     expect(rt.getTools()[0]?.fullName).toBe('mcp__tools__ping')
@@ -223,6 +227,118 @@ describe('ModRuntime (Claude Code first-mod)', () => {
     expect(getModToolDefinitions().some((t) => t.name === 'mcp__tools__ping')).toBe(true)
     const env = await rt.emitCommandRun('env', '')
     expect(env.text).toBe('kept')
+  })
+
+  it('loads every listed hooks.json module and keeps the mod alive if one fails', async () => {
+    const rt = new ModRuntime()
+    await rt.load([
+      {
+        id: 'multi@test',
+        name: 'multi',
+        root: '/tmp/multi',
+        tier: 'user',
+        sources: [
+          withDollar(
+            [
+              'export function register(on) {',
+              "  on('tool.call', async (__API__, e, next) => next(e))",
+              '}'
+            ].join('\n')
+          ),
+          [
+            'export function register(on) {',
+            "  on('command.run', { command: 'second' }, async () => ({ text: 'from second' }))",
+            '}'
+          ].join('\n')
+        ]
+      }
+    ])
+    expect(rt.getActiveMods().map((m) => m.name)).toContain('multi')
+    expect(rt.getLoaded()[0]?.hooks.sort()).toEqual(['command.run', 'tool.call'])
+
+    const answer = await rt.emitCommandRun('second', '')
+    expect(answer.text).toBe('from second')
+  })
+
+  it('marks a mod failed with an error when no module can load', async () => {
+    const rt = new ModRuntime()
+    await rt.load([
+      {
+        id: 'broken@test',
+        name: 'broken',
+        root: '/tmp/broken',
+        tier: 'user',
+        sources: ['export function register(on { // syntax error']
+      }
+    ])
+    const info = rt.getLoaded()[0]
+    expect(info?.enabled).toBe(false)
+    expect(info?.error).toBeTruthy()
+    expect(rt.getActiveMods()).toHaveLength(0)
+  })
+
+  it('ignores a stale next() so the core cannot run twice', async () => {
+    const rt = new ModRuntime()
+    await rt.load([
+      {
+        id: 'late@test',
+        name: 'late',
+        root: '/tmp/late',
+        tier: 'user',
+        sources: [
+          withDollar(
+            [
+              'export function register(on) {',
+              "  on('tool.call', async (__API__, e, next) => {",
+              "    setTimeout(() => { void next(e) }, 30)",
+              '    return next(e)',
+              '  })',
+              '}'
+            ].join('\n')
+          )
+        ]
+      }
+    ])
+    let coreRuns = 0
+    const out = await rt.emitToolCall('read_file', { path: 'x' }, async () => {
+      coreRuns += 1
+      return { result: 'core' }
+    })
+    expect(out.handled).toBe(false)
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    expect(coreRuns).toBe(1)
+  })
+
+  it('a late next() cannot re-run the chain after the hook answered', async () => {
+    const rt = new ModRuntime()
+    await rt.load([
+      {
+        id: 'deny@test',
+        name: 'deny',
+        root: '/tmp/deny',
+        tier: 'user',
+        sources: [
+          withDollar(
+            [
+              'export function register(on) {',
+              "  on('tool.call', async (__API__, e, next) => {",
+              '    setTimeout(() => { void next(e) }, 30)',
+              "    return { deny: 'no' }",
+              '  })',
+              '}'
+            ].join('\n')
+          )
+        ]
+      }
+    ])
+    let coreRuns = 0
+    const out = await rt.emitToolCall('read_file', { path: 'x' }, async () => {
+      coreRuns += 1
+      return { result: 'core' }
+    })
+    expect(out.deny).toBe('no')
+    await new Promise((resolve) => setTimeout(resolve, 80))
+    expect(coreRuns).toBe(0)
   })
 
   it('stacks AbovePrompt bands and emits session.end on unload', async () => {
@@ -235,7 +351,7 @@ describe('ModRuntime (Claude Code first-mod)', () => {
         name: 'alpha',
         root: '/tmp/alpha',
         tier: 'user',
-        source: withDollar(
+        sources: [withDollar(
           [
             'export function register(on) {',
             "  on('ui.render', { component: 'AbovePrompt' }, async (__API__, e, next) => next({",
@@ -243,14 +359,15 @@ describe('ModRuntime (Claude Code first-mod)', () => {
             '  }))',
             '}'
           ].join('\n')
-        )
+        )]
       },
       {
         id: 'b@test',
         name: 'beta',
         root: '/tmp/beta',
         tier: 'user',
-        source: [
+        sources: [
+        [
           'export function register(on) {',
           "  on('ui.render', { component: 'AbovePrompt' }, async (api, e, next) => next({",
           '    ...e, props: { ...e.props, plugin: "beta", tree: { type: "Text", props: { text: "B" } } }',
@@ -258,6 +375,7 @@ describe('ModRuntime (Claude Code first-mod)', () => {
           "  on('session.end', () => { globalThis.__modEnded = true })",
           '}'
         ].join('\n')
+        ]
       }
     ])
     await rt.emitUiRender('AbovePrompt', {})

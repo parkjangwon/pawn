@@ -26,6 +26,9 @@ export interface DiscoveredMod {
   /** Absolute path to the hooks module entry (first modules[] entry). */
   modulePath: string
   moduleRelative: string
+  /** Every resolvable hooks module entry, first first. */
+  modulePaths: string[]
+  moduleRelatives: string[]
   tier: ModTier
   source: 'pawn' | 'claude' | 'plugin-dir' | 'project' | 'builtin'
   enabled: boolean
@@ -36,10 +39,10 @@ export interface DiscoveredMod {
   userConfig: Record<string, unknown>
 }
 
-export interface ModModuleSource {
+export interface ModMultiSource {
   mod: DiscoveredMod
-  /** ESM source ready for dynamic import (TS stripped when needed). */
-  source: string
+  /** One entry per resolvable hooks module, in hooks.json order. */
+  sources: string[]
   language: 'js' | 'ts'
 }
 

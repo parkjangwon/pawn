@@ -28,7 +28,7 @@ export async function ensureModsLoaded(ctx: ModRuntimeContext): Promise<LoadedMo
       name: s.name,
       root: s.root,
       tier: (s.tier as ModSourcePayload['tier']) || 'user',
-      source: s.source,
+      sources: Array.isArray(s.sources) ? s.sources : [],
       userConfig: s.userConfig
     }))
     return runtime.load(sources)

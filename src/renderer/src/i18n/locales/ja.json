@@ -1026,6 +1026,7 @@
       "empty": "まだありません。サンプルを入れるかフォルダを選んでください。",
       "needsReview": "要確認",
       "running": "実行中",
+      "loadFailed": "読み込み失敗",
       "review": "確認",
       "consentTitle": "「{{name}}」を許可しますか？",
       "consentBody": "この mods はプロセス内であなたの権限で動きます。許可前にフック内容を確認してください。",

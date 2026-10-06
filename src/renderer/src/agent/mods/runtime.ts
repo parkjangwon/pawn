@@ -29,6 +29,12 @@ export function applyPromptRewrite(original: string, returned: string): string {
 
 type RegisterFn = (on: ModOn, options?: Record<string, unknown>) => void | Promise<void>
 
+interface RegisterLoad {
+  register: RegisterFn | null
+  /** First failure seen while trying the candidates (blob / data / Function). */
+  error?: string
+}
+
 /**
  * Load a hooks module's `register` export.
  * Prefer ESM (data: / blob:), fall back to a Function wrapper for Node/vitest
@@ -37,7 +43,7 @@ type RegisterFn = (on: ModOn, options?: Record<string, unknown>) => void | Promi
 async function loadRegisterFn(
   source: string,
   trackUrl: (url: string) => void
-): Promise<RegisterFn | null> {
+): Promise<RegisterLoad> {
   const candidates: string[] = []
   try {
     if (typeof URL !== 'undefined' && typeof Blob !== 'undefined' && typeof URL.createObjectURL === 'function') {
@@ -51,6 +57,13 @@ async function loadRegisterFn(
   }
   candidates.push('data:text/javascript;charset=utf-8,' + encodeURIComponent(source))
 
+  let error: string | undefined
+  // Keep the last failure: the Function fallback's message is the most
+  // diagnostic one (a real SyntaxError, or the CSP refusal that blocked eval).
+  const note = (err: unknown): void => {
+    error = err instanceof Error ? err.message : String(err)
+  }
+
   for (const url of candidates) {
     try {
       const mod = (await import(/* @vite-ignore */ url)) as {
@@ -58,9 +71,9 @@ async function loadRegisterFn(
         default?: RegisterFn | { register?: RegisterFn }
       }
       const reg = mod.register || (typeof mod.default === 'function' ? mod.default : mod.default?.register)
-      if (typeof reg === 'function') return reg
-    } catch {
-      /* try next / Function fallback */
+      if (typeof reg === 'function') return { register: reg }
+    } catch (err) {
+      note(err)
     }
   }
 
@@ -75,10 +88,11 @@ async function loadRegisterFn(
     // eslint-disable-next-line no-new-func
     const factory = new Function(`${rewritten}\n; return typeof register === 'function' ? register : null;`)
     const reg = factory() as RegisterFn | null
-    return typeof reg === 'function' ? reg : null
-  } catch {
-    return null
+    if (typeof reg === 'function') return { register: reg }
+  } catch (err) {
+    note(err)
   }
+  return { register: null, error }
 }
 
 interface HookEntry {
@@ -96,7 +110,8 @@ export interface ModSourcePayload {
   name: string
   root: string
   tier: ModTier
-  source: string
+  /** One entry per hooks.json module, in order. */
+  sources: string[]
   userConfig?: Record<string, unknown>
 }
 
@@ -212,7 +227,11 @@ export class ModRuntime {
 
   async load(sources: ModSourcePayload[]): Promise<LoadedModInfo[]> {
     await this.unload()
-    await this.refreshProcessEnv()
+    // The env snapshot crosses the whole process environment into the
+    // renderer, so only take it when a mod actually reads `$.env`.
+    if (sources.some((s) => s.sources.some((code) => /\$\.env\b/.test(code)))) {
+      await this.refreshProcessEnv()
+    }
     for (const src of sources) {
       await this.loadOne(src)
     }
@@ -242,29 +261,59 @@ export class ModRuntime {
     const api = buildModsApi(host)
     const on = this.makeOn(src.name, src.tier || 'user', api)
 
-    try {
-      const register = await loadRegisterFn(src.source, (url) => this.blobUrls.push(url))
-      if (typeof register !== 'function') {
-        info.enabled = false
-        this.loaded.push(info)
-        return
+    // Load every listed module; the mod runs when at least one settles.
+    const errors: string[] = []
+    let loaded = 0
+    for (const source of src.sources) {
+      try {
+        const { register, error } = await loadRegisterFn(source, (url) => this.blobUrls.push(url))
+        if (error) errors.push(error)
+        if (typeof register !== 'function') continue
+        // register() may hang (a mod awaiting something that never resolves)
+        // and load() gates the first prompt, so give it the hook budget too.
+        const running = (async () => {
+          await register(on, src.userConfig || {})
+        })()
+        running.catch(() => {}) // the race below also handles it; this covers the timeout path
+        const outcome = await Promise.race([
+          running.then(
+            (): 'ok' => 'ok',
+            (err: unknown): { kind: 'error'; err: unknown } => ({ kind: 'error', err })
+          ),
+          new Promise<'timeout'>((resolve) => setTimeout(() => resolve('timeout'), HOOK_BUDGET_MS))
+        ])
+        if (outcome === 'timeout') {
+          errors.push(`register() did not settle within ${HOOK_BUDGET_MS / 1000}s`)
+          continue
+        }
+        if (outcome !== 'ok') {
+          errors.push(outcome.err instanceof Error ? outcome.err.message : String(outcome.err))
+          continue
+        }
+        loaded++
+      } catch (err) {
+        errors.push(err instanceof Error ? err.message : String(err))
       }
-      await register(on, src.userConfig || {})
-      const newHooks = this.hooks.slice(hooksBefore)
-      info.hooks = [...new Set(newHooks.map((h) => h.event))]
-      // Approximate calls from source text for UI
-      const callRe = /\$\.([a-zA-Z_][\w]*)\.([a-zA-Z_][\w]*)/g
-      const calls = new Set<string>()
-      let m: RegExpExecArray | null
-      while ((m = callRe.exec(src.source))) calls.add(`$.${m[1]}.${m[2]}`)
-      info.calls = [...calls].sort()
-      this.loaded.push(info)
-    } catch (err) {
-      info.enabled = false
-      info.hooks = []
-      console.warn('[mods] failed to load', src.name, err)
-      this.loaded.push(info)
     }
+
+    const newHooks = this.hooks.slice(hooksBefore)
+    info.hooks = [...new Set(newHooks.map((h) => h.event))]
+    if (loaded === 0) this.hooks.length = hooksBefore
+    // Approximate calls from source text for UI
+    const callRe = /\$\.([a-zA-Z_][\w]*)\.([a-zA-Z_][\w]*)/g
+    const calls = new Set<string>()
+    let m: RegExpExecArray | null
+    for (const source of src.sources) {
+      callRe.lastIndex = 0
+      while ((m = callRe.exec(source))) calls.add(`$.${m[1]}.${m[2]}`)
+    }
+    info.calls = [...calls].sort()
+    if (loaded === 0) info.enabled = false
+    if (errors.length > 0) {
+      info.error = errors[0].slice(0, 300)
+      console.warn('[mods]', src.name, 'load issue:', info.error)
+    }
+    this.loaded.push(info)
   }
 
   private makeHost(pluginName: string, pluginRoot: string): ModsApiHost {
@@ -355,11 +404,15 @@ export class ModRuntime {
 
     let index = 0
     let skipUntil: ModTier | null = null
+    /** The hook currently holding the chain. A stale next() after a timeout
+     * must not re-enter the chain once the chain has moved on. */
+    let activeEntry: HookEntry | null = null
 
     const runFrom = async (e: unknown, fromTier?: ModTier): Promise<unknown> => {
       if (fromTier) skipUntil = fromTier
       while (index < matched.length) {
         const entry = matched[index++]
+        activeEntry = entry
         if (skipUntil) {
           const entryIdx = TIER_ORDER.indexOf(entry.tier)
           const skipIdx = TIER_ORDER.indexOf(skipUntil)
@@ -377,6 +430,7 @@ export class ModRuntime {
 
         let nextCalled = false
         const next = ((nextEvent: unknown) => {
+          if (activeEntry !== entry) return Promise.resolve(nextEvent)
           nextCalled = true
           return runFrom(nextEvent)
         }) as ModNext
@@ -385,6 +439,7 @@ export class ModRuntime {
         next.origin = { plugin: entry.plugin, tier: entry.tier }
         next.budget = budget
         next.to = (nextEvent, tier) => {
+          if (activeEntry !== entry) return Promise.resolve(nextEvent)
           nextCalled = true
           return runFrom(nextEvent, tier)
         }
@@ -404,6 +459,9 @@ export class ModRuntime {
           ])
           if (!nextCalled) {
             this.lastAnswerPlugin = entry.plugin
+            // The handler settled without next: a later next() from it is
+            // stale and must not re-enter the chain past this answer.
+            activeEntry = null
             return result
           }
           return result
@@ -417,7 +475,10 @@ export class ModRuntime {
             catchNext.called = nextCalled
             try {
               const caught = await entry.catchHandler(entry.api, deepFreeze(e), catchNext)
-              if (!nextCalled) this.lastAnswerPlugin = entry.plugin
+              if (!nextCalled) {
+                this.lastAnswerPlugin = entry.plugin
+                activeEntry = null
+              }
               return caught
             } catch {
               /* fall through */
@@ -428,6 +489,7 @@ export class ModRuntime {
           continue
         }
       }
+      activeEntry = null
       return core(e)
     }
 

@@ -1237,7 +1237,7 @@ declare global {
             name: string
             root: string
             tier: string
-            source: string
+            sources: string[]
             language: string
             userConfig: Record<string, unknown>
           }>

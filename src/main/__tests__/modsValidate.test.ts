@@ -106,6 +106,66 @@ describe('mods validate / discover', () => {
     expect(report.findings.some((f) => f.message.includes('tool.calls'))).toBe(true)
   })
 
+  it('never evaluates matcher source while labeling', () => {
+    const g = globalThis as { __pawnPwned?: string }
+    const root = tempMod(
+      [
+        'export function register(on) {',
+        "  on('tool.call', { tool: (globalThis.__pawnPwned = 'pwned') }, async () => ({}))",
+        '}'
+      ].join('\n')
+    )
+    const report = validateModDirectory(root)
+    expect(g.__pawnPwned).toBeUndefined()
+    expect(report.hooks.some((h) => h.includes('tool.call'))).toBe(true)
+  })
+
+  it('warns when a hook listens to an event Pawn never emits', () => {
+    const root = tempMod(
+      [
+        'export function register(on) {',
+        "  on('classic.PreToolUse', async (api, e, next) => next(e))",
+        '}'
+      ].join('\n')
+    )
+    const report = validateModDirectory(root)
+    expect(report.ok).toBe(true)
+    expect(report.findings.some((f) => f.severity === 'warning' && f.message.includes('classic.PreToolUse'))).toBe(
+      true
+    )
+  })
+
+  it('discovers every hooks.json module and reports missing entries', () => {
+    const root = tempMod(
+      withDollar([
+        'export function register(on) {',
+        "  on('tool.call', async (__API__, e, next) => next(e))",
+        '}'
+      ].join('\n'))
+    )
+    writeFileSync(
+      join(root, 'hooks', 'hooks.json'),
+      JSON.stringify({ modules: ['./register.js', './extra.js', './missing.js'] })
+    )
+    writeFileSync(
+      join(root, 'hooks', 'extra.js'),
+      withDollar([
+        'export function register(on) {',
+        "  on('command.run', async () => ({ text: 'ok' }))",
+        '}'
+      ].join('\n'))
+    )
+    const mod = inspectModDir(root, { tier: 'user', source: 'plugin-dir', enabled: true, consented: true })
+    expect(mod?.modulePaths).toHaveLength(2)
+    expect(mod?.moduleRelatives).toEqual(['register.js', 'extra.js'])
+
+    const report = validateModDirectory(root)
+    expect(report.ok).toBe(false)
+    expect(report.findings.some((f) => f.message.includes('./missing.js'))).toBe(true)
+    expect(report.hooks.some((h) => h.startsWith('tool.call'))).toBe(true)
+    expect(report.hooks.some((h) => h.startsWith('command.run'))).toBe(true)
+  })
+
   it('validates examples/mods/first-mod', () => {
     const report = validateModDirectory(EXAMPLE_FIRST_MOD)
     expect(report.ok).toBe(true)
