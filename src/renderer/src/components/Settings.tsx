@@ -27,7 +27,6 @@ import './Settings.css'
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useFocusTrap } from '../utils/focusTrap'
 import { PanelLeft, Search } from 'lucide-react'
-import { useState, useMemo } from 'react'
 
 export default function Settings({
   onSidebarWidthChange,

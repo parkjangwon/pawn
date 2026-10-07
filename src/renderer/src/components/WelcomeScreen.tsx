@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, Check, Code, Globe, Monitor, Settings } from 'lucide-react'
 import { useProviderStore } from '../stores/provider'
@@ -10,6 +10,16 @@ interface WelcomeScreenProps {
   onPick: (text: string) => void
   /** The chat composer, rendered prominent directly under the greeting. */
   composer: ReactNode
+}
+
+const CHECKLIST_DISMISS_KEY = 'pawn-welcome-checklist-dismissed'
+
+type ChecklistItem = {
+  id: string
+  label: string
+  done: boolean
+  action?: () => void
+  actionLabel?: string
 }
 
 /** Local hour -> one of the six greeting segments. */
@@ -67,6 +77,13 @@ export default function WelcomeScreen({
     projects.some((p) => p.id !== '__general__' && Array.isArray(p.paths) && p.paths.length > 0)
 
   const [githubConnected, setGithubConnected] = useState<boolean | null>(null)
+  const [dismissed, setDismissed] = useState(() => {
+    try {
+      return localStorage.getItem(CHECKLIST_DISMISS_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
   const [hour, setHour] = useState(() => new Date().getHours())
 
   useEffect(() => {
@@ -182,6 +199,8 @@ export default function WelcomeScreen({
           ? t('chat.welcomeProject', { name: activeProject.name })
           : t('chat.welcomeSub')}
       </p>
+
+      <div className="welcome-composer">{composer}</div>
 
       {providerReady && !hasExtension && (
         <div className="welcome-mod-cta">

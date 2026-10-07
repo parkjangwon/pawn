@@ -4,6 +4,7 @@ import { render, screen } from '@testing-library/react'
 import WelcomeScreen, { getGreetingKey } from '../WelcomeScreen'
 
 vi.mock('react-i18next', () => ({
+  initReactI18next: { type: '3rdParty', init: () => {} },
   useTranslation: () => ({ t: (key: string, vars?: Record<string, string>) => (vars?.name ? `${key}:${vars.name}` : key) })
 }))
 
@@ -25,7 +26,7 @@ describe('getGreetingKey', () => {
 })
 
 describe('WelcomeScreen', () => {
-  it('renders greeting, then composer, then four home cards, with no onboarding', () => {
+  it('renders greeting, then composer, then four home cards, keeping the setup checklist', () => {
     render(
       <WelcomeScreen
         activeProject={undefined}
@@ -45,6 +46,6 @@ describe('WelcomeScreen', () => {
     expect(screen.getByText('chat.home.computerTitle')).toBeTruthy()
     expect(screen.getByText('chat.home.autoTitle')).toBeTruthy()
     expect(screen.getByText('chat.home.codeDesc')).toBeTruthy()
-    expect(document.querySelector('.welcome-checklist')).toBeNull()
+    expect(document.querySelector('.welcome-checklist')).toBeTruthy()
   })
 })

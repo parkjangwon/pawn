@@ -642,6 +642,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       aria-label={t('chat.send')}
                     >
                       <ArrowUp size={16} />
+                    </button>
+                  </>
                 )}
               </div>
             </div>

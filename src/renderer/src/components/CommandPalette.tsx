@@ -77,6 +77,15 @@ export function recordRecentCommand(id: string): void {
 }
 
 /** Label with fuzzy-matched characters wrapped in <mark>. */
+function Icon({ d }: { d: React.ReactNode }): React.JSX.Element {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      {d}
+    </svg>
+  )
+}
+
+/** Label with fuzzy-matched characters wrapped in <mark>. */
 function HighlightedText({ text, query }: { text: string; query: string }): React.JSX.Element {
   const ranges = query.trim() ? fuzzyMatchRanges(text, query) : []
   if (ranges.length === 0) return <>{text}</>
