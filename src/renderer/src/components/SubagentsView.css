@@ -155,7 +155,7 @@
   font-size: var(--text-ui-sm);
   padding: var(--space-6) 14px;
   border-radius: 999px;
-  box-shadow: 0 6px 18px color-mix(in srgb, #000 12%, transparent);
+  box-shadow: var(--shadow-elevated);
   animation: subagent-expand 0.16s ease;
   pointer-events: none;
 }
@@ -300,7 +300,7 @@
 
 .subagents-card:hover {
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border-color));
-  box-shadow: 0 6px 18px color-mix(in srgb, #000 8%, transparent);
+  box-shadow: var(--shadow-elevated);
 }
 
 .subagents-card.status-running {

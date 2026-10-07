@@ -237,7 +237,7 @@
 .rec-btn.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: var(--on-accent, #fff);
+  color: var(--on-accent);
   font-weight: 600;
 }
 .rec-btn.primary:hover:not(:disabled) {
@@ -258,12 +258,12 @@
   gap: var(--space-6);
 }
 .rec-start .rec-dot {
-  background: #fff;
+  background: var(--on-primary);
 }
 .rec-btn.primary.rec-stop {
   background: var(--danger);
   border-color: var(--danger);
-  color: #fff;
+  color: var(--on-primary);
 }
 
 .rec-goal {

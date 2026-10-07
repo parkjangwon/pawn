@@ -138,7 +138,7 @@
 }
 
 .app.dark .automation-card:hover {
-  border-color: #6e6e73;
+  border-color: var(--border-strong);
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35);
 }
 
@@ -199,12 +199,12 @@
 
 .automation-running-badge {
   background: var(--accent);
-  color: var(--on-accent, #fff);
+  color: var(--on-accent);
 }
 
 .app.dark .automation-running-badge {
-  background: #f5f5f7;
-  color: #1c1c1e;
+  background: var(--primary);
+  color: var(--on-primary);
   border-color: transparent;
 }
 
@@ -240,8 +240,8 @@
 }
 
 .app.dark .automation-modal {
-  background: #262628;
-  border-color: var(--border-strong, #48484a);
+  background: var(--bg-elevated);
+  border-color: var(--border-strong);
   box-shadow: var(--shadow-elevated);
 }
 
@@ -327,19 +327,19 @@
 .app.dark .automation-field input,
 .app.dark .automation-field textarea,
 .app.dark .automation-field select {
-  background: #1c1c1e;
+  background: var(--bg-input);
   border-color: var(--control-border);
   color: var(--text-primary);
 }
 
 .app.dark .automation-field select option {
-  background: #1c1c1e;
-  color: #f5f5f7;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
 .app.dark .automation-field input::placeholder,
 .app.dark .automation-field textarea::placeholder {
-  color: #8e8e93;
+  color: var(--text-muted);
 }
 
 
@@ -399,13 +399,13 @@
 
 .app.dark .automation-tool-btn:hover {
   background: var(--bg-hover);
-  border-color: #6e6e73;
+  border-color: var(--border-strong);
 }
 
 .app.dark .automation-card .settings-badge {
-  background: #3a3a3c;
+  background: var(--bg-active);
   color: var(--text-primary);
-  border: 1px solid var(--border-strong, #48484a);
+  border: 1px solid var(--border-strong);
 }
 
 .app.dark .automation-card .test-btn {

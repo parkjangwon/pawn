@@ -885,7 +885,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .app.dark .wiki-item-main:hover {
-  background: color-mix(in srgb, #2c2c2e 80%, transparent);
+  background: color-mix(in srgb, var(--bg-hover) 80%, transparent);
 }
 
 .wiki-item-title {
@@ -949,7 +949,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .wiki-item-degree {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
@@ -958,7 +958,7 @@ body.resizing-sidebar .settings-resizer::after {
 
 .wiki-total {
   padding: var(--space-sm) var(--space-md);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
 }
 
@@ -1233,7 +1233,7 @@ body.resizing-sidebar .settings-resizer::after {
   position: absolute;
   cursor: pointer;
   inset: 0;
-  background: color-mix(in srgb, var(--border-color) 80%, #999);
+  background: color-mix(in srgb, var(--border-color) 80%, var(--text-muted));
   border: 1px solid transparent;
   border-radius: 999px;
   transition: background-color 0.2s var(--ease-spring);
@@ -1259,7 +1259,7 @@ body.resizing-sidebar .settings-resizer::after {
 
 .toggle-switch input:checked + .toggle-slider::before {
   transform: translateX(16px);
-  background: var(--on-accent, #fff);
+  background: var(--on-accent);
 }
 
 /* Dark toggle */
@@ -1498,7 +1498,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .conn-logo-gitlab {
-  background: #fff;
+  background: var(--bg-elevated);
   border-color: rgba(226, 67, 41, 0.22);
 }
 
@@ -1760,7 +1760,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .app.dark .test-btn:hover:not(:disabled) {
-  border-color: #a1a1aa;
+  border-color: var(--border-strong);
   color: var(--text-primary);
   background: var(--bg-hover);
 }

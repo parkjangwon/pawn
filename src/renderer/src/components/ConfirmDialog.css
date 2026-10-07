@@ -60,7 +60,7 @@
 
 .confirm-btn.danger {
   background: var(--danger);
-  color: #fff;
+  color: var(--on-primary);
   border-color: var(--danger);
 }
 
@@ -70,12 +70,12 @@
 
 .confirm-btn.primary {
   background: var(--accent);
-  color: var(--on-accent, #fff);
+  color: var(--on-accent);
   border-color: var(--accent);
 }
 
 .app.dark .confirm-btn.primary {
-  color: var(--on-accent, #1c1c1e);
+  color: var(--on-accent);
 }
 
 .confirm-details {

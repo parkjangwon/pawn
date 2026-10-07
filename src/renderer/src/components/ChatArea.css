@@ -936,7 +936,7 @@
 
 /* Dark composer chips: raised gray pills so they don't melt into the input card */
 .app.dark .context-chip {
-  background: var(--bg-hover);
+  background: var(--bg-active);
   border-color: var(--border-strong);
   color: var(--text-secondary);
 }
@@ -949,7 +949,7 @@
 
 .app.dark .context-chip.project-chip:hover,
 .app.dark .context-chip.git-chip:hover {
-  background: var(--bg-active);
+  background: var(--bg-hover);
   border-color: var(--border-strong);
 }
 
@@ -1377,13 +1377,13 @@
   background: color-mix(in srgb, var(--danger) 10%, transparent);
 }
 .record-btn.recording {
-  color: #fff;
+  color: var(--on-primary);
   background: var(--danger);
   animation: recPulse 1.4s ease-in-out infinite;
 }
 .record-btn.recording:hover {
-  background: color-mix(in srgb, var(--danger) 85%, #000);
-  color: #fff;
+  background: var(--danger);
+  color: var(--on-primary);
 }
 
 .input-actions-left {
@@ -1464,7 +1464,7 @@
 }
 
 .app.dark .mode-segment-btn.agent-plan {
-  color: #5eead4;
+  color: var(--success);
 }
 
 .mode-segment-btn.agent-build {
@@ -1472,7 +1472,7 @@
 }
 
 .app.dark .mode-segment-btn.agent-build {
-  color: #93c5fd;
+  color: var(--accent);
 }
 
 .mode-segment-btn.perm-yolo {
@@ -1519,7 +1519,7 @@
 }
 
 .app.dark .perm-chip {
-  background: var(--bg-hover);
+  background: var(--bg-active);
   border-color: var(--border-strong);
 }
 
@@ -1575,13 +1575,13 @@
 .app.dark .perm-chip.perm-agent-plan {
   background: rgba(45, 212, 191, 0.12);
   border-color: rgba(45, 212, 191, 0.28);
-  color: #5eead4;
+  color: var(--success);
 }
 
 .app.dark .perm-chip.perm-agent-build {
   background: rgba(96, 165, 250, 0.12);
   border-color: rgba(96, 165, 250, 0.28);
-  color: #93c5fd;
+  color: var(--accent);
 }
 
 .perm-chip svg {
@@ -1804,12 +1804,12 @@
 
 .app.dark .model-chip-btn {
   color: var(--text-primary);
-  background: var(--bg-hover);
+  background: var(--bg-active);
   border-color: var(--border-strong);
 }
 
 .app.dark .model-chip-btn:hover {
-  background: var(--bg-active);
+  background: var(--bg-hover);
   border-color: var(--border-strong);
 }
 
@@ -1822,7 +1822,7 @@
   border-radius: 50%;
   border: none;
   background: var(--danger);
-  color: #fff;
+  color: var(--on-primary);
   cursor: pointer;
   flex-shrink: 0;
   transition: opacity 0.15s;
@@ -2586,7 +2586,7 @@
 }
 
 .selection-actions-btn.copied {
-  color: #34d399;
+  color: var(--success);
 }
 
 .selection-actions-sep {

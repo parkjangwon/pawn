@@ -727,7 +727,7 @@ body.resizing-right-panel .rp-resizer::after {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: var(--primary);
+  background: var(--warning);
   flex-shrink: 0;
   animation: rp-pick-pulse 1.2s ease-in-out infinite;
 }
@@ -747,7 +747,7 @@ body.resizing-right-panel .rp-resizer::after {
   display: flex;
   min-height: 0;
   position: relative;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 
 .rp-browser-viewport.mobile {
@@ -763,7 +763,7 @@ body.resizing-right-panel .rp-resizer::after {
   flex: 1;
   width: 100%;
   border: none;
-  background: #fff;
+  background: var(--bg-elevated);
 }
 
 /* Positioning placeholder for the native WebContentsView (see BrowserView.tsx).
@@ -1155,7 +1155,7 @@ body.resizing-right-panel .rp-resizer::after {
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: rgba(30, 30, 30, 0.75);
-  color: #ccc;
+  color: var(--text-primary);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s ease, background 0.15s ease;
@@ -1167,7 +1167,7 @@ body.resizing-right-panel .rp-resizer::after {
 
 .terminal-restart-btn:hover {
   background: rgba(70, 70, 70, 0.9);
-  color: #fff;
+  color: var(--text-primary);
 }
 
 /* ========== File Editor (in-panel) ========== */

@@ -165,7 +165,7 @@
 /* Filled primary — must use --on-accent (dark theme accent is light gray) */
 .allow-btn {
   background: var(--accent);
-  color: var(--on-accent, #fff);
+  color: var(--on-accent);
   min-width: 72px;
   font-weight: 600;
 }
@@ -193,14 +193,14 @@
 
 .app.dark .deny-btn,
 .app.dark .session-btn {
-  background: var(--control-bg, #2c2c2e);
-  border-color: var(--control-border, #48484a) !important;
+  background: var(--control-bg);
+  border-color: var(--control-border) !important;
   color: var(--text-primary);
 }
 
 .app.dark .allow-btn {
   background: var(--accent);
-  color: var(--on-accent, #1c1c1e);
+  color: var(--on-accent);
 }
 
 .permission-preview {
@@ -240,8 +240,8 @@
   color: var(--text-secondary);
 }
 .pp-line.add {
-  color: var(--success, #34d399);
-  background: color-mix(in srgb, var(--success, #34d399) 10%, transparent);
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 10%, transparent);
 }
 .pp-line.del {
   color: var(--danger);
