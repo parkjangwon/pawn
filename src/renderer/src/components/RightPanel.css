@@ -60,14 +60,15 @@ body.resizing-right-panel .rp-resizer::after {
   display: flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 24px 5px 8px;
-  border: none;
-  border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+  min-height: 28px;
+  padding: 4px 24px 4px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  font-size: var(--text-ui-sm);
-  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+  font-size: var(--text-ui-base);
+  transition: background-color, border-color, color var(--dur-fast);
   white-space: nowrap;
   position: relative;
 }
@@ -79,14 +80,11 @@ body.resizing-right-panel .rp-resizer::after {
 
 .rp-tab.active {
   color: var(--text-primary);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  border-bottom-color: var(--bg-primary);
-  margin-bottom: -1px;
+  background: var(--bg-active);
 }
 
 .rp-tab-label {
-  font-size: var(--text-ui-xs);
+  font-size: var(--text-ui-sm);
   font-weight: 500;
   max-width: 92px;
   overflow: hidden;
@@ -105,12 +103,12 @@ body.resizing-right-panel .rp-resizer::after {
   width: 24px;
   height: 24px;
   border: none;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
   margin-right: var(--space-6);
-  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
+  transition: background-color, color var(--dur-fast);
 }
 
 .rp-tab-close-panel:hover {
@@ -155,12 +153,15 @@ body.resizing-right-panel .rp-resizer::after {
   top: 38px;
   left: 8px;
   right: 8px;
-  background: var(--bg-primary);
+  background: var(--bg-elevated);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
   z-index: var(--z-dropdown);
   padding: 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   max-height: 240px;
   overflow-y: auto;
 }
@@ -170,14 +171,15 @@ body.resizing-right-panel .rp-resizer::after {
   align-items: center;
   gap: 8px;
   width: 100%;
-  padding: 8px var(--space-10);
+  min-height: 28px;
+  padding: 4px 8px;
   border: none;
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-primary);
-  font-size: var(--text-ui-caption);
+  font-size: var(--text-ui-base);
   cursor: pointer;
-  transition: background 0.1s;
+  transition: background-color, color var(--dur-fast);
 }
 
 .rp-picker-item:hover {
@@ -191,7 +193,7 @@ body.resizing-right-panel .rp-resizer::after {
   font-size: var(--text-ui-sm);
 }
 
-/* Tool picker screen (when no tabs open) */
+/* Empty state: ZCode-style "open tab" card grid (icon + label per tab) */
 .rp-tool-picker {
   display: flex;
   flex-direction: column;
@@ -201,74 +203,51 @@ body.resizing-right-panel .rp-resizer::after {
 }
 
 .rp-picker-title {
-  font-size: var(--text-ui-caption);
-  font-weight: 600;
-  color: var(--text-secondary);
-  margin-bottom: 8px;
-}
-
-.rp-tool-item {
-  display: flex;
-  align-items: center;
-  gap: var(--space-10);
-  width: 100%;
-  padding: 12px 14px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
+  font-size: var(--text-ui-base);
+  font-weight: 500;
   color: var(--text-primary);
-  cursor: pointer;
-  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
+  margin: 0 0 4px;
 }
 
-.rp-tool-item:hover {
-  border-color: var(--accent);
-  background: var(--accent-subtle);
-}
-
-.rp-tool-icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
-  background: var(--bg-secondary);
+.rp-picker-hint {
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
-  flex-shrink: 0;
+  margin: 0 0 8px;
 }
 
-.rp-tool-item:hover .rp-tool-icon {
-  color: var(--accent);
+.rp-tool-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(104px, 1fr));
+  gap: 8px;
 }
 
-.rp-tool-info {
-  flex: 1;
+.rp-tool-card {
   display: flex;
   flex-direction: column;
-  gap: 2px;
-  min-width: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: background-color, border-color, color var(--dur-fast);
+}
+
+.rp-tool-card:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .rp-tool-label {
-  font-size: var(--text-ui-caption);
+  font-size: var(--text-ui-sm);
   font-weight: 500;
-}
-
-.rp-tool-desc {
-  font-size: var(--text-ui-xs);
-  color: var(--text-muted);
-}
-
-.rp-tool-item > svg:last-child {
-  color: var(--text-muted);
-  opacity: 0;
-  transition: opacity 0.1s;
-}
-
-.rp-tool-item:hover > svg:last-child {
-  opacity: 1;
-  color: var(--accent);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 }
 
 /* Content area */
@@ -585,7 +564,7 @@ body.resizing-right-panel .rp-resizer::after {
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-muted);
-  font-size: var(--font-lg);
+  font-size: var(--text-ui-lg);
   line-height: 1;
   cursor: pointer;
   flex-shrink: 0;
@@ -980,18 +959,6 @@ body.resizing-right-panel .rp-resizer::after {
   text-align: center;
   color: var(--text-muted);
   font-size: var(--text-ui-sm);
-}
-
-/* On narrow windows the panel overlays the chat instead of being hidden. */
-@media (max-width: 1024px) {
-  .right-panel {
-    position: fixed;
-    top: var(--app-header-height);
-    right: 0;
-    bottom: 0;
-    z-index: var(--z-dropdown);
-    box-shadow: -10px 0 28px rgba(0, 0, 0, 0.22);
-  }
 }
 
 /* Browser error overlay */
@@ -1589,7 +1556,7 @@ body.resizing-right-panel .rp-resizer::after {
 }
 
 .rp-diff-empty-hint {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   padding: 0 var(--space-md) var(--space-md);
 }

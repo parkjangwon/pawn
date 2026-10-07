@@ -1619,6 +1619,7 @@
       "untrackedHint_other": "git がまだ追跡していない新規ファイル {{count}} 件"
     },
     "openTool": "ツールを開く",
+    "openTabHint": "サイドペインで開くタブを選んでください。",
     "toolDescs": {
       "terminal": "ローカルシェルアクセス",
       "files": "プロジェクトファイルの閲覧",

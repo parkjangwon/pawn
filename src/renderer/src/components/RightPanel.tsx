@@ -405,21 +405,18 @@ export default function RightPanel(): React.JSX.Element | null {
       return (
         <div className="rp-tool-picker">
           <h3 className="rp-picker-title">{t('rightPanel.openTool')}</h3>
+          <p className="rp-picker-hint">{t('rightPanel.openTabHint')}</p>
+          <div className="rp-tool-grid">
           {(Object.keys(TOOL_ICONS) as TabId[]).map((id) => {
             const Icon = TOOL_ICONS[id]
             return (
-            <button key={id} className="rp-tool-item" onClick={() => openTool(id)}>
-              <div className="rp-tool-icon">
-                <Icon size={20} />
-              </div>
-              <div className="rp-tool-info">
-                <span className="rp-tool-label">{t(`rightPanel.tools.${id}`)}</span>
-                <span className="rp-tool-desc">{t(`rightPanel.toolDescs.${id}`)}</span>
-              </div>
-              <Plus size={14} />
+            <button key={id} className="rp-tool-card" onClick={() => openTool(id)}>
+              <Icon size={20} />
+              <span className="rp-tool-label">{t(`rightPanel.tools.${id}`)}</span>
             </button>
             )
           })}
+          </div>
         </div>
       )
     }

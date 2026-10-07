@@ -1619,6 +1619,7 @@
       "untrackedHint_other": "git이 아직 추적하지 않는 새 파일 {{count}}개"
     },
     "openTool": "도구 열기",
+    "openTabHint": "사이드 패널에서 열 탭을 골라주세요.",
     "toolDescs": {
       "terminal": "로컬 셸 접근",
       "files": "프로젝트 파일 탐색",

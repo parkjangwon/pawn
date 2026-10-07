@@ -1619,6 +1619,7 @@
       "untrackedHint_other": "{{count}} 个尚未被 git 跟踪的新文件"
     },
     "openTool": "打开工具",
+    "openTabHint": "选择要在侧边面板中打开的选项卡。",
     "toolDescs": {
       "terminal": "本地Shell访问",
       "files": "浏览项目文件",

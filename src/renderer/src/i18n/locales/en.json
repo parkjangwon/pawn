@@ -1619,6 +1619,7 @@
       "untrackedHint_other": "{{count}} new files not tracked by git yet"
     },
     "openTool": "Open a tool",
+    "openTabHint": "Choose a tab to open in the side pane.",
     "toolDescs": {
       "terminal": "Local shell access",
       "files": "Browse project files",
