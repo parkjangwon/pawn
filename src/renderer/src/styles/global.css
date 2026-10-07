@@ -41,13 +41,14 @@
   --timeline-read: #9fbbe0;
   --timeline-edit: #c0a8dd;
   --timeline-done: #c08532;
-  --font-xs: 11px;
-  --font-sm: 12px;
-  --font-md: 13px;
-  --font-lg: 14px;
-  --font-xl: 16px;
-  --font-2xl: 20px;
-  --font-3xl: 24px;
+  /* v3.0.0: ZCode homage */
+  --ui-font-size: 14px;
+  --text-ui-xl: calc(var(--ui-font-size) + 4px);
+  --text-ui-lg: calc(var(--ui-font-size) + 2px);
+  --text-ui-base: var(--ui-font-size);
+  --text-ui-caption: calc(var(--ui-font-size) - 1px);
+  --text-ui-sm: calc(var(--ui-font-size) - 2px);
+  --text-ui-xs: calc(var(--ui-font-size) - 4px);
   /* Motion system — snappy spring + short durations for “instant but alive” feel */
   --ease-spring: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
@@ -60,7 +61,7 @@
   /* Shared chat column width: welcome, messages, composer stay aligned */
   --chat-content-max: 720px;
   /* Message text size — Settings → Appearance overrides at runtime */
-  --chat-font-size: var(--font-lg);
+  --chat-font-size: var(--text-ui-base);
 }
 
 * {
@@ -84,7 +85,7 @@ html, body, #root {
   position: fixed;
   right: 10px;
   bottom: 5px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   line-height: 1;
   color: var(--text-muted);
   opacity: 0.55;
@@ -97,7 +98,7 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-size: var(--font-lg);
+  font-size: var(--text-ui-base);
   line-height: 1.6;
   text-rendering: optimizeLegibility;
   /* Reduce paint cost when scrolling long chats */
@@ -115,7 +116,7 @@ body {
   max-width: min(480px, 90vw);
   padding: 10px 16px;
   border-radius: 999px;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   line-height: 1.4;
   color: var(--text-primary);
   background: color-mix(in srgb, var(--bg-secondary) 92%, var(--accent));
@@ -133,7 +134,7 @@ body {
   border-radius: var(--radius-sm);
   background: var(--accent, #2c2c2c);
   color: var(--on-accent, #fff);
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 600;
   text-decoration: none;
   white-space: nowrap;

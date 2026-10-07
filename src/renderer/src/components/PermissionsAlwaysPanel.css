@@ -9,7 +9,7 @@
 }
 
 .perm-always-empty {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
   padding: 10px 12px;
   border: 1px dashed var(--border-color);
@@ -51,12 +51,12 @@
 }
 
 .perm-always-item-info strong {
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 600;
 }
 
 .perm-always-detail {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   color: var(--text-secondary);
   word-break: break-all;
@@ -64,7 +64,7 @@
 
 .perm-always-badge {
   align-self: flex-start;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   padding: 2px 7px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--accent) 14%, transparent);
@@ -78,7 +78,7 @@
   background: transparent;
   color: var(--danger);
   border-radius: 999px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   padding: 4px 10px;
   cursor: pointer;
 }

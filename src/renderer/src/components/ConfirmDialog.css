@@ -23,14 +23,14 @@
 }
 
 .confirm-dialog h3 {
-  font-size: var(--font-lg);
+  font-size: var(--text-ui-base);
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--space-sm);
 }
 
 .confirm-dialog p {
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   color: var(--text-secondary);
   line-height: 1.5;
   margin-bottom: var(--space-lg);
@@ -45,7 +45,7 @@
 .confirm-btn {
   padding: 7px 16px;
   border-radius: var(--radius-md);
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 500;
   cursor: pointer;
   border: 1px solid var(--border-color);
@@ -86,7 +86,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
 }
 

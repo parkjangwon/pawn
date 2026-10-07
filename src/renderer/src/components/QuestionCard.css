@@ -28,14 +28,14 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--success) 16%, transparent);
   color: var(--success);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-weight: 700;
 }
 
 .question-card-title {
   flex: 1;
   min-width: 0;
-  font-size: var(--font-lg);
+  font-size: var(--text-ui-base);
   font-weight: 600;
   line-height: 1.45;
   color: var(--text-primary);
@@ -70,7 +70,7 @@
   background: transparent;
   padding: 0;
   color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
@@ -84,7 +84,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--radius-md);
   background: var(--bg-primary);
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
 }
 
 .question-card-options {
@@ -130,7 +130,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
@@ -142,12 +142,12 @@
 }
 
 .question-card-option-label {
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 500;
 }
 
 .question-card-option-desc {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
   line-height: 1.4;
 }
@@ -161,7 +161,7 @@
   background: var(--bg-primary);
   color: var(--text-primary);
   font: inherit;
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   resize: vertical;
   min-height: 36px;
 }
@@ -181,7 +181,7 @@
 
 .question-card-hint {
   margin-right: auto;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
 }
 
@@ -191,7 +191,7 @@
   border-radius: var(--radius-md);
   background: var(--bg-secondary);
   color: var(--text-primary);
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 500;
   cursor: pointer;
 }
@@ -222,7 +222,7 @@
   border-radius: 999px;
   background: color-mix(in srgb, var(--success) 16%, transparent);
   color: var(--success);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-weight: 600;
   line-height: 1.5;
   white-space: nowrap;

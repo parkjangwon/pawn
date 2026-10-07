@@ -33,7 +33,7 @@
   border: none;
   color: var(--text-primary);
   font: inherit;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   cursor: pointer;
   text-align: left;
 }
@@ -44,7 +44,7 @@
 
 .subagent-activity-chevron {
   color: var(--text-muted);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   transition: transform var(--dur-fast) var(--ease-out-soft);
 }
 
@@ -104,7 +104,7 @@
   align-items: center;
   gap: 6px;
   padding: 5px 12px 0;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
 }
 
 .subagent-activity-dot {
@@ -149,7 +149,7 @@
 }
 
 .subagent-activity-status {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
 }
 
@@ -170,7 +170,7 @@
   border: none;
   background: none;
   color: var(--text-muted);
-  font-size: var(--font-lg);
+  font-size: var(--text-ui-base);
   line-height: 1;
   padding: 0 2px;
   cursor: pointer;

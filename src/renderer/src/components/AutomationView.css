@@ -28,14 +28,14 @@
 }
 
 .automation-page-head h2 {
-  font-size: var(--font-3xl);
+  font-size: var(--text-ui-xl);
   font-weight: 700;
   color: var(--text-primary);
   margin-bottom: var(--space-xs);
 }
 
 .automation-page-head h3 {
-  font-size: var(--font-xl);
+  font-size: var(--text-ui-lg);
   font-weight: 600;
   color: var(--text-primary);
   margin: 0;
@@ -81,14 +81,14 @@
 }
 
 .automation-hero h3 {
-  font-size: var(--font-2xl);
+  font-size: var(--text-ui-xl);
   font-weight: 600;
   color: var(--text-primary);
   margin-bottom: var(--space-xs);
 }
 
 .automation-hero p {
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   color: var(--text-muted);
   max-width: 440px;
   margin: 0 auto var(--space-lg);
@@ -97,7 +97,7 @@
 
 .btn-primary.automation-cta {
   padding: 8px 20px;
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 500;
   border-radius: var(--radius-md);
 }
@@ -159,7 +159,7 @@
 }
 
 .automation-card-head h4 {
-  font-size: var(--font-lg);
+  font-size: var(--text-ui-base);
   font-weight: 600;
   color: var(--text-primary);
   overflow: hidden;
@@ -168,7 +168,7 @@
 }
 
 .automation-card-desc {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
   line-height: 1.45;
   margin-bottom: 6px;
@@ -180,7 +180,7 @@
 
 .automation-card-result {
   margin: 0 0 10px;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   line-height: 1.4;
   color: var(--text-secondary);
   opacity: 0.9;
@@ -191,7 +191,7 @@
 }
 
 .automation-card-meta {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   margin-top: auto;
   margin-bottom: var(--space-sm);
@@ -259,7 +259,7 @@
 }
 
 .automation-modal-head h3 {
-  font-size: var(--font-lg);
+  font-size: var(--text-ui-base);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -299,7 +299,7 @@
 }
 
 .automation-field label {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -313,7 +313,7 @@
   color: var(--text-primary);
   border-radius: var(--radius-md);
   padding: 8px 12px;
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   outline: none;
   font-family: inherit;
 }
@@ -344,7 +344,7 @@
 
 
 .automation-field-hint {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
 }
 
@@ -365,7 +365,7 @@
 }
 
 .automation-modal-hint {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
 }
 
@@ -381,7 +381,7 @@
   border-radius: var(--radius-sm);
   background: transparent;
   color: var(--text-secondary);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   cursor: pointer;
   -webkit-app-region: no-drag;
 }
@@ -415,7 +415,7 @@
 }
 
 .automation-import-msg {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   margin-right: var(--space-sm);
 }
@@ -441,7 +441,7 @@
 }
 .automation-advanced > summary {
   cursor: pointer;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
   padding: 4px 0;
   user-select: none;
@@ -477,7 +477,7 @@
 .automation-templates > summary::before {
   content: '▸';
   color: var(--text-muted);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   transition: transform 0.15s ease;
 }
 .automation-templates[open] > summary::before {

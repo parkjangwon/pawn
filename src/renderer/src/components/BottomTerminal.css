@@ -61,7 +61,7 @@ body.resizing-bottom-terminal .bt-resizer::after {
   gap: 8px;
   flex: 1;
   min-width: 0;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   font-weight: 500;
   color: var(--text-secondary);
 }
@@ -73,7 +73,7 @@ body.resizing-bottom-terminal .bt-resizer::after {
 
 .bt-path {
   font-weight: 400;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;

@@ -29,7 +29,7 @@
 }
 
 .fb-header h3 {
-  font-size: var(--font-lg);
+  font-size: var(--text-ui-base);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -59,7 +59,7 @@
   border-bottom: 1px solid var(--border-color);
   overflow-x: auto;
   white-space: nowrap;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
 }
 
 .fb-crumb {
@@ -69,7 +69,7 @@
   cursor: pointer;
   padding: 2px 4px;
   border-radius: var(--radius-xs);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
 }
 
 .fb-crumb:hover {
@@ -94,7 +94,7 @@
   padding: 6px var(--space-sm);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   color: var(--text-primary);
   transition: background 0.1s;
 }
@@ -125,7 +125,7 @@
 .fb-empty {
   padding: var(--space-lg);
   text-align: center;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-muted);
 }
 
@@ -144,7 +144,7 @@
 
 .fb-current-path {
   flex: 1;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-muted);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -161,7 +161,7 @@
 .fb-btn {
   padding: 6px 14px;
   border-radius: var(--radius-sm);
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   cursor: pointer;
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);

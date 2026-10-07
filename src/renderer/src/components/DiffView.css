@@ -4,7 +4,7 @@
   overflow: hidden;
   margin: 8px 0;
   font-family: 'SF Mono', 'Fira Code', 'Consolas', monospace;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   line-height: 1.5;
 }
 
@@ -38,7 +38,7 @@
 }
 
 .diff-filename {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   font-weight: 500;
   color: var(--text-primary);
 }
@@ -46,7 +46,7 @@
 .diff-stats {
   display: flex;
   gap: 8px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-weight: 600;
 }
 
@@ -87,7 +87,7 @@
   text-align: right;
   padding: 0 6px;
   color: var(--text-muted);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   user-select: none;
 }
 
@@ -131,7 +131,7 @@
   border: none;
   border-top: 1px solid var(--border-color);
   color: var(--accent);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   cursor: pointer;
 }
 
@@ -161,7 +161,7 @@
   color: var(--text-primary);
   border-radius: var(--radius-sm);
   padding: 2px 8px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   cursor: pointer;
 }
 .diff-action-btn:hover {
@@ -172,6 +172,6 @@
   color: var(--danger);
 }
 .diff-action-msg {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
 }

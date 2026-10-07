@@ -40,15 +40,15 @@
   gap: 8px;
   min-width: 0;
   flex-wrap: wrap;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
 }
 .rec-head strong {
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   color: var(--text-primary);
 }
 .rec-sub {
   color: var(--text-muted);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
 }
 .rec-num {
   font-variant-numeric: tabular-nums;
@@ -112,7 +112,7 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
 }
 .rec-field em {
@@ -129,7 +129,7 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   font: inherit;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   resize: vertical;
   outline: none;
 }
@@ -147,7 +147,7 @@
   gap: var(--space-6);
 }
 .rec-sources legend {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
   margin-bottom: 4px;
 }
@@ -172,11 +172,11 @@
   min-width: 0;
 }
 .rec-check strong {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-primary);
 }
 .rec-check small {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   line-height: 1.4;
 }
@@ -190,7 +190,7 @@
   border: none;
   padding: 0;
   color: var(--accent);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   cursor: pointer;
 }
 .rec-link:hover,
@@ -201,7 +201,7 @@
 .rec-tips {
   margin: 0;
   padding-left: 18px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   line-height: 1.5;
 }
@@ -222,7 +222,7 @@
   background: var(--bg-secondary);
   color: var(--text-primary);
   font: inherit;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   font-weight: 500;
   line-height: 1.4;
   cursor: pointer;
@@ -267,22 +267,22 @@
 }
 
 .rec-goal {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-primary);
 }
 .rec-last {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 .rec-note {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
 }
 .rec-error {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--danger);
 }
 
@@ -304,14 +304,14 @@
   flex-wrap: wrap;
 }
 .skill-card-head code {
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 600;
   color: var(--text-primary);
   background: none;
   padding: 0;
 }
 .skill-card-badge {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-weight: 600;
   padding: 1px 7px;
   border-radius: 999px;
@@ -323,7 +323,7 @@
   color: var(--success);
 }
 .skill-card-desc {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
   line-height: 1.5;
 }
@@ -331,7 +331,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-6);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
 }
 .skill-card-inputs code {
   padding: 1px var(--space-6);
@@ -349,7 +349,7 @@
   min-width: 8px;
 }
 .skill-card-path {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   word-break: break-all;
 }
@@ -361,7 +361,7 @@
   border-radius: var(--radius-sm);
   background: var(--bg-primary);
   border: 1px solid var(--border-color);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   line-height: 1.5;
   white-space: pre-wrap;
   word-break: break-word;
@@ -371,7 +371,7 @@
   grid-template-columns: minmax(90px, max-content) 1fr;
   gap: var(--space-6) var(--space-10);
   align-items: center;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
 }
 .skill-run-form label {
   color: var(--text-secondary);
@@ -383,7 +383,7 @@
   background: var(--bg-primary);
   color: var(--text-primary);
   font: inherit;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   outline: none;
 }
 .skill-run-form input:focus {

@@ -35,7 +35,7 @@
   border: none;
   cursor: pointer;
   color: var(--text-primary);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   text-align: left;
   user-select: none;
 }
@@ -111,7 +111,7 @@
   border-radius: var(--radius-xs);
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-family: var(--font-mono, monospace);
   color: var(--text-secondary);
 }
@@ -130,7 +130,7 @@
 }
 
 .tool-batch-diff-badge {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-weight: 600;
   padding: 1px 6px;
   border-radius: var(--radius-xs);
@@ -166,7 +166,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -188,7 +188,7 @@
 }
 
 .tool-batch-duration {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }

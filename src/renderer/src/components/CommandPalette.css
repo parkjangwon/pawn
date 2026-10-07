@@ -173,7 +173,7 @@
   /* NOT sticky — eliminates all overlay/bleed bugs */
   position: static;
   padding: var(--space-6) var(--space-10) 5px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-weight: 600;
   color: var(--text-muted);
   user-select: none;
@@ -238,7 +238,7 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 1.3;
@@ -256,7 +256,7 @@
   flex-shrink: 0;
   padding: 1px var(--space-6);
   border-radius: var(--radius-xs);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-weight: 600;
   color: var(--text-muted);
   background: var(--bg-secondary);
@@ -264,7 +264,7 @@
 }
 
 .cp-item-desc {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   line-height: 1.3;
   color: var(--text-muted);
   overflow: hidden;
@@ -273,7 +273,7 @@
 }
 
 .cp-item-project-tag {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-muted);
   flex-shrink: 0;
   margin-left: auto;
@@ -300,14 +300,14 @@
 }
 
 .cp-empty-title {
-  font-size: var(--font-md);
+  font-size: var(--text-ui-caption);
   font-weight: 500;
   color: var(--text-secondary);
   margin-bottom: 4px;
 }
 
 .cp-empty-hint {
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-muted);
 }
 
@@ -326,7 +326,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   user-select: none;
 }
@@ -344,7 +344,7 @@
   border-radius: var(--radius-xs);
   background: var(--bg-primary);
   color: var(--text-muted);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-family: inherit;
   font-weight: 500;
   line-height: 1;

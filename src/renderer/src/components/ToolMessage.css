@@ -5,7 +5,7 @@
   border: 1px solid var(--border-color);
   background: var(--bg-elevated, var(--bg-secondary));
   overflow: hidden;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   transition:
     border-color var(--dur-fast) var(--ease-out-soft),
     box-shadow var(--dur-fast) var(--ease-out-soft),
@@ -86,7 +86,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-family: var(--font-mono);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
 }
 
@@ -95,7 +95,7 @@
   gap: 4px;
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   font-variant-numeric: tabular-nums;
 }
 
@@ -110,7 +110,7 @@
 .tool-duration {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-muted);
   font-variant-numeric: tabular-nums;
 }
@@ -122,7 +122,7 @@
 .tool-status {
   margin-left: auto;
   flex-shrink: 0;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   padding: 1px 6px;
   border-radius: var(--radius-xs);
   font-weight: 600;
@@ -176,7 +176,7 @@
 }
 
 .tool-message-content {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   line-height: 1.4;
   margin: 0;
   white-space: pre-wrap;
@@ -202,7 +202,7 @@
 }
 
 .tool-show-more {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--accent);
   background: none;
   border: none;
@@ -235,7 +235,7 @@
 }
 
 .tool-badge-warn {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   padding: 0 5px;
   border-radius: var(--radius-xs);
   background: color-mix(in srgb, var(--warning) 22%, transparent);

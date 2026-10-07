@@ -37,7 +37,7 @@
 
 .usage-stat-val {
   display: block;
-  font-size: var(--font-xl);
+  font-size: var(--text-ui-lg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
@@ -46,7 +46,7 @@
 .usage-stat-label {
   display: block;
   margin-top: 4px;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-secondary);
 }
 
@@ -59,7 +59,7 @@
 .usage-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
 }
 
 .usage-table th,
@@ -70,7 +70,7 @@
 }
 
 .usage-table th {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-secondary);
   background: color-mix(in srgb, var(--bg-secondary) 85%, transparent);
   position: sticky;
@@ -83,6 +83,6 @@
 
 .usage-mono {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   word-break: break-all;
 }
