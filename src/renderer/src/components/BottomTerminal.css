@@ -111,6 +111,7 @@ body.resizing-bottom-terminal .bt-resizer::after {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg-primary);
+  padding-left: 8px;
 }
 
 /* Restart button lives inside TerminalView; show it on panel hover too */
