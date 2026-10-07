@@ -55,7 +55,7 @@ describe('ChatFindBar', () => {
   it('focuses the input and counts matches across messages', () => {
     vi.useFakeTimers()
     renderBar()
-    const input = screen.getByRole('textbox', { name: 'chat.find.placeholder' })
+    const input = screen.getByRole('textbox', { name: 'Find in conversation' })
     expect(document.activeElement).toBe(input)
     fireEvent.change(input, { target: { value: 'router' } })
     act(() => {
@@ -63,7 +63,7 @@ describe('ChatFindBar', () => {
     })
     // 1 match in the prompt + 2 in the reply. jsdom has no layout, so it
     // starts at the latest match.
-    expect(screen.getByText('chat.find.count:3,3')).toBeInTheDocument()
+    expect(screen.getByText('3/3')).toBeInTheDocument()
   })
 
   it('steps through matches with Enter / Shift+Enter and wraps', () => {
@@ -72,14 +72,14 @@ describe('ChatFindBar', () => {
     act(() => {
       vi.advanceTimersByTime(200)
     })
-    const input = screen.getByRole('textbox', { name: 'chat.find.placeholder' })
+    const input = screen.getByRole('textbox', { name: 'Find in conversation' })
     fireEvent.keyDown(input, { key: 'Enter' })
-    expect(screen.getByText('chat.find.count:1,3')).toBeInTheDocument()
+    expect(screen.getByText('1/3')).toBeInTheDocument()
     fireEvent.keyDown(input, { key: 'ArrowDown' })
-    expect(screen.getByText('chat.find.count:2,3')).toBeInTheDocument()
+    expect(screen.getByText('2/3')).toBeInTheDocument()
     fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
     fireEvent.keyDown(input, { key: 'Enter', shiftKey: true })
-    expect(screen.getByText('chat.find.count:3,3')).toBeInTheDocument()
+    expect(screen.getByText('3/3')).toBeInTheDocument()
   })
 
   it('shows "no results" and disables navigation when nothing matches', () => {
@@ -88,8 +88,8 @@ describe('ChatFindBar', () => {
     act(() => {
       vi.advanceTimersByTime(200)
     })
-    expect(screen.getByText('chat.find.noResults')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'chat.find.next' })).toBeDisabled()
+    expect(screen.getByText('No results')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next match (Enter)' })).toBeDisabled()
   })
 
   it('closes on Escape', () => {
@@ -110,7 +110,7 @@ describe('ChatFindBar', () => {
     act(() => {
       vi.advanceTimersByTime(200)
     })
-    fireEvent.click(screen.getByRole('button', { name: 'chat.find.loadEarlier' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Load them' }))
     expect(onLoadEarlier).toHaveBeenCalledTimes(1)
   })
 })
@@ -166,7 +166,7 @@ describe('SelectionActions', () => {
       document.dispatchEvent(new MouseEvent('mouseup', { bubbles: true }))
       await new Promise((r) => requestAnimationFrame(() => r(null)))
     })
-    fireEvent.click(await screen.findByRole('button', { name: /chat\.selection\.quote/ }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Quote' }))
     expect(onQuote).toHaveBeenCalledWith('quote me')
     expect(screen.queryByRole('toolbar')).not.toBeInTheDocument()
   })
@@ -190,7 +190,7 @@ describe('TurnNavigator', () => {
   it('renders one bar per prompt, previews on hover, and jumps on click', () => {
     const onJump = vi.fn()
     render(<TurnNavigator messages={messages} scrollEl={mountChat('')} onJump={onJump} />)
-    const bars = screen.getAllByRole('button', { name: /chat\.turnNav\.jumpTo/ })
+    const bars = screen.getAllByRole('button', { name: /Jump to prompt/ })
     expect(bars).toHaveLength(2)
     fireEvent.pointerEnter(bars[0])
     expect(screen.getByRole('tooltip')).toHaveTextContent('first prompt')
@@ -201,9 +201,9 @@ describe('TurnNavigator', () => {
 
   it('marks the latest prompt as running while the agent works', () => {
     render(<TurnNavigator messages={messages.slice(0, 3)} scrollEl={mountChat('')} busy onJump={() => {}} />)
-    const bars = screen.getAllByRole('button', { name: /chat\.turnNav\.jumpTo/ })
+    const bars = screen.getAllByRole('button', { name: /Jump to prompt/ })
     expect(bars[1]).toHaveClass('running')
     fireEvent.pointerEnter(bars[1])
-    expect(screen.getByRole('tooltip')).toHaveTextContent('chat.turnNav.working')
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Working on it…')
   })
 })

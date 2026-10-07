@@ -37,7 +37,7 @@ describe('FileEditor', () => {
     fireEvent.change(ta, { target: { value: 'hello world!' } })
     expect(document.querySelector('.rp-fe-name')?.className).toContain('is-dirty')
 
-    fireEvent.click(screen.getByText('common.save'))
+    fireEvent.click(screen.getByText('Save'))
     await waitFor(() => expect(fs.writeFile).toHaveBeenCalledWith('/proj/note.txt', 'hello world!'))
   })
 
@@ -46,7 +46,7 @@ describe('FileEditor', () => {
     fs.readFile.mockResolvedValue('a\u0000b\u0000')
     mount('blob.bin')
 
-    await waitFor(() => expect(screen.getByText('fileEditor.binary')).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText('Binary file — cannot display as text')).toBeInTheDocument())
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
   })
 
@@ -54,7 +54,7 @@ describe('FileEditor', () => {
     fs.stat.mockResolvedValue({ size: 5_000_000, isFile: true, isDirectory: false, mtime: 0 })
     mount('huge.txt')
 
-    await waitFor(() => expect(screen.getByText(/fileEditor.tooLarge/)).toBeInTheDocument())
+    await waitFor(() => expect(screen.getByText(/File too large to open/)).toBeInTheDocument())
     expect(fs.readFile).not.toHaveBeenCalled()
   })
 
@@ -64,11 +64,11 @@ describe('FileEditor', () => {
     mount('note.md')
 
     await waitFor(() => expect(screen.getByRole('textbox')).toBeInTheDocument())
-    fireEvent.click(screen.getByRole('button', { name: 'fileEditor.preview' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Hello' })).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'fileEditor.viewCode' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Code' }))
     expect(screen.getByRole('textbox')).toBeInTheDocument()
   })
 

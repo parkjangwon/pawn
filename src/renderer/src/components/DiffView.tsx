@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react'
 import ConfirmDialog from './ConfirmDialog'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronRight, GitCompare } from 'lucide-react'
 import { computeDiff } from '../utils/diff'
 import { useChangeLedger } from '../stores/changeLedger'
@@ -24,7 +24,6 @@ export default function DiffView({
   maxLines = 100,
   showActions = true
 }: DiffViewProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(false)
   const [showAll, setShowAll] = useState(false)
   const [actionMsg, setActionMsg] = useState<string | null>(null)
@@ -44,7 +43,7 @@ export default function DiffView({
 
   const onRevert = async (): Promise<void> => {
     if (!openPath) {
-      setActionMsg(t('diffView.noPath'))
+      setActionMsg('No path to revert')
       return
     }
     const r = await useChangeLedger.getState().revertFile(openPath)
@@ -53,13 +52,13 @@ export default function DiffView({
       setConfirmForce(openPath)
       return
     }
-    setActionMsg(r.ok ? t('diffView.reverted') : t('diffView.revertFailed'))
+    setActionMsg(r.ok ? 'Reverted' : 'Revert failed')
     if (!r.ok && r.error) console.warn('[revert]', r.error)
   }
 
   const forceRevert = async (target: string): Promise<void> => {
     const forced = await useChangeLedger.getState().revertFile(target, { force: true })
-    setActionMsg(forced.ok ? t('diffView.reverted') : forced.error || t('diffView.revertFailed'))
+    setActionMsg(forced.ok ? 'Reverted' : forced.error || 'Revert failed')
   }
 
   const onReveal = (): void => {
@@ -70,9 +69,9 @@ export default function DiffView({
     <div className={`diff-view ${collapsed ? 'collapsed' : ''}`}>
       {confirmForce && (
         <ConfirmDialog
-          title={t('diffView.revertConflictTitle')}
-          message={t('diffView.revertConflict')}
-          confirmLabel={t('diffView.revertForce')}
+          title={'File changed after the edit'}
+          message={'This file changed after the agent edited it. Reverting will discard those later changes. Revert anyway?'}
+          confirmLabel={'Overwrite anyway'}
           danger
           onConfirm={() => {
             const target = confirmForce
@@ -81,7 +80,7 @@ export default function DiffView({
           }}
           onCancel={() => {
             setConfirmForce(null)
-            setActionMsg(t('diffView.revertCancelled'))
+            setActionMsg('Revert cancelled — file kept')
           }}
         />
       )}
@@ -115,17 +114,17 @@ export default function DiffView({
         <div className="diff-actions" onClick={(e) => e.stopPropagation()}>
           {openPath && (
             <button type="button" className="diff-action-btn" onClick={onOpen}>
-              {t('diffView.open')}
+              {'Open'}
             </button>
           )}
           {openPath && (
             <button type="button" className="diff-action-btn" onClick={onReveal}>
-              {t('diffView.reveal')}
+              {'Reveal in Finder'}
             </button>
           )}
           {openPath && (
             <button type="button" className="diff-action-btn diff-action-revert" onClick={() => void onRevert()}>
-              {t('diffView.revert')}
+              {'Revert'}
             </button>
           )}
           {actionMsg && <span className="diff-action-msg">{actionMsg}</span>}
@@ -149,7 +148,7 @@ export default function DiffView({
           ))}
           {truncated && (
             <button className="diff-show-more" onClick={() => setShowAll(true)}>
-              {t('diffView.showAll', { total: diff.lines.length, extra: diff.lines.length - maxLines })}
+              {`Show all ${diff.lines.length} lines (+${diff.lines.length - maxLines})`}
             </button>
           )}
         </div>

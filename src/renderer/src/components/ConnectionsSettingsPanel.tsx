@@ -4,10 +4,10 @@ import logoCodeCommit from '../assets/logos/codecommit.svg'
 import type { SettingsState } from './settingsState'
 import Button from './Button'
 import Input from './Input'
+import { tx } from '../i18n'
 
 export default function ConnectionsSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     connStatus,
     connBusy,
     patFormOpen,
@@ -34,8 +34,8 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
 
   return (
     <div className="settings-section">
-      <h2>{t('settings.connectionsSection.title')}</h2>
-      <p className="settings-desc">{t('settings.connectionsSection.desc')}</p>
+      <h2>{'Service connections'}</h2>
+      <p className="settings-desc">{'Optionally link Google, GitHub, GitLab (self-hosted), or AWS CodeCommit so the agent can access your data on this machine. Tokens stay local — never sent to Pawn servers.'}</p>
 
       <div className="settings-card conn-card">
         <div className="conn-toolbar">
@@ -45,7 +45,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
             disabled={!statusLoaded}
             onClick={() => void refreshConnections()}
           >
-            {t('settings.connectionsSection.refresh')}
+            {'Refresh'}
           </button>
         </div>
         {(['google', 'github', 'gitlab', 'codecommit'] as const).map((provider) => {
@@ -88,35 +88,33 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       {connProviderLabel(provider)}
                       {isPat && (
                         <span className="settings-badge conn-pat-badge">
-                          {t('settings.connectionsSection.patBadge')}
+                          {'PAT'}
                         </span>
                       )}
                       {connected && (
                         <span className="settings-badge conn-account-badge">
-                          {st?.accountLabel || t('settings.connectionsSection.statusConnected')}
+                          {st?.accountLabel || 'Connected'}
                         </span>
                       )}
                     </span>
                     <span className="settings-row-desc">
                       {connected
-                        ? t('settings.connectionsSection.statusConnectedDesc')
+                        ? 'Signed in. Tokens are stored only on this device.'
                         : busy && !isPat
-                          ? t('settings.connectionsSection.waitingBrowser')
+                          ? 'Waiting for browser authorization…'
                           : isPat
-                            ? t('settings.connectionsSection.statusDisconnectedPat')
-                            : t('settings.connectionsSection.statusDisconnected')}
+                            ? 'Not connected — paste a token / credentials to connect'
+                            : 'Not connected — click Connect to sign in'}
                       {provider === 'google' && connected && st?.writeScopesReady === false && (
                         <span className="conn-write-scope-warn">
                           {' · '}
-                          {t('settings.connectionsSection.writeScopesMissing', {
-                            scopes: st.writeScopesMissing?.join(', ') || ''
-                          })}
+                          {`Write scopes missing (${st.writeScopesMissing?.join(', ') || ''}). Disconnect → Connect to enable Gmail send / Sheets write / Calendar create.`}
                         </span>
                       )}
                       {provider === 'google' && connected && st?.writeScopesReady === true && (
                         <span className="conn-write-scope-ok">
                           {' · '}
-                          {t('settings.connectionsSection.writeScopesReady')}
+                          {'Write scopes ready'}
                         </span>
                       )}
                     </span>
@@ -129,14 +127,14 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       disabled={busy || !statusLoaded}
                       onClick={() => void handleDisconnect(provider)}
                     >
-                      {t('settings.connectionsSection.disconnect')}
+                      {'Disconnect'}
                     </button>
                   ) : busy && !isPat ? (
                     <button
                       className="conn-action-btn conn-btn-cancel"
                       onClick={() => void handleCancelConnect(provider)}
                     >
-                      {t('settings.connectionsSection.cancel')}
+                      {'Cancel'}
                     </button>
                   ) : isPat ? (
                     <button
@@ -148,8 +146,8 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       }}
                     >
                       {patOpen
-                        ? t('settings.connectionsSection.cancel')
-                        : t('settings.connectionsSection.connect')}
+                        ? 'Cancel'
+                        : 'Connect'}
                     </button>
                   ) : (
                     <button
@@ -157,7 +155,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       disabled={!ready || !statusLoaded}
                       onClick={() => void handleConnect(provider)}
                     >
-                      {t('settings.connectionsSection.connect')}
+                      {'Connect'}
                     </button>
                   )}
                 </div>
@@ -167,18 +165,18 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                 <div className="conn-pat-panel">
                   <div className="conn-pat-title">
                     {provider === 'gitlab'
-                      ? t('settings.connectionsSection.gitlabPatTitle')
-                      : t('settings.connectionsSection.codecommitPatTitle')}
+                      ? 'GitLab personal access token'
+                      : 'AWS credentials (IAM)'}
                   </div>
                   <p className="conn-pat-hint">
                     {provider === 'gitlab'
-                      ? t('settings.connectionsSection.gitlabPatHint')
-                      : t('settings.connectionsSection.codecommitPatHint')}
+                      ? 'Works with gitlab.com or self-hosted GitLab. Create a PAT with api (or read_api) scope under User Settings → Access Tokens.'
+                      : 'CodeCommit has no browser OAuth — paste an IAM access key with codecommit permissions. Optional session token for temporary credentials.'}
                   </p>
                   {provider === 'gitlab' ? (
                     <div className="conn-pat-fields">
                       <label className="conn-pat-field">
-                        <span>{t('settings.connectionsSection.baseUrl')}</span>
+                        <span>{'GitLab base URL'}</span>
                         <Input
                           type="url"
                           autoComplete="off"
@@ -188,7 +186,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                         />
                       </label>
                       <label className="conn-pat-field">
-                        <span>{t('settings.connectionsSection.personalToken')}</span>
+                        <span>{'Personal access token'}</span>
                         <Input
                           type="password"
                           autoComplete="off"
@@ -201,7 +199,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                   ) : (
                     <div className="conn-pat-fields">
                       <label className="conn-pat-field">
-                        <span>{t('settings.connectionsSection.awsRegion')}</span>
+                        <span>{'AWS region'}</span>
                         <Input
                           type="text"
                           autoComplete="off"
@@ -211,7 +209,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                         />
                       </label>
                       <label className="conn-pat-field">
-                        <span>{t('settings.connectionsSection.awsAccessKeyId')}</span>
+                        <span>{'Access key ID'}</span>
                         <Input
                           type="text"
                           autoComplete="off"
@@ -221,7 +219,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                         />
                       </label>
                       <label className="conn-pat-field">
-                        <span>{t('settings.connectionsSection.awsSecretAccessKey')}</span>
+                        <span>{'Secret access key'}</span>
                         <Input
                           type="password"
                           autoComplete="off"
@@ -230,11 +228,11 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                         />
                       </label>
                       <label className="conn-pat-field">
-                        <span>{t('settings.connectionsSection.awsSessionToken')}</span>
+                        <span>{'Session token'}</span>
                         <Input
                           type="password"
                           autoComplete="off"
-                          placeholder={t('settings.connectionsSection.optional')}
+                          placeholder={'Optional'}
                           value={patForm.sessionToken}
                           onChange={(e) => setPatForm((f) => ({ ...f, sessionToken: e.target.value }))}
                         />
@@ -255,8 +253,8 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       onClick={() => void handleConnectPat(provider)}
                     >
                       {busy
-                        ? t('settings.connectionsSection.connecting')
-                        : t('settings.connectionsSection.saveConnect')}
+                        ? 'Connecting…'
+                        : 'Save & connect'}
                     </Button>
                   </div>
                 </div>
@@ -267,16 +265,14 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
 
         {deviceAuth && (
           <div className="conn-device-panel">
-            <div className="conn-device-title">{t('settings.connectionsSection.deviceTitle')}</div>
+            <div className="conn-device-title">{'Enter this code on GitHub'}</div>
             <div className="conn-device-hint">
-              {t('settings.connectionsSection.deviceHint', {
-                uri: deviceAuth.verificationUri.replace(/^https?:\/\//, '')
-              })}
+              {`Open ${deviceAuth.verificationUri.replace(/^https?:\/\//, '')} and enter the code below (not a 2FA code).`}
             </div>
             <div className="conn-device-code-row">
               <code className="conn-device-code">{deviceAuth.userCode}</code>
               <button type="button" className="test-btn" onClick={() => void copyDeviceCode()}>
-                {t('settings.connectionsSection.copyCode')}
+                {'Copy'}
               </button>
             </div>
             <a
@@ -289,7 +285,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                 window.open(deviceAuth.verificationUri, '_blank')
               }}
             >
-              {t('settings.connectionsSection.openDevicePage')}
+              {'Open GitHub device page'}
             </a>
           </div>
         )}
@@ -297,7 +293,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
         {connMsg && !deviceAuth && (
           <div className="conn-msg">{connMsg}</div>
         )}
-        <p className="settings-row-desc conn-privacy">{t('settings.connectionsSection.privacyNote')}</p>
+        <p className="settings-row-desc conn-privacy">{'Sign-in tokens and secrets are stored only under ~/.pawn on this machine. They are not uploaded or shared with other services.'}</p>
       </div>
     </div>
   )

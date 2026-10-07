@@ -9,7 +9,6 @@
  */
 
 import { create } from 'zustand'
-import i18n from '../i18n'
 import { useAppStore } from './app'
 import { useChatStore } from './chat'
 import { draftSkillFromRecording } from '../agent/skillDrafting'
@@ -79,7 +78,7 @@ function resolveTarget(bundle: RecordingBundleDto): Target {
     (ctx.projectId && app.projects.some((p) => p.id === ctx.projectId) ? ctx.projectId : null) ||
     app.activeProjectId ||
     app.ensureGeneralProject()
-  const title = (bundle.goal || i18n.t('record.chat.newChatTitle')).slice(0, 60)
+  const title = (bundle.goal || 'Recorded workflow').slice(0, 60)
   const sessionId = app.addSession(projectId, title)
   useAppStore.setState((s) => ({ loadedSessions: new Set([...s.loadedSessions, sessionId]) }))
   return { projectId, sessionId }
@@ -138,7 +137,7 @@ export const useRecordingStore = create<RecordingState>((set, get) => {
         return { jobs }
       })
       if (!outcome.draft) {
-        window.dispatchEvent(new CustomEvent('pawn:toast', { detail: { message: i18n.t('record.errors.noSkillBlock') } }))
+        window.dispatchEvent(new CustomEvent('pawn:toast', { detail: { message: 'The answer has no SKILL.md block. Ask the agent to write it as a skill.' } }))
       }
       return
     }
@@ -165,7 +164,7 @@ export const useRecordingStore = create<RecordingState>((set, get) => {
         const bundle = ev.bundle
         if (!bundle || !Array.isArray(bundle.steps)) return
         if (bundle.steps.length === 0) {
-          set({ error: i18n.t('record.errors.nothingRecorded') })
+          set({ error: 'Nothing was recorded. Do the task while recording, then stop.' })
           return
         }
         pendingBundles.set(bundle.id, bundle)

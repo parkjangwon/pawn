@@ -1,11 +1,10 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Check, ChevronDown, ClipboardList, X } from 'lucide-react'
 import { usePlanStore, type PlanItemStatus } from '../stores/plan'
 import './PlanStrip.css'
 
 export default function PlanStrip({ sessionId }: { sessionId: string | null }): React.JSX.Element | null {
-  const { t } = useTranslation()
   const items = usePlanStore((s) => (sessionId ? s.bySession[sessionId] : undefined)) || []
   const [collapsed, setCollapsed] = useState(false)
 
@@ -34,7 +33,7 @@ export default function PlanStrip({ sessionId }: { sessionId: string | null }): 
               <ClipboardList size={12} />
             )}
           </span>
-          <span className="plan-strip-title">{t('plan.title')}</span>
+          <span className="plan-strip-title">{'Plan'}</span>
           <span className="plan-strip-progress">
             {done}/{items.length} ({progressPercent}%)
           </span>
@@ -50,8 +49,8 @@ export default function PlanStrip({ sessionId }: { sessionId: string | null }): 
           type="button"
           className="plan-strip-clear"
           onClick={() => usePlanStore.getState().clearPlan(sessionId)}
-          title={t('plan.clear')}
-          aria-label={t('plan.clear')}
+          title={'Clear plan'}
+          aria-label={'Clear plan'}
         >
           ×
         </button>

@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Sparkles } from 'lucide-react'
 import { buildAutomationPrompt, buildRunPrompt, sameSkill, type SkillDraft } from '../agent/recordReplay'
 import { clearProjectContextCache } from '../agent/skills'
@@ -24,7 +24,6 @@ export function prefillComposer(text: string): void {
  * agent revisions): save it to ~/.agents/skills, run it, or schedule it.
  */
 export default function SkillDraftCard({ draft, projectId }: { draft: SkillDraft; projectId?: string | null }): React.JSX.Element {
-  const { t, i18n } = useTranslation()
   const [state, setState] = useState<SaveState>('checking')
   const [path, setPath] = useState('')
   const [error, setError] = useState('')
@@ -92,7 +91,7 @@ export default function SkillDraftCard({ draft, projectId }: { draft: SkillDraft
       setRunning(true)
       return
     }
-    prefillComposer(buildRunPrompt(draft.name, draft.inputs, values, i18n.language))
+    prefillComposer(buildRunPrompt(draft.name, draft.inputs, values, 'en'))
     setRunning(false)
   }
 
@@ -104,15 +103,15 @@ export default function SkillDraftCard({ draft, projectId }: { draft: SkillDraft
 
   const badge =
     state === 'saved' ? (
-      <span className="skill-card-badge saved">{t('record.card.saved')}</span>
+      <span className="skill-card-badge saved">{'Saved'}</span>
     ) : state === 'changed' ? (
-      <span className="skill-card-badge">{t('record.card.changed')}</span>
+      <span className="skill-card-badge">{'Differs from saved skill'}</span>
     ) : state === 'new' ? (
-      <span className="skill-card-badge">{t('record.card.draft')}</span>
+      <span className="skill-card-badge">{'Draft'}</span>
     ) : null
 
   return (
-    <div className="skill-card" role="group" aria-label={t('record.card.label', { name: draft.name })}>
+    <div className="skill-card" role="group" aria-label={`Skill ${draft.name}`}>
       <div className="skill-card-head">
         <Sparkles size={15} aria-hidden />
         <code>{draft.name}</code>
@@ -120,8 +119,8 @@ export default function SkillDraftCard({ draft, projectId }: { draft: SkillDraft
       </div>
       {draft.description && <div className="skill-card-desc">{draft.description}</div>}
       {draft.inputs.length > 0 && (
-        <div className="skill-card-inputs" aria-label={t('record.card.inputs')}>
-          <span>{t('record.card.inputs')}:</span>
+        <div className="skill-card-inputs" aria-label={'Inputs'}>
+          <span>{'Inputs'}:</span>
           {draft.inputs.map((i) => (
             <code key={i.name} title={i.description}>
               {i.name}
@@ -155,10 +154,10 @@ export default function SkillDraftCard({ draft, projectId }: { draft: SkillDraft
           ))}
           <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 6, justifyContent: 'flex-end' }}>
             <button type="button" className="rec-btn" onClick={() => setRunning(false)}>
-              {t('common.cancel')}
+              {'Cancel'}
             </button>
             <button type="submit" className="rec-btn primary">
-              {t('record.card.putInComposer')}
+              {'Put in the message box'}
             </button>
           </div>
         </form>
@@ -167,21 +166,21 @@ export default function SkillDraftCard({ draft, projectId }: { draft: SkillDraft
         <div className="skill-card-actions">
           {state !== 'saved' && state !== 'unavailable' && (
             <button type="button" className="rec-btn primary" disabled={busy || state === 'checking'} onClick={() => void (state === 'changed' ? setConfirmReplace(true) : save(false))}>
-              {state === 'changed' ? t('record.card.update') : t('record.card.save')}
+              {state === 'changed' ? 'Update saved skill' : 'Save skill'}
             </button>
           )}
           <button type="button" className="rec-btn" disabled={busy || state === 'checking' || state === 'unavailable'} onClick={() => void run()}>
-            {t('record.card.run')}
+            {'Run it'}
           </button>
           <button type="button" className="rec-btn" disabled={busy || state === 'checking' || state === 'unavailable'} onClick={() => void automate()}>
-            {t('record.card.automate')}
+            {'Automate'}
           </button>
-          <button type="button" className="rec-btn" onClick={() => prefillComposer(t('record.card.editPrompt', { name: draft.name }))}>
-            {t('record.card.edit')}
+          <button type="button" className="rec-btn" onClick={() => prefillComposer(`Change the ${draft.name} skill: `)}>
+            {'Refine'}
           </button>
           <span className="rec-spacer" />
           <button type="button" className="rec-link" aria-expanded={preview} onClick={() => setPreview((v) => !v)}>
-            {preview ? t('record.card.hide') : t('record.card.show')}
+            {preview ? 'Hide SKILL.md' : 'Show SKILL.md'}
           </button>
         </div>
       )}
@@ -194,10 +193,10 @@ export default function SkillDraftCard({ draft, projectId }: { draft: SkillDraft
       {preview && <pre className="skill-card-preview">{draft.content}</pre>}
       {confirmReplace && (
         <ConfirmDialog
-          title={t('record.card.replaceTitle', { name: draft.name })}
-          message={t('record.card.replaceMessage')}
-          confirmLabel={t('record.card.update')}
-          cancelLabel={t('common.cancel')}
+          title={`Replace ${draft.name}?`}
+          message={'A skill with this name is already saved. Replace it with this version?'}
+          confirmLabel={'Update saved skill'}
+          cancelLabel={'Cancel'}
           onConfirm={() => {
             setConfirmReplace(false)
             void save(true)

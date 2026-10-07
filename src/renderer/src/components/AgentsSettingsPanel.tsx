@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import ConfirmDialog from './ConfirmDialog'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useProviderStore, type SubagentCostMode } from '../stores/provider'
@@ -124,7 +124,6 @@ function profileInitial(name: string): string {
 }
 
 export default function AgentsSettingsPanel(): React.JSX.Element {
-  const { t } = useTranslation()
   const projectPath = useAppStore((s) => {
     const p = s.projects.find((x) => x.id === s.activeProjectId)
     return getEffectiveProjectPath(p, useAppStore.getState().activeSessionId)
@@ -235,15 +234,15 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
   const handleSave = async (): Promise<void> => {
     const name = sanitizeAgentName(draft.name)
     if (!name) {
-      setError(t('settings.agentsSection.errName'))
+      setError('Enter a valid agent name.')
       return
     }
     if (!draft.systemPrompt.trim()) {
-      setError(t('settings.agentsSection.errPrompt'))
+      setError('Instructions are required.')
       return
     }
     if (scope === 'project' && !projectPath && !existingPath) {
-      setError(t('settings.agentsSection.errNoProject'))
+      setError('Open a project to save for this project, or choose “This device”.')
       return
     }
     setSaving(true)
@@ -279,7 +278,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
         setError(res.error)
         return
       }
-      setMessage(t('settings.agentsSection.saved', { path: res.path }))
+      setMessage(`Saved to ${res.path}`)
       closeEditor()
       await refresh()
     } catch (err) {
@@ -296,21 +295,21 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
     try {
       const res = await deleteAgentProfile(p.sourcePath)
       if (!res.ok) {
-        setError(res.error || t('common.operationFailed'))
+        setError(res.error || 'Something failed — see the console for details.')
         return
       }
-      setMessage(t('settings.agentsSection.deleted', { name: p.name }))
+      setMessage(`Deleted ${p.name}`)
       if (editorMode !== 'closed' && existingPath === p.sourcePath) closeEditor()
       await refresh()
     } catch (e) {
       console.warn('[agents-settings]', e)
-      setError(t('common.operationFailed'))
+      setError('Something failed — see the console for details.')
     }
   }
 
   const requestDelete = (p: AgentProfile): void => {
     if (!p.sourcePath || !isPawnAgentPath(p.sourcePath)) {
-      setError(t('settings.agentsSection.errDeleteClaude'))
+      setError('You can edit Claude Code agents here, but only Pawn-saved agents can be deleted from this screen.')
       return
     }
     setPendingDelete(p)
@@ -333,7 +332,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           <div className="agents-settings-name">
             <strong>{p.name}</strong>
             <span className="agents-settings-tag">
-              {isCustom ? p.source : t('settings.agentsSection.builtin')}
+              {isCustom ? p.source : 'Built-in'}
             </span>
             {p.isolation === 'worktree' && (
               <span className="agents-settings-tag soft">worktree</span>
@@ -346,19 +345,19 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           <div className="agents-settings-desc">
             {isCustom
               ? p.description
-              : t(`settings.agentsSection.builtinDesc_${p.name}`, { defaultValue: p.description })}
+              : tx(`settings.agentsSection.builtinDesc_${p.name}`, { defaultValue: p.description })}
           </div>
         </div>
       </div>
       <div className="agents-settings-meta">
-        {t('settings.agentsSection.modelMeta', { model: p.model || t('settings.agentsSection.modelInherit'), turns: p.maxTurns })}
+        {`Model: ${p.model || 'Same as main chat'} · Max steps: ${p.maxTurns}`}
         {p.sourcePath ? ` · ${p.sourcePath}` : ''}
       </div>
       <div className="agents-card-actions">
         {isCustom ? (
           <>
             <button type="button" className="agents-link-btn" onClick={() => openEdit(p)}>
-              {t('settings.agentsSection.edit')}
+              {'Edit'}
             </button>
             {p.sourcePath && isPawnAgentPath(p.sourcePath) && (
               <button
@@ -366,13 +365,13 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
                 className="agents-link-btn danger"
                 onClick={() => requestDelete(p)}
               >
-                {t('settings.agentsSection.delete')}
+                {'Delete'}
               </button>
             )}
           </>
         ) : (
           <button type="button" className="agents-link-btn" onClick={() => openEdit(p)}>
-            {t('settings.agentsSection.duplicate')}
+            {'Copy as custom'}
           </button>
         )}
       </div>
@@ -383,9 +382,9 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
     <div className="agents-settings">
       {pendingDelete && (
         <ConfirmDialog
-          title={t('settings.agentsSection.confirmDeleteTitle')}
-          message={t('settings.agentsSection.confirmDelete', { name: pendingDelete.name })}
-          confirmLabel={t('common.delete')}
+          title={'Delete this agent?'}
+          message={`Delete “${pendingDelete.name}”? This cannot be undone.`}
+          confirmLabel={'Delete'}
           danger
           onConfirm={() => void handleDelete(pendingDelete)}
           onCancel={() => setPendingDelete(null)}
@@ -393,15 +392,15 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
       )}
       <div className="agents-settings-head">
         <div>
-          <p className="settings-desc">{t('settings.agentsSection.desc')}</p>
-          <p className="agents-settings-subhint">{t('settings.agentsSection.parallelHint')}</p>
+          <p className="settings-desc">{'Build specialized helpers the main chat can hand work off to—research, planning, implementation, review, and more. Pawn ships with ready-made roles; yours are saved with the project or on this device.'}</p>
+          <p className="agents-settings-subhint">{'When work can be split up, Pawn can run several helpers at the same time (up to six) so independent tasks finish faster. Watch them live in the chat, or open the Agents panel for full history.'}</p>
         </div>
         <div className="agents-settings-head-actions">
           <button type="button" className="agents-settings-refresh" onClick={() => void refresh()}>
-            {t('settings.agentsSection.refresh')}
+            {'Refresh'}
           </button>
           <button type="button" className="agents-settings-primary" onClick={() => openCreate()}>
-            {t('settings.agentsSection.new')}
+            {'New agent'}
           </button>
         </div>
       </div>
@@ -409,8 +408,8 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
       <div className="agents-cost-mode settings-card">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentsSection.costMode')}</span>
-            <span className="settings-row-desc">{t('settings.agentsSection.costModeDesc')}</span>
+            <span className="settings-row-label">{'Cost preference'}</span>
+            <span className="settings-row-desc">{'Default model budget when helpers run. A stronger model set on a specific agent still wins.'}</span>
           </div>
           <div className="theme-toggle agents-cost-toggle">
             {(
@@ -432,38 +431,35 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
                 key={mode}
                 type="button"
                 className={subagentCostMode === mode ? 'active' : ''}
-                title={t(descKey)}
+                title={tx(descKey)}
                 onClick={() => setSubagentCostMode(mode as SubagentCostMode)}
               >
-                {t(labelKey)}
+                {tx(labelKey)}
               </button>
             ))}
           </div>
         </div>
         <p className="agents-cost-hint">
           {subagentCostMode === 'frugal'
-            ? t('settings.agentsSection.costFrugalDesc')
+            ? 'Prefer cheaper models. Research stays light; implementers may use a mid-tier model. No automatic upgrades.'
             : subagentCostMode === 'quality'
-              ? t('settings.agentsSection.costQualityDesc')
-              : t('settings.agentsSection.costBalancedDesc')}
+              ? 'Use the best available model when it helps. Still reuses cached context to limit cost when possible.'
+              : 'Recommended. Light research, mid-tier planning/review, freer choice for implementers—within safe bounds.'}
         </p>
 
         <div className="agents-perf-block">
           <div className="settings-row agents-perf-settings-row">
             <div className="settings-row-info">
-              <span className="settings-row-label">{t('settings.agentsSection.maxParallel')}</span>
-              <span className="settings-row-desc">{t('settings.agentsSection.maxParallelDesc')}</span>
+              <span className="settings-row-label">{'Run at once'}</span>
+              <span className="settings-row-desc">{'How many agents can work side by side. Extra jobs wait in line.'}</span>
               <span className="settings-row-desc">
-                {t('settings.agentsSection.maxParallelHarness', {
-                  eco: harnessProfile('eco').parallelPool,
-                  maxing: harnessProfile('maxing').parallelPool
-                })}
+                {`Applies in Default mode. Eco uses ${harnessProfile('eco').parallelPool}, Maxing uses ${harnessProfile('maxing').parallelPool}.`}
               </span>
             </div>
             <div
               className="theme-toggle agents-pool-toggle"
               role="group"
-              aria-label={t('settings.agentsSection.maxParallel')}
+              aria-label={'Run at once'}
             >
               {([1, 2, 3, 4, 5, 6] as const).map((n) => (
                 <button
@@ -480,14 +476,14 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <div className="settings-row agents-perf-settings-row">
             <div className="settings-row-info">
-              <span className="settings-row-label">{t('settings.agentsSection.autoOpenPanel')}</span>
-              <span className="settings-row-desc">{t('settings.agentsSection.autoOpenPanelDesc')}</span>
+              <span className="settings-row-label">{'Show helper progress in chat'}</span>
+              <span className="settings-row-desc">{'Show a compact activity bar in the chat while helpers work, and expand it to see what each one is doing.'}</span>
             </div>
             <label className="agents-switch">
               <input
                 type="checkbox"
                 checked={autoOpenAgentsPanel}
-                aria-label={t('settings.agentsSection.autoOpenPanel')}
+                aria-label={'Show helper progress in chat'}
                 onChange={(e) => setAutoOpenAgentsPanel(e.target.checked)}
               />
               <span className="agents-switch-track" aria-hidden />
@@ -502,14 +498,14 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={t('settings.agentsSection.searchPh')}
-          aria-label={t('settings.agentsSection.searchPh')}
+          placeholder={'Search agents…'}
+          aria-label={'Search agents…'}
         />
       </div>
 
       {editorMode === 'closed' && (
         <div className="agents-templates">
-          <div className="agents-templates-label">{t('settings.agentsSection.templates')}</div>
+          <div className="agents-templates-label">{'Start from a template'}</div>
           <div className="agents-templates-row">
             {TEMPLATES.map((tpl) => (
               <button
@@ -518,7 +514,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
                 className="agents-template-chip"
                 onClick={() => openCreate(tpl.draft)}
               >
-                {t(`settings.agentsSection.template_${tpl.id}`)}
+                {tx(`settings.agentsSection.template_${tpl.id}`)}
               </button>
             ))}
           </div>
@@ -526,7 +522,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
       )}
 
       {loading && (
-        <div className="agents-settings-muted">{t('settings.agentsSection.loading')}</div>
+        <div className="agents-settings-muted">{'Loading…'}</div>
       )}
       {error && <div className="agents-settings-error">{error}</div>}
       {message && <div className="agents-settings-ok">{message}</div>}
@@ -535,55 +531,55 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
         <div className="agents-editor">
           <div className="agents-editor-title">
             {editorMode === 'create'
-              ? t('settings.agentsSection.editorCreate')
-              : t('settings.agentsSection.editorEdit', { name: originalName || draft.name })}
+              ? 'Create agent'
+              : `Edit ${originalName || draft.name}`}
           </div>
 
           <label className="agents-field">
-            <span>{t('settings.agentsSection.fieldName')}</span>
+            <span>{'Name'}</span>
             <Input
               value={draft.name}
               onChange={(e) => patchDraft('name', e.target.value)}
               placeholder="security-audit"
               disabled={editorMode === 'edit' && !!existingPath && !isPawnAgentPath(existingPath)}
             />
-            <span className="agents-field-hint">{t('settings.agentsSection.fieldNameHint')}</span>
+            <span className="agents-field-hint">{'Lowercase letters, numbers, and hyphens. Stored as a small file under .pawn/agents.'}</span>
           </label>
 
           <label className="agents-field">
-            <span>{t('settings.agentsSection.fieldDescription')}</span>
+            <span>{'When to use'}</span>
             <Input
               value={draft.description}
               onChange={(e) => patchDraft('description', e.target.value)}
-              placeholder={t('settings.agentsSection.fieldDescriptionPh')}
+              placeholder={'When should the main chat pick this agent?'}
             />
           </label>
 
           <label className="agents-field">
-            <span>{t('settings.agentsSection.fieldPrompt')}</span>
+            <span>{'Instructions'}</span>
             <Textarea
               value={draft.systemPrompt}
               onChange={(e) => patchDraft('systemPrompt', e.target.value)}
               rows={8}
-              placeholder={t('settings.agentsSection.fieldPromptPh')}
+              placeholder={'You are a specialist that…'}
             />
           </label>
 
           <div className="agents-field-row">
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldModel')}</span>
+              <span>{'Model preference'}</span>
               <Select
                 value={draft.model}
                 onChange={(e) => patchDraft('model', e.target.value as AgentModelPref)}
               >
-                <option value="inherit">{t('settings.agentsSection.modelInherit')}</option>
-                <option value="simple">{t('settings.agentsSection.modelSimple')}</option>
-                <option value="mid">{t('settings.agentsSection.modelMid')}</option>
-                <option value="complex">{t('settings.agentsSection.modelComplex')}</option>
+                <option value="inherit">{'Same as main chat'}</option>
+                <option value="simple">{'Faster / lower cost'}</option>
+                <option value="mid">{'Balanced'}</option>
+                <option value="complex">{'Strongest'}</option>
               </Select>
             </label>
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldMaxTurns')}</span>
+              <span>{'Max steps'}</span>
               <Input
                 type="number"
                 min={1}
@@ -598,7 +594,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <div className="agents-field-row">
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldIsolation')}</span>
+              <span>{'Workspace'}</span>
               <Select
                 value={draft.isolation}
                 onChange={(e) => {
@@ -609,23 +605,23 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
                   }
                 }}
               >
-                <option value="none">{t('settings.agentsSection.isolationNone')}</option>
-                <option value="worktree">{t('settings.agentsSection.isolationWorktree')}</option>
+                <option value="none">{'Shared with project'}</option>
+                <option value="worktree">{'Isolated copy (git worktree)'}</option>
               </Select>
             </label>
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldApply')}</span>
+              <span>{'Bring changes back'}</span>
               <Select
                 value={draft.apply}
                 onChange={(e) => patchDraft('apply', e.target.value as AgentApplyMode)}
               >
-                <option value="none">{t('settings.agentsSection.applyNone')}</option>
-                <option value="auto">{t('settings.agentsSection.applyAuto')}</option>
-                <option value="review">{t('settings.agentsSection.applyReview')}</option>
+                <option value="none">{'Discard when done'}</option>
+                <option value="auto">{'Merge into project'}</option>
+                <option value="review">{'Review before applying'}</option>
               </Select>
             </label>
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldThoroughness')}</span>
+              <span>{'Depth'}</span>
               <Select
                 value={draft.thoroughness || ''}
                 onChange={(e) =>
@@ -635,47 +631,47 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
                   )
                 }
               >
-                <option value="">{t('settings.agentsSection.thoroughnessDefault')}</option>
-                <option value="quick">{t('settings.agentsSection.thoroughnessQuick')}</option>
-                <option value="medium">{t('settings.agentsSection.thoroughnessMedium')}</option>
-                <option value="very_thorough">{t('settings.agentsSection.thoroughnessDeep')}</option>
+                <option value="">{'Default'}</option>
+                <option value="quick">{'Quick'}</option>
+                <option value="medium">{'Balanced'}</option>
+                <option value="very_thorough">{'Very thorough'}</option>
               </Select>
             </label>
           </div>
 
           <label className="agents-field">
-            <span>{t('settings.agentsSection.fieldSkills')}</span>
+            <span>{'Skills to load (optional)'}</span>
             <Input
               value={skillsText}
               onChange={(e) => setSkillsText(e.target.value)}
               placeholder="pdf, git-helpers"
             />
-            <span className="agents-field-hint">{t('settings.agentsSection.fieldSkillsHint')}</span>
+            <span className="agents-field-hint">{'Comma-separated skill names. Their guides are loaded for this agent only.'}</span>
           </label>
 
           <label className="agents-field">
-            <span>{t('settings.agentsSection.fieldPathAllow')}</span>
+            <span>{'Editable paths (optional)'}</span>
             <Input
               value={pathAllowText}
               onChange={(e) => setPathAllowText(e.target.value)}
               placeholder="src/**, package.json"
             />
-            <span className="agents-field-hint">{t('settings.agentsSection.fieldPathAllowHint')}</span>
+            <span className="agents-field-hint">{'Only these paths may be edited (e.g. src/**). Leave empty to allow anything not blocked below.'}</span>
           </label>
 
           <label className="agents-field">
-            <span>{t('settings.agentsSection.fieldPathDeny')}</span>
+            <span>{'Blocked paths (optional)'}</span>
             <Input
               value={pathDenyText}
               onChange={(e) => setPathDenyText(e.target.value)}
               placeholder=".env, .env.*, **/secrets/**"
             />
-            <span className="agents-field-hint">{t('settings.agentsSection.fieldPathDenyHint')}</span>
+            <span className="agents-field-hint">{'Never touch these paths (e.g. .env, secrets folders).'}</span>
           </label>
 
           <div className="agents-field-row">
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldMaxEdits')}</span>
+              <span>{'Max file edits'}</span>
               <Input
                 type="number"
                 min={1}
@@ -691,7 +687,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
               />
             </label>
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldMaxShell')}</span>
+              <span>{'Max shell runs'}</span>
               <Input
                 type="number"
                 min={1}
@@ -707,7 +703,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
               />
             </label>
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldMaxToolCalls')}</span>
+              <span>{'Max tool uses'}</span>
               <Input
                 type="number"
                 min={1}
@@ -725,18 +721,18 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           </div>
 
           <label className="agents-field">
-            <span>{t('settings.agentsSection.fieldTools')}</span>
+            <span>{'Allowed tools (optional)'}</span>
             <Textarea
               value={toolsText}
               onChange={(e) => setToolsText(e.target.value)}
               rows={2}
               placeholder="read_file, grep_search, repo_map"
             />
-            <span className="agents-field-hint">{t('settings.agentsSection.fieldToolsHint')}</span>
+            <span className="agents-field-hint">{'Comma-separated tool names. Leave empty to allow the usual set (minus anything you deny below).'}</span>
           </label>
 
           <label className="agents-field">
-            <span>{t('settings.agentsSection.fieldDeny')}</span>
+            <span>{'Blocked tools (optional)'}</span>
             <Textarea
               value={denyText}
               onChange={(e) => setDenyText(e.target.value)}
@@ -747,23 +743,23 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           {editorMode === 'create' && (
             <label className="agents-field">
-              <span>{t('settings.agentsSection.fieldScope')}</span>
+              <span>{'Save to'}</span>
               <Select
                 value={scope}
                 onChange={(e) => setScope(e.target.value as 'project' | 'user')}
               >
                 <option value="project" disabled={!projectPath}>
-                  {t('settings.agentsSection.scopeProject')}
-                  {!projectPath ? ` (${t('settings.agentsSection.scopeNoProject')})` : ''}
+                  {'This project'}
+                  {!projectPath ? ` (${'open a project first'})` : ''}
                 </option>
-                <option value="user">{t('settings.agentsSection.scopeUser')}</option>
+                <option value="user">{'This device (all projects)'}</option>
               </Select>
             </label>
           )}
 
           {existingPath && (
             <div className="agents-settings-meta">
-              {t('settings.agentsSection.path')}: {existingPath}
+              {'File'}: {existingPath}
             </div>
           )}
 
@@ -774,27 +770,27 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
               disabled={saving}
               onClick={() => void handleSave()}
             >
-              {saving ? t('settings.agentsSection.saving') : t('settings.agentsSection.save')}
+              {saving ? 'Saving…' : 'Save'}
             </button>
             <button type="button" className="agents-settings-refresh" onClick={closeEditor}>
-              {t('common.cancel')}
+              {'Cancel'}
             </button>
           </div>
         </div>
       )}
 
       <h4 className="agents-settings-h">
-        {t('settings.agentsSection.builtin')} ({builtins.length})
+        {'Built-in'} ({builtins.length})
       </h4>
       <ul className="agents-settings-list agents-grid">
         {builtins.map((p) => renderCard(p, false))}
       </ul>
 
       <h4 className="agents-settings-h">
-        {t('settings.agentsSection.custom')} ({custom.length})
+        {'Custom'} ({custom.length})
       </h4>
       {custom.length === 0 ? (
-        <div className="agents-settings-muted">{t('settings.agentsSection.customEmpty')}</div>
+        <div className="agents-settings-muted">{'No custom agents yet. Tap “New agent”, or copy a built-in role and tweak it.'}</div>
       ) : (
         <ul className="agents-settings-list agents-grid">
           {custom.map((p) => renderCard(p, true))}

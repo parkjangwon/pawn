@@ -1,5 +1,4 @@
 import { isUltraWorkSession } from './ultraWorkRegistry'
-import i18n from '../i18n'
 import { parseToolLoadingMode, type ToolLoadingMode } from '../agent/toolsets'
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
@@ -236,7 +235,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const msg = err instanceof Error ? err.message : String(err)
       try {
         window.dispatchEvent(
-          new CustomEvent('pawn:toast', { detail: { message: i18n.t('settings.providerLoadFailed', { error: msg.slice(0, 120) }) } })
+          new CustomEvent('pawn:toast', { detail: { message: `Couldn't load saved settings: ${msg.slice(0, 120)}` } })
         )
       } catch {
         /* ignore */

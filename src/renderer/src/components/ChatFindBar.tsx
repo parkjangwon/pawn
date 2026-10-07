@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import type { Message } from '../stores/app'
 import { stripDisplayImages } from '../utils/attachments'
@@ -57,7 +57,6 @@ export default function ChatFindBar({
   onLoadEarlier,
   onClose
 }: ChatFindBarProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [query, setQuery] = useState(initialQuery)
   const [ranges, setRanges] = useState<Range[]>([])
   const [active, setActive] = useState(-1)
@@ -160,8 +159,8 @@ export default function ChatFindBar({
   const counter = !hasQuery
     ? ''
     : total > 0
-      ? t('chat.find.count', { current: active + 1, total })
-      : t('chat.find.noResults')
+      ? `${active + 1}/${total}`
+      : 'No results'
 
   return (
     <div className="chat-find" role="search" data-find-ignore="true">
@@ -173,8 +172,8 @@ export default function ChatFindBar({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={onInputKeyDown}
-          placeholder={t('chat.find.placeholder')}
-          aria-label={t('chat.find.placeholder')}
+          placeholder={'Find in conversation'}
+          aria-label={'Find in conversation'}
           spellCheck={false}
           autoComplete="off"
         />
@@ -189,8 +188,8 @@ export default function ChatFindBar({
           className="chat-find-btn"
           onClick={() => step('prev')}
           disabled={total === 0}
-          aria-label={t('chat.find.previous')}
-          title={t('chat.find.previous')}
+          aria-label={'Previous match (Shift+Enter)'}
+          title={'Previous match (Shift+Enter)'}
         >
           <ChevronUp size={14} aria-hidden />
         </button>
@@ -199,8 +198,8 @@ export default function ChatFindBar({
           className="chat-find-btn"
           onClick={() => step('next')}
           disabled={total === 0}
-          aria-label={t('chat.find.next')}
-          title={t('chat.find.next')}
+          aria-label={'Next match (Enter)'}
+          title={'Next match (Enter)'}
         >
           <ChevronDown size={14} aria-hidden />
         </button>
@@ -208,17 +207,17 @@ export default function ChatFindBar({
           type="button"
           className="chat-find-btn"
           onClick={onClose}
-          aria-label={t('chat.find.close')}
-          title={t('chat.find.close')}
+          aria-label={'Close (Esc)'}
+          title={'Close (Esc)'}
         >
           <X size={14} aria-hidden />
         </button>
       </div>
       {earlier > 0 && (
         <div className="chat-find-earlier">
-          <span>{t('chat.find.earlierMatches', { count: earlier })}</span>
+          <span>{`${earlier} earlier messages also match`}</span>
           <button type="button" className="chat-find-earlier-btn" onClick={onLoadEarlier}>
-            {t('chat.find.loadEarlier')}
+            {'Load them'}
           </button>
         </div>
       )}

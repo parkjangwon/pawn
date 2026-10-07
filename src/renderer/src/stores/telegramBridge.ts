@@ -4,7 +4,7 @@
  * desktop turn. Remote chats do not steal the window focus.
  */
 
-import i18n from '../i18n'
+import { tx } from '../i18n'
 import { useAppStore, type Session } from './app'
 import { compactSessionNow, useChatStore } from './chat'
 import { useChangeLedger, type TurnCheckpoint } from './changeLedger'
@@ -165,7 +165,7 @@ async function ensureSession(ev: {
   const app = useAppStore.getState()
   const project = app.projects.find((p) => p.id === ev.projectId)
   if (!project || project.paths.length === 0) {
-    return { error: i18n.t('settings.telegramSection.missingProject') }
+    return { error: 'That project is not open in Pawn, or it has no folder. Pick one under Settings → Telegram.' }
   }
   let sessionId = ev.sessionId && project.sessions.some((s) => s.id === ev.sessionId) ? ev.sessionId : ''
   if (!sessionId) {
@@ -184,7 +184,6 @@ async function ensureSession(ev: {
 async function runInbound(ev: Extract<TelegramEventDto, { type: 'inbound' }>): Promise<void> {
   const api = window.api?.telegram
   if (!api) return
-  const t = tFor(ev.language)
   const bound = await ensureSession(ev)
   if ('error' in bound) {
     await api.reply(ev.chatId, bound.error).catch(() => {})
@@ -193,7 +192,7 @@ async function runInbound(ev: Extract<TelegramEventDto, { type: 'inbound' }>): P
   const label = ev.username ? `@${ev.username}` : ev.userId
   const content = `[Telegram ${label}]\n${ev.text}`
   useChatStore.getState().sendMessage(bound.projectId, bound.sessionId, content, 'queue')
-  await api.progress(ev.chatId, t('settings.telegramSection.working')).catch(() => {})
+  await api.progress(ev.chatId, 'Working…').catch(() => {})
 
   // Edit the working bubble only when the interim answer changed: editing the
   // same text every tick would burn the bot's rate limit on long turns.
@@ -214,7 +213,7 @@ async function runInbound(ev: Extract<TelegramEventDto, { type: 'inbound' }>): P
   try {
     const idle = await waitUntilIdle(bound.sessionId, TURN_WAIT_MS)
     if (!idle && !lastDraft) {
-      await api.progress(ev.chatId, t('settings.telegramSection.stillWorking')).catch(() => {})
+      await api.progress(ev.chatId, 'Still working in Pawn. The answer will arrive when the turn finishes.').catch(() => {})
       await waitUntilIdle(bound.sessionId, TURN_WAIT_MS)
     }
   } finally {
@@ -225,17 +224,11 @@ async function runInbound(ev: Extract<TelegramEventDto, { type: 'inbound' }>): P
     .getState()
     .projects.find((p) => p.id === bound.projectId)
     ?.sessions.find((s) => s.id === bound.sessionId)
-  const answer = telegramReplyText(session?.messages || [], ev.text) || t('settings.telegramSection.doneFallback')
+  const answer = telegramReplyText(session?.messages || [], ev.text) || 'Done. The trace is in this chat inside Pawn.'
   await api.reply(ev.chatId, answer).catch(() => {})
 }
 
 type DataCommand = Extract<TelegramEventDto, { type: 'command' }>
-
-/** t() bound to the Telegram user's client language, falling back to the app language. */
-function tFor(lng: string | undefined) {
-  return (key: string, opts?: Record<string, unknown>): string =>
-    i18n.t(key, { ...(opts ?? {}), ...(lng ? { lng } : {}) }) as string
-}
 
 function projectOf(projectId: string) {
   return useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -260,17 +253,16 @@ function kTokens(tokens: number): string {
 async function runDataCommand(ev: DataCommand): Promise<void> {
   const api = window.api?.telegram
   if (!api) return
-  const t = tFor(ev.language)
   await ensureProjects()
   const project = projectOf(ev.projectId || '')
   if (!project) {
-    await api.reply(ev.chatId, t('settings.telegramSection.missingProject')).catch(() => {})
+    await api.reply(ev.chatId, 'That project is not open in Pawn, or it has no folder. Pick one under Settings → Telegram.').catch(() => {})
     return
   }
   const sessionId = sessionByChat.get(ev.chatId) || ev.sessionId || ''
   const needSession = async (): Promise<boolean> => {
     if (sessionId) return false
-    await api.reply(ev.chatId, t('settings.telegramSection.chatNone')).catch(() => {})
+    await api.reply(ev.chatId, 'This chat is not bound yet. Send a message or use /sessions.').catch(() => {})
     return true
   }
   const recentTurns = (): TurnCheckpoint[] =>
@@ -283,12 +275,12 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
     case 'sessions': {
       const sessions = recentSessions(project.id).slice(0, SESSIONS_SHOWN)
       if (sessions.length === 0) {
-        await api.reply(ev.chatId, t('settings.telegramSection.noSessions')).catch(() => {})
+        await api.reply(ev.chatId, 'No chats in this project yet.').catch(() => {})
         return
       }
       const current = sessionByChat.get(ev.chatId)
       const lines = sessions.map((s, i) => `${i + 1}. ${s.title}${s.id === current ? ' ←' : ''}`)
-      lines.push(t('settings.telegramSection.chatSwitchHint'))
+      lines.push('Reply /chat <number> to switch.')
       await api.reply(ev.chatId, lines.join('\n')).catch(() => {})
       return
     }
@@ -297,32 +289,33 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
       if (!/^\d{1,2}$/.test(arg)) {
         const current = project.sessions.find((s) => s.id === sessionByChat.get(ev.chatId))
         const key = current ? 'settings.telegramSection.chatCurrent' : 'settings.telegramSection.chatNone'
-        await api.reply(ev.chatId, t(key, current ? { title: current.title } : undefined)).catch(() => {})
+        await api.reply(ev.chatId, tx(key, current ? { title: current.title } : undefined)).catch(() => {})
         return
       }
       const picked = recentSessions(project.id)[Number(arg) - 1]
       if (!picked) {
-        await api.reply(ev.chatId, t('settings.telegramSection.chatBadIndex')).catch(() => {})
+        await api.reply(ev.chatId, 'No chat with that number. Try /sessions.').catch(() => {})
         return
       }
       const bound = await api.bindChat(ev.chatId, project.id, picked.id, ev.userId).catch(() => undefined)
       if (!bound?.ok) return
       sessionByChat.set(ev.chatId, picked.id)
-      await api.reply(ev.chatId, t('settings.telegramSection.chatSwitched', { title: picked.title })).catch(() => {})
+      await api.reply(ev.chatId, `Switched to “${picked.title}”.`).catch(() => {})
       return
     }
     case 'project':
       await api
         .reply(
           ev.chatId,
-          t('settings.telegramSection.projectInfo', { name: project.name, paths: project.paths.join('\n') })
+          `${project.name}
+${project.paths.join('\n')}`
         )
         .catch(() => {})
       return
     case 'usage': {
       const db = window.api?.db
       if (!db?.getUsageSummary) {
-        await api.reply(ev.chatId, t('settings.telegramSection.usageUnavailable')).catch(() => {})
+        await api.reply(ev.chatId, 'Usage data is only available in the desktop app.').catch(() => {})
         return
       }
       const rows = await db.getUsageSummary(Math.floor(Date.now() / 1000) - 86400).catch(() => [])
@@ -333,7 +326,7 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
         calls += Number(row.calls) || 0
       }
       await api
-        .reply(ev.chatId, t('settings.telegramSection.usageInfo', { cost: cost.toFixed(2), calls: String(calls) }))
+        .reply(ev.chatId, `Last 24h: ${String(calls)} calls, $${cost.toFixed(2)}.`)
         .catch(() => {})
       return
     }
@@ -344,8 +337,10 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
       const request = (ev.arg || '').trim()
       useProviderStore.getState().setAgentMode('plan', sessionId)
       const text = request
-        ? t('settings.telegramSection.planRequestWith', { request })
-        : t('settings.telegramSection.planRequest')
+        ? `Plan this request with the plan tool before any implementation:
+
+${request}`
+        : 'Review this chat and write a task plan for the remaining work with the plan tool. Do not start executing it.'
       enqueue(
         ev.chatId,
         () =>
@@ -364,7 +359,7 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
     case 'build': {
       if (await needSession()) return
       useProviderStore.getState().setAgentMode('build', sessionId)
-      await api.reply(ev.chatId, t('settings.telegramSection.buildOn')).catch(() => {})
+      await api.reply(ev.chatId, 'Build mode on. The next message can edit files and run commands.').catch(() => {})
       return
     }
     case 'tasks': {
@@ -373,12 +368,12 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
       if (!plan.hydrated.has(sessionId)) await plan.hydrate(sessionId).catch(() => {})
       const items = (plan.bySession[sessionId] || []).slice(0, 15)
       if (items.length === 0) {
-        await api.reply(ev.chatId, t('settings.telegramSection.planEmpty')).catch(() => {})
+        await api.reply(ev.chatId, 'No task list for this chat yet. Ask the agent to plan the work.').catch(() => {})
         return
       }
       const lines = items.map((it) => `${PLAN_MARK[it.status] || '○'} ${it.content.slice(0, 100)}`)
       const done = items.filter((it) => it.status === 'done' || it.status === 'cancelled').length
-      lines.push(t('settings.telegramSection.planProgress', { done: String(done), total: String(items.length) }))
+      lines.push(`${String(done)}/${String(items.length)} done`)
       await api.reply(ev.chatId, lines.join('\n')).catch(() => {})
       return
     }
@@ -388,7 +383,7 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
       if (!ledger.hydrated) await ledger.hydrate().catch(() => {})
       const turns = recentTurns()
       if (turns.length === 0) {
-        await api.reply(ev.chatId, t('settings.telegramSection.noChanges')).catch(() => {})
+        await api.reply(ev.chatId, 'No file changes recorded for this chat yet.').catch(() => {})
         return
       }
       // The short id token survives new turns landing between /changes and
@@ -396,9 +391,9 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
       const lines = turns.map((turn, i) => {
         const files = turn.changes.filter((c) => c.status === 'applied').length
         const label = turn.label.replace(/\s+/g, ' ').slice(0, 80)
-        return `${i + 1}. ${label} — ${t('settings.telegramSection.changeFiles', { count: files })} [${turn.id.slice(-6)}]`
+        return `${i + 1}. ${label} — ${(files === 1 ? `${files} file` : `${files} files`)} [${turn.id.slice(-6)}]`
       })
-      lines.push(t('settings.telegramSection.undoHint'))
+      lines.push('Reply /undo <number> to revert a change set.')
       await api.reply(ev.chatId, lines.join('\n')).catch(() => {})
       return
     }
@@ -406,7 +401,7 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
       if (await needSession()) return
       const arg = (ev.arg || '').trim()
       if (!/^\d{1,2}$/.test(arg) && !/^[a-z0-9]{3,10}$/i.test(arg)) {
-        await api.reply(ev.chatId, t('settings.telegramSection.undoHint')).catch(() => {})
+        await api.reply(ev.chatId, 'Reply /undo <number> to revert a change set.').catch(() => {})
         return
       }
       const ledger = useChangeLedger.getState()
@@ -416,23 +411,24 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
         ? turns[Number(arg) - 1]
         : turns.find((candidate) => candidate.id.toLowerCase().endsWith(arg.toLowerCase()))
       if (!turn) {
-        await api.reply(ev.chatId, t('settings.telegramSection.undoNoTurn')).catch(() => {})
+        await api.reply(ev.chatId, 'No change set with that number. Try /changes.').catch(() => {})
         return
       }
       // Remote default is conservative: later user edits are never clobbered.
       const res = await ledger.revertTurn(turn.id, { skipConflicts: true }).catch(() => null)
       if (!res || !res.ok) {
-        await api.reply(ev.chatId, t('settings.telegramSection.undoFailed', { error: res?.error || 'error' })).catch(() => {})
+        await api.reply(ev.chatId, `Revert failed: ${res?.error || 'error'}`).catch(() => {})
         return
       }
-      let text = t('settings.telegramSection.undoDone', { count: res.reverted })
+      let text = (res.reverted === 1 ? `Reverted ${res.reverted} file.` : `Reverted ${res.reverted} files.`)
       const skipped = (res.conflicts || []).length
       if (skipped > 0) {
         const paths = res
           .conflicts!.slice(0, 3)
           .map((c) => `${c.path} (${c.reason})`)
           .join('\n')
-        text += `\n${t('settings.telegramSection.undoSkipped', { count: res.skipped ?? skipped, paths })}`
+        text += `\n${`Skipped ${res.skipped ?? skipped} (changed afterwards):
+${paths}`}`
       }
       await api.reply(ev.chatId, text).catch(() => {})
       return
@@ -441,15 +437,11 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
       if (await needSession()) return
       const usage = useUsageStore.getState()
       const route = usage.lastRoute[sessionId]
-      const lines = [t('settings.telegramSection.modelInfo', { model: route?.label || 'Auto' })]
+      const lines = [`Model: ${route?.label || 'Auto'}`]
       const ctx = usage.contextFor(sessionId)
       if (ctx) {
         lines.push(
-          t('settings.telegramSection.contextInfo', {
-            pct: String(Math.round(ctx.ratio * 100)),
-            tokens: kTokens(ctx.tokens),
-            window: kTokens(ctx.window)
-          })
+          `Context: ${String(Math.round(ctx.ratio * 100))}% (${kTokens(ctx.tokens)} / ${kTokens(ctx.window)})`
         )
       }
       await api.reply(ev.chatId, lines.join('\n')).catch(() => {})
@@ -458,12 +450,12 @@ async function runDataCommand(ev: DataCommand): Promise<void> {
     case 'compact': {
       if (await needSession()) return
       if (useChatStore.getState().isSessionStreaming(sessionId)) {
-        await api.reply(ev.chatId, t('settings.telegramSection.compactBusy')).catch(() => {})
+        await api.reply(ev.chatId, 'A turn is still running. Send /stop first.').catch(() => {})
         return
       }
-      await api.progress(ev.chatId, t('settings.telegramSection.compactStarted')).catch(() => {})
+      await api.progress(ev.chatId, 'Compacting context…').catch(() => {})
       const ok = await compactSessionNow(sessionId).catch(() => false)
-      await api.reply(ev.chatId, t(ok ? 'settings.telegramSection.compactDone' : 'settings.telegramSection.compactNothing')).catch(() => {})
+      await api.reply(ev.chatId, tx(ok ? 'settings.telegramSection.compactDone' : 'settings.telegramSection.compactNothing')).catch(() => {})
       return
     }
   }
@@ -476,7 +468,7 @@ function handle(ev: TelegramEventDto): void {
     try {
       window.dispatchEvent(
         new CustomEvent('pawn:toast', {
-          detail: { message: i18n.t('settings.telegramSection.pairingToast', { who, code: ev.code }) }
+          detail: { message: `Telegram pairing ${ev.code} from ${who}` }
         })
       )
     } catch {

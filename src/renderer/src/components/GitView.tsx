@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Check, ChevronDown, ChevronRight, GitBranch } from 'lucide-react'
 import { secretPreflight, validateCommitMessage } from '../agent/gitWrite'
 import { scanForSecrets, formatSecretScanBlock } from '../agent/secretScan'
@@ -19,7 +19,6 @@ interface GitViewProps {
 }
 
 export default function GitView({ projectPath }: GitViewProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [branch, setBranch] = useState<string | null>(null)
   const [files, setFiles] = useState<GitFile[]>([])
   const [summary, setSummary] = useState({ added: 0, modified: 0, deleted: 0 })
@@ -128,7 +127,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
     setError(null)
     const r = await window.api.shell.execFile('git', ['checkout', name], projectPath)
     if (r.exitCode === 0) setBranch(name)
-    else setError(r.stderr || r.stdout || t('rightPanel.git.errCheckout', { code: r.exitCode }))
+    else setError(r.stderr || r.stdout || `Checkout failed (${r.exitCode})`)
     setShowBranches(false)
     setBusy(false)
   }
@@ -137,7 +136,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
     setBusy(true)
     setError(null)
     const r = await window.api.shell.execFile('git', ['add', '--', path], projectPath)
-    if (r.exitCode !== 0) setError(r.stderr || r.stdout || t('rightPanel.git.errStage'))
+    if (r.exitCode !== 0) setError(r.stderr || r.stdout || 'Stage failed')
     refreshStatus()
     setBusy(false)
   }
@@ -157,7 +156,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
         ['reset', 'HEAD', '--', path],
         projectPath
       )
-      if (r2.exitCode !== 0) setError(r2.stderr || r.stderr || t('rightPanel.git.errUnstage'))
+      if (r2.exitCode !== 0) setError(r2.stderr || r.stderr || 'Unstage failed')
     }
     refreshStatus()
     setBusy(false)
@@ -167,7 +166,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
     setBusy(true)
     setError(null)
     const r = await window.api.shell.execFile('git', ['add', '-A'], projectPath)
-    if (r.exitCode !== 0) setError(r.stderr || r.stdout || t('rightPanel.git.errStage'))
+    if (r.exitCode !== 0) setError(r.stderr || r.stdout || 'Stage failed')
     refreshStatus()
     setBusy(false)
   }
@@ -194,7 +193,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
     if (!hasStaged) {
       const add = await window.api.shell.execFile('git', ['add', '-A'], projectPath)
       if (add.exitCode !== 0) {
-        setError(add.stderr || add.stdout || t('rightPanel.git.errStage'))
+        setError(add.stderr || add.stdout || 'Stage failed')
         setBusy(false)
         return
       }
@@ -213,7 +212,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
       projectPath
     )
     if (commit.exitCode !== 0) {
-      setError(commit.stderr || commit.stdout || t('rightPanel.git.errCommit', { code: commit.exitCode }))
+      setError(commit.stderr || commit.stdout || `Commit failed (${commit.exitCode})`)
     } else {
       setCommitMessage('')
       refreshStatus()
@@ -241,13 +240,13 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
       /* continue */
     }
     const r = await window.api.shell.execFile('git', ['push'], projectPath)
-    if (r.exitCode !== 0) setError(r.stderr || r.stdout || t('rightPanel.git.errPush', { code: r.exitCode }))
+    if (r.exitCode !== 0) setError(r.stderr || r.stdout || `Push failed (${r.exitCode})`)
     setBusy(false)
   }
 
   const openPullRequest = async (): Promise<void> => {
     if (!remoteHint || !window.api?.connections?.runTool) {
-      setError(t('rightPanel.git.prNeedGithub'))
+      setError('Connect GitHub under Settings → Connections')
       return
     }
     setPrBusy(true)
@@ -256,7 +255,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
       // Push first if needed
       const push = await window.api.shell.execFile('git', ['push', '-u', 'origin', 'HEAD'], projectPath)
       if (push.exitCode !== 0 && !/up-to-date|everything up-to-date/i.test(push.stderr + push.stdout)) {
-        setError(push.stderr || push.stdout || t('rightPanel.git.errPush', { code: push.exitCode }))
+        setError(push.stderr || push.stdout || `Push failed (${push.exitCode})`)
         setPrBusy(false)
         return
       }
@@ -281,14 +280,14 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
           body: `Opened from Pawn Git panel on branch \`${head}\`.`
         })
         if (!res2?.ok) {
-          setError(res2?.error || res?.error || res?.text || t('rightPanel.git.errPr'))
+          setError(res2?.error || res?.error || res?.text || 'Could not open PR')
         } else {
           setError(null)
-          void window.api.notification?.send?.('Pawn', t('rightPanel.git.prOpened'))?.catch(() => {})
+          void window.api.notification?.send?.('Pawn', 'Pull request created')?.catch(() => {})
           if (res2.text) setError(res2.text.slice(0, 200))
         }
       } else {
-        void window.api.notification?.send?.('Pawn', t('rightPanel.git.prOpened'))?.catch(() => {})
+        void window.api.notification?.send?.('Pawn', 'Pull request created')?.catch(() => {})
         if (res.text) setError(res.text.slice(0, 200))
       }
     } catch (e) {
@@ -305,7 +304,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
   }
 
   if (!projectPath || !branch) {
-    return <div className="rp-empty">{t('rightPanel.git.noRepo')}</div>
+    return <div className="rp-empty">{'No git repository'}</div>
   }
 
   const staged = files.filter((f) => f.staged)
@@ -343,11 +342,11 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
       </div>
 
       <div className="rp-git-body">
-        {files.length === 0 && <div className="rp-files-empty">{t('rightPanel.git.noChanges')}</div>}
+        {files.length === 0 && <div className="rp-files-empty">{'No changes'}</div>}
 
         {staged.length > 0 && (
           <div className="rp-git-section">
-            <div className="rp-git-section-label">{t('rightPanel.git.staged')}</div>
+            <div className="rp-git-section-label">{'Staged'}</div>
             {staged.map((file) => (
               <div key={`s-${file.path}`} className="rp-git-file">
                 <span className={`rp-git-file-status rp-git-status-${statusBadge(file)}`}>
@@ -361,7 +360,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
                   className="rp-git-file-btn"
                   disabled={busy}
                   onClick={() => void unstageFile(file.path)}
-                  title={t('rightPanel.git.unstage')}
+                  title={'Unstage'}
                 >
                   −
                 </button>
@@ -373,14 +372,14 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
         {unstaged.length > 0 && (
           <div className="rp-git-section">
             <div className="rp-git-section-label">
-              {t('rightPanel.git.unstaged')}
+              {'Changes'}
               <button
                 type="button"
                 className="rp-git-file-btn link"
                 disabled={busy}
                 onClick={() => void stageAll()}
               >
-                {t('rightPanel.git.stageAll')}
+                {'Stage all'}
               </button>
             </div>
             {unstaged.map((file) => (
@@ -396,7 +395,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
                   className="rp-git-file-btn"
                   disabled={busy}
                   onClick={() => void stageFile(file.path)}
-                  title={t('rightPanel.git.stage')}
+                  title={'Stage'}
                 >
                   +
                 </button>
@@ -417,7 +416,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
       <div className="rp-git-actions">
         <Input
           className="rp-git-commit-input"
-          placeholder={t('rightPanel.git.commitPlaceholder')}
+          placeholder={'Commit message…'}
           value={commitMessage}
           onChange={(e) => setCommitMessage(e.target.value)}
           onKeyDown={(e) => {
@@ -429,19 +428,19 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
           onClick={() => void doCommit()}
           disabled={busy || !commitMessage.trim()}
         >
-          {t('rightPanel.git.commit')}
+          {'Commit'}
         </button>
         <button className="rp-git-btn" onClick={() => void doPush()} disabled={busy}>
-          {t('rightPanel.git.push')}
+          {'Push'}
         </button>
         {remoteHint && (
           <button
             className="rp-git-btn primary"
             onClick={() => void openPullRequest()}
             disabled={busy || prBusy}
-            title={t('rightPanel.git.openPrHint', { repo: remoteHint })}
+            title={`Create a GitHub pull request for ${remoteHint}`}
           >
-            {prBusy ? t('rightPanel.git.openingPr') : t('rightPanel.git.openPr')}
+            {prBusy ? 'Opening…' : 'Open PR'}
           </button>
         )}
       </div>
@@ -459,7 +458,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
                 transition: 'transform 0.15s'
               }}
             />
-            {t('rightPanel.git.history', { count: history.length })}
+            {`History (${history.length})`}
           </div>
           {showHistory && (
             <div className="rp-git-history-list">

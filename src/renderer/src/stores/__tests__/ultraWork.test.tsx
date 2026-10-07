@@ -138,10 +138,10 @@ describe('UltraWorkBanner', () => {
   it('shows the goal, iteration, and a Stop button while active', () => {
     useUltraWorkStore.getState().start('s1', 'make CI green', 12)
     render(<UltraWorkBanner sessionId="s1" />)
-    expect(screen.getByText('ultraWork.wordmark')).toHaveClass('ulw-rainbow-text')
+    expect(screen.getByText('ULTRA WORK')).toHaveClass('ulw-rainbow-text')
     expect(screen.getByText('make CI green')).toBeInTheDocument()
-    expect(screen.getByText('ultraWork.iteration:1/12')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'ultraWork.stop' }))
+    expect(screen.getByText('Iteration 1/12')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
     expect(useUltraWorkStore.getState().get('s1')?.status).toBe('stopped')
   })
 
@@ -151,7 +151,7 @@ describe('UltraWorkBanner', () => {
     const { container } = render(<UltraWorkBanner sessionId="s1" />)
     expect(container.querySelector('.ulw-banner')).toHaveClass('ulw-achieved')
     expect(screen.getByText('npm test exits 0')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'ultraWork.dismiss' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Dismiss' }))
     expect(useUltraWorkStore.getState().get('s1')).toBeUndefined()
   })
 })

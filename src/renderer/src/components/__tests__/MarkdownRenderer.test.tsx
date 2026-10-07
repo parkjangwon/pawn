@@ -56,7 +56,7 @@ describe('MarkdownRenderer', () => {
     fireEvent.click(link, { metaKey: true })
     await vi.waitFor(() => expect(reveal).toHaveBeenCalledWith('/tmp/project/src/app.ts'))
     fireEvent.click(gone)
-    await vi.waitFor(() => expect(toasts[0]).toBe('markdown.fileNotFound: /tmp/project/gone.ts'))
+    await vi.waitFor(() => expect(toasts[0]).toBe('File not found: /tmp/project/gone.ts'))
     window.removeEventListener('pawn:toast', onToast)
   })
 
@@ -85,7 +85,7 @@ describe('MarkdownRenderer', () => {
     const img = await screen.findByRole('button', { name: 'Sales chart' })
     expect(img).toHaveAttribute('src', 'data:image/png;base64,iVBORw0KGgo=')
     expect(readImage).toHaveBeenCalledWith('/p/charts/chart.png')
-    expect(await screen.findByText(/Lost — markdown.fileNotFound/)).toBeInTheDocument()
+    expect(await screen.findByText(/Lost — File not found/)).toBeInTheDocument()
     // Remote images still never auto-load.
     render(<MarkdownRenderer content="![remote](https://evil.example/x.png)" />)
     expect(screen.getByRole('link', { name: 'remote' })).toHaveAttribute('href', 'https://evil.example/x.png')
@@ -107,12 +107,12 @@ describe('MarkdownRenderer', () => {
     }
 
     open()
-    const dialog = screen.getByRole('dialog', { name: 'chat.imageLightbox' })
+    const dialog = screen.getByRole('dialog', { name: 'Enlarged image' })
     expect(dialog).toBeInTheDocument()
     const enlarged = dialog.querySelector('img.md-image-lightbox-img')
     expect(enlarged).toHaveAttribute('src', src)
 
-    fireEvent.click(screen.getByRole('button', { name: 'common.close' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
     open()
@@ -143,17 +143,17 @@ describe('MarkdownRenderer', () => {
     const { container } = render(<MarkdownRenderer content={'```ts\n' + code + '\n```'} />)
     const wrapper = container.querySelector('.code-block-wrapper')!
     expect(wrapper).toHaveAttribute('data-folded', 'true')
-    const toggle = screen.getByRole('button', { name: 'markdown.expandCode' })
+    const toggle = screen.getByRole('button', { name: 'Show all 45 lines' })
     expect(toggle).toHaveAttribute('aria-expanded', 'false')
     fireEvent.click(toggle)
     expect(wrapper).not.toHaveAttribute('data-folded')
-    expect(screen.getByRole('button', { name: 'markdown.collapseCode' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getByRole('button', { name: 'Collapse' })).toHaveAttribute('aria-expanded', 'true')
   })
 
   it('leaves short code blocks unfolded', () => {
     const { container } = render(<MarkdownRenderer content={'```\na\nb\n```'} />)
     expect(container.querySelector('.code-block-wrapper')).not.toHaveAttribute('data-folded')
-    expect(screen.queryByRole('button', { name: 'markdown.expandCode' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /Show all/ })).not.toBeInTheDocument()
   })
 
   it('unfolds when conversation find reveals a match inside', () => {

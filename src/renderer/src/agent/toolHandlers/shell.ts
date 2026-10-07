@@ -2,7 +2,6 @@ import { resolveToolPath } from '../pathUtils'
 import { getProjectTarget } from '../executionTarget'
 import { useProviderStore } from '../../stores/provider'
 import { useStreamingStore } from '../../stores/streaming'
-import i18n from '../../i18n'
 import type { ToolHandler } from './types'
 import type { ToolExecContext } from './types'
 import { analyzeProcessOutput, formatAnalysis, markJobSeen, watchJob } from '../runtimeWatch'
@@ -240,7 +239,7 @@ const shell_exec: ToolHandler = async (call, projectPath, signal, ctx, api) => {
                 signal,
                 sessionId: ctx?.sessionId,
                 liveEnabled: Boolean(ctx?.sessionId) && !ctx?.subagent,
-                label: i18n.t('toolMessage.shell'),
+                label: 'Run command',
                 target: clipLiveTarget(command)
               })
               return shellResultPayload(call.id, result)

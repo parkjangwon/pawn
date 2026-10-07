@@ -1,6 +1,6 @@
 import React, { memo, useCallback, useContext, useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Check, ChevronDown, X } from 'lucide-react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
@@ -40,7 +40,6 @@ function safeUrlTransform(url: string): string {
 }
 
 function MarkdownRendererInner({ content }: Props): React.JSX.Element {
-  const { t } = useTranslation()
   const baseDir = useContext(MarkdownBaseDirContext)
   const [lightbox, setLightbox] = useState<LightboxState | null>(null)
 
@@ -84,7 +83,7 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
     },
     img: ({ src, alt }: { src?: string; alt?: string }) => {
       if (!src) return null
-      const label = alt || t('chat.attachedImage')
+      const label = alt || 'Pasted image'
       if (!isInlineImageSrc(src)) {
         // Local images load through the main process (never file:/remote fetches).
         const local = resolveLocalPath(src, baseDir)
@@ -101,7 +100,7 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
           src={src}
           alt={label}
           loading="lazy"
-          title={t('chat.imageExpandHint')}
+          title={'Double-click to enlarge'}
           role="button"
           tabIndex={0}
           onDoubleClick={(e) => {
@@ -121,7 +120,7 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
     code: ({ className, children }: { className?: string; children?: React.ReactNode }) =>
       className ? <code className={className}>{children}</code> : <PathCode text={getNodeText(children)}>{children}</PathCode>,
     pre: ({ children }: { children?: React.ReactNode }) => <CodeBlock>{children}</CodeBlock>
-  }), [t, openLightbox, baseDir])
+  }), [openLightbox, baseDir])
 
   return (
     <div className="markdown-body">
@@ -146,21 +145,20 @@ function ImageLightbox({ src, alt, onClose }: {
   alt: string
   onClose: () => void
 }): React.JSX.Element {
-  const { t } = useTranslation()
   return (
     <div
       className="md-image-lightbox"
       role="dialog"
       aria-modal="true"
-      aria-label={t('chat.imageLightbox')}
+      aria-label={'Enlarged image'}
       onClick={onClose}
     >
       <button
         type="button"
         className="md-image-lightbox-close"
         onClick={(e) => { e.stopPropagation(); onClose() }}
-        aria-label={t('common.close')}
-        title={t('common.close')}
+        aria-label={'Close'}
+        title={'Close'}
       >
         <X size={18} />
       </button>
@@ -205,7 +203,6 @@ function getNodeText(node: React.ReactNode): string {
 }
 
 function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Element {
-  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
@@ -240,20 +237,20 @@ function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Elem
       <div className="code-block-header" data-find-ignore="true">
         <span className="code-lang">{lang}</span>
         {foldable && (
-          <span className="code-lines">{t('markdown.codeLines', { count: lineCount })}</span>
+          <span className="code-lines">{`${lineCount} lines`}</span>
         )}
         <button
           className={`copy-btn ${copied ? 'copied' : ''}`}
           onClick={handleCopy}
-          aria-label={copied ? t('markdown.codeCopied') : t('markdown.copyCode')}
+          aria-label={copied ? 'Copied to clipboard' : 'Copy code'}
         >
           {copied ? (
             <>
               <Check size={12} />
-              <span>{t('chat.copied')}</span>
+              <span>{'Copied'}</span>
             </>
           ) : (
-            t('chat.copy')
+            'Copy'
           )}
         </button>
       </div>
@@ -280,7 +277,7 @@ function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Elem
           }}
         >
           <ChevronDown size={12} aria-hidden style={{ transform: folded ? 'none' : 'rotate(180deg)' }} />
-          {folded ? t('markdown.expandCode', { count: lineCount }) : t('markdown.collapseCode')}
+          {folded ? `Show all ${lineCount} lines` : 'Collapse'}
         </button>
       )}
     </div>

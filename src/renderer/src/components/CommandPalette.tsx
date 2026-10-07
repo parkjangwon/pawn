@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import {
   Clock,
   Disc,
@@ -133,7 +133,6 @@ export default function CommandPalette({
   onOpenSettings,
   onMainViewChange
 }: CommandPaletteProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null)
@@ -173,7 +172,7 @@ export default function CommandPalette({
       .flatMap((p) => p.sessions.map((s) => ({
         session: s,
         projectId: p.id,
-        projectName: p.id === GENERAL_ID ? t('contextBar.noProject') : p.name
+        projectName: p.id === GENERAL_ID ? 'No project selected' : p.name
       })))
       .sort((a, b) => b.session.createdAt - a.session.createdAt)
 
@@ -183,8 +182,8 @@ export default function CommandPalette({
     const actions: Command[] = [
       {
         id: 'new-session',
-        label: t('commandPalette.commands.newSession'),
-        description: t('commandPalette.commands.newSessionDesc'),
+        label: 'New chat',
+        description: 'Start a blank chat without a project',
         shortcut: formatCombo(keybindings['new-session']),
         group: 'actions',
         keywords: 'new chat session blank',
@@ -197,8 +196,8 @@ export default function CommandPalette({
       ...(hasChat
         ? [{
             id: 'find-in-chat',
-            label: t('commandPalette.commands.findInChat'),
-            description: t('commandPalette.commands.findInChatDesc'),
+            label: 'Find in conversation',
+            description: 'Search this chat and jump between matches',
             shortcut: formatCombo('Meta+F'),
             group: 'actions' as GroupId,
             keywords: 'find search conversation text ctrl+f',
@@ -213,8 +212,8 @@ export default function CommandPalette({
       ...(useRecordingStore.getState().supported
         ? [{
             id: 'record-workflow',
-            label: useRecordingStore.getState().status.state === 'recording' ? t('record.button.stop') : t('record.palette.label'),
-            description: t('record.palette.desc'),
+            label: useRecordingStore.getState().status.state === 'recording' ? 'Stop recording' : 'Record a workflow',
+            description: 'Demonstrate a task once; Pawn writes a reusable skill',
             group: 'actions' as const,
             keywords: 'record replay skill demo macro workflow 녹화 스킬',
             icon: <Disc size={16} />,
@@ -227,8 +226,8 @@ export default function CommandPalette({
         : []),
       {
         id: 'open-automations',
-        label: t('commandPalette.commands.openAutomations'),
-        description: t('commandPalette.commands.openAutomationsDesc'),
+        label: 'Automations',
+        description: 'Open the automations screen',
         group: 'actions',
         keywords: 'automation routine schedule',
         icon: <Clock size={16} />,
@@ -236,8 +235,8 @@ export default function CommandPalette({
       },
       {
         id: 'open-settings',
-        label: t('commandPalette.commands.openSettings'),
-        description: t('commandPalette.commands.openSettingsDesc'),
+        label: 'Settings',
+        description: 'Providers, models, connections, and more',
         shortcut: formatCombo(keybindings['open-settings']),
         group: 'actions',
         keywords: 'preferences config connections',
@@ -246,8 +245,8 @@ export default function CommandPalette({
       },
       {
         id: 'mods-reload',
-        label: t('commandPalette.commands.modsReload'),
-        description: t('commandPalette.commands.modsReloadDesc'),
+        label: 'Reload mods',
+        description: 'Re-scan and reload mods for this chat',
         group: 'actions',
         keywords: 'mods extensions hooks reload plugin in-app',
         icon: <Icon d={<><path d="M4 4h6v6H4V4zm10 0h6v6h-6V4zM4 14h6v6H4v-6zm10 3h6v3h-6v-3z" /></>} />,
@@ -264,8 +263,8 @@ export default function CommandPalette({
       },
       {
         id: 'mods-settings',
-        label: t('commandPalette.commands.modsSettings'),
-        description: t('commandPalette.commands.modsSettingsDesc'),
+        label: 'Mods settings',
+        description: 'Review, allow, or disable local mods',
         group: 'actions',
         keywords: 'mods extensions settings plugins consent',
         icon: <Icon d={<><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" /></>} />,
@@ -277,8 +276,8 @@ export default function CommandPalette({
       },
       {
         id: 'keyboard-shortcuts',
-        label: t('commandPalette.shortcuts'),
-        description: t('commandPalette.shortcutsDesc'),
+        label: 'Keyboard shortcuts',
+        description: 'See every shortcut in one place',
         group: 'actions',
         keywords: 'shortcuts keys keyboard help cheat',
         icon: <Icon d={<><rect x="2" y="6" width="20" height="12" rx="2" /><path d="M6 10h.01M10 10h.01M14 10h.01M18 10h.01M7 14h10" /></>} />,
@@ -286,10 +285,10 @@ export default function CommandPalette({
       },
       {
         id: 'stop-streaming',
-        label: t('commandPalette.commands.stopStreaming'),
+        label: 'Stop generating',
         description: isStreaming
-          ? t('commandPalette.commands.stopStreamingDesc')
-          : t('commandPalette.commands.stopStreamingIdle'),
+          ? 'Stop the active chat\'s response'
+          : 'Nothing is generating right now',
         group: 'actions',
         keywords: 'stop cancel abort',
         icon: <Square size={16} />,
@@ -300,8 +299,8 @@ export default function CommandPalette({
     const navigation: Command[] = [
       {
         id: 'toggle-sidebar',
-        label: t('commandPalette.commands.toggleSidebar'),
-        description: t('commandPalette.commands.toggleSidebarDesc'),
+        label: 'Toggle sidebar',
+        description: 'Show or hide the project sidebar',
         shortcut: formatCombo(keybindings['toggle-sidebar']),
         group: 'navigation',
         icon: <PanelLeft size={16} />,
@@ -309,8 +308,8 @@ export default function CommandPalette({
       },
       {
         id: 'toggle-right-panel',
-        label: t('commandPalette.commands.toggleRightPanel'),
-        description: t('commandPalette.commands.toggleRightPanelDesc'),
+        label: 'Toggle right panel',
+        description: 'Show or hide files, git, browser, and tools',
         shortcut: formatCombo(keybindings['toggle-right-panel']),
         group: 'navigation',
         icon: <PanelRight size={16} />,
@@ -318,8 +317,8 @@ export default function CommandPalette({
       },
       {
         id: 'open-agents-panel',
-        label: t('commandPalette.commands.openAgents'),
-        description: t('commandPalette.commands.openAgentsDesc'),
+        label: 'Open Agents panel',
+        description: 'See helpers at work—progress, cost, and file changes',
         group: 'navigation',
         keywords: 'subagent parallel worker explore agents',
         icon: <Users size={16} />,
@@ -334,8 +333,8 @@ export default function CommandPalette({
       },
       {
         id: 'toggle-terminal',
-        label: t('commandPalette.commands.toggleTerminal'),
-        description: t('commandPalette.commands.toggleTerminalDesc'),
+        label: 'Toggle terminal',
+        description: 'Show or hide the bottom terminal',
         shortcut: formatCombo(keybindings['toggle-terminal']),
         group: 'navigation',
         icon: <Terminal size={16} />,
@@ -343,14 +342,12 @@ export default function CommandPalette({
       },
       {
         id: 'theme-toggle',
-        label: t('commandPalette.commands.toggleTheme'),
-        description: t('commandPalette.commands.toggleThemeDesc', {
-          current: theme === 'dark'
-            ? t('commandPalette.themeDark')
+        label: 'Toggle theme',
+        description: `Currently ${theme === 'dark'
+            ? 'Dark'
             : theme === 'light'
-              ? t('commandPalette.themeLight')
-              : t('commandPalette.themeSystem')
-        }),
+              ? 'Light'
+              : 'System'} — switch light/dark`,
         group: 'navigation',
         keywords: 'dark light appearance',
         icon: theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />,
@@ -358,8 +355,8 @@ export default function CommandPalette({
       },
       {
         id: 'theme-light',
-        label: t('commandPalette.commands.themeLight'),
-        description: t('commandPalette.commands.themeLightDesc'),
+        label: 'Use light theme',
+        description: 'Switch the app to light mode',
         group: 'navigation',
         keywords: 'light appearance',
         icon: <Sun size={16} />,
@@ -367,8 +364,8 @@ export default function CommandPalette({
       },
       {
         id: 'theme-dark',
-        label: t('commandPalette.commands.themeDark'),
-        description: t('commandPalette.commands.themeDarkDesc'),
+        label: 'Use dark theme',
+        description: 'Switch the app to dark mode',
         group: 'navigation',
         keywords: 'dark appearance',
         icon: <Moon size={16} />,
@@ -381,7 +378,7 @@ export default function CommandPalette({
 
     const sessions: Command[] = recentSessions.map(({ session, projectId, projectName }, idx) => ({
       id: `session-${session.id}`,
-      label: session.title || t('sidebar.session'),
+      label: session.title || 'Chat',
       description:
         projectId === GENERAL_ID
           ? ''
@@ -401,8 +398,8 @@ export default function CommandPalette({
       id: `project-${p.id}`,
       label: p.name,
       description: getEffectiveProjectPath(p)
-        ? t('commandPalette.projectPath', { path: getEffectiveProjectPath(p) })
-        : t('commandPalette.projectNoPath'),
+        ? `${getEffectiveProjectPath(p)}`
+        : 'No folder linked',
       group: 'projects' as GroupId,
       keywords: `${p.name} ${p.paths?.join(' ') || ''}`,
       icon: <Folder size={16} />,
@@ -418,10 +415,10 @@ export default function CommandPalette({
     // pane instead of opening Settings and scrolling the nav.
     const settingsCmds: Command[] = SECTIONS.map((s) => ({
       id: `settings-${s.id}`,
-      label: t(s.labelKey),
-      description: t(s.groupKey),
+      label: tx(s.labelKey),
+      description: tx(s.groupKey),
       group: 'settings' as GroupId,
-      keywords: s.searchKey ? t(s.searchKey) : '',
+      keywords: s.searchKey ? tx(s.searchKey) : '',
       icon: <Icon d={<path d={s.icon} />} />,
       action: () => run(() => {
         openSettingsSection(s.id)
@@ -431,7 +428,7 @@ export default function CommandPalette({
 
     return [...sessions, ...actions, ...projectCmds, ...navigation, ...settingsCmds]
   }, [
-    projects, keybindings, t, run, onMainViewChange, onOpenSettings, openNewChat,
+    projects, keybindings, run, onMainViewChange, onOpenSettings, openNewChat,
     stopStreaming, isStreaming, theme, toggleTheme, setTheme, setActiveProject, setActiveSession,
     hasChat
   ])
@@ -580,7 +577,7 @@ export default function CommandPalette({
         className="cp-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={t('commandPalette.title')}
+        aria-label={'Command palette'}
         onClick={(e) => {
           e.stopPropagation()
           inputRef.current?.focus()
@@ -597,7 +594,7 @@ export default function CommandPalette({
               data-cp-search
               value={query}
               onChange={(e) => setQuery(e.target.value)}
-              placeholder={t('commandPalette.placeholder')}
+              placeholder={'Search chats, actions, projects…'}
               aria-autocomplete="list"
               aria-controls="cp-listbox"
               autoComplete="off"
@@ -611,12 +608,12 @@ export default function CommandPalette({
                   setQuery('')
                   inputRef.current?.focus()
                 }}
-                aria-label={t('commandPalette.clear')}
+                aria-label={'Clear search'}
               >
                 <X size={16} />
               </button>
             ) : (
-              <span className="cp-esc-hint" title={t('commandPalette.close')}>
+              <span className="cp-esc-hint" title={'Close'}>
                 <kbd>esc</kbd>
               </span>
             )}
@@ -626,13 +623,13 @@ export default function CommandPalette({
         <div className="cp-list" ref={listRef} id="cp-listbox" role="listbox">
           {flatItems.length === 0 && (
             <div className="cp-empty">
-              <div className="cp-empty-title">{t('commandPalette.noResults')}</div>
-              <div className="cp-empty-hint">{t('commandPalette.noResultsHint')}</div>
+              <div className="cp-empty-title">{'No matching chats'}</div>
+              <div className="cp-empty-hint">{'Try another keyword, or clear the search.'}</div>
             </div>
           )}
           {groups.map((group) => (
-            <div key={group.id} className="cp-group" role="group" aria-label={t(`commandPalette.groups.${group.id}`)}>
-              <div className="cp-group-label">{t(`commandPalette.groups.${group.id}`)}</div>
+            <div key={group.id} className="cp-group" role="group" aria-label={tx(`commandPalette.groups.${group.id}`)}>
+              <div className="cp-group-label">{tx(`commandPalette.groups.${group.id}`)}</div>
               {group.items.map((cmd) => {
                 flatCursor += 1
                 const idx = flatCursor
@@ -662,7 +659,7 @@ export default function CommandPalette({
                           <HighlightedText text={cmd.label} query={query} />
                         </span>
                         {(isActiveSession || isActiveProject) && (
-                          <span className="cp-badge">{t('commandPalette.current')}</span>
+                          <span className="cp-badge">{'Current'}</span>
                         )}
                       </span>
                     </span>
@@ -680,15 +677,15 @@ export default function CommandPalette({
         <div className="cp-footer">
           <span className="cp-footer-hint">
             <kbd>↑</kbd><kbd>↓</kbd>
-            <span>{t('commandPalette.navigate')}</span>
+            <span>{'Navigate'}</span>
           </span>
           <span className="cp-footer-hint">
             <kbd>↵</kbd>
-            <span>{t('commandPalette.select')}</span>
+            <span>{'Select'}</span>
           </span>
           <span className="cp-footer-hint">
             <kbd>Esc</kbd>
-            <span>{t('commandPalette.close')}</span>
+            <span>{'Close'}</span>
           </span>
         </div>
       </div>

@@ -1,31 +1,29 @@
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { usePermissionStore, type AllowRule, type PermissionType } from '../stores/permission'
 import './PermissionsAlwaysPanel.css'
 
 function describeRule(
   rule: AllowRule,
-  t: (k: string, o?: Record<string, string>) => string
 ): { title: string; detail: string } {
   if (rule.kind === 'perm_type') {
     return {
-      title: t(`permission.types.${rule.type}` as never) || rule.type,
-      detail: t('permission.alwaysRules.kindType')
+      title: tx(`permission.types.${rule.type}` as never) || rule.type,
+      detail: 'Entire permission type'
     }
   }
   if (rule.kind === 'path_prefix') {
     return {
-      title: t('permission.alwaysRules.pathTitle'),
+      title: 'Folder path',
       detail: rule.prefix
     }
   }
   return {
-    title: t('permission.alwaysRules.shellTitle'),
+    title: 'Shell command prefix',
     detail: rule.prefix
   }
 }
 
 export default function PermissionsAlwaysPanel(): React.JSX.Element {
-  const { t } = useTranslation()
   const alwaysRules = usePermissionStore((s) => s.alwaysRules)
   const sessionRules = usePermissionStore((s) => s.sessionRules)
   const sessionApproved = usePermissionStore((s) => s.sessionApproved)
@@ -36,16 +34,16 @@ export default function PermissionsAlwaysPanel(): React.JSX.Element {
   return (
     <div className="perm-always-panel">
       <div className="settings-row-info perm-always-head">
-        <span className="settings-row-label">{t('permission.alwaysRules.title')}</span>
-        <span className="settings-row-desc">{t('permission.alwaysRules.desc')}</span>
+        <span className="settings-row-label">{'Always-allow rules'}</span>
+        <span className="settings-row-desc">{'Actions approved forever for this device. Remove a rule anytime — the next request will ask again.'}</span>
       </div>
 
       {alwaysRules.length === 0 ? (
-        <div className="perm-always-empty">{t('permission.alwaysRules.empty')}</div>
+        <div className="perm-always-empty">{'No always-allow rules yet. Approve with “Always allow…” on a permission prompt.'}</div>
       ) : (
         <ul className="perm-always-list">
           {alwaysRules.map((rule) => {
-            const { title, detail } = describeRule(rule, t as never)
+            const { title, detail } = describeRule(rule)
             return (
               <li key={rule.id} className="perm-always-item">
                 <div className="perm-always-item-info">
@@ -53,14 +51,14 @@ export default function PermissionsAlwaysPanel(): React.JSX.Element {
                   <span className="perm-always-detail" title={detail}>
                     {detail}
                   </span>
-                  <span className="perm-always-badge">{t('permission.alwaysRules.scopeAlways')}</span>
+                  <span className="perm-always-badge">{'Always'}</span>
                 </div>
                 <button
                   type="button"
                   className="perm-always-remove"
                   onClick={() => removeRule(rule.id)}
                 >
-                  {t('permission.alwaysRules.remove')}
+                  {'Remove'}
                 </button>
               </li>
             )
@@ -70,32 +68,32 @@ export default function PermissionsAlwaysPanel(): React.JSX.Element {
 
       {(sessionRules.length > 0 || sessionTypes.length > 0) && (
         <div className="perm-session-block">
-          <div className="settings-row-label">{t('permission.alwaysRules.sessionTitle')}</div>
-          <span className="settings-row-desc">{t('permission.alwaysRules.sessionDesc')}</span>
+          <div className="settings-row-label">{'Temporary approvals'}</div>
+          <span className="settings-row-desc">{'Cleared when you quit the app.'}</span>
           <ul className="perm-always-list soft">
             {sessionTypes.map((type) => (
               <li key={`type-${type}`} className="perm-always-item">
                 <div className="perm-always-item-info">
-                  <strong>{t(`permission.types.${type}`)}</strong>
-                  <span className="perm-always-badge">{t('permission.alwaysRules.scopeSession')}</span>
+                  <strong>{tx(`permission.types.${type}`)}</strong>
+                  <span className="perm-always-badge">{'Until quit'}</span>
                 </div>
               </li>
             ))}
             {sessionRules.map((rule) => {
-              const { title, detail } = describeRule(rule, t as never)
+              const { title, detail } = describeRule(rule)
               return (
                 <li key={rule.id} className="perm-always-item">
                   <div className="perm-always-item-info">
                     <strong>{title}</strong>
                     <span className="perm-always-detail">{detail}</span>
-                    <span className="perm-always-badge">{t('permission.alwaysRules.scopeSession')}</span>
+                    <span className="perm-always-badge">{'Until quit'}</span>
                   </div>
                   <button
                     type="button"
                     className="perm-always-remove"
                     onClick={() => removeRule(rule.id)}
                   >
-                    {t('permission.alwaysRules.remove')}
+                    {'Remove'}
                   </button>
                 </li>
               )

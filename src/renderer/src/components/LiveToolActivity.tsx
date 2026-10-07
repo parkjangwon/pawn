@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useStreamingStore } from '../stores/streaming'
 import './LiveToolActivity.css'
 
@@ -14,7 +14,6 @@ interface LiveToolActivityProps {
  * touches the persisted transcript. Renders nothing when no command is live.
  */
 export default function LiveToolActivity({ sessionId }: LiveToolActivityProps): React.JSX.Element | null {
-  const { t } = useTranslation()
   const live = useStreamingStore((s) => s.liveTool[sessionId])
   const hasLive = Boolean(live)
   const [now, setNow] = useState(() => Date.now())
@@ -44,18 +43,18 @@ export default function LiveToolActivity({ sessionId }: LiveToolActivityProps): 
       <div className="live-tool-activity-head">
         <span className="live-tool-activity-dot" aria-hidden="true" />
         <span className="live-tool-activity-title">
-          {t('chat.liveTool.title', { label: live.label })}
+          {`Running: ${live.label}`}
         </span>
         {live.target && <span className="live-tool-activity-target">{live.target}</span>}
         <span className="live-tool-activity-elapsed">
-          {t('chat.liveTool.running', { seconds })}
+          {`${seconds}s`}
         </span>
       </div>
       <pre ref={preRef} className="live-tool-activity-tail">
         {live.tail || ' '}
       </pre>
       <div className="live-tool-activity-foot">
-        {t('chat.liveTool.output', { count: live.totalLines })}
+        {`Output (last ${live.totalLines} lines)`}
       </div>
     </div>
   )

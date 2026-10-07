@@ -21,7 +21,7 @@ describe('ToolBatch', () => {
       createdAt: Date.now()
     }
     const { container } = render(<ToolBatch messages={[singleMsg]} />)
-    expect(screen.getByText('toolMessage.read')).toBeInTheDocument()
+    expect(screen.getByText('Read file')).toBeInTheDocument()
     expect(container.querySelector('.tool-batch-card')).not.toBeInTheDocument()
   })
 
@@ -32,10 +32,10 @@ describe('ToolBatch', () => {
       { id: '3', role: 'system', content: '[Tool: grep_search] OK\ncontent 3', createdAt: Date.now() }
     ]
     render(<ToolBatch messages={messages} />)
-    expect(screen.getByText('toolMessage.batchDone')).toBeInTheDocument()
+    expect(screen.getByText('Executed 3 operations')).toBeInTheDocument()
     // Readable labels, raw id in the tooltip.
-    expect(screen.getByText('toolMessage.read ×2')).toHaveAttribute('title', 'toolMessage.read')
-    expect(screen.getByText('toolMessage.family.findFiles')).toHaveAttribute('title', 'toolMessage.family.findFiles')
+    expect(screen.getByText('Read file ×2')).toHaveAttribute('title', 'Read file')
+    expect(screen.getByText('Find files')).toHaveAttribute('title', 'Find files')
   })
 
   it('expands on click to display individual tool items', () => {
@@ -47,7 +47,7 @@ describe('ToolBatch', () => {
     const headerBtn = screen.getByRole('button')
     fireEvent.click(headerBtn)
     const rows = Array.from(document.querySelectorAll('.tool-message .tool-name')).map((n) => n.textContent)
-    expect(rows).toEqual(['toolMessage.read', 'toolMessage.write'])
+    expect(rows).toEqual(['Read file', 'Write file'])
   })
 
   it('keeps working when a single-tool batch grows to two (stable hook order)', () => {
@@ -78,7 +78,7 @@ describe('ToolBatch', () => {
     ]
     const { container } = render(<ToolBatch messages={messages} />)
     const header = container.querySelector('.tool-batch-header')!
-    expect(header).toHaveTextContent('toolMessage.filesChanged')
+    expect(header).toHaveTextContent('1 files')
     expect(header).toHaveTextContent('+12')
     expect(header).toHaveTextContent('−3')
     expect(header).toHaveTextContent('4.2s')
@@ -97,7 +97,7 @@ describe('ToolBatch chips', () => {
       />
     )
     const chips = Array.from(document.querySelectorAll('.tool-batch-chip'))
-    expect(chips.map((c) => c.textContent)).toEqual(['toolMessage.write', 'toolMessage.shell', 'toolMessage.family.browser'])
-    expect(chips.map((c) => c.getAttribute('title'))).toEqual(['toolMessage.write', 'toolMessage.shell', 'toolMessage.family.browser'])
+    expect(chips.map((c) => c.textContent)).toEqual(['Write file', 'Run command', 'Browser'])
+    expect(chips.map((c) => c.getAttribute('title'))).toEqual(['Write file', 'Run command', 'Browser'])
   })
 })

@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronRight, Folder, History, MessageSquare, Pencil, Plus, Search, Settings, Star, X } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { IconChevronRight } from './icons'
@@ -31,7 +31,6 @@ interface SidebarProps {
 const GENERAL_PROJECT_ID = '__general__'
 
 export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle, open, mainView, onMainViewChange, onSidebarWidthChange }: SidebarProps): React.JSX.Element {
-  const { t } = useTranslation()
   const {
     projects,
     activeProjectId,
@@ -135,13 +134,13 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
     e.stopPropagation()
     if (id === GENERAL_PROJECT_ID) return
     const project = projects.find((p) => p.id === id)
-    setConfirmDelete({ type: 'project', id, name: project?.name || t('sidebar.project') })
+    setConfirmDelete({ type: 'project', id, name: project?.name || 'Project' })
   }
 
   const handleDeleteSession = (e: React.MouseEvent, projectId: string, sessionId: string): void => {
     e.stopPropagation()
     const session = projects.find((p) => p.id === projectId)?.sessions.find((s) => s.id === sessionId)
-    setConfirmDelete({ type: 'session', id: sessionId, projectId, name: session?.title || t('sidebar.session') })
+    setConfirmDelete({ type: 'session', id: sessionId, projectId, name: session?.title || 'Chat' })
   }
 
   // Soft-delete: out of every list, restorable from the archive section.
@@ -172,7 +171,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
 
   const handleDeleteArchivedSession = (sessionId: string): void => {
     const info = archivedSessions.find((a) => a.id === sessionId)
-    setConfirmDelete({ type: 'archivedSession', id: sessionId, name: info?.title || t('sidebar.session') })
+    setConfirmDelete({ type: 'archivedSession', id: sessionId, name: info?.title || 'Chat' })
   }
 
   const handleConfirmDelete = (): void => {
@@ -223,8 +222,8 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
       type="button"
       className="tree-action-btn"
       onClick={(e) => handleArchiveSession(e, projectId, sessionId)}
-      title={t('sidebar.archive')}
-      aria-label={t('sidebar.archive')}
+      title={'Archive'}
+      aria-label={'Archive'}
     >
       <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" /></svg>
     </button>
@@ -262,16 +261,16 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
   const renderSessionMeta = (meta: ReturnType<typeof sessionMeta>, withPreview: boolean): React.ReactNode => (
     <>
       {meta.ultra && (
-        <span className="session-ulw ulw-rainbow-text" title={t('ultraWork.title')}>
+        <span className="session-ulw ulw-rainbow-text" title={'Ultra Work'}>
           ULW
         </span>
       )}
       {meta.waiting ? (
-        <span className="session-waiting" title={t('sidebar.waitingHint')}>
-          {t('sidebar.waiting')}
+        <span className="session-waiting" title={'The agent is waiting for your answer or approval'}>
+          {'Waiting'}
         </span>
       ) : (
-        meta.running && <span className="session-running" title={t('sidebar.running')} />
+        meta.running && <span className="session-running" title={'Running'} />
       )}
       {withPreview && meta.preview && !meta.waiting && !meta.ultra && (
         <span className="session-preview">{meta.preview}</span>
@@ -299,7 +298,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
     .slice(0, 8)
 
   return (
-    <aside className={`sidebar ${open ? 'open' : ''}`} aria-label={t('sidebar.project')}>
+    <aside className={`sidebar ${open ? 'open' : ''}`} aria-label={'Project'}>
       {/* Drag handle for resizing the sidebar width — not in tab order */}
       <div
         className="sidebar-resizer"
@@ -315,12 +314,12 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
         <span className="sidebar-logo">Pawn</span>
         <div className="sidebar-top-actions">
           {onOpenCommandPalette && (
-            <Tooltip label={t('commandPalette.title')} shortcut={formatCombo(keybindings['open-command-palette'])} placement="bottom">
+            <Tooltip label={'Command palette'} shortcut={formatCombo(keybindings['open-command-palette'])} placement="bottom">
               <button
                 type="button"
                 className="sidebar-icon-btn"
                 onClick={onOpenCommandPalette}
-                aria-label={t('commandPalette.title')}
+                aria-label={'Command palette'}
               >
                 <Search size={15} aria-hidden />
               </button>
@@ -335,10 +334,10 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
           type="button"
           className="sidebar-action-btn"
           onClick={handleNewSession}
-          title={`${t('sidebar.newChat')} (${formatCombo(keybindings['new-session'])})`}
+          title={`${'New chat'} (${formatCombo(keybindings['new-session'])})`}
         >
           <Pencil size={16} aria-hidden />
-          <span>{t('sidebar.newChat')}</span>
+          <span>{'New chat'}</span>
         </button>
         <button
           type="button"
@@ -347,7 +346,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
           aria-current={mainView === 'automations' ? 'page' : undefined}
         >
           <History size={16} aria-hidden />
-          <span>{t('sidebar.automations')}</span>
+          <span>{'Automations'}</span>
         </button>
       </div>
 
@@ -355,7 +354,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
         {/* 1. Pinned */}
         {pinnedItems.length > 0 && (
           <div className="sidebar-section">
-            <div className="section-label">{t('sidebar.pinned')}</div>
+            <div className="section-label">{'Pinned'}</div>
             {pinnedItems.map((session) => {
               const select = (): void => {
                 onMainViewChange('chat')
@@ -377,8 +376,8 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                     className="tree-action-btn pin"
                     tabIndex={0}
                     onClick={(e) => togglePin(e, session.id)}
-                    title={t('sidebar.unpin')}
-                    aria-label={t('sidebar.unpin')}
+                    title={'Unpin'}
+                    aria-label={'Unpin'}
                   >
                     <Star size={12} fill="currentColor" aria-hidden />
                   </button>
@@ -386,7 +385,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                   {renderSessionMeta(sessionMeta(session), true)}
                   <div className="sidebar-item-actions">
                     {renderArchiveButton(session.projectId, session.id)}
-                    <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
+                    <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={'Delete'} aria-label={'Delete'}>
                               <X size={9} aria-hidden />
                     </button>
                   </div>
@@ -399,8 +398,8 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
         {/* 2. Projects */}
         <div className="sidebar-section">
           <div className="section-header">
-            <span className="section-label">{t('sidebar.projects')}</span>
-            <button className="section-add-btn" onClick={handleAddProject} title={t('sidebar.addProject')} aria-label={t('sidebar.addProject')}>
+            <span className="section-label">{'Projects'}</span>
+            <button className="section-add-btn" onClick={handleAddProject} title={'Add project'} aria-label={'Add project'}>
               <Plus size={12} aria-hidden />
             </button>
           </div>
@@ -423,10 +422,10 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                   <Folder size={13} className="tree-folder-icon" aria-hidden />
                   <span className="tree-project-name">{project.name}</span>
                   <div className="tree-project-actions">
-                    <button type="button" className="tree-action-btn" onClick={(e) => { e.stopPropagation(); addSession(project.id); if (!isExpanded) toggleProject(project.id) }} title={t('sidebar.newSession')} aria-label={t('sidebar.newSession')}>
+                    <button type="button" className="tree-action-btn" onClick={(e) => { e.stopPropagation(); addSession(project.id); if (!isExpanded) toggleProject(project.id) }} title={'New chat'} aria-label={'New chat'}>
                       <Plus size={10} aria-hidden />
                     </button>
-                    <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteProject(e, project.id)} title={t('common.delete')} aria-label={t('common.delete')}>
+                    <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteProject(e, project.id)} title={'Delete'} aria-label={'Delete'}>
                       <X size={10} aria-hidden />
                     </button>
                   </div>
@@ -473,23 +472,23 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                                 if (e.key === 'Enter') commitRename()
                                 if (e.key === 'Escape') setRenamingSession(null)
                               }}
-                              aria-label={t('sidebar.rename')}
+                              aria-label={'Rename'}
                             />
                           ) : (
                             <span
                               className="tree-session-title"
-                              title={`${session.title}\n${t('sidebar.renameHint')}`}
+                              title={`${session.title}\n${'Double-click to rename'}`}
                             >
                               {session.title}
                             </span>
                           )}
                           {renderSessionMeta(sessionMeta(session), false)}
                           <div className="tree-session-actions">
-                            <button type="button" className="tree-action-btn pin" onClick={(e) => togglePin(e, session.id)} title={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')} aria-label={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')}>
+                            <button type="button" className="tree-action-btn pin" onClick={(e) => togglePin(e, session.id)} title={pinnedSessions.has(session.id) ? 'Unpin' : 'Pin'} aria-label={pinnedSessions.has(session.id) ? 'Unpin' : 'Pin'}>
                               <Star size={9} fill={pinnedSessions.has(session.id) ? 'currentColor' : 'none'} aria-hidden />
                             </button>
                             {renderArchiveButton(project.id, session.id)}
-                            <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, project.id, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
+                            <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, project.id, session.id)} title={'Delete'} aria-label={'Delete'}>
                       <X size={9} aria-hidden />
                             </button>
                           </div>
@@ -498,7 +497,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                     })}
                     {project.sessions.length === 0 && (
                       <div className="tree-empty">
-                        {t('sidebar.noSessions')}
+                        {'No chats yet'}
                       </div>
                     )}
                   </div>
@@ -506,7 +505,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
               </div>
             )
           })}
-          {initialized && userProjects.length === 0 && <div className="empty-hint">{t('sidebar.noProjects')}</div>}
+          {initialized && userProjects.length === 0 && <div className="empty-hint">{'No projects yet'}</div>}
         </div>
 
         {/* 3. Recent */}
@@ -514,7 +513,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
           <div className="sidebar-section">
             <button className="section-header recent-header" onClick={() => setRecentExpanded((v) => !v)}>
               <ChevronRight size={10} className={`tree-chevron ${recentExpanded ? 'expanded' : ''}`} />
-              <span className="section-label">{t('sidebar.recent')}</span>
+              <span className="section-label">{'Recent'}</span>
             </button>
             {recentExpanded && recentSessions.map((session) => {
               const select = (): void => {
@@ -537,7 +536,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                 {renderSessionMeta(sessionMeta(session), true)}
                 <div className="sidebar-item-actions">
                   {renderArchiveButton(session.projectId, session.id)}
-                  <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
+                  <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={'Delete'} aria-label={'Delete'}>
                     <X size={9} aria-hidden />
                   </button>
                 </div>
@@ -556,7 +555,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
               aria-expanded={archivedExpanded}
             >
               <IconChevronRight size={10} className={`tree-chevron ${archivedExpanded ? 'expanded' : ''}`} />
-              <span className="section-label">{t('sidebar.archived')}</span>
+              <span className="section-label">{'Archived'}</span>
               <span className="tree-empty">{archivedSessions.length}</span>
             </button>
             {archivedExpanded && archivedSessions.map((a) => (
@@ -576,8 +575,8 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                     type="button"
                     className="tree-action-btn"
                     onClick={(e) => { e.stopPropagation(); handleRestoreSession(a.id, false) }}
-                    title={t('sidebar.restore')}
-                    aria-label={t('sidebar.restore')}
+                    title={'Restore'}
+                    aria-label={'Restore'}
                   >
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><polyline points="1 4 1 10 7 10" /><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" /></svg>
                   </button>
@@ -585,8 +584,8 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                     type="button"
                     className="tree-action-btn delete"
                     onClick={(e) => { e.stopPropagation(); handleDeleteArchivedSession(a.id) }}
-                    title={t('common.delete')}
-                    aria-label={t('common.delete')}
+                    title={'Delete'}
+                    aria-label={'Delete'}
                   >
                     <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
                   </button>
@@ -599,10 +598,10 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
 
       {/* Footer */}
       <div className="sidebar-footer">
-        <Tooltip label={t('sidebar.settings')} shortcut={formatCombo(keybindings['open-settings'])} placement="top">
-          <button type="button" className="footer-btn" onClick={onOpenSettings} aria-label={t('sidebar.settings')}>
+        <Tooltip label={'Settings'} shortcut={formatCombo(keybindings['open-settings'])} placement="top">
+          <button type="button" className="footer-btn" onClick={onOpenSettings} aria-label={'Settings'}>
             <Settings size={14} />
-            <span>{t('sidebar.settings')}</span>
+            <span>{'Settings'}</span>
           </button>
         </Tooltip>
       </div>
@@ -612,15 +611,15 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
       )}
       {confirmDelete && (
         <ConfirmDialog
-          title={`${confirmDelete.name} ${t('common.delete')}`}
+          title={`${confirmDelete.name} ${'Delete'}`}
           message={
             confirmDelete.type === 'project'
-              ? t('sidebar.deleteProjectConfirm')
+              ? 'Delete this project? This can\'t be undone.'
               : confirmDelete.type === 'archivedSession'
-                ? t('sidebar.deleteArchivedConfirm')
-                : t('sidebar.deleteSessionConfirm')
+                ? 'Permanently delete this archived chat? This can\'t be undone.'
+                : 'Delete this chat? This can\'t be undone.'
           }
-          confirmLabel={t('confirmDialog.confirm')}
+          confirmLabel={'Confirm'}
           onConfirm={handleConfirmDelete}
           onCancel={() => setConfirmDelete(null)}
         />

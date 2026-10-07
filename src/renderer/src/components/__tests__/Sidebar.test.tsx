@@ -60,7 +60,7 @@ function renderSidebar(props: { onSidebarWidthChange?: (width: number) => void; 
  *  title, so scope the query to the specific session row by its title text. */
 function deleteButtonForSession(sessionTitle: string): HTMLElement {
   const row = screen.getByText(sessionTitle).closest('.sidebar-item') as HTMLElement
-  return within(row).getByTitle('common.delete')
+  return within(row).getByTitle('Delete')
 }
 
 describe('Sidebar — session deletion', () => {
@@ -70,11 +70,11 @@ describe('Sidebar — session deletion', () => {
     const sessionId = useAppStore.getState().activeSessionId!
 
     renderSidebar()
-    fireEvent.click(screen.getByText('sidebar.recent'))
+    fireEvent.click(screen.getByText('Recent'))
     expect(screen.getByText('My Session')).toBeInTheDocument()
 
     fireEvent.click(deleteButtonForSession('My Session'))
-    fireEvent.click(await screen.findByText('confirmDialog.confirm'))
+    fireEvent.click(await screen.findByText('Confirm'))
 
     expect(useAppStore.getState().projects[0].sessions).toHaveLength(0)
     expect(dbMock.removeSession).toHaveBeenCalledWith(sessionId)
@@ -87,9 +87,9 @@ describe('Sidebar — session deletion', () => {
     localStorage.setItem('pawn-pinned-sessions', JSON.stringify([sessionId]))
 
     renderSidebar()
-    expect(screen.getByText('sidebar.pinned')).toBeInTheDocument()
+    expect(screen.getByText('Pinned')).toBeInTheDocument()
     fireEvent.click(deleteButtonForSession('Pinned Session'))
-    fireEvent.click(await screen.findByText('confirmDialog.confirm'))
+    fireEvent.click(await screen.findByText('Confirm'))
 
     expect(useAppStore.getState().projects[0].sessions).toHaveLength(0)
     expect(JSON.parse(localStorage.getItem('pawn-pinned-sessions') || '[]')).not.toContain(sessionId)
@@ -103,9 +103,9 @@ describe('Sidebar — session deletion', () => {
     useChatStore.setState({ isStreaming: true, streamingSessionId: sessionId, streamingSessionIds: [sessionId], stopStreaming })
 
     renderSidebar()
-    fireEvent.click(screen.getByText('sidebar.recent'))
+    fireEvent.click(screen.getByText('Recent'))
     fireEvent.click(deleteButtonForSession('Streaming Session'))
-    fireEvent.click(await screen.findByText('confirmDialog.confirm'))
+    fireEvent.click(await screen.findByText('Confirm'))
 
     expect(stopStreaming).toHaveBeenCalledTimes(1)
   })
@@ -118,9 +118,9 @@ describe('Sidebar — session deletion', () => {
     useChatStore.setState({ isStreaming: true, streamingSessionId: 'some-other-session', streamingSessionIds: ['some-other-session'], stopStreaming })
 
     renderSidebar()
-    fireEvent.click(screen.getByText('sidebar.recent'))
+    fireEvent.click(screen.getByText('Recent'))
     fireEvent.click(deleteButtonForSession('Target'))
-    fireEvent.click(await screen.findByText('confirmDialog.confirm'))
+    fireEvent.click(await screen.findByText('Confirm'))
 
     expect(stopStreaming).not.toHaveBeenCalled()
     expect(useAppStore.getState().projects[0].sessions.find((s) => s.id === targetId)).toBeUndefined()
@@ -131,7 +131,7 @@ describe('Sidebar — top actions', () => {
   it('triggers onOpenCommandPalette when clicking the top search button', () => {
     const onOpenCommandPalette = vi.fn()
     renderSidebar({ onOpenCommandPalette })
-    const searchBtn = screen.getByLabelText('commandPalette.title')
+    const searchBtn = screen.getByLabelText('Command palette')
     fireEvent.click(searchBtn)
     expect(onOpenCommandPalette).toHaveBeenCalledTimes(1)
   })

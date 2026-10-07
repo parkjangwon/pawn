@@ -6,7 +6,6 @@ const REPO_URL = 'https://github.com/parkjangwon/pawn'
 
 export default function SystemSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     sleepPrevention,
     setSleepPrevention,
     taskNotificationsEnabled,
@@ -25,35 +24,35 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
 
   return (
     <div className="settings-section">
-      <h2>{t('settings.systemSection.title')}</h2>
-      <p className="settings-desc">{t('settings.systemSection.desc')}</p>
+      <h2>{'System'}</h2>
+      <p className="settings-desc">{'Power and OS-level behavior.'}</p>
       <div className="settings-card">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.systemSection.sleepPrevention')}</span>
-            <span className="settings-row-desc">{t('settings.systemSection.sleepPreventionDesc')}</span>
+            <span className="settings-row-label">{'Sleep prevention'}</span>
+            <span className="settings-row-desc">{'Keep the system awake while the app runs. Display mode also prevents the screen from turning off.'}</span>
           </div>
-          <div className="theme-toggle" role="group" aria-label={t('settings.systemSection.sleepPrevention')}>
-            <button className={sleepPrevention === 'off' ? 'active' : ''} aria-pressed={sleepPrevention === 'off'} onClick={() => setSleepPrevention('off')}>{t('settings.systemSection.sleepOff')}</button>
-            <button className={sleepPrevention === 'sleep' ? 'active' : ''} aria-pressed={sleepPrevention === 'sleep'} onClick={() => setSleepPrevention('sleep')}>{t('settings.systemSection.sleepSystem')}</button>
-            <button className={sleepPrevention === 'display' ? 'active' : ''} aria-pressed={sleepPrevention === 'display'} onClick={() => setSleepPrevention('display')}>{t('settings.systemSection.sleepDisplay')}</button>
+          <div className="theme-toggle" role="group" aria-label={'Sleep prevention'}>
+            <button className={sleepPrevention === 'off' ? 'active' : ''} aria-pressed={sleepPrevention === 'off'} onClick={() => setSleepPrevention('off')}>{'Off'}</button>
+            <button className={sleepPrevention === 'sleep' ? 'active' : ''} aria-pressed={sleepPrevention === 'sleep'} onClick={() => setSleepPrevention('sleep')}>{'Prevent sleep'}</button>
+            <button className={sleepPrevention === 'display' ? 'active' : ''} aria-pressed={sleepPrevention === 'display'} onClick={() => setSleepPrevention('display')}>{'Prevent sleep + screen'}</button>
           </div>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.systemSection.taskNotifications')}</span>
-            <span className="settings-row-desc">{t('settings.systemSection.taskNotificationsDesc')}</span>
+            <span className="settings-row-label">{'Task complete notification'}</span>
+            <span className="settings-row-desc">{'Show a notification once when an answer finishes (chat replies and coding work) while Pawn is in the background.'}</span>
           </div>
           <Switch
             checked={taskNotificationsEnabled}
             onCheckedChange={setTaskNotificationsEnabled}
-            aria-label={t('settings.systemSection.taskNotifications')}
+            aria-label={'Task complete notification'}
           />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.systemSection.trayEnabled')}</span>
-            <span className="settings-row-desc">{t('settings.systemSection.trayEnabledDesc')}</span>
+            <span className="settings-row-label">{'Show in menu bar'}</span>
+            <span className="settings-row-desc">{'Keep a Pawn icon in the system tray / menu bar (right-click for menu)'}</span>
           </div>
           <Switch
             checked={trayVisible}
@@ -61,36 +60,36 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
               setTrayVisible(next)
               void window.api.tray?.setEnabled?.(next)?.catch?.(() => {})
             }}
-            aria-label={t('settings.systemSection.trayEnabled')}
+            aria-label={'Show in menu bar'}
           />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.systemSection.confirmQuit')}</span>
-            <span className="settings-row-desc">{t('settings.systemSection.confirmQuitDesc')}</span>
+            <span className="settings-row-label">{'Confirm before quitting'}</span>
+            <span className="settings-row-desc">{'Only asks when quitting would cancel running agent work or pause scheduled automations. Turn off to always quit immediately.'}</span>
           </div>
           <Switch
             checked={confirmQuit}
             onCheckedChange={setConfirmQuit}
-            aria-label={t('settings.systemSection.confirmQuit')}
+            aria-label={'Confirm before quitting'}
           />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.systemSection.checkUpdatesOnLaunch')}</span>
-            <span className="settings-row-desc">{t('settings.systemSection.checkUpdatesOnLaunchDesc')}</span>
+            <span className="settings-row-label">{'Check for updates on launch'}</span>
+            <span className="settings-row-desc">{'Quietly compare with GitHub Releases when Pawn starts'}</span>
           </div>
           <Switch
             checked={checkUpdatesOnLaunch}
             onCheckedChange={setCheckUpdatesOnLaunch}
-            aria-label={t('settings.systemSection.checkUpdatesOnLaunch')}
+            aria-label={'Check for updates on launch'}
           />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.systemSection.checkUpdates')}</span>
+            <span className="settings-row-label">{'Check for updates'}</span>
             <span className="settings-row-desc">
-              {updateMsg || t('settings.systemSection.checkUpdatesDesc')}
+              {updateMsg || 'Compare this build with the latest GitHub release'}
             </span>
           </div>
           <div className="settings-row-actions">
@@ -100,7 +99,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
               disabled={updateChecking}
               onClick={() => {
                 if (!window.api?.checkForUpdates) {
-                  setUpdateMsg(t('settings.systemSection.desktopOnly'))
+                  setUpdateMsg('Available in the desktop app')
                   return
                 }
                 setUpdateChecking(true)
@@ -113,27 +112,24 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
                     }
                     if (r.updateAvailable) {
                       setUpdateMsg(
-                        t('settings.systemSection.updateAvailable', {
-                          latest: r.latest,
-                          current: r.current
-                        })
+                        `Update available: ${r.latest} (you have ${r.current})`
                       )
                     } else {
                       setUpdateMsg(
-                        t('settings.systemSection.upToDate', { current: r.current })
+                        `You’re up to date (${r.current})`
                       )
                     }
                   })
                   .catch((e) => {
                     console.warn('[system-settings]', e)
-                    setUpdateMsg(t('common.operationFailed'))
+                    setUpdateMsg('Something failed — see the console for details.')
                   })
                   .finally(() => setUpdateChecking(false))
               }}
             >
               {updateChecking
-                ? t('settings.systemSection.checking')
-                : t('settings.systemSection.checkUpdates')}
+                ? 'Checking…'
+                : 'Check for updates'}
             </button>
             <button
               type="button"
@@ -141,38 +137,36 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
               disabled={updateChecking}
               onClick={() => {
                 if (!window.api?.downloadUpdate) {
-                  setUpdateMsg(t('settings.systemSection.desktopOnly'))
+                  setUpdateMsg('Available in the desktop app')
                   return
                 }
                 setUpdateChecking(true)
-                setUpdateMsg(t('settings.systemSection.downloading'))
+                setUpdateMsg('Downloading installer…')
                 void window.api
                   .downloadUpdate()
                   .then((r) => {
                     if (r.alreadyLatest) {
                       setUpdateMsg(
-                        t('settings.systemSection.upToDate', {
-                          current: r.current || ''
-                        })
+                        `You’re up to date (${r.current || ''})`
                       )
                       return
                     }
                     if (r.ok && r.path) {
                       setUpdateMsg(
-                        t('settings.systemSection.downloadOpened', { path: r.path })
+                        `Installer opened: ${r.path}`
                       )
                     } else {
-                      setUpdateMsg(r.error || t('settings.systemSection.downloadFailed'))
+                      setUpdateMsg(r.error || 'Download failed')
                     }
                   })
                   .catch((e) => {
                     console.warn('[system-settings]', e)
-                    setUpdateMsg(t('common.operationFailed'))
+                    setUpdateMsg('Something failed — see the console for details.')
                   })
                   .finally(() => setUpdateChecking(false))
               }}
             >
-              {t('settings.systemSection.downloadInstall')}
+              {'Download & open'}
             </button>
           </div>
         </div>
@@ -180,9 +174,9 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
           <div className="settings-row-info">
             <span className="settings-row-label settings-row-label-icon">
               <IconGitHub size={16} />
-              {t('settings.systemSection.openGitHub')}
+              {'GitHub'}
             </span>
-            <span className="settings-row-desc">{t('settings.systemSection.openGitHubDesc')}</span>
+            <span className="settings-row-desc">{'Source, releases, and issues'}</span>
           </div>
           <button
             type="button"
@@ -192,7 +186,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
             }}
           >
             <IconGitHub size={14} />
-            {t('settings.systemSection.openGitHubAction')}
+            {'Open'}
           </button>
         </div>
       </div>

@@ -49,8 +49,8 @@ describe('GitSummaryChip', () => {
     const openTab = vi.fn()
     ;(window as any).__openRightPanelTab = openTab
     render(<GitSummaryChip projectPath="/repo" />)
-    fireEvent.click(await screen.findByTitle('rightPanel.branch'))
-    fireEvent.click(await screen.findByText('rightPanel.tools.git'))
+    fireEvent.click(await screen.findByTitle('Branch'))
+    fireEvent.click(await screen.findByText('Git'))
     expect(openTab).toHaveBeenCalledWith('git')
   })
 })

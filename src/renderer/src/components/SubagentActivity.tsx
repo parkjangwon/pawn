@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useProviderStore } from '../stores/provider'
 import { useSubagentRunsStore, type SubagentRun } from '../stores/subagentRuns'
 import './SubagentActivity.css'
@@ -33,7 +33,6 @@ export default function SubagentActivity({
 }: {
   sessionId?: string | null
 }): React.JSX.Element | null {
-  const { t } = useTranslation()
   const enabled = useProviderStore((s) => s.autoOpenAgentsPanel)
   const runs = useSubagentRunsStore((s) => s.runs)
   const cancel = useSubagentRunsStore((s) => s.cancel)
@@ -76,12 +75,12 @@ export default function SubagentActivity({
         </span>
         <span className="subagent-activity-title">
           {live
-            ? t('subagents.inlineWorking', { count: runningCount })
-            : t('subagents.inlineDone')}
+            ? `${runningCount} agents working…`
+            : 'Helpers finished'}
         </span>
         {live && doneCount > 0 && (
           <span className="subagent-activity-sub">
-            · {t('subagents.inlineDoneCount', { count: doneCount })}
+            · {`${doneCount} done`}
           </span>
         )}
       </button>
@@ -99,14 +98,14 @@ export default function SubagentActivity({
                   {run.maxRounds ? `/${run.maxRounds}` : ''} · {elapsed(run, now)}
                   {run.lastTool && run.status === 'running' ? ` · ${run.lastTool}` : ''}
                 </span>
-                <span className={`subagent-activity-status ${sc}`}>{t(`subagents.status.${run.status}`, { defaultValue: run.status })}</span>
+                <span className={`subagent-activity-status ${sc}`}>{tx(`subagents.status.${run.status}`, { defaultValue: run.status })}</span>
                 {run.status === 'running' && (
                   <button
                     type="button"
                     className="subagent-activity-stop"
                     onClick={() => cancel(run.id)}
-                    title={t('subagents.cancel')}
-                    aria-label={t('subagents.cancel')}
+                    title={'Stop'}
+                    aria-label={'Stop'}
                   >
                     ×
                   </button>

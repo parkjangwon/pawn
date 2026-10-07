@@ -3,7 +3,6 @@ import type { SettingsState } from './settingsState'
 
 export default function ShortcutsSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     comboConflict,
     shortcutLabel,
     recording,
@@ -15,11 +14,11 @@ export default function ShortcutsSettingsPanel({ state }: { state: SettingsState
 
   return (
     <div className="settings-section">
-      <h2>{t('settings.shortcutSection.title')}</h2>
-      <p className="settings-desc">{t('settings.shortcutSection.desc')}</p>
+      <h2>{'Shortcuts'}</h2>
+      <p className="settings-desc">{'Rebind keyboard shortcuts. Click Change, then press the new combination.'}</p>
       <div>
         <button type="button" className="test-btn" onClick={() => window.dispatchEvent(new CustomEvent('pawn:shortcuts-help'))}>
-          {t('settings.shortcutSection.help')}
+          {'View all shortcuts'}
         </button>
       </div>
       <div className="settings-card">
@@ -31,26 +30,26 @@ export default function ShortcutsSettingsPanel({ state }: { state: SettingsState
                 <span className="settings-row-label">{shortcutLabel(id)}</span>
                 <span className="settings-row-desc">
                   {recording === id
-                    ? t('settings.shortcutSection.recording')
+                    ? 'Press new shortcut… (Esc to cancel)'
                     : conflict
-                      ? t('settings.shortcutSection.conflict', { other: shortcutLabel(conflict) })
-                      : keybindings[id] ? formatCombo(keybindings[id]) : t('settings.shortcutSection.none')}
+                      ? `Conflicts with ${shortcutLabel(conflict)}`
+                      : keybindings[id] ? formatCombo(keybindings[id]) : 'Not set'}
                 </span>
               </div>
               <div className="settings-row-actions">
                 <button className={`test-btn ${recording === id ? 'ok' : ''}`} onClick={() => setRecording(recording === id ? null : id)}>
-                  {recording === id ? t('settings.shortcutSection.cancel') : t('settings.shortcutSection.change')}
+                  {recording === id ? 'Cancel' : 'Change'}
                 </button>
                 <button
                   className="test-btn"
                   onClick={() => setKeybinding(id, '')}
                   disabled={!keybindings[id]}
-                  title={t('settings.shortcutSection.none')}
+                  title={'Not set'}
                 >
-                  {t('settings.shortcutSection.clear')}
+                  {'Clear'}
                 </button>
                 <button className="test-btn" onClick={() => resetKeybinding(id)} disabled={keybindings[id] === DEFAULT_KEYBINDINGS[id]}>
-                  {t('settings.shortcutSection.reset')}
+                  {'Reset'}
                 </button>
               </div>
             </div>

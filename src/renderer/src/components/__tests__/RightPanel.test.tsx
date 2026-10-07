@@ -29,13 +29,13 @@ beforeEach(() => {
 describe('RightPanel', () => {
   it('starts closed with the tool picker mounted', () => {
     const { container } = render(<RightPanel />)
-    expect(screen.getByText('rightPanel.openTool')).toBeInTheDocument()
+    expect(screen.getByText('Open a tool')).toBeInTheDocument()
     expect(container.querySelector('aside')?.getAttribute('style')).toContain('display: none')
   })
 
   it('opens a tool tab on click', () => {
     render(<RightPanel />)
-    fireEvent.click(screen.getByText('rightPanel.tools.files'))
+    fireEvent.click(screen.getByText('Files'))
     expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
   })
 
@@ -74,7 +74,7 @@ describe('RightPanel', () => {
     expect(container.querySelector('aside')?.getAttribute('style')).not.toContain('width: 0px')
 
     // Choose a tool from the picker while the panel is already open.
-    fireEvent.click(screen.getByText('rightPanel.tools.files'))
+    fireEvent.click(screen.getByText('Files'))
     expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
     // Regression: the panel must not collapse back to width 0.
     expect(container.querySelector('aside')?.getAttribute('style')).not.toContain('width: 0px')
@@ -124,7 +124,7 @@ describe('RightPanel', () => {
 
   it('closing the last tab starts the hide animation', () => {
     const { container } = render(<RightPanel />)
-    fireEvent.click(screen.getByText('rightPanel.tools.files'))
+    fireEvent.click(screen.getByText('Files'))
     expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
 
     fireEvent.click(container.querySelector('.rp-tab-close-btn') as HTMLElement)
@@ -135,7 +135,7 @@ describe('RightPanel', () => {
   it('keeps a hidden tool tab mounted until the tab is closed', () => {
     ;(window as any).api.platform = 'browser'
     const { container } = render(<RightPanel />)
-    fireEvent.click(screen.getByText('rightPanel.tools.files'))
+    fireEvent.click(screen.getByText('Files'))
     expect(screen.getByText('FILES_VIEW')).toBeInTheDocument()
 
     fireEvent.keyDown(window, { key: 'b', altKey: true, metaKey: true })
@@ -227,7 +227,7 @@ describe('RightPanel', () => {
     act(() => { ;(window as any).__openRightPanelTab('browser', { subagent: true }) })
     expect((window as any).__subagentOpenedBrowserPanel).toBe(true)
     const tabBtn = [...container.querySelectorAll('.rp-tab')].find(
-      (b) => b.querySelector('.rp-tab-label')?.textContent === 'rightPanel.tools.browser'
+      (b) => b.querySelector('.rp-tab-label')?.textContent === 'Browser'
     ) as HTMLElement
     act(() => { fireEvent.click(tabBtn) })
     expect((window as any).__subagentOpenedBrowserPanel).toBe(false)

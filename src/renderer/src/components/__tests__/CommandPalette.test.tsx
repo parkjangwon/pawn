@@ -127,16 +127,16 @@ describe('CommandPalette — fuzzy search and recent actions', () => {
 
   it('matches subsequences and ranks the best match first', () => {
     render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
-    fireEvent.change(screen.getByPlaceholderText('commandPalette.placeholder'), {
+    fireEvent.change(screen.getByPlaceholderText('Search chats, actions, projects…'), {
       target: { value: 'tglsdb' }
     })
     const items = screen.getAllByRole('option')
-    expect(items[0]).toHaveTextContent('commandPalette.commands.toggleSidebar')
+    expect(items[0]).toHaveTextContent('Toggle sidebar')
   })
 
   it('highlights matched characters in labels', () => {
     render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
-    fireEvent.change(screen.getByPlaceholderText('commandPalette.placeholder'), { target: { value: 'Session' } })
+    fireEvent.change(screen.getByPlaceholderText('Search chats, actions, projects…'), { target: { value: 'Session' } })
     const marks = document.querySelectorAll('mark.cp-match')
     expect(marks.length).toBeGreaterThan(0)
     expect(marks[0].textContent).toBe('Session')
@@ -147,15 +147,15 @@ describe('CommandPalette — fuzzy search and recent actions', () => {
     const { unmount } = render(<CommandPalette onClose={vi.fn()} onOpenSettings={onOpenSettings} />)
     // 'preferences' matches the settings action's keywords uniquely: a bare
     // 'settings' now also hits every settings-section deep link.
-    fireEvent.change(screen.getByPlaceholderText('commandPalette.placeholder'), { target: { value: 'preferences' } })
+    fireEvent.change(screen.getByPlaceholderText('Search chats, actions, projects…'), { target: { value: 'preferences' } })
     fireEvent.keyDown(window, { key: 'Enter' })
     expect(onOpenSettings).toHaveBeenCalled()
     expect(JSON.parse(localStorage.getItem('pawn-cp-recent') || '[]')).toEqual(['open-settings'])
     unmount()
 
     render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
-    expect(screen.getByRole('group', { name: 'commandPalette.groups.recent' })).toHaveTextContent(
-      'commandPalette.commands.openSettings'
+    expect(screen.getByRole('group', { name: 'Recently used' })).toHaveTextContent(
+      'Settings'
     )
     // Sessions keep the first slot so Enter still reopens the latest chat.
     expect(screen.getAllByRole('option')[0]).toHaveTextContent('Session One')
@@ -169,7 +169,7 @@ describe('CommandPalette — fuzzy search and recent actions', () => {
 
   it('offers find-in-conversation only when the active chat has messages', () => {
     const { unmount } = render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
-    expect(screen.queryByText('commandPalette.commands.findInChat')).not.toBeInTheDocument()
+    expect(screen.queryByText('Find in conversation')).not.toBeInTheDocument()
     unmount()
     useAppStore.setState({
       projects: [
@@ -190,6 +190,6 @@ describe('CommandPalette — fuzzy search and recent actions', () => {
       ]
     })
     render(<CommandPalette onClose={vi.fn()} onOpenSettings={vi.fn()} />)
-    expect(screen.getByText('commandPalette.commands.findInChat')).toBeInTheDocument()
+    expect(screen.getByText('Find in conversation')).toBeInTheDocument()
   })
 })

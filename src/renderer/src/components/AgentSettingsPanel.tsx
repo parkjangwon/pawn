@@ -5,10 +5,10 @@ import { useProviderStore } from '../stores/provider'
 import { HARNESS_MODES } from '../agent/harnessMode'
 import Select from './Select'
 import Switch from './Switch'
+import { tx } from '../i18n'
 
 export default function AgentSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     routingMode,
     setRoutingMode,
     visionModelId,
@@ -49,41 +49,41 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
   )
   const harnessTierHint =
     routingMode !== 'auto'
-      ? t('settings.agentSection.harnessManualHint')
+      ? 'Manual routing: model choice stays pinned; other mode effects still apply.'
       : harnessMode === 'maxing' && !tiers.has('high')
-        ? t('settings.agentSection.harnessNoHighTier')
+        ? 'No high-tier model enabled, so Maxing model picks will feel similar.'
         : harnessMode === 'eco' && !tiers.has('low')
-          ? t('settings.agentSection.harnessNoLowTier')
+          ? 'No low-tier model enabled, so Eco model picks will feel similar.'
           : ''
 
   return (
     <div className="settings-section">
-      <h2>{t('settings.agentSection.title')}</h2>
-      <p className="settings-desc">{t('settings.agentSection.desc')}</p>
+      <h2>{'Agent'}</h2>
+      <p className="settings-desc">{'Routing, permissions, and shell safety for the main agent'}</p>
       <div className="settings-card">
-        <div className="settings-subheader">{t('settings.agentSection.groupBehavior')}</div>
+        <div className="settings-subheader">{'Run behavior'}</div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.routing')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.routingDesc')}</span>
+            <span className="settings-row-label">{'Model routing'}</span>
+            <span className="settings-row-desc">{'Automatically route tasks to the best available model'}</span>
           </div>
-          <div className="theme-toggle" role="group" aria-label={t('settings.agentSection.routing')}>
-            <button className={routingMode === 'auto' ? 'active' : ''} aria-pressed={routingMode === 'auto'} onClick={() => setRoutingMode('auto')}>{t('statusBar.auto')}</button>
-            <button className={routingMode === 'manual' ? 'active' : ''} aria-pressed={routingMode === 'manual'} onClick={() => setRoutingMode('manual')}>{t('statusBar.manual')}</button>
+          <div className="theme-toggle" role="group" aria-label={'Model routing'}>
+            <button className={routingMode === 'auto' ? 'active' : ''} aria-pressed={routingMode === 'auto'} onClick={() => setRoutingMode('auto')}>{'Auto'}</button>
+            <button className={routingMode === 'manual' ? 'active' : ''} aria-pressed={routingMode === 'manual'} onClick={() => setRoutingMode('manual')}>{'Manual'}</button>
           </div>
         </div>
         <div className="settings-row settings-row-stack">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.visionFallback')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.visionFallbackDesc')}</span>
+            <span className="settings-row-label">{'Vision fallback model'}</span>
+            <span className="settings-row-desc">{'Optional. Used only when the active model cannot handle images (attachments or screenshots). If your main model already has vision (e.g. Gemini), leave this on Auto — nothing extra is needed.'}</span>
           </div>
           <Select
             className="vision-fallback-select"
-            aria-label={t('settings.agentSection.visionFallback')}
+            aria-label={'Vision fallback model'}
             value={visionModelId || ''}
             onChange={(e) => setVisionModel(e.target.value || null)}
           >
-            <option value="">{t('settings.agentSection.visionFallbackAuto')}</option>
+            <option value="">{'Auto — any vision-capable model'}</option>
             {visionCandidates.map((m) => (
               <option key={m.id} value={m.id}>
                 {m.label || m.modelId}
@@ -93,48 +93,48 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           </Select>
           {visionCandidates.length === 0 && (
             <div className="settings-row-desc vision-fallback-warn">
-              {t('settings.agentSection.visionFallbackEmpty')}
+              {'No vision-capable models yet. Add one under Models and set Vision to Yes (or use a Gemini/GPT-4o/Claude preset).'}
             </div>
           )}
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.sendMode')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.sendModeDesc')}</span>
+            <span className="settings-row-label">{'Send mode'}</span>
+            <span className="settings-row-desc">{'Choose how messages are sent to the agent'}</span>
           </div>
           <Select
-            aria-label={t('settings.agentSection.sendMode')}
+            aria-label={'Send mode'}
             value={defaultSendMode}
             onChange={(e) => setDefaultSendMode(e.target.value as 'queue' | 'steer')}
           >
-            <option value="queue">{t('settings.agentSection.queue')}</option>
-            <option value="steer">{t('settings.agentSection.steer')}</option>
+            <option value="queue">{'Queue'}</option>
+            <option value="steer">{'Steer'}</option>
           </Select>
         </div>
-        <div className="settings-subheader">{t('settings.agentSection.groupSafety')}</div>
+        <div className="settings-subheader">{'Safety & approvals'}</div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.permissionMode')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.permissionModeDesc')}</span>
+            <span className="settings-row-label">{'Permission mode'}</span>
+            <span className="settings-row-desc">{'Control how the agent asks for permissions'}</span>
             {permissionMode === 'yolo' && (
-              <span className="settings-row-desc vision-fallback-warn">{t('settings.agentSection.yoloWarn')}</span>
+              <span className="settings-row-desc vision-fallback-warn">{'YOLO runs every tool without asking. Only use in throwaway environments.'}</span>
             )}
           </div>
-          <div className="theme-toggle" role="group" aria-label={t('settings.agentSection.permissionMode')}>
-            <button className={permissionMode === 'ask' ? 'active' : ''} aria-pressed={permissionMode === 'ask'} onClick={() => setPermissionMode('ask')}>{t('permission.ask')}</button>
-            <button className={permissionMode === 'auto' ? 'active' : ''} aria-pressed={permissionMode === 'auto'} onClick={() => setPermissionMode('auto')}>{t('permission.auto')}</button>
-            <button className={permissionMode === 'yolo' ? 'active' : ''} aria-pressed={permissionMode === 'yolo'} onClick={() => setPermissionMode('yolo')}>{t('permission.yolo')}</button>
+          <div className="theme-toggle" role="group" aria-label={'Permission mode'}>
+            <button className={permissionMode === 'ask' ? 'active' : ''} aria-pressed={permissionMode === 'ask'} onClick={() => setPermissionMode('ask')}>{'Ask'}</button>
+            <button className={permissionMode === 'auto' ? 'active' : ''} aria-pressed={permissionMode === 'auto'} onClick={() => setPermissionMode('auto')}>{'Auto-approve'}</button>
+            <button className={permissionMode === 'yolo' ? 'active' : ''} aria-pressed={permissionMode === 'yolo'} onClick={() => setPermissionMode('yolo')}>{'Full auto'}</button>
           </div>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.harnessMode')}</span>
-            <span className="settings-row-desc">{t(`settings.agentSection.harnessDesc_${harnessMode}`)}</span>
+            <span className="settings-row-label">{'Harness mode'}</span>
+            <span className="settings-row-desc">{tx(`settings.agentSection.harnessDesc_${harnessMode}`)}</span>
             {harnessTierHint && harnessMode !== 'default' && (
               <span className="settings-row-desc vision-fallback-warn">{harnessTierHint}</span>
             )}
           </div>
-          <div className="theme-toggle" role="group" aria-label={t('settings.agentSection.harnessMode')}>
+          <div className="theme-toggle" role="group" aria-label={'Harness mode'}>
             {HARNESS_MODES.map((m) => (
               <button
                 key={m}
@@ -142,7 +142,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
                 aria-pressed={harnessMode === m}
                 onClick={() => setHarnessMode(m)}
               >
-                {t(`settings.agentSection.harness_${m}`)}
+                {tx(`settings.agentSection.harness_${m}`)}
               </button>
             ))}
           </div>
@@ -150,73 +150,73 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
         <PermissionsAlwaysPanel />
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.shellSandbox')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.shellSandboxDesc')}</span>
+            <span className="settings-row-label">{'Shell sandbox'}</span>
+            <span className="settings-row-desc">{'Env allowlist + dangerous-command block for agent shell_exec (default on)'}</span>
           </div>
           <Switch
             checked={shellSandbox}
             onCheckedChange={setShellSandbox}
-            aria-label={t('settings.agentSection.shellSandbox')}
+            aria-label={'Shell sandbox'}
           />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.shellNetwork')}</span>
+            <span className="settings-row-label">{'Shell network'}</span>
             <span className="settings-row-desc">
               {shellSandbox
-                ? t('settings.agentSection.shellNetworkDesc')
-                : t('settings.agentSection.shellNetworkNeedsSandbox')}
+                ? 'Allow network in sandboxed shells (off uses sandbox-exec on macOS when possible)'
+                : 'Only applies while the shell sandbox is on.'}
             </span>
           </div>
           <Switch
             checked={shellNetwork}
             onCheckedChange={setShellNetwork}
             disabled={!shellSandbox}
-            aria-label={t('settings.agentSection.shellNetwork')}
+            aria-label={'Shell network'}
           />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.cwdJail')}</span>
+            <span className="settings-row-label">{'CWD jail'}</span>
             <span className="settings-row-desc">
-              {shellSandbox ? t('settings.agentSection.cwdJailDesc') : t('settings.agentSection.shellNetworkNeedsSandbox')}
+              {shellSandbox ? 'Refuse shell cwd outside the project root' : 'Only applies while the shell sandbox is on.'}
             </span>
           </div>
           <Switch
             checked={shellCwdJail}
             onCheckedChange={setShellCwdJail}
             disabled={!shellSandbox}
-            aria-label={t('settings.agentSection.cwdJail')}
+            aria-label={'CWD jail'}
           />
         </div>
-        <div className="settings-subheader">{t('settings.agentSection.groupContext')}</div>
+        <div className="settings-subheader">{'Context & compaction'}</div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.toolLoading')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.toolLoadingDesc')}</span>
+            <span className="settings-row-label">{'Tool loading'}</span>
+            <span className="settings-row-desc">{'Smart sends core coding tools always and loads browser, computer, account (GitHub/GitLab/Google/CodeCommit) and app tools only when a chat needs them — about half the tool tokens per request. All sends every tool.'}</span>
           </div>
           <Select
             className="settings-select"
-            aria-label={t('settings.agentSection.toolLoading')}
+            aria-label={'Tool loading'}
             value={toolLoading}
             onChange={(e) => setToolLoading(e.target.value === 'all' ? 'all' : 'smart')}
           >
-            <option value="smart">{t('settings.agentSection.toolLoadingSmart')}</option>
-            <option value="all">{t('settings.agentSection.toolLoadingAll')}</option>
+            <option value="smart">{'Smart (on demand)'}</option>
+            <option value="all">{'All tools'}</option>
           </Select>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.smartCompaction')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.smartCompactionDesc')}</span>
+            <span className="settings-row-label">{'Smart compaction'}</span>
+            <span className="settings-row-desc">{'When the context fills up, the cheapest enabled model writes a handoff summary (goal, decisions, changed files, open work). Off = free heuristic digest.'}</span>
           </div>
-          <Switch checked={smartCompaction} onCheckedChange={setSmartCompaction} aria-label={t('settings.agentSection.smartCompaction')} />
+          <Switch checked={smartCompaction} onCheckedChange={setSmartCompaction} aria-label={'Smart compaction'} />
         </div>
-        <div className="settings-subheader">{t('settings.agentSection.groupTools')}</div>
+        <div className="settings-subheader">{'Models & tools'}</div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.computerUse')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.computerUseDesc')}</span>
+            <span className="settings-row-label">{'Computer use'}</span>
+            <span className="settings-row-desc">{'Control apps on this Mac: accessibility-tree actions, screenshots and zoom, OCR, mouse and keyboard, windows and menus. Needs Accessibility and Screen Recording permission. Press Esc twice to stop the agent.'}</span>
             {computerInfo && <span className="settings-row-desc computer-status-line">{computerInfo}</span>}
           </div>
           <button
@@ -226,49 +226,49 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             onClick={() => {
               const status = window.api?.computer?.status
               if (!status) {
-                setComputerInfo(t('settings.agentSection.computerUnavailable'))
+                setComputerInfo('Computer use is only available in the desktop app.')
                 return
               }
               setComputerBusy(true)
-              setComputerInfo(t('settings.agentSection.computerSettingUp'))
+              setComputerInfo('Setting up… preparing the helper and opening permission prompts. Turn on Pawn in System Settings.')
               void status({ prompt: true })
                 .then((r) =>
                   setComputerInfo(
                     r.ok
-                      ? t('settings.agentSection.computerReady', { backend: r.backend, version: r.version || '' })
-                      : t('settings.agentSection.computerFailed', { detail: r.errors.join(' · ').slice(0, 160) })
+                      ? `Ready — ${r.backend} helper ${r.version || ''}`
+                      : `Check failed: ${r.errors.join(' · ').slice(0, 160)}`
                   )
                 )
                 .catch((e) => {
                   console.warn('[agent-settings]', e)
-                  setComputerInfo(t('common.operationFailed'))
+                  setComputerInfo('Something failed — see the console for details.')
                 })
                 .finally(() => setComputerBusy(false))
             }}
           >
-            {computerBusy ? t('settings.agentSection.computerSettingUpShort') : t('settings.agentSection.computerCheck')}
+            {computerBusy ? 'Setting up…' : 'Check & grant permissions'}
           </button>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.nativeCodingTools')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.nativeCodingToolsDesc')}</span>
+            <span className="settings-row-label">{'Model-native coding tools'}</span>
+            <span className="settings-row-desc">{'Give each model the editing tools it was trained on: Claude\'s text editor and persistent bash on the Anthropic API, apply_patch for GPT models. Undo, permissions and verification still apply.'}</span>
           </div>
-          <Switch checked={nativeCodingTools} onCheckedChange={setNativeCodingTools} aria-label={t('settings.agentSection.nativeCodingTools')} />
+          <Switch checked={nativeCodingTools} onCheckedChange={setNativeCodingTools} aria-label={'Model-native coding tools'} />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.nativeComputerTool')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.nativeComputerToolDesc')}</span>
+            <span className="settings-row-label">{'Claude native computer tool'}</span>
+            <span className="settings-row-desc">{'On the Anthropic API, give Claude its own trained computer tool (batched actions, best click accuracy). Pawn\'s accessibility, OCR, app and menu tools stay available.'}</span>
           </div>
-          <Switch checked={nativeComputerTool} onCheckedChange={setNativeComputerTool} aria-label={t('settings.agentSection.nativeComputerTool')} />
+          <Switch checked={nativeComputerTool} onCheckedChange={setNativeComputerTool} aria-label={'Claude native computer tool'} />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.lspDiagnostics')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.lspDiagnosticsDesc')}</span>
+            <span className="settings-row-label">{'Language server diagnostics'}</span>
+            <span className="settings-row-desc">{'Run installed language servers (TypeScript, Python, Go, Rust) so the agent sees real errors right after each edit and can jump to definitions/references.'}</span>
           </div>
-          <Switch checked={lspDiagnostics} onCheckedChange={setLspDiagnostics} aria-label={t('settings.agentSection.lspDiagnostics')} />
+          <Switch checked={lspDiagnostics} onCheckedChange={setLspDiagnostics} aria-label={'Language server diagnostics'} />
         </div>
       </div>
     </div>

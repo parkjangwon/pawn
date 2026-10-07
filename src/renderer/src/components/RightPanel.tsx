@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import { generalWorkspaceDirSync } from '../utils/generalWorkspace'
@@ -38,7 +38,6 @@ const DEFAULT_WIDTH = Math.min(Math.round(window.innerWidth * 0.5), 640)
 const HIDE_MS = 220
 
 export default function RightPanel(): React.JSX.Element | null {
-  const { t } = useTranslation()
   const [openTabs, setOpenTabs] = useState<TabId[]>([])
   const [activeTab, setActiveTab] = useState<TabId | null>(null)
   const [showPicker, setShowPicker] = useState(false)
@@ -404,15 +403,15 @@ export default function RightPanel(): React.JSX.Element | null {
     if (openTabs.length === 0) {
       return (
         <div className="rp-tool-picker">
-          <h3 className="rp-picker-title">{t('rightPanel.openTool')}</h3>
-          <p className="rp-picker-hint">{t('rightPanel.openTabHint')}</p>
+          <h3 className="rp-picker-title">{'Open a tool'}</h3>
+          <p className="rp-picker-hint">{'Choose a tab to open in the side pane.'}</p>
           <div className="rp-tool-grid">
           {(Object.keys(TOOL_ICONS) as TabId[]).map((id) => {
             const Icon = TOOL_ICONS[id]
             return (
             <button key={id} className="rp-tool-card" onClick={() => openTool(id)}>
               <Icon size={20} />
-              <span className="rp-tool-label">{t(`rightPanel.tools.${id}`)}</span>
+              <span className="rp-tool-label">{tx(`rightPanel.tools.${id}`)}</span>
             </button>
             )
           })}
@@ -429,7 +428,7 @@ export default function RightPanel(): React.JSX.Element | null {
       case 'diff': return <DiffListView />
       case 'artifacts': return <ArtifactsView />
       case 'agents': return <SubagentsView />
-      default: return <div className="rp-empty">{t('rightPanel.selectTool')}</div>
+      default: return <div className="rp-empty">{'Select a tool'}</div>
     }
   }
 
@@ -454,10 +453,10 @@ export default function RightPanel(): React.JSX.Element | null {
               key={id}
               className={`rp-tab ${activeTab === id ? 'active' : ''}`}
               onClick={() => switchTab(id)}
-              title={t(`rightPanel.tools.${id}`)}
+              title={tx(`rightPanel.tools.${id}`)}
             >
               <Icon size={14} />
-              <span className="rp-tab-label">{t(`rightPanel.tools.${id}`)}</span>
+              <span className="rp-tab-label">{tx(`rightPanel.tools.${id}`)}</span>
               <span className="rp-tab-close-btn" onClick={(e) => closeTab(id, e)}>
                 <X size={10} />
               </span>
@@ -475,18 +474,18 @@ export default function RightPanel(): React.JSX.Element | null {
             ;(window as any).__subagentOpenedBrowserPanel = false
             setShowPicker(!showPicker)
           }}
-          title={t('rightPanel.addTool')}
+          title={'Add tool'}
         >
           <Plus size={14} />
         </button>
 
         <div className="rp-tabs-spacer" />
-        <Tooltip label={t('contextBar.toggleRightPanel')} shortcut={panelShortcut} placement="bottom">
+        <Tooltip label={'Toggle side panel'} shortcut={panelShortcut} placement="bottom">
           <button
             type="button"
             className="rp-tab-close-panel"
             onClick={() => requestHide()}
-            aria-label={t('contextBar.toggleRightPanel')}
+            aria-label={'Toggle side panel'}
           >
             <X size={12} />
           </button>
@@ -501,12 +500,12 @@ export default function RightPanel(): React.JSX.Element | null {
             return (
             <button key={id} className="rp-picker-item" onClick={() => openTool(id)}>
               <Icon size={14} />
-              <span>{t(`rightPanel.tools.${id}`)}</span>
+              <span>{tx(`rightPanel.tools.${id}`)}</span>
             </button>
             )
           })}
           {(Object.keys(TOOL_ICONS) as TabId[]).filter((id) => !openTabs.includes(id)).length === 0 && (
-            <div className="rp-picker-empty">{t('rightPanel.allToolsOpen')}</div>
+            <div className="rp-picker-empty">{'All tools are open'}</div>
           )}
         </div>
       )}

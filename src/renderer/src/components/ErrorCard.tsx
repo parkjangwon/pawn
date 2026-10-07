@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { openSettingsSection } from './settingsState'
 import type { MessageErrorInfo } from '../stores/app'
 import './ErrorCard.css'
@@ -28,7 +28,6 @@ interface ErrorCardProps {
 /** Actionable failure card for a collapsed agent turn: what broke, what to
  *  do next, the raw detail on demand, and one-click recovery. */
 export default function ErrorCard({ error, onRetry }: ErrorCardProps): React.JSX.Element {
-  const { t } = useTranslation()
   return (
     <div className="error-card" role="alert">
       <div className="error-card-head">
@@ -49,20 +48,20 @@ export default function ErrorCard({ error, onRetry }: ErrorCardProps): React.JSX
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
         <div className="error-card-copy">
-          <div className="error-card-title">{t(TITLE_KEYS[error.kind])}</div>
-          <div className="error-card-hint">{t(HINT_KEYS[error.kind])}</div>
+          <div className="error-card-title">{tx(TITLE_KEYS[error.kind])}</div>
+          <div className="error-card-hint">{tx(HINT_KEYS[error.kind])}</div>
         </div>
       </div>
       {error.detail ? (
         <details className="error-card-details">
-          <summary>{t('chat.errorCard.details')}</summary>
+          <summary>{'Show details'}</summary>
           <pre>{error.detail}</pre>
         </details>
       ) : null}
       <div className="error-card-actions">
         {onRetry && (
           <button type="button" className="error-card-btn primary" onClick={onRetry}>
-            {t('chat.errorCard.retry')}
+            {'Retry'}
           </button>
         )}
         {error.settingsTarget && (
@@ -71,7 +70,7 @@ export default function ErrorCard({ error, onRetry }: ErrorCardProps): React.JSX
             className="error-card-btn"
             onClick={() => openSettingsSection(error.settingsTarget)}
           >
-            {t('chat.errorCard.settings')}
+            {'Open Settings'}
           </button>
         )}
       </div>

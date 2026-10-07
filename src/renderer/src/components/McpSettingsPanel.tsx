@@ -7,10 +7,10 @@ import type { SettingsState } from './settingsState'
 import Button from './Button'
 import Input, { Textarea } from './Input'
 import Switch from './Switch'
+import { tx } from '../i18n'
 
 export default function McpSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     mcpAdding,
     projectPath,
     setMcpAdding,
@@ -43,9 +43,9 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
     <div className="settings-section">
       {pendingDelete && (
         <ConfirmDialog
-          title={t('settings.mcpSection.deleteConfirmTitle')}
-          message={t('settings.mcpSection.deleteConfirm', { id: pendingDelete.id })}
-          confirmLabel={t('common.delete')}
+          title={'Remove MCP server?'}
+          message={`Remove ${pendingDelete.id}? Its tools disappear from the agent until re-added.`}
+          confirmLabel={'Delete'}
           danger
           onConfirm={() => {
             const target = pendingDelete
@@ -55,13 +55,13 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
           onCancel={() => setPendingDelete(null)}
         />
       )}
-      <h2>{t('settings.mcpSection.title')}</h2>
-      <p className="settings-desc">{t('settings.mcpSection.desc')}</p>
+      <h2>{'MCP'}</h2>
+      <p className="settings-desc">{'MCP servers configured for this device, added through Pawn, or scoped to this project — the agent can call their tools alongside its built-in ones.'}</p>
       <div className="settings-card">
         <div className="settings-row-info" style={{ marginBottom: 8 }}>
-          <span className="settings-row-label">{t('settings.mcpSection.templates')}</span>
+          <span className="settings-row-label">{'Templates'}</span>
           <span className="settings-row-desc">
-            {t('settings.mcpSection.templatesDesc')}
+            {'One-click install common MCP servers (stdio or HTTP). Add secrets in env after install.'}
           </span>
         </div>
         <div className="mcp-templates" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
@@ -83,7 +83,7 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
                     tpl.input as McpServerInput
                   )
                   setMcpAdding(false)
-                  if (!res.ok) setMcpFormError(res.error || t('settings.mcpSection.addFailed'))
+                  if (!res.ok) setMcpFormError(res.error || 'Couldn\'t add the server.')
                   else void useMcpStore.getState().refresh(projectPath || undefined)
                 })()
               }}
@@ -92,8 +92,8 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
             </button>
           ))}
         </div>
-        {mcpLoading && mcpServers.length === 0 && <div className="settings-empty">{t('common.loading')}</div>}
-        {!mcpLoading && mcpServers.length === 0 && <div className="settings-empty">{t('settings.mcpSection.empty')}</div>}
+        {mcpLoading && mcpServers.length === 0 && <div className="settings-empty">{'Loading…'}</div>}
+        {!mcpLoading && mcpServers.length === 0 && <div className="settings-empty">{'No MCP servers found'}</div>}
         {mcpServers.map((server) => (
           <div key={server.id} className="settings-row">
             <div className="settings-row-info">
@@ -101,18 +101,18 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
                 {server.id}
                 <span className={`mcp-status-badge ${server.disabled ? 'disabled' : server.status}`}>
                   {server.disabled
-                    ? t('settings.mcpSection.statusDisabled')
+                    ? 'Disabled'
                     : server.status === 'connected'
-                      ? t('settings.mcpSection.statusConnected', { count: server.toolCount })
+                      ? `Connected · ${server.toolCount} tools`
                       : server.status === 'error'
-                        ? t('settings.mcpSection.statusError')
-                        : t('settings.mcpSection.statusConnecting')}
+                        ? 'Error'
+                        : 'Connecting…'}
                 </span>
               </span>
               <span className="settings-row-desc">
                 {!server.disabled && server.status === 'error'
                   ? server.error
-                  : t(`settings.mcpSection.source.${server.source}`)}
+                  : tx(`settings.mcpSection.source.${server.source}`)}
               </span>
             </div>
             <div className="settings-row-actions">
@@ -123,7 +123,7 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
                   disabled={retryingId === server.id}
                   onClick={() => retryServer(server.id)}
                 >
-                  {retryingId === server.id ? t('common.loading') : t('settings.mcpSection.retry')}
+                  {retryingId === server.id ? 'Loading…' : 'Retry'}
                 </Button>
               )}
               <Switch
@@ -134,8 +134,8 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
               {server.source !== 'user-claude' && (
                 <button
                   className="delete-btn"
-                  title={t('common.delete')}
-                  aria-label={t('common.delete') + ': ' + server.id}
+                  title={'Delete'}
+                  aria-label={'Delete' + ': ' + server.id}
                   onClick={() => setPendingDelete(server)}
                 >
                   <Trash2 size={14} />
@@ -144,22 +144,22 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
             </div>
           </div>
         ))}
-        <p className="settings-mcp-hint">{t('settings.mcpSection.hint')}</p>
+        <p className="settings-mcp-hint">{'Servers from ~/.claude.json are read-only here — manage those with Claude Code. Servers you add below live in Pawn\'s own config and can be edited or removed anytime.'}</p>
       </div>
 
       {showAddMcpServer ? (
         <div className="settings-card add-form">
           <div className="theme-toggle">
-            <button className={mcpScope === 'project' ? 'active' : ''} disabled={!projectPath} onClick={() => setMcpScope('project')}>{t('settings.mcpSection.scopeProject')}</button>
-            <button className={mcpScope === 'user' ? 'active' : ''} onClick={() => setMcpScope('user')}>{t('settings.mcpSection.scopeUser')}</button>
+            <button className={mcpScope === 'project' ? 'active' : ''} disabled={!projectPath} onClick={() => setMcpScope('project')}>{'This project'}</button>
+            <button className={mcpScope === 'user' ? 'active' : ''} onClick={() => setMcpScope('user')}>{'All projects'}</button>
           </div>
-          {mcpScope === 'project' && !projectPath && <div className="settings-row-desc">{t('settings.mcpSection.noProjectForScope')}</div>}
-          <Input placeholder={t('settings.mcpSection.idPlaceholder')} value={mcpForm.id} onChange={(e) => setMcpForm({ ...mcpForm, id: e.target.value })} />
-          <Input placeholder={t('settings.mcpSection.commandPlaceholder')} value={mcpForm.command} onChange={(e) => setMcpForm({ ...mcpForm, command: e.target.value })} />
-          <Input placeholder={t('settings.mcpSection.argsPlaceholder')} value={mcpForm.args} onChange={(e) => setMcpForm({ ...mcpForm, args: e.target.value })} />
+          {mcpScope === 'project' && !projectPath && <div className="settings-row-desc">{'Open a project to add a project-scoped server.'}</div>}
+          <Input placeholder={'Server id (e.g. codegraph)'} value={mcpForm.id} onChange={(e) => setMcpForm({ ...mcpForm, id: e.target.value })} />
+          <Input placeholder={'Command (e.g. npx)'} value={mcpForm.command} onChange={(e) => setMcpForm({ ...mcpForm, command: e.target.value })} />
+          <Input placeholder={'Arguments, space-separated (e.g. -y @some/mcp-server)'} value={mcpForm.args} onChange={(e) => setMcpForm({ ...mcpForm, args: e.target.value })} />
           <Textarea
             className="mcp-env-input"
-            placeholder={t('settings.mcpSection.envPlaceholder')}
+            placeholder={'Environment variables, one per line: KEY=value'}
             value={mcpForm.env}
             onChange={(e) => setMcpForm({ ...mcpForm, env: e.target.value })}
             rows={3}
@@ -167,13 +167,13 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
           {mcpFormError && <div className="settings-row-desc mcp-form-error">{mcpFormError}</div>}
           <div className="form-actions">
             <Button onClick={() => void handleAddMcpServer()} disabled={mcpAdding || !mcpForm.id.trim() || !mcpForm.command.trim() || (mcpScope === 'project' && !projectPath)}>
-              {mcpAdding ? t('common.loading') : t('common.save')}
+              {mcpAdding ? 'Loading…' : 'Save'}
             </Button>
-            <Button variant="secondary" onClick={() => { setShowAddMcpServer(false); setMcpFormError(null) }}>{t('common.cancel')}</Button>
+            <Button variant="secondary" onClick={() => { setShowAddMcpServer(false); setMcpFormError(null) }}>{'Cancel'}</Button>
           </div>
         </div>
       ) : (
-        <button className="add-btn-full" onClick={() => setShowAddMcpServer(true)}>{t('settings.mcpSection.add')}</button>
+        <button className="add-btn-full" onClick={() => setShowAddMcpServer(true)}>{'Add MCP server'}</button>
       )}
     </div>
   )

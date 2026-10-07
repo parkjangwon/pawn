@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronLeft, File, Folder, X } from 'lucide-react'
 import { useModalDialog } from '../utils/focusTrap'
 import './FileBrowser.css'
@@ -17,7 +17,6 @@ interface FileBrowserProps {
 }
 
 export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrowserProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [currentPath, setCurrentPath] = useState(initialPath || '/')
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [loading, setLoading] = useState(false)
@@ -81,8 +80,8 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
     <div className="file-browser-overlay" onClick={onClose}>
       <div ref={dialogRef} className="file-browser" role="dialog" aria-modal="true" aria-labelledby="fb-title" onClick={(e) => e.stopPropagation()}>
         <div className="fb-header">
-          <h3 id="fb-title">{t("fileBrowser.title")}</h3>
-          <button type="button" className="fb-close" onClick={onClose} aria-label={t('common.close')} title={t('common.close')}>
+          <h3 id="fb-title">{'Select folder'}</h3>
+          <button type="button" className="fb-close" onClick={onClose} aria-label={'Close'} title={'Close'}>
             <X size={14} />
           </button>
         </div>
@@ -105,7 +104,7 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
 
         {/* File list */}
         <div className="fb-list">
-          {loading && <div className="fb-loading">{t("common.loading")}</div>}
+          {loading && <div className="fb-loading">{'Loading…'}</div>}
           {error && <div className="fb-error">{error}</div>}
           {!loading && (
             <>
@@ -123,7 +122,7 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
                   }}
                 >
                   <ChevronLeft size={14} />
-                  <span>{t("fileBrowser.parent")}</span>
+                  <span>{'Parent folder'}</span>
                 </div>
               )}
               {!error && entries.filter((e) => e.isDirectory).map((entry) => (
@@ -151,7 +150,7 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
                 </div>
               ))}
               {entries.length === 0 && !error && (
-                <div className="fb-empty">{t("fileBrowser.empty")}</div>
+                <div className="fb-empty">{'This folder is empty'}</div>
               )}
             </>
           )}
@@ -161,8 +160,8 @@ export default function FileBrowser({ initialPath, onSelect, onClose }: FileBrow
         <div className="fb-footer">
           <span className="fb-current-path">{currentPath}</span>
           <div className="fb-actions">
-            <button className="fb-btn cancel" onClick={onClose}>{t("fileBrowser.cancel")}</button>
-            <button className="fb-btn select" onClick={() => onSelect(currentPath)}>{t("fileBrowser.select")}</button>
+            <button className="fb-btn cancel" onClick={onClose}>{'Cancel'}</button>
+            <button className="fb-btn select" onClick={() => onSelect(currentPath)}>{'Select'}</button>
           </div>
         </div>
       </div>

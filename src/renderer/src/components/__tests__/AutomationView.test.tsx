@@ -29,10 +29,10 @@ describe('AutomationView — Repeat this handoff', () => {
     expect(await screen.findByRole('dialog')).toBeInTheDocument()
     // Name (input) and task (textarea) both come from the chat prompt.
     expect(screen.getAllByDisplayValue('Summarize AI news with links').map((el) => el.tagName).sort()).toEqual(['INPUT', 'TEXTAREA'])
-    const when = screen.getByDisplayValue('automation.weekdays') as HTMLSelectElement
+    const when = screen.getByDisplayValue('Every weekday') as HTMLSelectElement
     expect(when.value).toBe('weekdays')
     await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /save|common.save|automation.save/i }))
+      fireEvent.click(screen.getByRole('button', { name: 'Save' }))
     })
     expect(add).toHaveBeenCalledTimes(1)
     const arg = (add.mock.calls[0] as unknown as [{ name: string; schedule: { type: string; expr?: string } }])[0]

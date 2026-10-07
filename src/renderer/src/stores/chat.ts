@@ -22,7 +22,6 @@ import {
 } from './chatState'
 import { loadTranscript, persistTranscript, systemError } from './chatTranscript'
 import { agentLoop, processQueue } from './chatLoop'
-import i18n from '../i18n'
 
 // Re-exports so existing import sites keep working after the split.
 export {
@@ -274,7 +273,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
       systemError(
         cp.projectId,
         cp.sessionId,
-        i18n.t('chat.diagnostics.resumedTurn')
+        'Resuming the interrupted agent work from the last checkpoint…'
       )
       const epoch = bumpSessionEpoch(cp.sessionId)
       setSessionStreamingFlags(set, get, cp.sessionId, true)
@@ -304,20 +303,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
     if (!lastUser && plan.length === 0 && files.length === 0) return null
 
     const lines: string[] = []
-    lines.push(i18n.t('chat.handoff.header'))
+    lines.push('Continuing from a previous chat. Here is the handoff:')
     if (lastUser) {
       lines.push('')
-      lines.push(i18n.t('chat.handoff.goal'))
+      lines.push('## Original goal')
       lines.push(stripDisplayImages(lastUser.content).trim().slice(0, 600))
     }
     if (lastAssistant) {
       lines.push('')
-      lines.push(i18n.t('chat.handoff.state'))
+      lines.push('## Where it left off')
       lines.push(lastAssistant.content.trim().slice(0, 800))
     }
     if (plan.length > 0) {
       lines.push('')
-      lines.push(i18n.t('chat.handoff.plan'))
+      lines.push('## Plan state')
       for (const item of plan) {
         const mark = item.status === 'done' ? 'x' : item.status === 'in_progress' ? '~' : ' '
         lines.push(`- [${mark}] ${item.content}`)
@@ -325,14 +324,14 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
     if (files.length > 0) {
       lines.push('')
-      lines.push(i18n.t('chat.handoff.files'))
+      lines.push('## Files touched')
       for (const f of files) lines.push(`- ${f}`)
     }
     lines.push('')
-    lines.push(i18n.t('chat.handoff.instruction'))
+    lines.push('Pick up where this left off: re-verify the current state before changing anything, finish what is unfinished, and keep the same plan unless it is wrong.')
     const doc = lines.join('\n')
 
-    const newId = app.addSession(projectId, i18n.t('chat.handoff.title'))
+    const newId = app.addSession(projectId, 'Handoff — continued work')
     // Fire-and-forget from the caller's perspective: the turn runs in the new
     // session like any other send.
     get().sendMessage(projectId, newId, doc, 'steer')

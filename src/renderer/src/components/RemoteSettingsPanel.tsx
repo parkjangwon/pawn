@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useAppStore } from '../stores/app'
 import ConfirmDialog from './ConfirmDialog'
 import Button from './Button'
@@ -25,7 +25,6 @@ interface TestState {
 }
 
 export default function RemoteSettingsPanel(): React.JSX.Element {
-  const { t } = useTranslation()
   const projects = useAppStore((s) => s.projects)
   const setProjectExecutionTarget = useAppStore((s) => s.setProjectExecutionTarget)
 
@@ -90,7 +89,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
         setPassword('')
         await reload()
       } else if (res && !res.ok) {
-        setFormError(res.error || t('settings.remoteSection.addFailed'))
+        setFormError(res.error || 'Could not add the host.')
       }
     } finally {
       setBusy(false)
@@ -100,7 +99,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
   const removeHost = async (id: string): Promise<void> => {
     setRemoveError(null)
     const res = await window.api?.ssh?.remove(id)?.catch?.(() => undefined)
-    if (res && !res.ok) setRemoveError(res.error || t('settings.remoteSection.removeFailed'))
+    if (res && !res.ok) setRemoveError(res.error || 'Operation failed')
     await reload()
   }
 
@@ -110,16 +109,16 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
     const result = res?.result
     setTests((s) => ({
       ...s,
-      [id]: result?.ok ? { state: 'ok', detail: result.uname } : { state: 'fail', detail: result?.error || t('settings.remoteSection.removeFailed') }
+      [id]: result?.ok ? { state: 'ok', detail: result.uname } : { state: 'fail', detail: result?.error || 'Operation failed' }
     }))
   }
 
   if (!window.api?.ssh) {
     return (
       <div className="settings-section remote-panel">
-        <h2>{t('settings.remoteSection.title')}</h2>
-        <p className="settings-desc">{t('settings.remoteSection.desc')}</p>
-        <div className="settings-empty">{t('settings.remoteSection.desktopOnly')}</div>
+        <h2>{'Remote execution'}</h2>
+        <p className="settings-desc">{'Run a project’s commands on a machine you reach over SSH — Tailscale hostnames work as-is. The agent, your API keys, and this app stay on this computer.'}</p>
+        <div className="settings-empty">{'Remote execution is only available in the desktop app.'}</div>
       </div>
     )
   }
@@ -128,9 +127,9 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
     <div className="settings-section remote-panel">
       {pendingRemove && (
         <ConfirmDialog
-          title={t('settings.remoteSection.remove')}
-          message={t('settings.remoteSection.removeConfirm', { label: pendingRemove.label || pendingRemove.host })}
-          confirmLabel={t('settings.remoteSection.remove')}
+          title={'Remove'}
+          message={`Remove ${pendingRemove.label || pendingRemove.host}? Sessions configured to run there will fall back to local.`}
+          confirmLabel={'Remove'}
           danger
           onConfirm={() => {
             const target = pendingRemove
@@ -140,15 +139,15 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
           onCancel={() => setPendingRemove(null)}
         />
       )}
-      <h2>{t('settings.remoteSection.title')}</h2>
-      <p className="settings-desc">{t('settings.remoteSection.desc')}</p>
+      <h2>{'Remote execution'}</h2>
+      <p className="settings-desc">{'Run a project’s commands on a machine you reach over SSH — Tailscale hostnames work as-is. The agent, your API keys, and this app stay on this computer.'}</p>
       {removeError && <p className="remote-note remote-error">{removeError}</p>}
 
       <div className="settings-card">
         <div className="settings-row settings-row-stack">
-          <span className="settings-row-label">{t('settings.remoteSection.hosts')}</span>
+          <span className="settings-row-label">{'Hosts'}</span>
           {loaded && hosts.length === 0 && (
-            <span className="settings-row-desc">{t('settings.remoteSection.hostsEmpty')}</span>
+            <span className="settings-row-desc">{'No hosts yet. Add one to run a project remotely.'}</span>
           )}
         </div>
         {hosts.map((h) => {
@@ -161,18 +160,18 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                   {h.user ? `${h.user}@` : ''}
                   {h.host}
                   {h.port && h.port !== 22 ? `:${h.port}` : ''} ·{' '}
-                  {h.auth === 'password' ? t('settings.remoteSection.authPassword') : t('settings.remoteSection.authKey')}
-                  {h.hasPassword && h.auth === 'password' ? ' · ' + t('settings.remoteSection.passwordSaved') : ''}
+                  {h.auth === 'password' ? 'Password' : 'SSH key (agent or default keys)'}
+                  {h.hasPassword && h.auth === 'password' ? ' · ' + 'password saved' : ''}
                 </span>
-                {test.state === 'ok' && <span className="remote-test-ok">{t('settings.remoteSection.testOk', { uname: test.detail || '' })}</span>}
-                {test.state === 'fail' && <span className="remote-test-fail">{t('settings.remoteSection.testFail', { error: test.detail || '' })}</span>}
+                {test.state === 'ok' && <span className="remote-test-ok">{`Connected · ${test.detail || ''}`}</span>}
+                {test.state === 'fail' && <span className="remote-test-fail">{`Failed: ${test.detail || ''}`}</span>}
               </div>
               <div className="remote-actions">
                 <Button type="button" variant="secondary" disabled={test.state === 'testing'} onClick={() => void testHost(h.id)}>
-                  {test.state === 'testing' ? t('settings.remoteSection.testing') : t('settings.remoteSection.test')}
+                  {test.state === 'testing' ? 'Testing…' : 'Test'}
                 </Button>
                 <Button type="button" variant="secondary" onClick={() => setPendingRemove(h)}>
-                  {t('settings.remoteSection.remove')}
+                  {'Remove'}
                 </Button>
               </div>
             </div>
@@ -180,7 +179,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
         })}
 
         <div className="settings-row settings-row-stack">
-          <span className="settings-row-label">{t('settings.remoteSection.addHost')}</span>
+          <span className="settings-row-label">{'Add host'}</span>
           <form
             className="remote-form"
             onSubmit={(e) => {
@@ -190,11 +189,11 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
           >
             <div className="remote-grid">
               <label className="remote-field">
-                <span>{t('settings.remoteSection.label')}</span>
+                <span>{'Label'}</span>
                 <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="homelab" />
               </label>
               <label className="remote-field">
-                <span>{t('settings.remoteSection.hostname')}</span>
+                <span>{'Hostname'}</span>
                 <Input
                   value={host}
                   onChange={(e) => setHost(e.target.value)}
@@ -203,23 +202,23 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                 />
               </label>
               <label className="remote-field">
-                <span>{t('settings.remoteSection.user')}</span>
+                <span>{'User'}</span>
                 <Input value={user} onChange={(e) => setUser(e.target.value)} placeholder="root" />
               </label>
               <label className="remote-field">
-                <span>{t('settings.remoteSection.port')}</span>
+                <span>{'Port'}</span>
                 <Input value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric" placeholder="22" />
               </label>
               <label className="remote-field">
-                <span>{t('settings.remoteSection.auth')}</span>
+                <span>{'Authentication'}</span>
                 <Select value={auth} onChange={(e) => setAuth(e.target.value === 'password' ? 'password' : 'key')}>
-                  <option value="key">{t('settings.remoteSection.authKey')}</option>
-                  <option value="password">{t('settings.remoteSection.authPassword')}</option>
+                  <option value="key">{'SSH key (agent or default keys)'}</option>
+                  <option value="password">{'Password'}</option>
                 </Select>
               </label>
               {auth === 'key' ? (
                 <label className="remote-field">
-                  <span>{t('settings.remoteSection.identityFile')}</span>
+                  <span>{'Identity file path'}</span>
                   <Input
                     value={identityFile}
                     onChange={(e) => setIdentityFile(e.target.value)}
@@ -228,17 +227,17 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                 </label>
               ) : (
                 <label className="remote-field">
-                  <span>{t('settings.remoteSection.password')}</span>
+                  <span>{'Password'}</span>
                   <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </label>
               )}
             </div>
             {auth === 'password' && !sshpassAvailable && (
-              <p className="remote-note">{t('settings.remoteSection.sshpassMissing')}</p>
+              <p className="remote-note">{'Password auth needs the sshpass helper. Install it (macOS: brew install sshpass · Debian/Ubuntu: apt install sshpass) or use key auth.'}</p>
             )}
             {formError && <p className="remote-note remote-error">{formError}</p>}
             <Button type="submit" disabled={busy || !host.trim()}>
-              {t('settings.remoteSection.add')}
+              {'Add host'}
             </Button>
           </form>
         </div>
@@ -247,8 +246,8 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
       <div className="settings-card">
         <div className="settings-row settings-row-stack">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.remoteSection.projects')}</span>
-            <span className="settings-row-desc">{t('settings.remoteSection.projectsDesc')}</span>
+            <span className="settings-row-label">{'Projects'}</span>
+            <span className="settings-row-desc">{'Pick where each project runs. File and debug tools stay local and are refused on remote projects — use shell tools there.'}</span>
           </div>
         </div>
         {folders.map((p) => {
@@ -265,7 +264,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                       setProjectExecutionTarget(p.id, nextHost, nextHost ? p.remotePath || '' : '')
                     }}
                   >
-                    <option value="">{t('settings.remoteSection.targetLocal')}</option>
+                    <option value="">{'This computer'}</option>
                     {hosts.map((h) => (
                       <option key={h.id} value={h.id}>
                         {h.label}
@@ -277,8 +276,8 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                     defaultValue={p.remotePath || ''}
                     key={p.id + ':' + (p.remotePath || '')}
                     disabled={!isRemote}
-                    aria-label={t('settings.remoteSection.remotePathHint')}
-                    placeholder={t('settings.remoteSection.remotePathHint')}
+                    aria-label={'Absolute repo path on the host'}
+                    placeholder={'Absolute repo path on the host'}
                     onBlur={(e) => {
                       const v = e.target.value.trim()
                       if (v !== (p.remotePath || '')) {
@@ -291,7 +290,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
             </div>
           )
         })}
-        <p className="remote-note">{t('settings.remoteSection.securityNote')}</p>
+        <p className="remote-note">{'Commands run with the host account’s permissions. The first connection trusts the host key (accept-new).'}</p>
       </div>
     </div>
   )

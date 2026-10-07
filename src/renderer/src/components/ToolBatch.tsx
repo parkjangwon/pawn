@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Check, ChevronDown, CircleAlert } from 'lucide-react'
 import ToolMessage from './ToolMessage'
 import type { Message } from '../stores/app'
@@ -13,8 +13,6 @@ interface ToolBatchProps {
 }
 
 export default function ToolBatch({ messages, animateIn }: ToolBatchProps): React.JSX.Element {
-  const { t } = useTranslation()
-
   // Parse details from batch
   const parsedTools = useMemo(() => {
     return messages.map((m) => {
@@ -38,7 +36,7 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
   }, [messages])
 
   const stats = useMemo(() => aggregateToolMeta(messages.map((m) => m.toolMeta)), [messages])
-  const labels = useMemo(() => toolLabelTable(t), [t])
+  const labels = useMemo(() => toolLabelTable(), [])
   const hasRunning = parsedTools.some((p) => p.isRunning)
   const hasError = parsedTools.some((p) => p.isError)
   const hasDiff = parsedTools.some((p) => p.hasDiff)
@@ -89,13 +87,13 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
             </span>
             <span className="tool-batch-title">
               {hasRunning
-                ? t('toolMessage.batchRunning', { count: messages.length })
-                : t('toolMessage.batchDone', { count: messages.length })}
+                ? `Running ${messages.length} tools…`
+                : `Executed ${messages.length} operations`}
             </span>
             <div className="tool-batch-chips">
               {Object.entries(counts).slice(0, 4).map(([name, count]) => (
-                <span key={name} className="tool-batch-chip" title={toolLabel(t, name).label}>
-                  {toolLabel(t, name, labels).label}
+                <span key={name} className="tool-batch-chip" title={toolLabel(name).label}>
+                  {toolLabel(name, labels).label}
                   {count > 1 ? ` ×${count}` : ''}
                 </span>
               ))}
@@ -107,8 +105,8 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
 
           <div className="tool-batch-header-right">
             {stats.filesChanged > 0 && (
-              <span className="tool-batch-lines" title={t('toolMessage.filesChanged', { count: stats.filesChanged })}>
-                <span className="tool-batch-files">{t('toolMessage.filesChanged', { count: stats.filesChanged })}</span>
+              <span className="tool-batch-lines" title={`${stats.filesChanged} files`}>
+                <span className="tool-batch-files">{`${stats.filesChanged} files`}</span>
                 {stats.added > 0 && <span className="tool-added">+{stats.added}</span>}
                 {stats.removed > 0 && <span className="tool-removed">−{stats.removed}</span>}
               </span>
@@ -117,8 +115,8 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
               <span className="tool-batch-duration">{formatToolDuration(stats.durationMs)}</span>
             )}
             {hasDiff && stats.filesChanged === 0 && (
-              <span className="tool-batch-diff-badge" title={t('toolMessage.filesModified')}>
-                {t('toolMessage.diffBadge')}
+              <span className="tool-batch-diff-badge" title={'Files modified'}>
+                {'Diff'}
               </span>
             )}
             <ChevronDown

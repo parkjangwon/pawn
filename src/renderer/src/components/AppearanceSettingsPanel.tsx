@@ -1,27 +1,26 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import type { SettingsState } from './settingsState'
 import { CHAT_FONT_SIZES, DEFAULT_CHAT_FONT_SIZE, usePrefsStore } from '../stores/prefs'
-import Select from './Select'
 
 export default function AppearanceSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
-  const { t, i18n, theme, set, languages } = state
+  const { theme, set } = state
   const chatFontSize = usePrefsStore((s) => s.chatFontSize)
   const setChatFontSize = usePrefsStore((s) => s.setChatFontSize)
 
   return (
     <div className="settings-section settings-section-animate">
-      <h2>{t('settings.appearanceSection.title')}</h2>
-      <p className="settings-desc">{t('settings.appearanceSection.desc')}</p>
+      <h2>{'Appearance'}</h2>
+      <p className="settings-desc">{'Customize how Pawn looks and feels'}</p>
       <div className="settings-card">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.appearanceSection.theme')}</span>
-            <span className="settings-row-desc">{t('settings.appearanceSection.themeDesc')}</span>
+            <span className="settings-row-label">{'Theme'}</span>
+            <span className="settings-row-desc">{'Choose between light, dark, or system theme'}</span>
           </div>
           <div
             className="theme-segmented-control"
             role="radiogroup"
-            aria-label={t('settings.appearanceSection.theme')}
+            aria-label={'Theme'}
           >
             <button
               type="button"
@@ -31,7 +30,7 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
               onClick={() => set('light')}
             >
               <Sun size={14} />
-              <span>{t('theme.light')}</span>
+              <span>{'Light'}</span>
             </button>
             <button
               type="button"
@@ -41,7 +40,7 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
               onClick={() => set('dark')}
             >
               <Moon size={14} />
-              <span>{t('theme.dark')}</span>
+              <span>{'Dark'}</span>
             </button>
             <button
               type="button"
@@ -51,19 +50,19 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
               onClick={() => set('system')}
             >
               <Monitor size={14} />
-              <span>{t('theme.system')}</span>
+              <span>{'System'}</span>
             </button>
           </div>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.appearanceSection.chatFontSize')}</span>
-            <span className="settings-row-desc">{t('settings.appearanceSection.chatFontSizeDesc')}</span>
+            <span className="settings-row-label">{'Message text size'}</span>
+            <span className="settings-row-desc">{'Size of chat message text and code. The rest of the interface stays the same.'}</span>
           </div>
           <div
             className="theme-segmented-control font-size-control"
             role="radiogroup"
-            aria-label={t('settings.appearanceSection.chatFontSize')}
+            aria-label={'Message text size'}
           >
             {CHAT_FONT_SIZES.map((px) => (
               <button
@@ -73,7 +72,7 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
                 aria-checked={chatFontSize === px}
                 className={`theme-segment-btn ${chatFontSize === px ? 'active' : ''}`}
                 onClick={() => setChatFontSize(px)}
-                title={px === DEFAULT_CHAT_FONT_SIZE ? t('settings.appearanceSection.chatFontSizeDefault') : `${px}px`}
+                title={px === DEFAULT_CHAT_FONT_SIZE ? 'Default (14px)' : `${px}px`}
               >
                 <span style={{ fontSize: `${Math.max(11, px - 2)}px`, fontWeight: 600 }} aria-hidden>
                   A
@@ -82,21 +81,6 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
               </button>
             ))}
           </div>
-        </div>
-        <div className="settings-row">
-          <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.appearanceSection.language')}</span>
-            <span className="settings-row-desc">{t('settings.appearanceSection.languageDesc')}</span>
-          </div>
-          <Select
-            className="settings-select"
-            value={i18n.language}
-            onChange={(e) => i18n.changeLanguage(e.target.value)}
-          >
-            {languages.map((l) => (
-              <option key={l.code} value={l.code}>{l.label}</option>
-            ))}
-          </Select>
         </div>
       </div>
     </div>

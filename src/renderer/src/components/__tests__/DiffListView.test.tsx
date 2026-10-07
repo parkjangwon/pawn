@@ -39,7 +39,7 @@ describe('DiffListView', () => {
   it('shows the empty state when no diff messages exist', () => {
     seedStore([{ id: 'm0', role: 'user', content: 'hi' }])
     render(<DiffListView />)
-    expect(screen.getByText('rightPanel.diff.empty')).toBeInTheDocument()
+    expect(screen.getByText('No recent file changes')).toBeInTheDocument()
   })
 
   it('lists diff items from system messages only', () => {
@@ -49,7 +49,7 @@ describe('DiffListView', () => {
       diffMessage('m2', 'src/a.ts', 'old', 'new')
     ])
     render(<DiffListView />)
-    expect(screen.getByText('rightPanel.diff.title (1)')).toBeInTheDocument()
+    expect(screen.getByText('Recent changes (1)')).toBeInTheDocument()
     expect(screen.getByText('src/a.ts')).toBeInTheDocument()
     expect(screen.getByText('1 → 1 lines (0)')).toBeInTheDocument()
   })
@@ -84,7 +84,7 @@ describe('DiffListView', () => {
         diffMessage('m3', 'third.ts', 'a', 'b')
       ])
     })
-    expect(screen.getByText('rightPanel.diff.title (3)')).toBeInTheDocument()
+    expect(screen.getByText('Recent changes (3)')).toBeInTheDocument()
     expect(screen.getByText('+1')).toBeInTheDocument()
     expect(screen.getAllByText('first.ts').length).toBeGreaterThan(1)
   })

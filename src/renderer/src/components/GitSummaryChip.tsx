@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Check, ChevronDown, ChevronRight, Folder, GitBranch, Zap } from 'lucide-react'
 import { useGitSummary } from '../hooks/useGitSummary'
 
@@ -15,7 +15,6 @@ interface GitSummaryChipProps {
  * instead of duplicating its commit/push UI.
  */
 export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): React.JSX.Element | null {
-  const { t } = useTranslation()
   const summary = useGitSummary(projectPath)
   const [open, setOpen] = useState(false)
   const [showBranches, setShowBranches] = useState(false)
@@ -63,7 +62,7 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
       setShowBranches(false)
     } else {
       const detail = (r.stderr || r.stdout || '').trim().split('\n')[0].slice(0, 160)
-      setError(detail ? t('git.checkoutFailedDetail', { detail }) : t('rightPanel.git.checkoutFailed'))
+      setError(detail ? `Couldn't switch branches: ${detail}` : 'Couldn\'t switch branches')
     }
   }
 
@@ -82,7 +81,7 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
       <button
         className={`context-chip git-chip ${dirty ? 'dirty' : ''}`}
         onClick={() => setOpen((v) => !v)}
-        title={t('rightPanel.branch')}
+        title={'Branch'}
       >
         <GitBranch size={12} />
         <span>{summary.branch}</span>
@@ -101,8 +100,8 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
               </>
             )}
             {summary.untracked > 0 && (
-              <span className="git-stat-new" title={t('rightPanel.git.untrackedHint', { count: summary.untracked })}>
-                {t('rightPanel.git.newFiles', { count: summary.untracked })}
+              <span className="git-stat-new" title={(summary.untracked === 1 ? `${summary.untracked} new file not tracked by git yet` : `${summary.untracked} new files not tracked by git yet`)}>
+                {`+${summary.untracked} new`}
               </span>
             )}
           </span>
@@ -116,7 +115,7 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
             onClick={toggleBranches}
             disabled={busy}
             aria-expanded={showBranches}
-            aria-label={`${t('rightPanel.git.branch')}: ${summary.branch}`}
+            aria-label={`${tx('rightPanel.git.branch')}: ${summary.branch}`}
           >
             <GitBranch size={12} />
             <span className="git-popover-branch-name">{summary.branch}</span>
@@ -125,7 +124,7 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
 
           {showBranches && (
             <div className="git-branch-list">
-              {branches.length === 0 && <div className="git-branch-empty">{t('rightPanel.git.noBranches')}</div>}
+              {branches.length === 0 && <div className="git-branch-empty">{'No branches found'}</div>}
               {branches.map((b) => (
                 <button key={b} className={`git-branch-item ${b === summary.branch ? 'active' : ''}`} onClick={() => checkout(b)} disabled={busy}>
                   {b === summary.branch && (
@@ -143,7 +142,7 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
 
           <button className="git-popover-row" onClick={() => openPanelTab('diff')}>
             <Folder size={13} />
-            <span>{t('rightPanel.changes')}</span>
+            <span>{'Changes'}</span>
             <span className="git-popover-spacer" />
             {dirty ? (
               <span className="git-chip-stat">
@@ -151,13 +150,13 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
                 <span className="git-stat-del">-{summary.deletions}</span>
               </span>
             ) : (
-              <span className="git-popover-muted">{t('rightPanel.git.noChanges')}</span>
+              <span className="git-popover-muted">{'No changes'}</span>
             )}
           </button>
 
           <button className="git-popover-row" onClick={() => openPanelTab('git')}>
             <Zap size={13} />
-            <span>{t('rightPanel.tools.git')}</span>
+            <span>{'Git'}</span>
             <span className="git-popover-spacer" />
             <ChevronRight size={10} />
           </button>

@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useShallow } from 'zustand/react/shallow'
 import { useProviderStore } from '../stores/provider'
 import { useChatStore } from '../stores/chat'
@@ -8,7 +8,6 @@ import { useSubagentRunsStore } from '../stores/subagentRuns'
 import './StatusBar.css'
 
 export default function StatusBar(): React.JSX.Element {
-  const { t } = useTranslation()
   const providers = useProviderStore((s) => s.providers)
   const models = useProviderStore((s) => s.models)
   const routingMode = useProviderStore((s) => s.routingMode)
@@ -43,9 +42,9 @@ export default function StatusBar(): React.JSX.Element {
 
   const subLabel =
     activeSubs.length > 0
-      ? t('statusBar.subagentsRunning', { count: activeSubs.length })
+      ? `${activeSubs.length} agents`
       : hasSubError
-        ? t('statusBar.subagentError')
+        ? 'agent error'
         : null
 
   return (
@@ -63,11 +62,11 @@ export default function StatusBar(): React.JSX.Element {
         <span className="status-text">
           {isStreaming
             ? concurrentTurns > 1
-              ? t('statusBar.workingMulti', { count: concurrentTurns })
-              : t('statusBar.working')
+              ? `Working (${concurrentTurns} chats)`
+              : 'Working…'
             : enabledProviders.length > 0
-              ? t('statusBar.ready')
-              : t('statusBar.noProvider')}
+              ? 'Ready'
+              : 'No provider'}
         </span>
         {subLabel && (
           <button
@@ -75,7 +74,7 @@ export default function StatusBar(): React.JSX.Element {
             className="status-subagents"
             title={
               activeSubs.map((r) => `${r.name} [${r.agent}]`).join(', ') ||
-              t('statusBar.openAgents')
+              'Open Agents panel'
             }
             onClick={() => {
               try {
@@ -95,11 +94,11 @@ export default function StatusBar(): React.JSX.Element {
         {totals && totals.calls > 0 && (
           <span
             className="status-usage"
-            title={t('statusBar.usageHint', { rate: (totals.cacheHitRate * 100).toFixed(0), saved: totals.savedCost.toFixed(4) })}
+            title={`Cache hit ${(totals.cacheHitRate * 100).toFixed(0)}% · saved $${totals.savedCost.toFixed(4)}`}
           >
-            {t('statusBar.usageTokens', { tokens: formatTokens(totals.inputTokens + totals.cacheReadTokens) })} · ${totals.cost.toFixed(3)}
+            {`${formatTokens(totals.inputTokens + totals.cacheReadTokens)} in`} · ${totals.cost.toFixed(3)}
             {totals.cacheHitRate > 0
-              ? ` · ${t('statusBar.usageCache', { rate: (totals.cacheHitRate * 100).toFixed(0) })}`
+              ? ` · ${`${(totals.cacheHitRate * 100).toFixed(0)}% cached`}`
               : ''}
           </span>
         )}
@@ -113,7 +112,7 @@ export default function StatusBar(): React.JSX.Element {
           )
         )}
         <span className="status-mode">
-          {routingMode === 'auto' ? t('statusBar.auto') : t('statusBar.manual')}
+          {routingMode === 'auto' ? 'Auto' : 'Manual'}
         </span>
       </div>
     </div>

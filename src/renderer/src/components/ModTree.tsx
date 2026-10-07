@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { getModRuntime } from '../agent/mods'
 import { modEventLabel } from '../agent/mods/eventLabel'
 import { useModsUiStore } from '../agent/mods/uiStore'
-import i18n from '../i18n'
 
 /** Render frozen mod UI trees from $.ui.resolve element constructors. */
 
@@ -55,10 +54,10 @@ async function emitUiEvent(
         : modEventLabel(event)
   const text =
     event === 'ui.input'
-      ? i18n.t('chat.mods.timelineInput', { label })
+      ? `Edited ${label}.`
       : event === 'ui.select'
-        ? i18n.t('chat.mods.timelineSelect', { label })
-        : i18n.t('chat.mods.timelinePress', { label })
+        ? `Chose ${label}.`
+        : `Pressed ${label}.`
   useModsUiStore.getState().pushTimeline(plugin || 'extension', text, 'press')
   useModsUiStore.getState().invalidate()
   void runtime.emitUiRender('AbovePrompt', {}).catch(() => {})

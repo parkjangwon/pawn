@@ -23,6 +23,7 @@ import { useSettingsState } from './settingsState'
 import { formatCombo } from '../stores/keybindings'
 import Tooltip from './Tooltip'
 import './Settings.css'
+import { tx } from '../i18n'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useFocusTrap } from '../utils/focusTrap'
@@ -39,7 +40,6 @@ export default function Settings({
   const state = useSettingsState({ onSidebarWidthChange })
   const [searchQuery, setSearchQuery] = useState('')
   const {
-    t,
     navOpen,
     setNavOpen,
     groups,
@@ -60,10 +60,10 @@ export default function Settings({
     if (!searchQuery.trim()) return null
     const q = searchQuery.toLowerCase().trim()
     return SECTIONS.filter((s) => {
-      const extra = s.searchKey ? t(s.searchKey) : ''
-      return `${t(s.labelKey)} ${s.id} ${extra}`.toLowerCase().includes(q)
+      const extra = s.searchKey ? tx(s.searchKey) : ''
+      return `${tx(s.labelKey)} ${s.id} ${extra}`.toLowerCase().includes(q)
     })
-  }, [searchQuery, t])
+  }, [searchQuery])
 
   const sidebarShortcut = formatCombo(keybindings['toggle-sidebar'])
 
@@ -93,16 +93,16 @@ export default function Settings({
       ref={pageRef}
       role="dialog"
       aria-modal="true"
-      aria-label={t('settings.title')}
+      aria-label={'Settings'}
       className={`settings-page ${navOpen ? '' : 'nav-collapsed'}`}
     >
       <div className="settings-header">
         <div className="settings-header-left">
-          <Tooltip label={t('settings.toggleNav')} shortcut={sidebarShortcut} placement="bottom">
+          <Tooltip label={'Toggle settings sidebar'} shortcut={sidebarShortcut} placement="bottom">
             <button
               className="settings-header-back"
               onClick={() => setNavOpen((v) => !v)}
-              aria-label={t('settings.toggleNav')}
+              aria-label={'Toggle settings sidebar'}
             >
               <PanelLeft size={18} />
             </button>
@@ -121,15 +121,15 @@ export default function Settings({
               type="search"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={t('settings.searchPlaceholder')}
-              aria-label={t('settings.searchPlaceholder')}
+              placeholder={'Search settings…'}
+              aria-label={'Search settings…'}
             />
             {searchQuery && (
               <button
                 type="button"
                 className="sidebar-search-clear"
                 onClick={() => setSearchQuery('')}
-                aria-label={t('common.clear')}
+                aria-label={'Clear'}
               >
                 ×
               </button>
@@ -141,7 +141,7 @@ export default function Settings({
           {filteredSections ? (
             <div className="sidebar-section">
               <div className="section-label">
-                {t('settings.searchResults')} ({filteredSections.length})
+                {'Search results'} ({filteredSections.length})
               </div>
               {filteredSections.map((section) => (
                 <button
@@ -152,17 +152,17 @@ export default function Settings({
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d={section.icon} />
                   </svg>
-                  <span>{t(section.labelKey)}</span>
+                  <span>{tx(section.labelKey)}</span>
                 </button>
               ))}
               {filteredSections.length === 0 && (
-                <div className="tree-empty">{t('settings.noResults')}</div>
+                <div className="tree-empty">{'No settings found'}</div>
               )}
             </div>
           ) : (
             groups.map((group) => (
               <div key={group} className="settings-nav-group">
-                <div className="settings-nav-label">{t(group)}</div>
+                <div className="settings-nav-label">{tx(group)}</div>
                 {SECTIONS.filter((s) => s.groupKey === group).map((section) => (
                   <button
                     key={section.id}
@@ -172,7 +172,7 @@ export default function Settings({
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d={section.icon} />
                     </svg>
-                    <span>{t(section.labelKey)}</span>
+                    <span>{tx(section.labelKey)}</span>
                   </button>
                 ))}
               </div>
@@ -192,33 +192,33 @@ export default function Settings({
         {activeSection === 'agent' && <AgentSettingsPanel state={state} />}
         {activeSection === 'wiki' && (
           <div className="settings-section">
-            <h2>{t('settings.wikiSection.title')}</h2>
-            <p className="settings-desc">{t('settings.wikiSection.desc')}</p>
+            <h2>{'Wiki (LLM knowledge base)'}</h2>
+            <p className="settings-desc">{'An interlinked markdown wiki the agent writes and maintains itself — pages, index, log, and a link graph under ~/.pawn/wiki. Open the folder as an Obsidian vault if you like.'}</p>
             <WikiPanel />
           </div>
         )}
         {activeSection === 'hooks' && (
           <div className="settings-section">
-            <h2>{t('settings.hooksSection.title')}</h2>
-            <p className="settings-desc">{t('settings.hooksSection.desc')}</p>
+            <h2>{'Hooks'}</h2>
+            <p className="settings-desc">{'Run scripts at agent lifecycle points (Claude/Codex-compatible). Sources merge with dedupe so the same command is not run twice. PreToolUse deny wins even in YOLO.'}</p>
             <HooksSettingsPanel />
           </div>
         )}
         {activeSection === 'subagents' && (
           <div className="settings-section">
-            <h2>{t('settings.agentsSection.title')}</h2>
+            <h2>{'Subagents'}</h2>
             <AgentsSettingsPanel />
           </div>
         )}
         {activeSection === 'usage' && (
           <div className="settings-section">
-            <h2>{t('settings.usageSection.title')}</h2>
+            <h2>{'Usage history'}</h2>
             <UsageSettingsPanel />
             <div className="settings-card" style={{ marginTop: 16 }}>
               <div className="settings-row">
                 <div className="settings-row-info">
-                  <span className="settings-row-label">{t('settings.usageSection.sessionBudget')}</span>
-                  <span className="settings-row-desc">{t('settings.usageSection.sessionBudgetDesc')}</span>
+                  <span className="settings-row-label">{'Chat spend cap ($)'}</span>
+                  <span className="settings-row-desc">{'Soft-stop the agent when this chat\'s USD cost reaches the cap. 0 = unlimited.'}</span>
                 </div>
                 <label className="budget-field">
                   <span className="budget-field-prefix" aria-hidden="true">$</span>
@@ -227,7 +227,7 @@ export default function Settings({
                     inputMode="decimal"
                     min={0}
                     step={0.5}
-                    aria-label={t('settings.usageSection.sessionBudget')}
+                    aria-label={'Chat spend cap ($)'}
                     value={sessionBudgetUsd || ''}
                     placeholder="0"
                     onChange={(e) => setSessionBudgetUsd(Number(e.target.value) || 0)}
@@ -236,8 +236,8 @@ export default function Settings({
               </div>
               <div className="settings-row">
                 <div className="settings-row-info">
-                  <span className="settings-row-label">{t('settings.usageSection.dailyBudget')}</span>
-                  <span className="settings-row-desc">{t('settings.usageSection.dailyBudgetDesc')}</span>
+                  <span className="settings-row-label">{'Daily spend cap ($)'}</span>
+                  <span className="settings-row-desc">{'Soft-stop when today’s on-device usage reaches the cap. 0 = unlimited.'}</span>
                 </div>
                 <label className="budget-field">
                   <span className="budget-field-prefix" aria-hidden="true">$</span>
@@ -246,7 +246,7 @@ export default function Settings({
                     inputMode="decimal"
                     min={0}
                     step={0.5}
-                    aria-label={t('settings.usageSection.dailyBudget')}
+                    aria-label={'Daily spend cap ($)'}
                     value={dailyBudgetUsd || ''}
                     placeholder="0"
                     onChange={(e) => setDailyBudgetUsd(Number(e.target.value) || 0)}
@@ -268,14 +268,14 @@ export default function Settings({
       </div>
       {confirmDelete && (
         <ConfirmDialog
-          title={`${confirmDelete.name} ${t('common.delete')}`}
+          title={`${confirmDelete.name} ${'Delete'}`}
           message={
             confirmDelete.type === 'provider'
-              ? t('confirmDialog.deleteProviderConfirm')
-              : t('confirmDialog.deleteModelConfirm')
+              ? 'Delete this provider? Models linked to it may stop working.'
+              : 'Delete this model? This can\'t be undone.'
           }
-          confirmLabel={t('confirmDialog.confirm')}
-          cancelLabel={t('confirmDialog.cancel')}
+          confirmLabel={'Confirm'}
+          cancelLabel={'Cancel'}
           onConfirm={() => { void handleConfirmDelete() }}
           onCancel={() => setConfirmDelete(null)}
         />

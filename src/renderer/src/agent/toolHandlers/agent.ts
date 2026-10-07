@@ -1,4 +1,3 @@
-import i18n from '../../i18n'
 import { formatAnswerForModel, useQuestionStore, type QuestionOption } from '../../stores/userQuestions'
 import { TOOLS } from '../toolDefinitions'
 import {
@@ -268,13 +267,13 @@ const request_plan_approval: ToolHandler = async (call, _projectPath, signal, ct
   }
   const plan = String(call.arguments.plan || '').trim().slice(0, 12_000)
   if (!plan) return { toolCallId: call.id, content: 'plan is required', isError: true }
-  const APPROVE = i18n.t('questions.approveLabel')
-  const REVISE = i18n.t('questions.reviseLabel')
+  const APPROVE = 'Approve'
+  const REVISE = 'Request changes'
   const answer = await useQuestionStore.getState().ask(
     {
       sessionId,
       kind: 'plan_approval',
-      question: i18n.t('questions.planApprovalTitle'),
+      question: 'Approve this plan and start building?',
       details: plan,
       options: [{ label: APPROVE }, { label: REVISE }],
       multiSelect: false,

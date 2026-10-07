@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { GitCompare } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
@@ -9,7 +9,6 @@ import { openFileInPanel, useFilesPanelStore } from '../stores/filesPanel'
 import { useChangeLedger } from '../stores/changeLedger'
 
 export default function DiffListView(): React.JSX.Element {
-  const { t } = useTranslation()
   const { projects, activeProjectId, activeSessionId } = useAppStore()
   const [expandedId, setExpandedId] = useState<string | null>(null)
 
@@ -56,11 +55,11 @@ export default function DiffListView(): React.JSX.Element {
     return (
       <div className="rp-diff">
         <div className="rp-diff-header">
-          {t('rightPanel.diff.title')}
+          {'Recent changes'}
         </div>
         <div className="rp-diff-list">
-          <div className="rp-diff-empty">{t('rightPanel.diff.empty')}</div>
-          <div className="rp-diff-empty-hint">{t('diff.emptyHint')}</div>
+          <div className="rp-diff-empty">{'No recent file changes'}</div>
+          <div className="rp-diff-empty-hint">{'File changes appear here after the agent edits files in this chat.'}</div>
         </div>
       </div>
     )
@@ -69,7 +68,7 @@ export default function DiffListView(): React.JSX.Element {
   return (
     <div className="rp-diff">
       <div className="rp-diff-header">
-        {`${t('rightPanel.diff.title')} (${diffMessages.length + (ledgerFocus ? 1 : 0)})`}
+        {`${'Recent changes'} (${diffMessages.length + (ledgerFocus ? 1 : 0)})`}
       </div>
       <div className="rp-diff-list" ref={listRef}>
         {ledgerFocus && (
@@ -77,9 +76,9 @@ export default function DiffListView(): React.JSX.Element {
             {ledgerFocus.binary ? (
               <div className="rp-diff-binary">
                 <span className="rp-diff-binary-name">{ledgerFocus.path.split('/').pop()}</span>
-                <span>{t('rightPanel.diff.noTextPreview')}</span>
+                <span>{'No text preview (binary or large file)'}</span>
                 <button type="button" className="rp-diff-binary-open" onClick={() => openFileInPanel(ledgerFocus.path)}>
-                  {t('rightPanel.diff.open')}
+                  {'Open'}
                 </button>
               </div>
             ) : (

@@ -1,5 +1,5 @@
 import React, { memo, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Check, ChevronRight, Copy, History } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import SkillDraftCard from './SkillDraftCard'
@@ -20,10 +20,9 @@ import { Textarea } from './Input'
 
 /** Localized fallback for a message whose markdown crashed the renderer. */
 function RenderErrorText({ error }: { error: Error | null }): React.JSX.Element {
-  const { t } = useTranslation()
   return (
     <span>
-      {t('chat.messageRenderFailed', { error: error?.message || 'render error' })}
+      {`Message content failed to render (${error?.message || 'render error'})`}
     </span>
   )
 }
@@ -102,7 +101,6 @@ function ThinkingBlock({
   text: string
   live?: boolean
 }): React.JSX.Element | null {
-  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const [elapsed, setElapsed] = useState(0)
   const spinnerSuffix = useModsUiStore((s) => s.spinnerSuffix)
@@ -118,9 +116,9 @@ function ThinkingBlock({
       <div className="message-thinking live one-line" aria-live="polite">
         <span className="message-thinking-spinner" aria-hidden="true" />
         <span className="message-thinking-label">
-          {t('chat.thinkingLive')}
+          {'Thinking…'}
           {spinnerSuffix ? (
-            <span className="message-thinking-mod-suffix" title={t('chat.mods.spinnerSuffixHint')}>
+            <span className="message-thinking-mod-suffix" title={'Status text from a mod'}>
               {' · '}
               {spinnerSuffix}
             </span>
@@ -142,7 +140,7 @@ function ThinkingBlock({
           size={10}
           style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.12s' }}
         />
-        <span>{t('chat.thinking')}</span>
+        <span>{'Thinking'}</span>
       </button>
       {open && <pre className="message-thinking-body">{text}</pre>}
     </div>
@@ -151,9 +149,8 @@ function ThinkingBlock({
 
 /** Hover-revealed send time (full timestamp in the tooltip). */
 function MessageTime({ createdAt }: { createdAt: number }): React.JSX.Element | null {
-  const { t, i18n } = useTranslation()
-  const locale = i18n?.language || 'en'
-  const label = formatMessageTime(createdAt, locale, (time) => t('chat.time.yesterday', { time }))
+  const locale = 'en'
+  const label = formatMessageTime(createdAt, locale, (time) => `Yesterday ${time}`)
   if (!label) return null
   const ms = normalizeTimestampMs(createdAt)
   return (
@@ -169,18 +166,17 @@ function MessageTime({ createdAt }: { createdAt: number }): React.JSX.Element | 
 
 /** "Worked for 1m 5s" — how long the agent spent on the turn ending here. */
 export function WorkedFor({ durationMs }: { durationMs?: number }): React.JSX.Element | null {
-  const { t } = useTranslation()
   const text = formatDuration(durationMs, {
-    d: (n) => t('chat.duration.d', { n }),
-    h: (n) => t('chat.duration.h', { n }),
-    m: (n) => t('chat.duration.m', { n }),
-    s: (n) => t('chat.duration.s', { n })
+    d: (n) => `${n}d`,
+    h: (n) => `${n}h`,
+    m: (n) => `${n}m`,
+    s: (n) => `${n}s`
   })
   if (!text) return null
   return (
     <span className="message-worked">
       <History size={11} aria-hidden />
-      {t('chat.duration.worked', { duration: text })}
+      {`Worked for ${text}`}
     </span>
   )
 }
@@ -209,7 +205,6 @@ const MessageRow = memo(function MessageRow({
   /** The user prompt that started this turn (for "Repeat this"). */
   turnPrompt?: string
 }): React.JSX.Element {
-  const { t } = useTranslation()
   const [copied, setCopied] = useState(false)
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -254,13 +249,13 @@ const MessageRow = memo(function MessageRow({
     >
       {!continuation && (
         <div className="message-role">
-          {msg.role === 'user' ? t('chat.you') : msg.id.startsWith('mod-') ? (
+          {msg.role === 'user' ? 'You' : msg.id.startsWith('mod-') ? (
             <>
-              {t('chat.mods.replyRole')}
+              {'Mod'}
               {msg.modelLabel ? <span className="message-mod-badge">{msg.modelLabel}</span> : null}
             </>
           ) : (
-            t('chat.assistant')
+            'Assistant'
           )}
         </div>
       )}
@@ -284,7 +279,7 @@ const MessageRow = memo(function MessageRow({
             />
             <div className="message-edit-actions">
               <button type="button" className="message-action-btn" onClick={() => setEditing(false)}>
-                {t('common.cancel')}
+                {'Cancel'}
               </button>
               <button
                 type="button"
@@ -296,7 +291,7 @@ const MessageRow = memo(function MessageRow({
                   void editAndResend(projectId, sessionId, msg.id, draft)
                 }}
               >
-                {t('chat.saveAndResend')}
+                {'Save & resend'}
               </button>
             </div>
           </div>
@@ -329,15 +324,15 @@ const MessageRow = memo(function MessageRow({
           <button
             className={`message-copy ${copied ? 'copied' : ''}`}
             onClick={() => void handleCopy()}
-            title={t('chat.copy')}
-            aria-label={t('chat.copy')}
+            title={'Copy'}
+            aria-label={'Copy'}
           >
             {copied ? (
               <Check size={12} />
             ) : (
               <Copy size={12} />
             )}
-            {copied ? t('chat.copied') : t('chat.copy')}
+            {copied ? 'Copied' : 'Copy'}
           </button>
           {canAct && msg.role === 'user' && !isLive && (
             <button
@@ -348,7 +343,7 @@ const MessageRow = memo(function MessageRow({
                 setEditing(true)
               }}
             >
-              {t('chat.edit')}
+              {'Edit'}
             </button>
           )}
           {canAct && msg.role === 'assistant' && !isLive && projectId && sessionId && (
@@ -357,17 +352,17 @@ const MessageRow = memo(function MessageRow({
               className="message-action-btn"
               onClick={() => void regenerate(projectId, sessionId, msg.id)}
             >
-              {t('chat.regenerate')}
+              {'Regenerate'}
             </button>
           )}
           {canAct && msg.role === 'assistant' && !isLive && turnPrompt && (
             <button
               type="button"
               className="message-action-btn"
-              title={t('chat.repeatHint')}
+              title={'Turn this request into an automation that runs on a schedule'}
               onClick={() => openAutomationDraft({ prompt: turnPrompt, projectId: projectId || undefined })}
             >
-              {t('chat.repeat')}
+              {'Repeat this'}
             </button>
           )}
           {!isLive && <MessageTime createdAt={msg.createdAt} />}
@@ -397,7 +392,6 @@ export default function MessageList({
   projectId,
   sessionId
 }: MessageListProps): React.JSX.Element {
-  const { t } = useTranslation()
   const sessionBusy = useChatStore((s) =>
     sessionId ? s.streamingSessionIds.includes(sessionId) : s.isStreaming
   )
@@ -462,7 +456,7 @@ export default function MessageList({
     <div className="chat-messages" ref={scrollRef} onScroll={onScroll} data-session={sessionKey || ''}>
       {startIndex > 0 && nearTop && (
         <button className="message-load-earlier" onClick={onShowEarlier}>
-          {t('chat.showEarlier', { count: startIndex })}
+          {`Show earlier messages (${startIndex})`}
         </button>
       )}
       {renderItems.map((item) => (
@@ -489,7 +483,7 @@ export default function MessageList({
       ))}
       {busy && lastRole !== 'assistant' && (
         <div className={`message assistant message-enter${turnHasAssistant ? ' message-continuation' : ''}`}>
-          {!turnHasAssistant && <div className="message-role">{t('chat.assistant')}</div>}
+          {!turnHasAssistant && <div className="message-role">{'Assistant'}</div>}
           <div className="message-content streaming">
             <span className="cursor-blink">▍</span>
           </div>

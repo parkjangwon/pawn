@@ -1,12 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 
 /**
  * xAI sign-in on a provider row. Device-code OAuth (SuperGrok / X Premium+).
  * A pasted API key still works and is used when nobody is signed in.
  */
 export default function XaiAuthPanel({ onSignedIn }: { onSignedIn?: () => void }): React.JSX.Element {
-  const { t } = useTranslation()
   const api = window.api?.xai
   const [signedIn, setSignedIn] = useState(false)
   const [email, setEmail] = useState('')
@@ -31,11 +30,11 @@ export default function XaiAuthPanel({ onSignedIn }: { onSignedIn?: () => void }
         setError('')
         void refresh()
         onSignedIn?.()
-      } else setError(r.error || t('settings.providerSection.xai.failed'))
+      } else setError(r.error || 'xAI sign-in failed')
     })
-  }, [api, refresh, onSignedIn, t])
+  }, [api, refresh, onSignedIn])
 
-  if (!api) return <div className="settings-row-desc">{t('settings.providerSection.xai.desktopOnly')}</div>
+  if (!api) return <div className="settings-row-desc">{'xAI sign-in is available in the desktop app. Paste an API key to use it here.'}</div>
 
   const start = async (): Promise<void> => {
     setBusy(true)
@@ -53,14 +52,14 @@ export default function XaiAuthPanel({ onSignedIn }: { onSignedIn?: () => void }
     <div className="kiro-auth">
       <div className="settings-row-desc">
         {signedIn
-          ? t('settings.providerSection.xai.signedIn', { email: email || t('settings.providerSection.xai.account') })
-          : t('settings.providerSection.xai.signedOut')}
+          ? `Signed in to xAI (${email || 'account'}). This session is used instead of an API key.`
+          : 'Not signed in. Paste an API key, or sign in with a SuperGrok / X Premium+ account.'}
       </div>
       {device && (
         <div className="settings-row-desc">
-          {t('settings.providerSection.xai.enterCode')} <strong className="kiro-code">{device.userCode}</strong>{' '}
+          {'Confirm this code in your browser:'} <strong className="kiro-code">{device.userCode}</strong>{' '}
           <a href={device.url} target="_blank" rel="noreferrer">
-            {t('settings.providerSection.xai.openPage')}
+            {'Open sign-in page'}
           </a>{' '}
           <button
             type="button"
@@ -70,7 +69,7 @@ export default function XaiAuthPanel({ onSignedIn }: { onSignedIn?: () => void }
               setBusy(false)
             }).catch(() => {})}
           >
-            {t('common.cancel')}
+            {'Cancel'}
           </button>
         </div>
       )}
@@ -83,17 +82,17 @@ export default function XaiAuthPanel({ onSignedIn }: { onSignedIn?: () => void }
               disabled={busy}
               onClick={() => void api.signOut().then(() => refresh())}
             >
-              {t('settings.providerSection.xai.signOut')}
+              {'Sign out'}
             </button>
           ) : (
             <button type="button" className="test-btn" disabled={busy} onClick={() => void start()}>
-              {t('settings.providerSection.xai.signIn')}
+              {'Sign in with xAI'}
             </button>
           )}
         </div>
       )}
       {error && <div className="settings-row-desc kiro-error">{error}</div>}
-      <div className="settings-row-desc kiro-note">{t('settings.providerSection.xai.note')}</div>
+      <div className="settings-row-desc kiro-note">{'Subscription sign-in uses the public Grok sign-in. If xAI rejects the session, sign out and use an API key from console.x.ai.'}</div>
     </div>
   )
 }

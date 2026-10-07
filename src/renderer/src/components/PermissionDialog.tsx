@@ -1,11 +1,10 @@
 import { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { usePermissionStore } from '../stores/permission'
 import { useFocusTrap } from '../utils/focusTrap'
 import './PermissionDialog.css'
 
 export default function PermissionDialog(): React.JSX.Element | null {
-  const { t } = useTranslation()
   const { pending, resolve, approveSession, addRule } = usePermissionStore()
   const dialogRef = useRef<HTMLDivElement>(null)
   const open = pending.length > 0
@@ -44,14 +43,14 @@ export default function PermissionDialog(): React.JSX.Element | null {
   const current = pending[0]
 
   const typeLabels: Record<string, string> = {
-    computer_use: t('permission.types.computer_use'),
-    file_write: t('permission.types.file_write'),
-    file_read: t('permission.types.file_read'),
-    shell_exec: t('permission.types.shell_exec'),
-    browser: t('permission.types.browser'),
-    app: t('permission.types.app'),
-    mcp: t('permission.types.mcp'),
-    network: t('permission.types.network')
+    computer_use: 'Use your computer',
+    file_write: 'Save a file',
+    file_read: 'Read a file',
+    shell_exec: 'Run a command',
+    browser: 'Use the browser',
+    app: 'Change an app setting',
+    mcp: 'Use a connected tool',
+    network: 'Go online'
   }
 
   const pathPrefix = current.path
@@ -75,10 +74,10 @@ export default function PermissionDialog(): React.JSX.Element | null {
         aria-modal="true"
         aria-labelledby="permission-dialog-title"
       >
-        <h3 id="permission-dialog-title">{t('permission.title')}</h3>
+        <h3 id="permission-dialog-title">{'Permission request'}</h3>
         {pending.length > 1 && (
           <div className="permission-queue">
-            {t('permission.queue', { current: 1, total: pending.length })}
+            {`${1} of ${pending.length} waiting`}
           </div>
         )}
         <div className="permission-type">{typeLabels[current.type] || current.type}</div>
@@ -88,19 +87,16 @@ export default function PermissionDialog(): React.JSX.Element | null {
             role={current.risk.escalated ? 'alert' : undefined}
           >
             <span className="permission-risk-label">
-              {t('permission.risk.rating', {
-                level: t(`permission.risk.levels.${current.risk.level}`),
-                pct: Math.round(current.risk.probability * 100)
-              })}
+              {`Decision model: ${tx(`permission.risk.levels.${current.risk.level}`)} (${Math.round(current.risk.probability * 100)}%)`}
             </span>
             {current.risk.sendsData >= 0.5 && (
-              <span className="permission-risk-note">{t('permission.risk.sendsData')}</span>
+              <span className="permission-risk-note">{'It may send local data to a remote server.'}</span>
             )}
-            {current.risk.escalated && <span className="permission-risk-note">{t('permission.risk.escalated')}</span>}
+            {current.risk.escalated && <span className="permission-risk-note">{'This would have run without asking. The decision model flagged it, so Pawn is checking with you.'}</span>}
           </div>
         ) : current.riskPending ? (
           <div className="permission-risk pending" aria-live="polite">
-            {t('permission.risk.checking')}
+            {'Checking the risk…'}
           </div>
         ) : null}
         {/* Plain-language purpose (from the agent) replaces the tool label. */}
@@ -114,8 +110,8 @@ export default function PermissionDialog(): React.JSX.Element | null {
             <button
               type="button"
               className="permission-copy-btn"
-              title={t('permission.copy')}
-              aria-label={t('permission.copy')}
+              title={'Copy'}
+              aria-label={'Copy'}
               onClick={() => {
                 const text = current.preview
                   ? `${current.preview.target || ''}\n${current.preview.lines.map((l) => (current.preview!.kind === 'edit' && l.mark ? `${l.mark} ` : '') + l.text).join('\n')}`
@@ -126,7 +122,7 @@ export default function PermissionDialog(): React.JSX.Element | null {
                 }).catch(() => {})
               }}
             >
-              {copied ? t('permission.copied') : t('permission.copy')}
+              {copied ? 'Copied' : 'Copy'}
             </button>
             {(current.preview.target || current.preview.summary) && (
               <div className="permission-preview-head">
@@ -139,7 +135,7 @@ export default function PermissionDialog(): React.JSX.Element | null {
               </div>
             )}
             {current.preview.lines.length > 0 && (
-              <pre className="permission-details" aria-label={t('permission.previewLabel')}>
+              <pre className="permission-details" aria-label={'What will change'}>
                 {current.preview.lines.map((l, i) => (
                   <span key={i} className={`pp-line${l.mark === '+' ? ' add' : l.mark === '-' ? ' del' : ''}`}>
                     {current.preview!.kind === 'edit' && l.mark ? `${l.mark} ` : ''}
@@ -148,7 +144,7 @@ export default function PermissionDialog(): React.JSX.Element | null {
                   </span>
                 ))}
                 {current.preview.truncated ? (
-                  <span className="pp-more">{t('permission.moreLines', { count: current.preview.truncated })}</span>
+                  <span className="pp-more">{(current.preview.truncated === 1 ? `… ${current.preview.truncated} more line` : `… ${current.preview.truncated} more lines`)}</span>
                 ) : null}
               </pre>
             )}
@@ -158,21 +154,21 @@ export default function PermissionDialog(): React.JSX.Element | null {
         )}
 
         <div className="permission-kbd-hint" aria-hidden="true">
-          {t('permission.kbdHint')}
+          {'Enter to allow · Esc to deny'}
         </div>
         <div className="permission-actions">
           <div className="permission-actions-secondary">
             <button
               type="button"
               className="session-btn"
-              title={t('permission.allowSessionHint')}
+              title={'Approve every request of this type until the app restarts'}
               onClick={() => {
                 approveSession(current.type)
                 resolve(current.id, true)
               }}
             >
-              {t('permission.allowSession')}
-              <span className="permission-scope-note">{t('permission.sessionGlobalNote')}</span>
+              {'Allow until I quit'}
+              <span className="permission-scope-note">{'Applies in every chat until Pawn restarts.'}</span>
             </button>
             {pathPrefix && current.type === 'file_write' && (
               <button
@@ -184,30 +180,30 @@ export default function PermissionDialog(): React.JSX.Element | null {
                   resolve(current.id, true)
                 }}
               >
-                {t('permission.allowPathAlways')}
+                {'Always allow this folder'}
               </button>
             )}
             {shellPrefix && current.type === 'shell_exec' && (
               <button
                 type="button"
                 className="session-btn"
-                title={t('permission.allowSessionHint')}
+                title={'Approve every request of this type until the app restarts'}
                 onClick={() => {
                   addRule({ kind: 'shell_prefix', prefix: shellPrefix, scope: 'always' })
                   resolve(current.id, true)
                 }}
               >
-                {t('permission.alwaysCommand', { prefix: shellPrefix })}
+                {`Always allow “${shellPrefix}”`}
               </button>
             )}
           </div>
 
           <div className={`permission-actions-primary${hasSticky ? ' has-secondary' : ''}`}>
             <button type="button" className="deny-btn" onClick={() => resolve(current.id, false)}>
-              {t('permission.deny')}
+              {'Deny'}
             </button>
             <button type="button" className="allow-btn" onClick={() => resolve(current.id, true)}>
-              {t('permission.allow')}
+              {'Allow'}
             </button>
           </div>
         </div>

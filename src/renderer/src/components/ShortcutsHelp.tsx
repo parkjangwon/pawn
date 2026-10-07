@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { KEYBINDING_IDS, useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { useModalDialog } from '../utils/focusTrap'
 import './ShortcutsHelp.css'
@@ -18,7 +18,6 @@ export function openShortcutsHelp(): void {
  * event.
  */
 export default function ShortcutsHelp(): React.JSX.Element | null {
-  const { t } = useTranslation()
   const [open, setOpen] = useState(false)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const bindings = useKeybindingsStore((s) => s.bindings)
@@ -39,39 +38,39 @@ export default function ShortcutsHelp(): React.JSX.Element | null {
         className="shortcuts-dialog"
         role="dialog"
         aria-modal="true"
-        aria-label={t('shortcuts.title')}
+        aria-label={'Keyboard shortcuts'}
         onClick={(e) => e.stopPropagation()}
       >
         <div className="shortcuts-head">
-          <h3>{t('shortcuts.title')}</h3>
-          <button type="button" className="shortcuts-close" onClick={() => setOpen(false)} aria-label={t('common.cancel')}>
+          <h3>{'Keyboard shortcuts'}</h3>
+          <button type="button" className="shortcuts-close" onClick={() => setOpen(false)} aria-label={'Cancel'}>
             ×
           </button>
         </div>
         <div className="shortcuts-grid">
           {KEYBINDING_IDS.map((id) => (
             <div key={id} className="shortcuts-row">
-              <span className="shortcuts-label">{t(`settings.shortcutSection.${id}`)}</span>
+              <span className="shortcuts-label">{tx(`settings.shortcutSection.${id}`)}</span>
               <kbd className="shortcuts-kbd">{bindings[id] ? formatCombo(bindings[id]) : '—'}</kbd>
             </div>
           ))}
         </div>
         <div className="shortcuts-fixed">
-          <div className="shortcuts-group-label">{t('shortcuts.groupFixed')}</div>
+          <div className="shortcuts-group-label">{'Fixed shortcuts'}</div>
           <div className="shortcuts-row">
-            <span className="shortcuts-label">{t('shortcuts.findInChat')}</span>
+            <span className="shortcuts-label">{'Find in chat'}</span>
             <kbd className="shortcuts-kbd">⌘F</kbd>
           </div>
           <div className="shortcuts-row">
-            <span className="shortcuts-label">{t('shortcuts.interrupt')}</span>
+            <span className="shortcuts-label">{'Interrupt the agent'}</span>
             <kbd className="shortcuts-kbd">Esc</kbd>
           </div>
           <div className="shortcuts-row">
-            <span className="shortcuts-label">{t('permission.kbdHint')}</span>
+            <span className="shortcuts-label">{'Enter to allow · Esc to deny'}</span>
             <kbd className="shortcuts-kbd">⏎ / Esc</kbd>
           </div>
           <div className="shortcuts-row">
-            <span className="shortcuts-label">{t('commandPalette.navigate')}</span>
+            <span className="shortcuts-label">{'Navigate'}</span>
             <kbd className="shortcuts-kbd">↑ ↓ · ↵ · Esc</kbd>
           </div>
         </div>

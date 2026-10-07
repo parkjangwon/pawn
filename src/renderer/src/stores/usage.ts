@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { uid } from '../utils/uid'
 import type { ModelEntry } from '../types/provider'
-import i18n from '../i18n'
 
 /** Raw token counts reported by a provider for a single request. */
 export interface CallUsage {
@@ -131,11 +130,11 @@ export const useUsageStore = create<UsageState>((set, get) => ({
       const callPrompt = usage.inputTokens + usage.cacheReadTokens + usage.cacheWriteTokens
       if (callPrompt > 0) {
         if (usage.cacheReadTokens === 0 && usage.cacheWriteTokens === 0) {
-          diags.push({ level: 'warn', message: i18n.t('usage.diagnostics.cacheMiss'), at: Date.now() })
+          diags.push({ level: 'warn', message: 'Cache miss — the prefix changed or the cache expired.', at: Date.now() })
         } else if (usage.cacheWriteTokens > usage.inputTokens && usage.cacheReadTokens === 0) {
-          diags.push({ level: 'info', message: i18n.t('usage.diagnostics.cachePriming'), at: Date.now() })
+          diags.push({ level: 'info', message: 'Cache priming — writing a new prefix.', at: Date.now() })
         } else if (usage.cacheReadTokens > callPrompt * 0.8) {
-          diags.push({ level: 'info', message: i18n.t('usage.diagnostics.cacheHit'), at: Date.now() })
+          diags.push({ level: 'info', message: 'Good cache hit — most of the input was served from cache.', at: Date.now() })
         }
       }
       const prevDiags = s.diagnostics[sessionId] || []

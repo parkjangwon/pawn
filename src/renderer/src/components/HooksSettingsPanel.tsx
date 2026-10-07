@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import Input from './Input'
@@ -76,7 +76,6 @@ function groupRank(event: string): number {
 }
 
 export default function HooksSettingsPanel(): React.JSX.Element {
-  const { t } = useTranslation()
   const projectPath = useAppStore((s) => {
     const p = s.projects.find((x) => x.id === s.activeProjectId)
     return getEffectiveProjectPath(p, useAppStore.getState().activeSessionId) || null
@@ -113,7 +112,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
     try {
       const next = await window.api.hooks.setSettings(partial)
       setSettings({ ...defaultSettings, ...(next || {}) })
-      setMsg(t('settings.hooksSection.saved'))
+      setMsg('Saved')
       void refresh()
     } catch (e) {
       setMsg(String(e))
@@ -146,7 +145,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
       setCopiedId(h.id)
       setTimeout(() => setCopiedId((cur) => (cur === h.id ? null : cur)), 1500)
     } catch {
-      setMsg(t('settings.hooksSection.copyFailed'))
+      setMsg('Could not copy to the clipboard')
     }
   }
 
@@ -167,7 +166,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
   }, [hooks, filter])
 
   if (!window.api.hooks) {
-    return <div className="settings-empty">{t('settings.hooksSection.desktopOnly')}</div>
+    return <div className="settings-empty">{'Hooks run in the desktop app.'}</div>
   }
 
   return (
@@ -175,8 +174,8 @@ export default function HooksSettingsPanel(): React.JSX.Element {
       <div className="settings-card">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.hooksSection.enabled')}</span>
-            <span className="settings-row-desc">{t('settings.hooksSection.enabledDesc')}</span>
+            <span className="settings-row-label">{'Use hooks'}</span>
+            <span className="settings-row-desc">{'Fire lifecycle hooks from Claude and Pawn config files'}</span>
           </div>
           <Switch
             checked={settings.enabled}
@@ -186,8 +185,8 @@ export default function HooksSettingsPanel(): React.JSX.Element {
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.hooksSection.readClaude')}</span>
-            <span className="settings-row-desc">{t('settings.hooksSection.readClaudeDesc')}</span>
+            <span className="settings-row-label">{'Read Claude settings'}</span>
+            <span className="settings-row-desc">{'~/.claude/settings.json and project .claude/settings.json'}</span>
           </div>
           <Switch
             checked={settings.readClaude}
@@ -197,8 +196,8 @@ export default function HooksSettingsPanel(): React.JSX.Element {
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.hooksSection.readPawn')}</span>
-            <span className="settings-row-desc">{t('settings.hooksSection.readPawnDesc')}</span>
+            <span className="settings-row-label">{'Read Pawn hooks'}</span>
+            <span className="settings-row-desc">{'~/.pawn/hooks.json and project .pawn/hooks.json'}</span>
           </div>
           <Switch
             checked={settings.readPawn}
@@ -208,8 +207,8 @@ export default function HooksSettingsPanel(): React.JSX.Element {
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.hooksSection.allowProjectHooks')}</span>
-            <span className="settings-row-desc">{t('settings.hooksSection.allowProjectHooksDesc')}</span>
+            <span className="settings-row-label">{'Run project hooks'}</span>
+            <span className="settings-row-desc">{'Run hooks from the opened repo\'s .claude/settings.json / .pawn/hooks.json. Off by default — those files ship with untrusted repos and can execute arbitrary commands. User-scope hooks always run.'}</span>
           </div>
           <Switch
             checked={settings.allowProjectHooks}
@@ -218,33 +217,30 @@ export default function HooksSettingsPanel(): React.JSX.Element {
           />
         </div>
         <div className="hooks-stats">
-          {t('settings.hooksSection.stats', {
-            total: hooks.length,
-            sources: Object.entries(bySource)
+          {`${hooks.length} hooks loaded · ${Object.entries(bySource)
               .map(([k, n]) => k + ':' + n)
-              .join(' · ') || '—'
-          })}
+              .join(' · ') || '—'}`}
         </div>
         {msg && <div className="hooks-msg">{msg}</div>}
       </div>
 
       <div className="settings-card hooks-browser">
         <div className="hooks-toolbar">
-          <span className="settings-row-label">{t('settings.hooksSection.loaded')}</span>
+          <span className="settings-row-label">{'Loaded hooks'}</span>
           <Input
             className="hooks-filter"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}
-            placeholder={t('settings.hooksSection.filterPlaceholder')}
+            placeholder={'Filter events or commands…'}
           />
           <button type="button" className="test-btn" onClick={() => void refresh()} disabled={busy}>
-            {t('settings.hooksSection.refresh')}
+            {'Refresh'}
           </button>
         </div>
         {hooks.length === 0 ? (
-          <div className="settings-empty">{t('settings.hooksSection.empty')}</div>
+          <div className="settings-empty">{'No hooks found. Add them under ~/.claude/settings.json or ~/.pawn/hooks.json.'}</div>
         ) : groups.length === 0 ? (
-          <div className="settings-empty">{t('settings.hooksSection.noMatch')}</div>
+          <div className="settings-empty">{'No hooks match the filter.'}</div>
         ) : (
           <div className="hooks-groups">
             {groups.map(({ event, rows }) => {
@@ -276,7 +272,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
                             <button
                               type="button"
                               className="hooks-cmd"
-                              title={t('settings.hooksSection.fullCommand')}
+                              title={'Toggle full command'}
                               onClick={() => toggleCmd(h.id)}
                             >
                               {isExpanded ? h.commandOrUrl : hookLabel(h.commandOrUrl)}
@@ -285,7 +281,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
                               <button
                                 type="button"
                                 className="hooks-icon-btn"
-                                title={t('settings.hooksSection.copy')}
+                                title={'Copy command'}
                                 onClick={() => void copyCmd(h)}
                               >
                                 {copiedId === h.id ? '✓' : '⧉'}
@@ -293,7 +289,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
                               <button
                                 type="button"
                                 className={'hooks-icon-btn hooks-expand' + (isExpanded ? ' is-open' : '')}
-                                title={t('settings.hooksSection.fullCommand')}
+                                title={'Toggle full command'}
                                 onClick={() => toggleCmd(h.id)}
                               >
                                 ▾

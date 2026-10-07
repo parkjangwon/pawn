@@ -1,61 +1,15 @@
-import i18n from 'i18next'
-import { initReactI18next } from 'react-i18next'
-import en from './locales/en.json'
-import ko from './locales/ko.json'
-import ja from './locales/ja.json'
-import zh from './locales/zh.json'
+import { EN, tx } from './strings'
 
-const SUPPORTED = ['en', 'ko', 'ja', 'zh'] as const
-
-/** First launch follows the OS language (Korean macOS → Korean UI), else English. */
-export function detectLanguage(langs: readonly string[] | undefined): string {
-  for (const l of langs || []) {
-    const base = String(l).toLowerCase().slice(0, 2)
-    if ((SUPPORTED as readonly string[]).includes(base)) return base
-  }
-  return 'en'
+/**
+ * English-only UI strings. Pawn v3 ships a single locale: dynamic lookups
+ * (status- or kind-driven keys) go through {@link tx}; everything else is an
+ * inline literal. No language detection, no switching.
+ */
+const i18n = {
+  language: 'en' as const,
+  t: tx,
+  async changeLanguage(): Promise<void> {},
 }
 
-const savedLang =
-  localStorage.getItem('pawn-lang') ||
-  (typeof navigator !== 'undefined' ? detectLanguage(navigator.languages?.length ? navigator.languages : [navigator.language]) : null)
-
-function applyDocumentLang(lng: string): void {
-  if (typeof document !== 'undefined') document.documentElement.lang = lng
-}
-
-// Keep the native tray menu in sync with the renderer's language.
-function notifyTrayLanguage(lng: string): void {
-  try {
-    void window.api.tray?.setLanguage?.(lng)?.catch?.(() => {})
-  } catch {
-    // Browser mode or preload unavailable — tray is desktop-only.
-  }
-}
-
-// Tests that mock react-i18next without the plugin should still be able to
-// import this module (the store layer depends on it for diagnostics strings).
-if (initReactI18next) i18n.use(initReactI18next)
-
-i18n.init({
-  resources: {
-    en: { translation: en },
-    ko: { translation: ko },
-    ja: { translation: ja },
-    zh: { translation: zh }
-  },
-  lng: savedLang || 'en',
-  fallbackLng: 'en',
-  interpolation: { escapeValue: false }
-})
-
-i18n.on('languageChanged', (lng) => {
-  localStorage.setItem('pawn-lang', lng)
-  applyDocumentLang(lng)
-  notifyTrayLanguage(lng)
-})
-
-applyDocumentLang(savedLang || 'en')
-notifyTrayLanguage(savedLang || 'en')
-
+export { EN, tx }
 export default i18n

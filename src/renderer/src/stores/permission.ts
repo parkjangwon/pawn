@@ -1,6 +1,5 @@
 import type { PermissionPreview } from '../agent/permissionPreview'
 import { create } from 'zustand'
-import i18n from '../i18n'
 
 export type PermissionType =
   | 'computer_use'
@@ -134,7 +133,7 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
         try {
           window.dispatchEvent(
             new CustomEvent('pawn:toast', {
-              detail: { kind: 'warn', message: i18n.t('permission.queueFull') }
+              detail: { kind: 'warn', message: 'Too many permission requests at once — this one was denied' }
             })
           )
         } catch {
@@ -172,7 +171,7 @@ export const usePermissionStore = create<PermissionState>((set, get) => ({
             new CustomEvent('pawn:toast', {
               detail: {
                 kind: 'warn',
-                message: i18n.t('permission.timedOut')
+                message: 'No answer to the permission request — it was denied'
               }
             })
           )

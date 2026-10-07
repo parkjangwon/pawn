@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useAppStore } from '../stores/app'
 import Button from './Button'
 import Input from './Input'
@@ -26,7 +26,6 @@ function personLabel(row: { username?: string; firstName?: string; userId: strin
 }
 
 export default function TelegramSettingsPanel(): React.JSX.Element {
-  const { t } = useTranslation()
   const projects = useAppStore((s) => s.projects)
   const [status, setStatus] = useState<TelegramStatusDto | null>(null)
   const [token, setToken] = useState('')
@@ -64,10 +63,10 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
   const href = botHref(status?.username)
 
   const steps: { id: StepId; done: boolean; label: string }[] = [
-    { id: 'token', done: hasToken, label: t('settings.telegramSection.stepToken') },
-    { id: 'project', done: hasProject, label: t('settings.telegramSection.stepProject') },
-    { id: 'enable', done: botOn, label: t('settings.telegramSection.stepEnable') },
-    { id: 'pair', done: paired, label: t('settings.telegramSection.stepPair') }
+    { id: 'token', done: hasToken, label: 'Save the bot token' },
+    { id: 'project', done: hasProject, label: 'Choose a project' },
+    { id: 'enable', done: botOn, label: 'Turn the bot on' },
+    { id: 'pair', done: paired, label: 'Approve an account' }
   ]
   const now = steps.find((step) => !step.done)?.id
 
@@ -78,13 +77,13 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
       return
     }
     if (result && result.ok === false) {
-      setFormError(result.error === 'invalid_token' ? t('settings.telegramSection.tokenInvalid') : errorText(result.error))
+      setFormError(result.error === 'invalid_token' ? 'That does not look like a BotFather token.' : errorText(result.error))
     }
   }
 
   /** Fire an IPC call and route both its result and any transport error into the UI. */
   const run = (p: Promise<TelegramStatusDto | { ok: false; error: string }> | undefined): void => {
-    p?.then((r) => void apply(r)).catch((err) => { console.warn('[telegram]', err); setFormError(t('common.operationFailed')) })
+    p?.then((r) => void apply(r)).catch((err) => { console.warn('[telegram]', err); setFormError('Something failed — see the console for details.') })
   }
 
   const saveToken = async (): Promise<void> => {
@@ -100,7 +99,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
       }
     } catch (err) {
       console.warn('[telegram]', err)
-      setFormError(t('common.operationFailed'))
+      setFormError('Something failed — see the console for details.')
     } finally {
       setBusy(false)
     }
@@ -113,7 +112,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
     try {
       const result = await window.api?.telegram?.allowUser(value)
       if (result && result.ok === false) {
-        setUserError(result.error === 'bad_user' ? t('settings.telegramSection.addUserInvalid') : t('common.operationFailed'))
+        setUserError(result.error === 'bad_user' ? 'A Telegram user id is numeric only, e.g. 123456789.' : 'Something failed — see the console for details.')
         return
       }
       if (isStatus(result)) {
@@ -143,9 +142,9 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
 
   const errorText = (code: string | undefined): string => {
     if (!code) return ''
-    if (code === 'token_rejected') return t('settings.telegramSection.tokenRejected')
-    if (code === 'conflict') return t('settings.telegramSection.conflict')
-    return t('common.operationFailed') + ' (' + code.slice(0, 60) + ')'
+    if (code === 'token_rejected') return 'Telegram rejected the token. Create a new one in BotFather.'
+    if (code === 'conflict') return 'Another app is already polling this bot. Stop that poller and toggle the bot again.'
+    return 'Something failed — see the console for details.' + ' (' + code.slice(0, 60) + ')'
   }
 
   const jump = (id: StepId): void => {
@@ -155,37 +154,37 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
   if (!window.api?.telegram) {
     return (
       <div className="settings-section">
-        <h2>{t('settings.telegramSection.title')}</h2>
-        <p className="settings-desc">{t('settings.telegramSection.desktopOnly')}</p>
+        <h2>{'Telegram'}</h2>
+        <p className="settings-desc">{'The browser preview cannot keep a bot connection open. Use the desktop app to connect.'}</p>
       </div>
     )
   }
 
   const commands: { cmd: string; label: string }[] = [
-    { cmd: '/new', label: t('settings.telegramSection.cmdNew') },
-    { cmd: '/stop', label: t('settings.telegramSection.cmdStop') },
-    { cmd: '/plan', label: t('settings.telegramSection.cmdPlan') },
-    { cmd: '/build', label: t('settings.telegramSection.cmdBuild') },
-    { cmd: '/sessions', label: t('settings.telegramSection.cmdSessions') },
-    { cmd: '/chat', label: t('settings.telegramSection.cmdChat') },
-    { cmd: '/tasks', label: t('settings.telegramSection.cmdTasks') },
-    { cmd: '/changes', label: t('settings.telegramSection.cmdChanges') },
-    { cmd: '/undo', label: t('settings.telegramSection.cmdUndo') },
-    { cmd: '/model', label: t('settings.telegramSection.cmdModel') },
-    { cmd: '/compact', label: t('settings.telegramSection.cmdCompact') },
-    { cmd: '/project', label: t('settings.telegramSection.cmdProject') },
-    { cmd: '/usage', label: t('settings.telegramSection.cmdUsage') },
-    { cmd: '/help', label: t('settings.telegramSection.cmdHelp') },
-    { cmd: '/status', label: t('settings.telegramSection.cmdStatus') },
-    { cmd: '/whoami', label: t('settings.telegramSection.cmdWhoami') }
+    { cmd: '/new', label: 'Start a fresh chat.' },
+    { cmd: '/stop', label: 'Cancel the turn in progress.' },
+    { cmd: '/plan', label: 'Plan mode: research and propose without changes (/plan <request>).' },
+    { cmd: '/build', label: 'Back to build mode: full tools.' },
+    { cmd: '/sessions', label: 'List recent chats.' },
+    { cmd: '/chat', label: 'Switch to a recent chat (/chat <number>).' },
+    { cmd: '/tasks', label: 'Show the task list of this chat.' },
+    { cmd: '/changes', label: 'Show files the agent changed.' },
+    { cmd: '/undo', label: 'Revert a change set (/undo <number>).' },
+    { cmd: '/model', label: 'Show the model and context fill.' },
+    { cmd: '/compact', label: 'Shrink the chat context.' },
+    { cmd: '/project', label: 'Show the folder the agent runs in.' },
+    { cmd: '/usage', label: 'Show spend over the last 24 hours.' },
+    { cmd: '/help', label: 'Show what the bot can do.' },
+    { cmd: '/status', label: 'Show whether the bot is listening.' },
+    { cmd: '/whoami', label: 'Show your Telegram user id.' }
   ]
 
   return (
     <div className="settings-section telegram-panel">
-      <h2>{t('settings.telegramSection.title')}</h2>
-      <p className="settings-desc">{t('settings.telegramSection.desc')}</p>
+      <h2>{'Telegram'}</h2>
+      <p className="settings-desc">{'Control this Pawn from a private Telegram bot. Strangers get a pairing code and nothing else until you approve them here.'}</p>
 
-      <ol className="telegram-steps" aria-label={t('settings.telegramSection.steps')}>
+      <ol className="telegram-steps" aria-label={'Setup'}>
         {steps.map((step, index) => (
           <li key={step.id}>
             <button
@@ -210,24 +209,24 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
       <div className="settings-card" id="telegram-step-token">
         <div className="settings-row settings-row-stack">
           <div className="settings-row-info">
-            <span className="settings-row-label" id="telegram-token-label">{t('settings.telegramSection.token')}</span>
+            <span className="settings-row-label" id="telegram-token-label">{'Bot token'}</span>
             <span className="settings-row-desc">
               {hasToken
                 ? status?.username
-                  ? t('settings.telegramSection.connected', { username: status.username })
-                  : t('settings.telegramSection.tokenSaved')
-                : t('settings.telegramSection.tokenDesc')}
+                  ? `Connected as @${status.username}`
+                  : 'Token saved'
+                : 'From BotFather. Sealed in the OS keychain on this computer, and never shown again.'}
             </span>
           </div>
           {hasToken && !replacing && (
             <div className="telegram-actions">
               {href && (
                 <a className="btn-cancel telegram-link" href={href} target="_blank" rel="noreferrer">
-                  {t('settings.telegramSection.openBot', { username: status?.username })}
+                  {`Open @${status?.username}`}
                 </a>
               )}
               <Button type="button" variant="secondary" onClick={() => setReplacing(true)}>
-                {t('settings.telegramSection.replaceToken')}
+                {'Replace token'}
               </Button>
               <Button
                 type="button"
@@ -238,7 +237,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                   run(window.api?.telegram?.clearToken())
                 }}
               >
-                {t('settings.telegramSection.clearToken')}
+                {'Remove token'}
               </Button>
             </div>
           )}
@@ -257,14 +256,14 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 autoComplete="off"
                 spellCheck={false}
                 aria-labelledby="telegram-token-label"
-                placeholder={t('settings.telegramSection.tokenPlaceholder')}
+                placeholder={'123456:ABC…'}
                 onChange={(e) => setToken(e.target.value)}
               />
               <Button type="submit" disabled={busy || !token.trim()}>
-                {t('settings.telegramSection.saveToken')}
+                {'Save token'}
               </Button>
               <a className="btn-cancel telegram-link" href={BOT_FATHER} target="_blank" rel="noreferrer">
-                {t('settings.telegramSection.openBotFather')}
+                {'Open BotFather'}
               </a>
               {replacing && (
                 <Button
@@ -276,7 +275,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                     setFormError(null)
                   }}
                 >
-                  {t('common.cancel')}
+                  {'Cancel'}
                 </Button>
               )}
             </form>
@@ -286,9 +285,9 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
 
         <div className="settings-row" id="telegram-step-project">
           <div className="settings-row-info">
-            <label className="settings-row-label" htmlFor="telegram-project">{t('settings.telegramSection.project')}</label>
+            <label className="settings-row-label" htmlFor="telegram-project">{'Project'}</label>
             <span className="settings-row-desc">
-              {folders.length === 0 ? t('settings.telegramSection.noProjects') : t('settings.telegramSection.projectDesc')}
+              {folders.length === 0 ? 'Add a project folder in the sidebar first. Remote messages need a folder.' : 'Remote messages run the agent in this folder.'}
             </span>
           </div>
           <Select
@@ -299,7 +298,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               run(window.api?.telegram?.setProject(e.target.value))
             }}
           >
-            <option value="">{t('settings.telegramSection.projectNone')}</option>
+            <option value="">{'Choose a project'}</option>
             {folders.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}
@@ -310,18 +309,18 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
 
         <div className="settings-row" id="telegram-step-enable">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.telegramSection.enable')}</span>
+            <span className="settings-row-label">{'Enable bot'}</span>
             <span className="settings-row-desc">
-              {hasToken ? t('settings.telegramSection.enableDesc') : t('settings.telegramSection.enableNeedsToken')}
+              {hasToken ? 'Listen while Pawn is open. Quitting the app stops the bot.' : 'Save a token before turning the bot on.'}
             </span>
             <span className={`telegram-status${status?.polling ? ' on' : status?.error ? ' bad' : ''}`}>
-              {status?.polling ? t('settings.telegramSection.polling') : t('settings.telegramSection.stopped')}
+              {status?.polling ? 'Listening for messages' : 'Not listening'}
             </span>
           </div>
           <Switch
             checked={!!status?.enabled}
             disabled={!hasToken}
-            aria-label={t('settings.telegramSection.enable')}
+            aria-label={'Enable bot'}
             onCheckedChange={(v) => {
               run(window.api?.telegram?.setEnabled(v))
             }}
@@ -333,8 +332,8 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
       <div className={`settings-card${pending.length > 0 ? ' telegram-card-alert' : ''}`} id="telegram-step-pair">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.telegramSection.pending')}</span>
-            {pending.length === 0 && <span className="settings-row-desc">{t('settings.telegramSection.pendingEmpty')}</span>}
+            <span className="settings-row-label">{'Waiting for approval'}</span>
+            {pending.length === 0 && <span className="settings-row-desc">{'No pairing requests.'}</span>}
           </div>
         </div>
         {pending.map((p) => (
@@ -346,7 +345,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
             </div>
             <div className="telegram-actions">
               <Button type="button" variant="secondary" onClick={() => void copyCode(p.code)}>
-                {copied === p.code ? t('settings.telegramSection.copied') : t('settings.telegramSection.copyCode')}
+                {copied === p.code ? 'Copied' : 'Copy'}
               </Button>
               <Button
                 type="button"
@@ -354,7 +353,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                   run(window.api?.telegram?.approve(p.code))
                 }}
               >
-                {t('settings.telegramSection.approve')}
+                {'Approve'}
               </Button>
               <Button
                 type="button"
@@ -363,7 +362,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                   run(window.api?.telegram?.deny(p.code))
                 }}
               >
-                {t('settings.telegramSection.deny')}
+                {'Deny'}
               </Button>
             </div>
           </div>
@@ -373,9 +372,9 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
       <div className="settings-card">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.telegramSection.paired')}</span>
+            <span className="settings-row-label">{'Paired accounts'}</span>
             {(status?.allowFrom || []).length === 0 && (
-              <span className="settings-row-desc">{t('settings.telegramSection.pairedEmpty')}</span>
+              <span className="settings-row-desc">{'Nobody is paired yet. Message the bot, then approve the code here.'}</span>
             )}
           </div>
         </div>
@@ -392,12 +391,12 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 run(window.api?.telegram?.revoke(u.userId))
               }}
             >
-              {t('settings.telegramSection.revoke')}
+              {'Revoke'}
             </Button>
           </div>
         ))}
         <div className="settings-row settings-row-stack">
-          <span className="settings-row-desc">{t('settings.telegramSection.addUserDesc')}</span>
+          <span className="settings-row-desc">{'Already know your numeric user id? Add it here to pair without a code. Then message the bot to start.'}</span>
           <form
             className="telegram-form"
             onSubmit={(e) => {
@@ -411,15 +410,15 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               autoComplete="off"
               spellCheck={false}
               value={userId}
-              aria-label={t('settings.telegramSection.addUserPlaceholder')}
-              placeholder={t('settings.telegramSection.addUserPlaceholder')}
+              aria-label={'Telegram user id'}
+              placeholder={'Telegram user id'}
               onChange={(e) => {
                 setUserId(e.target.value)
                 setUserError(null)
               }}
             />
             <Button type="submit" disabled={busy || !userId.trim()}>
-              {t('settings.telegramSection.addUser')}
+              {'Add user'}
             </Button>
           </form>
           {userError && <p className="telegram-error">{userError}</p>}
@@ -429,8 +428,8 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
       <div className="settings-card">
         <div className="settings-row settings-row-stack">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.telegramSection.commands')}</span>
-            <span className="settings-row-desc">{t('settings.telegramSection.groupsNote')}</span>
+            <span className="settings-row-label">{'Commands'}</span>
+            <span className="settings-row-desc">{'Group chats are ignored. The bot uses the same permission mode as this app.'}</span>
           </div>
           <ul className="telegram-commands">
             {commands.map((row) => (

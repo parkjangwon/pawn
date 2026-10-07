@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronRight, File, Folder } from 'lucide-react'
 import './FileTree.css'
 
@@ -14,7 +14,6 @@ interface FileTreeProps {
 }
 
 export default function FileTree({ rootPath }: FileTreeProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [entries, setEntries] = useState<FileEntry[]>([])
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [childEntries, setChildEntries] = useState<Record<string, FileEntry[]>>({})
@@ -126,9 +125,9 @@ export default function FileTree({ rootPath }: FileTreeProps): React.JSX.Element
       </div>
       {!collapsed && (
         <div className="ft-body">
-          {loading && <div className="ft-loading">{t("fileTree.loading")}</div>}
+          {loading && <div className="ft-loading">{'Loading files…'}</div>}
           {!loading && entries.map((entry) => renderEntry(entry, 0))}
-          {!loading && entries.length === 0 && <div className="ft-empty">{t("fileTree.empty")}</div>}
+          {!loading && entries.length === 0 && <div className="ft-empty">{'No files to display'}</div>}
         </div>
       )}
     </div>

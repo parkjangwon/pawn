@@ -6,7 +6,6 @@
  * recording itself is never stored.
  */
 
-import i18n from '../i18n'
 import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { processQueue } from '../stores/chatLoop'
@@ -31,11 +30,7 @@ function formatDuration(ms: number): string {
 
 /** Short visible note for the user bubble (no step list, no screenshots). */
 export function recordingNote(bundle: RecordingBundleDto): string {
-  return i18n.t('record.chat.recorded', {
-    goal: bundle.goal || i18n.t('record.chat.noGoal'),
-    steps: bundle.steps.length,
-    duration: formatDuration(bundle.durationMs)
-  })
+  return `🎬 Recorded a workflow: ${bundle.goal || 'no goal given'} · ${bundle.steps.length} steps · ${formatDuration(bundle.durationMs)}`
 }
 
 /** What the chat remembers about the recording (the draft follows it). */
@@ -69,7 +64,7 @@ export async function draftSkillFromRecording(
     const images = bundle.frames.map((f) => ({ kind: 'image' as const, dataUrl: f.dataUrl, name: `after step ${f.step}` }))
     const text = buildDraftUserText(bundle)
     let entries: TranscriptEntry[] = [{ role: 'user', content: text, ...(images.length ? { attachments: images } : {}) }]
-    const system = [buildDraftSystemPrompt(i18n.language)]
+    const system = [buildDraftSystemPrompt('en')]
     // Own sticky key: drafting must not move the chat's warm model.
     const routeId = `rec:${bundle.id}`
     let lastError = ''
@@ -84,7 +79,7 @@ export async function draftSkillFromRecording(
         decision = route({ sessionId: routeId, entries, complexity: 'complex', exclude: excluded, newTurn: true })
       }
       if (!decision) {
-        lastError = i18n.t('chat.errors.noProvider')
+        lastError = 'No provider or model configured. Open Settings → Providers, then Settings → Models.'
         break
       }
       messageId = `${Date.now()}-rec-draft-${attempt}`
@@ -105,7 +100,7 @@ export async function draftSkillFromRecording(
         noteProviderSuccess(decision.provider.id)
         useUsageStore.getState().record(sessionId, decision.model, result.usage)
         const answer = result.text.trim()
-        if (!answer) throw Object.assign(new Error(i18n.t('record.errors.emptyDraft')), { transient: true })
+        if (!answer) throw Object.assign(new Error('The model returned an empty draft.'), { transient: true })
         const app = useAppStore.getState()
         app.updateMessageContent(projectId, sessionId, messageId, answer, true)
         app.updateMessageModel(projectId, sessionId, messageId, decision.model.label || decision.model.modelId)
@@ -117,7 +112,7 @@ export async function draftSkillFromRecording(
         messageId = ''
         if (controller.signal.aborted) {
           useAppStore.getState().removeMessage(projectId, sessionId, noteId)
-          return { ok: false, error: i18n.t('record.errors.cancelled'), aborted: true }
+          return { ok: false, error: 'Drafting was stopped.', aborted: true }
         }
         lastError = err instanceof Error ? err.message : String(err)
         if ((err as { transient?: boolean }).transient !== false) noteProviderFailure(decision.provider.id)
@@ -126,7 +121,7 @@ export async function draftSkillFromRecording(
     }
     // A retry adds its own note again.
     useAppStore.getState().removeMessage(projectId, sessionId, noteId)
-    return { ok: false, error: lastError || i18n.t('record.errors.draftFailed') }
+    return { ok: false, error: lastError || 'Could not write the skill.' }
   } finally {
     if (sessionControllers.get(sessionId) === controller) sessionControllers.delete(sessionId)
     setSessionStreamingFlags(chatSet, chatGet, sessionId, false)

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { formatCost, formatTokens } from '../stores/usage'
 import './UsageSettingsPanel.css'
 
@@ -25,7 +25,6 @@ function sinceFor(range: RangeKey): number {
 }
 
 export default function UsageSettingsPanel(): React.JSX.Element {
-  const { t } = useTranslation()
   const [range, setRange] = useState<RangeKey>('7d')
   const [rows, setRows] = useState<SummaryRow[]>([])
   const [loading, setLoading] = useState(true)
@@ -38,19 +37,19 @@ export default function UsageSettingsPanel(): React.JSX.Element {
       const api = window.api?.db?.getUsageSummary
       if (!api) {
         setRows([])
-        setError(t('settings.usageSection.desktopOnly'))
+        setError('Usage history is available in the desktop app.')
         return
       }
       const data = await api(sinceFor(range))
       setRows(Array.isArray(data) ? (data as SummaryRow[]) : [])
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      setError(t('usage.loadFailed', { error: msg.slice(0, 160) }))
+      setError(`Couldn't load usage: ${msg.slice(0, 160)}`)
       setRows([])
     } finally {
       setLoading(false)
     }
-  }, [range, t])
+  }, [range])
 
   useEffect(() => {
     void refresh()
@@ -78,10 +77,10 @@ export default function UsageSettingsPanel(): React.JSX.Element {
 
   return (
     <div className="usage-settings">
-      <p className="settings-desc">{t('settings.usageSection.desc')}</p>
+      <p className="settings-desc">{'Token and cost totals across chats (stored on this device).'}</p>
 
       <div className="usage-toolbar">
-        <div className="theme-toggle usage-range" role="group" aria-label={t('settings.usageSection.title')}>
+        <div className="theme-toggle usage-range" role="group" aria-label={'Usage history'}>
           {(
             [
               ['1d', 'settings.usageSection.range1d'],
@@ -96,38 +95,38 @@ export default function UsageSettingsPanel(): React.JSX.Element {
               className={range === key ? 'active' : ''}
               onClick={() => setRange(key)}
             >
-              {t(label)}
+              {tx(label)}
             </button>
           ))}
         </div>
         <button type="button" className="test-btn" onClick={() => void refresh()}>
-          {t('settings.usageSection.refresh')}
+          {'Refresh'}
         </button>
       </div>
 
       <div className="usage-summary-cards">
         <div className="usage-stat">
           <span className="usage-stat-val">{formatCost(totals.cost)}</span>
-          <span className="usage-stat-label">{t('settings.usageSection.totalCost')}</span>
+          <span className="usage-stat-label">{'Total cost'}</span>
         </div>
         <div className="usage-stat">
           <span className="usage-stat-val">{totals.calls}</span>
-          <span className="usage-stat-label">{t('settings.usageSection.totalCalls')}</span>
+          <span className="usage-stat-label">{'API calls'}</span>
         </div>
         <div className="usage-stat">
           <span className="usage-stat-val">{formatTokens(totals.input + totals.output)}</span>
-          <span className="usage-stat-label">{t('settings.usageSection.totalTokens')}</span>
+          <span className="usage-stat-label">{'Tokens'}</span>
         </div>
         <div className="usage-stat">
           <span className="usage-stat-val">{Math.round(totals.hit * 100)}%</span>
-          <span className="usage-stat-label">{t('settings.usageSection.cacheHit')}</span>
+          <span className="usage-stat-label">{'Cache hit'}</span>
         </div>
       </div>
 
-      {loading && <div className="settings-empty">{t('common.loading')}</div>}
+      {loading && <div className="settings-empty">{'Loading…'}</div>}
       {error && <div className="settings-row-desc mcp-form-error">{error}</div>}
       {!loading && !error && rows.length === 0 && (
-        <div className="settings-empty">{t('settings.usageSection.empty')}</div>
+        <div className="settings-empty">{'No usage recorded for this range.'}</div>
       )}
 
       {!loading && rows.length > 0 && (
@@ -135,11 +134,11 @@ export default function UsageSettingsPanel(): React.JSX.Element {
           <table className="usage-table">
             <thead>
               <tr>
-                <th>{t('settings.usageSection.colModel')}</th>
-                <th>{t('settings.usageSection.colProvider')}</th>
-                <th>{t('settings.usageSection.colCalls')}</th>
-                <th>{t('settings.usageSection.colTokens')}</th>
-                <th>{t('settings.usageSection.colCost')}</th>
+                <th>{'Model'}</th>
+                <th>{'Provider'}</th>
+                <th>{'Calls'}</th>
+                <th>{'Tokens'}</th>
+                <th>{'Cost'}</th>
               </tr>
             </thead>
             <tbody>

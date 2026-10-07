@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Quote } from 'lucide-react'
 
 interface SelectionActionsProps {
@@ -53,7 +53,6 @@ export function readChatSelection(root: HTMLElement | null): Anchor | null {
  * quote into the composer, copy, or search the conversation for it.
  */
 export default function SelectionActions({ scrollEl, onQuote, onFind }: SelectionActionsProps): React.JSX.Element | null {
-  const { t } = useTranslation()
   const [anchor, setAnchor] = useState<Anchor | null>(null)
   const [copied, setCopied] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -134,7 +133,7 @@ export default function SelectionActions({ scrollEl, onQuote, onFind }: Selectio
       ref={menuRef}
       className="selection-actions"
       role="toolbar"
-      aria-label={t('chat.selection.label')}
+      aria-label={'Selection actions'}
       style={{ left: MARGIN, top: MARGIN }}
       // Keep the selection alive while clicking the menu.
       onMouseDown={(e) => e.preventDefault()}
@@ -150,7 +149,7 @@ export default function SelectionActions({ scrollEl, onQuote, onFind }: Selectio
         }}
       >
         <Quote size={13} aria-hidden />
-        {t('chat.selection.quote')}
+        {'Quote'}
       </button>
       <span className="selection-actions-sep" aria-hidden />
       <button
@@ -163,7 +162,7 @@ export default function SelectionActions({ scrollEl, onQuote, onFind }: Selectio
             .catch(() => {})
         }}
       >
-        {copied ? t('chat.copied') : t('chat.copy')}
+        {copied ? 'Copied' : 'Copy'}
       </button>
       {findable && (
         <>
@@ -176,7 +175,7 @@ export default function SelectionActions({ scrollEl, onQuote, onFind }: Selectio
               hide()
             }}
           >
-            {t('chat.selection.find')}
+            {'Find'}
           </button>
         </>
       )}

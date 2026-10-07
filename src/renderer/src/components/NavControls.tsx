@@ -1,4 +1,4 @@
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import { formatCombo } from '../stores/keybindings'
 import Tooltip from './Tooltip'
@@ -13,28 +13,27 @@ interface NavControlsProps {
 
 /** ChatGPT-style back/forward pair for traversing session/view history. */
 export default function NavControls({ canGoBack, canGoForward, onBack, onForward }: NavControlsProps): React.JSX.Element {
-  const { t } = useTranslation()
   const backShortcut = formatCombo('Meta+[')
   const forwardShortcut = formatCombo('Meta+]')
 
   return (
     <div className="nav-controls">
-      <Tooltip label={t('contextBar.navBack')} shortcut={backShortcut} placement="bottom" disabled={!canGoBack}>
+      <Tooltip label={'Back'} shortcut={backShortcut} placement="bottom" disabled={!canGoBack}>
         <button
           className="nav-btn"
           onClick={onBack}
           disabled={!canGoBack}
-          aria-label={t('contextBar.navBack')}
+          aria-label={'Back'}
         >
           <ChevronLeft size={18} />
         </button>
       </Tooltip>
-      <Tooltip label={t('contextBar.navForward')} shortcut={forwardShortcut} placement="bottom" disabled={!canGoForward}>
+      <Tooltip label={'Forward'} shortcut={forwardShortcut} placement="bottom" disabled={!canGoForward}>
         <button
           className="nav-btn"
           onClick={onForward}
           disabled={!canGoForward}
-          aria-label={t('contextBar.navForward')}
+          aria-label={'Forward'}
         >
           <ChevronRight size={18} />
         </button>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronRight } from 'lucide-react'
 import './ToolMessage.css'
 import DiffView from './DiffView'
@@ -20,7 +20,6 @@ interface ToolMessageProps {
 }
 
 export default function ToolMessage({ content, meta }: ToolMessageProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [collapsed, setCollapsed] = useState(true)
   const [showAll, setShowAll] = useState(false)
   const [paged, setPaged] = useState<{ content: string; total: number; hasMore: boolean } | null>(null)
@@ -90,7 +89,7 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
     toolName === 'await_agent' ||
     toolName === 'cancel_agent'
 
-  const info = toolLabel(t, toolName)
+  const info = toolLabel(toolName)
   const target = meta ? displayTarget(meta) : undefined
   const hasLineStats = Boolean(meta && ((meta.added ?? 0) > 0 || (meta.removed ?? 0) > 0))
   const duration = meta && (meta.durationMs ?? 0) >= 1000 ? formatToolDuration(meta.durationMs) : undefined
@@ -129,19 +128,19 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
         )}
         {meta?.host && <span className="tool-host" title={`Runs on ${meta.host}`}>{meta.host}</span>}
         {hasLineStats && (
-          <span className="tool-line-stats" aria-label={t('toolMessage.lineStats', { added: meta?.added ?? 0, removed: meta?.removed ?? 0 })}>
+          <span className="tool-line-stats" aria-label={`${meta?.added ?? 0} lines added, ${meta?.removed ?? 0} removed`}>
             {(meta?.added ?? 0) > 0 && <span className="tool-added">+{meta?.added}</span>}
             {(meta?.removed ?? 0) > 0 && <span className="tool-removed">−{meta?.removed}</span>}
           </span>
         )}
-        {structureWarn && <span className="tool-badge-warn" title={t('toolMessage.structureHint')}>{t('toolMessage.structure')}</span>}
+        {structureWarn && <span className="tool-badge-warn" title={'Structure check warnings'}>{'structure'}</span>}
         {meta?.mod && (
           <span
             className={`tool-mod-badge ${meta.mod.action}`}
             title={
               meta.mod.action === 'blocked'
-                ? t('chat.mods.toolBlocked', { plugin: meta.mod.plugin })
-                : t('chat.mods.toolAnswered', { plugin: meta.mod.plugin })
+                ? `${meta.mod.plugin} blocked this tool.`
+                : `${meta.mod.plugin} answered this tool.`
             }
           >
             {meta.mod.plugin}
@@ -150,9 +149,9 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
         {duration && <span className="tool-duration">{duration}</span>}
         <span
           className={`tool-status ${isRunning ? 'running' : isError ? 'error' : 'ok'}`}
-          title={isRunning ? undefined : isError ? t('toolMessage.statusError') : t('toolMessage.statusOk')}
+          title={isRunning ? undefined : isError ? 'Error' : 'OK'}
         >
-          {isRunning ? '⋯' : isError ? t('toolMessage.statusError') : t('toolMessage.statusOk')}
+          {isRunning ? '⋯' : isError ? 'Error' : 'OK'}
         </span>
       </div>
       {!collapsed && remaining && (
@@ -169,25 +168,25 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
             </div>
           )}
           <pre className="tool-message-content">
-            {displayContent ? linkifyCreatedFiles(displayContent) : t('toolMessage.empty')}
+            {displayContent ? linkifyCreatedFiles(displayContent) : '(empty)'}
           </pre>
           {truncated && (
             <button className="tool-show-more" onClick={() => setShowAll(true)}>
-              {t('toolMessage.showFullOutput')}
+              {'Show full output'}
             </button>
           )}
           {showAll && remaining.length > 300 && (
             <button className="tool-show-more" onClick={() => setShowAll(false)}>
-              {t('toolMessage.showLess')}
+              {'Show less'}
             </button>
           )}
           {offloaded && !paged && (
             <div className="tool-output-offloaded">
               <span className="tool-output-note">
-                {t('chat.toolMessage.outputOffloaded', { chars: offloaded.chars })}
+                {`Full output is ${offloaded.chars} chars — load it below.`}
               </span>
               <button className="tool-show-more" disabled={paging || !offloaded.id} onClick={() => void loadOutputPage(0, false)}>
-                {paging ? '…' : t('chat.toolMessage.loadFull')}
+                {paging ? '…' : 'Load full output'}
               </button>
             </div>
           )}
@@ -196,10 +195,10 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
               <pre className="tool-message-content tool-output-paged">{paged.content}</pre>
               {paged.hasMore ? (
                 <button className="tool-show-more" disabled={paging} onClick={() => void loadOutputPage(paged.content.length, true)}>
-                  {paging ? '…' : t('chat.toolMessage.loadMore')}
+                  {paging ? '…' : 'Load more'}
                 </button>
               ) : (
-                <span className="tool-output-total">{t('chat.toolMessage.fullShown', { chars: paged.total })}</span>
+                <span className="tool-output-total">{`Showing full output (${paged.total} chars)`}</span>
               )}
             </>
           )}

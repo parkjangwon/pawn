@@ -51,19 +51,19 @@ describe('SkillStorePanel', () => {
     expect(names()).toHaveLength(12)
     expect(names()[0]).toBe('skill-a')
     expect(await screen.findByText('About skill-a')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'settings.skillStore.next' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Next' }))
     expect(names()).toEqual(['skill-m', 'skill-n'])
-    expect(screen.getByText(/settings.skillStore.pageOf/)).toHaveTextContent('"page":2,"pages":2')
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument()
   })
 
   it('sorts by name and by newest (first-seen date)', async () => {
     render(<SkillStorePanel state={{ t } as never} />)
     await flush()
-    fireEvent.click(screen.getByRole('radio', { name: 'settings.skillStore.sort.newest' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Newest' }))
     await flush()
     await flush()
     expect(names()[0]).toBe('skill-n')
-    fireEvent.click(screen.getByRole('radio', { name: 'settings.skillStore.sort.name' }))
+    fireEvent.click(screen.getByRole('radio', { name: 'Name' }))
     expect(names().slice(0, 3)).toEqual(['skill-a', 'skill-b', 'skill-c'])
   })
 
@@ -72,8 +72,8 @@ describe('SkillStorePanel', () => {
     await flush()
     // Installed skills show Remove instead of Install.
     const b = document.querySelectorAll('.skill-store-card')[1] as HTMLElement
-    expect(within(b).getByText('settings.skillStore.installedBadge')).toBeInTheDocument()
-    fireEvent.click(within(b).getByRole('button', { name: 'settings.skillStore.remove' }))
+    expect(within(b).getByText('Installed')).toBeInTheDocument()
+    fireEvent.click(within(b).getByRole('button', { name: 'Remove' }))
     await flush()
     expect(api.remove).toHaveBeenCalledWith('skill-b')
 
@@ -84,10 +84,10 @@ describe('SkillStorePanel', () => {
     await flush()
     expect(api.search).toHaveBeenLastCalledWith('pdf')
     expect(names()).toEqual(['pdf'])
-    fireEvent.click(screen.getByRole('button', { name: 'settings.skillStore.install' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Install' }))
     await flush()
     expect(api.install).toHaveBeenCalledWith('anthropics/skills/pdf')
-    expect(await screen.findByText('settings.skillStore.installedBadge')).toBeInTheDocument()
-    expect(screen.getByText(/settings.skillStore.installed:/)).toHaveTextContent('"name":"pdf"')
+    expect(await screen.findByText('Installed')).toBeInTheDocument()
+    expect(screen.getByText(/Installed pdf — available in new chats/)).toBeInTheDocument()
   })
 })

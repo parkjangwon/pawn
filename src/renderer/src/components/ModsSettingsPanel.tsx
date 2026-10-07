@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { deriveModCapabilities, deriveModRisk, getModRuntime, reloadMods, useModsUiStore } from '../agent/mods'
 import { useAppStore } from '../stores/app'
 import { useFocusTrap } from '../utils/focusTrap'
@@ -57,7 +57,6 @@ const defaultSettings: ModsSettings = {
 }
 
 export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }): React.JSX.Element {
-  const { t } = useTranslation()
   const projectPath = useAppStore((s) => {
     const p = s.projects.find((x) => x.id === s.activeProjectId)
     return p?.paths?.[0] || null
@@ -115,11 +114,11 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
   const patch = async (partial: Partial<ModsSettings>, opts?: { silent?: boolean }): Promise<ModsSettings | null> => {
     const next = await window.api?.mods?.setSettings(partial).catch(() => null)
     if (!next) {
-      setMsg(t('settings.modsSection.saveFailed'))
+      setMsg('Could not save settings')
       return null
     }
     setSettings({ ...defaultSettings, ...next })
-    if (!opts?.silent) setMsg(t('settings.modsSection.saved'))
+    if (!opts?.silent) setMsg('Saved')
     await afterChange()
     return { ...defaultSettings, ...next }
   }
@@ -127,7 +126,7 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
   const openConsent = async (mod: ModRow): Promise<void> => {
     const res = await window.api?.mods?.validate(mod.root).catch(() => null)
     if (!res?.report) {
-      setMsg(t('settings.modsSection.validateFailed'))
+      setMsg('Could not validate this mod')
       return
     }
     setShowAdvanced(false)
@@ -192,10 +191,10 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
     try {
       const res = await window.api?.mods?.installExample().catch(() => null)
       if (!res?.ok) {
-        setMsg(res?.error || t('settings.modsSection.exampleFailed'))
+        setMsg(res?.error || 'Could not install the sample')
         return
       }
-      setMsg(t('settings.modsSection.exampleInstalled'))
+      setMsg('Sample installed — review it to allow')
       await refresh()
       const row = (await window.api?.mods?.list(projectPath))?.mods?.find((m) => m.name === 'first-mod')
       if (row) await openConsent(row as ModRow)
@@ -232,21 +231,21 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
   const installedMods = mods
 
   if (!window.api?.mods) {
-    return <div className="settings-empty">{t('settings.modsSection.desktopOnly')}</div>
+    return <div className="settings-empty">{'Mods run in the desktop app.'}</div>
   }
 
   const masterOn = settings.enabled && !settings.disableAllHooks
   const runningNames = activeMods.map((m) => m.name).join(', ')
   const sessionText = runningNames
-    ? t('settings.modsSection.sessionRunning', { names: runningNames })
-    : t('settings.modsSection.sessionEmpty')
+    ? `${runningNames} is running in this chat.`
+    : 'No mods are running in this chat.'
 
   return (
     <div className={`mods-settings ${embedded ? 'embedded' : ''}`}>
       {!embedded && (
         <>
-          <h2>{t('settings.modsSection.title')}</h2>
-          <p className="settings-desc">{t('settings.modsSection.desc')}</p>
+          <h2>{'Mods'}</h2>
+          <p className="settings-desc">{'Trusted local scripts that can observe or answer tool calls, prompts, and UI draws while you chat. Review capabilities before enabling.'}</p>
         </>
       )}
 
@@ -255,16 +254,18 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
           <TrustMark />
         </span>
         <span className="mods-trust-copy">
-          <strong>{t('settings.modsSection.trustTitle')}</strong>
-          <span>{t('settings.modsSection.trustBody')}</span>
+          <strong>{'Runs with your full permissions'}</strong>
+          <span>{`There is no sandbox.
+Review the events and APIs, then enable only code you trust.`}</span>
         </span>
       </div>
 
       <div className="settings-card mods-controls">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.modsSection.enabled')}</span>
-            <span className="settings-row-desc">{t('settings.modsSection.enabledDesc')}</span>
+            <span className="settings-row-label">{'Run mods'}</span>
+            <span className="settings-row-desc">{`When off, installed mods stay on disk but do not run.
+Skills and MCP stay available.`}</span>
           </div>
           <Switch
             checked={masterOn}
@@ -272,13 +273,14 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
               void patch(on ? { enabled: true, disableAllHooks: false } : { disableAllHooks: true })
             }}
             disabled={busy}
-            aria-label={t('settings.modsSection.enabled')}
+            aria-label={'Run mods'}
           />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.modsSection.readClaude')}</span>
-            <span className="settings-row-desc">{t('settings.modsSection.readClaudeDesc')}</span>
+            <span className="settings-row-label">{'Also scan Claude plugins'}</span>
+            <span className="settings-row-desc">{`Also load hook modules from Claude installs.
+Off by default. Turn it on only if you trust those plugins.`}</span>
           </div>
           <Switch
             checked={settings.readClaudePlugins}
@@ -290,7 +292,7 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
               void patch({ readClaudePlugins: false })
             }}
             disabled={busy}
-            aria-label={t('settings.modsSection.readClaude')}
+            aria-label={'Also scan Claude plugins'}
           />
         </div>
         <div className="mods-session">
@@ -302,9 +304,9 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
             type="button"
             className="mods-quiet-btn"
             disabled={busy}
-            onClick={() => void afterChange().then(() => setMsg(t('settings.modsSection.reloaded')))}
+            onClick={() => void afterChange().then(() => setMsg('Reloaded'))}
           >
-            {t('settings.modsSection.reload')}
+            {'Reload'}
           </button>
         </div>
         {msg && <p className="mods-feedback" role="status">{msg}</p>}
@@ -316,26 +318,26 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
             <HeroMark />
           </div>
           <div className="mods-hero-copy">
-            <h3>{t('settings.modsSection.onboarding')}</h3>
-            <p>{t('settings.modsSection.onboardingDesc')}</p>
+            <h3>{'Add a mod'}</h3>
+            <p>{'Install the sample, or pick a folder that already has a hooks module.'}</p>
           </div>
           <div className="mods-actions">
             <Button type="button" disabled={busy} onClick={() => void installExample()}>
-              {t('settings.modsSection.installExample')}
+              {'Install sample mod'}
             </Button>
             <Button type="button" variant="secondary" className="mods-folder-btn" disabled={busy} onClick={() => void pickFolder()}>
               <IconFolder size={14} />
-              {t('settings.modsSection.browseDir')}
+              {'Choose folder'}
             </Button>
           </div>
           <div className="mods-scan">
-            <p>{t('settings.modsSection.scan.lead')}</p>
+            <p>{'Mods are picked up from these places.'}</p>
             <ul>
               <li><code>~/.pawn/mods</code></li>
-              <li>{t('settings.modsSection.scan.extra')}</li>
-              <li>{t('settings.modsSection.scan.claude')}</li>
+              <li>{'Folders you add'}</li>
+              <li>{'Claude installs, when scanning is on'}</li>
               <li>
-                {t('settings.modsSection.scan.project')} <code>.claude/plugins</code>
+                {'This project’s'} <code>.claude/plugins</code>
               </li>
             </ul>
           </div>
@@ -345,14 +347,14 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
           <div className="mods-list-head">
             <div className="settings-row-info">
               <span className="settings-row-label">
-                {t('settings.modsSection.installed')}
+                {'Installed'}
                 <span className="mods-count">{installedMods.length}</span>
               </span>
-              <span className="settings-row-desc">{t('settings.modsSection.installedDesc')}</span>
+              <span className="settings-row-desc">{'Loaded from your folder, extra folders, and this project.'}</span>
             </div>
             <button type="button" className="mods-quiet-btn" disabled={busy} onClick={() => void pickFolder()}>
               <IconFolder size={13} />
-              {t('settings.modsSection.browseDir')}
+              {'Choose folder'}
             </button>
           </div>
           <div className="mods-tile-list">
@@ -367,19 +369,18 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
                 onReview={() => void openConsent(mod)}
                 onToggle={(on) => void togglePlugin(mod, on)}
                 onRevoke={() => void revokeConsent(mod)}
-                t={t}
               />
             ))}
           </div>
           {settings.pluginDirs.length > 0 && (
             <div className="mods-dirs">
-              <span className="mods-dirs-label">{t('settings.modsSection.pluginDirs')}</span>
+              <span className="mods-dirs-label">{'Extra folders'}</span>
               <ul className="mods-dir-list">
                 {settings.pluginDirs.map((dir) => (
                   <li key={dir}>
                     <span className="plugin-source" title={dir}>{dir}</span>
                     <button type="button" className="mods-quiet-btn danger" disabled={busy} onClick={() => void removePluginDir(dir)}>
-                      {t('common.delete')}
+                      {'Delete'}
                     </button>
                   </li>
                 ))}
@@ -399,19 +400,19 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
             aria-labelledby="mods-consent-title"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 id="mods-consent-title">{t('settings.modsSection.consentTitle', { name: consent.name })}</h3>
-            <p className="settings-desc">{t('settings.modsSection.consentBody')}</p>
+            <h3 id="mods-consent-title">{`Allow “${consent.name}”?`}</h3>
+            <p className="settings-desc">{'This mod runs in-process with your account permissions. Check what it hooks before allowing.'}</p>
             <div className="mods-consent-meta">
-              <span className="mods-version">{t('settings.modsSection.versionLabel', { version: consent.version })}</span>
-              <span className={`mods-risk mods-risk-${risk}`}>{t(`settings.modsSection.risk.${risk}`)}</span>
+              <span className="mods-version">{`Version ${consent.version}`}</span>
+              <span className={`mods-risk mods-risk-${risk}`}>{tx(`settings.modsSection.risk.${risk}`)}</span>
             </div>
             <div className="mods-cap-list">
               {capabilities.length === 0 && (
-                <span className="mods-cap-empty">{t('settings.modsSection.cap.none')}</span>
+                <span className="mods-cap-empty">{'No special capabilities detected'}</span>
               )}
               {capabilities.map((cap) => (
                 <span key={cap.id} className="mods-cap-chip">
-                  {t(cap.labelKey)}
+                  {tx(cap.labelKey)}
                 </span>
               ))}
             </div>
@@ -421,16 +422,16 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
               aria-expanded={showAdvanced}
               onClick={() => setShowAdvanced((v) => !v)}
             >
-              {t('settings.modsSection.consentAdvanced')}
+              {'Show technical hooks & calls'}
             </button>
             {showAdvanced && (
               <>
                 <div className="mods-consent-block">
-                  <span className="mods-consent-label">{t('settings.modsSection.consentHooks')}</span>
+                  <span className="mods-consent-label">{'Events it listens for'}</span>
                   <code>{consent.hooks.join(', ') || '—'}</code>
                 </div>
                 <div className="mods-consent-block">
-                  <span className="mods-consent-label">{t('settings.modsSection.consentCalls')}</span>
+                  <span className="mods-consent-label">{'APIs it may call'}</span>
                   <code>{consent.calls.join(', ') || '—'}</code>
                 </div>
               </>
@@ -444,10 +445,10 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
                 ))}
               </ul>
             )}
-            <p className="mods-consent-warn">{t('settings.modsSection.consentWarn')}</p>
+            <p className="mods-consent-warn">{'You can turn it off later. Untrusted code can read files and run commands.'}</p>
             <div className="mods-consent-actions">
               <button type="button" className="btn-cancel" onClick={() => setConsent(null)}>
-                {t('common.cancel')}
+                {'Cancel'}
               </button>
               <button
                 type="button"
@@ -455,7 +456,7 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
                 disabled={!consent.ok}
                 onClick={() => void confirmConsent()}
               >
-                {t('settings.modsSection.consentAllow')}
+                {'Allow and enable'}
               </button>
             </div>
           </div>
@@ -464,10 +465,10 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
 
       {claudeConfirm && (
         <ConfirmDialog
-          title={t('settings.modsSection.readClaude')}
-          message={t('settings.modsSection.readClaudeConfirm')}
-          confirmLabel={t('settings.modsSection.consentAllow')}
-          cancelLabel={t('common.cancel')}
+          title={'Also scan Claude plugins'}
+          message={'Scan Claude Code plugins for mods? They run with your full permissions after you allow each one.'}
+          confirmLabel={'Allow and enable'}
+          cancelLabel={'Cancel'}
           danger={false}
           onConfirm={() => {
             setClaudeConfirm(false)
@@ -496,7 +497,6 @@ function ModRowView({
   onReview,
   onToggle,
   onRevoke,
-  t
 }: {
   mod: ModRow
   busy: boolean
@@ -506,7 +506,6 @@ function ModRowView({
   onReview: () => void
   onToggle: (on: boolean) => void
   onRevoke: () => void
-  t: (key: string, opts?: Record<string, string>) => string
 }): React.JSX.Element {
   const needsReview = !mod.consented || mod.consentStale
   return (
@@ -523,14 +522,14 @@ function ModRowView({
           <span className="plugin-source" title={mod.root}>{mod.root}</span>
         </div>
         <div className="mods-tile-badges">
-          {mod.consentStale && <span className="mods-badge review">{t('settings.modsSection.needsReconsent')}</span>}
+          {mod.consentStale && <span className="mods-badge review">{'Updated — review again'}</span>}
           {!mod.consented && !mod.consentStale && (
-            <span className="mods-badge review">{t('settings.modsSection.needsReview')}</span>
+            <span className="mods-badge review">{'Needs review'}</span>
           )}
-          {mod.enabled && <span className="mods-badge on">{t('settings.modsSection.running')}</span>}
+          {mod.enabled && <span className="mods-badge on">{'Running'}</span>}
           {loadError && (
             <span className="mods-badge fail" title={loadError}>
-              {t('settings.modsSection.loadFailed')}
+              {'Failed to load'}
             </span>
           )}
         </div>
@@ -538,13 +537,13 @@ function ModRowView({
       <div className="mods-tile-actions">
         {needsReview ? (
           <button type="button" className="mods-quiet-btn accent" disabled={busy} onClick={onReview}>
-            {t(mod.consentStale ? 'settings.modsSection.reReview' : 'settings.modsSection.review')}
+            {tx(mod.consentStale ? 'settings.modsSection.reReview' : 'settings.modsSection.review')}
           </button>
         ) : (
           <>
             {showRevoke && (
               <button type="button" className="mods-quiet-btn" disabled={busy} onClick={onRevoke}>
-                {t('settings.modsSection.revoke')}
+                {'Revoke'}
               </button>
             )}
             <Switch

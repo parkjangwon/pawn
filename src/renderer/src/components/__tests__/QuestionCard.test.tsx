@@ -110,7 +110,7 @@ describe('ask_user tool + QuestionCard', () => {
       { sessionId: 's1' }
     )
     await flush()
-    const box = screen.getByPlaceholderText('questions.answerPlaceholder')
+    const box = screen.getByPlaceholderText('Type your answer…')
     fireEvent.change(box, { target: { value: 'ship it' } })
     fireEvent.keyDown(box, { key: 'Enter' })
     expect((await run2).content).toBe('The user answered: ship it')
@@ -143,7 +143,7 @@ describe('request_plan_approval', () => {
     )
     await flush()
     expect(screen.getByText('Edit router')).toBeInTheDocument()
-    fireEvent.click(screen.getByRole('button', { name: 'questions.approveAndBuild' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Approve & build' }))
     const r = await run
     expect(r.content).toContain('Plan approved')
     expect(useProviderStore.getState().agentModeFor('s1')).toBe('build')
@@ -158,10 +158,10 @@ describe('request_plan_approval', () => {
       { sessionId: 's1' }
     )
     await flush()
-    fireEvent.change(screen.getByPlaceholderText('questions.planFeedbackPlaceholder'), {
+    fireEvent.change(screen.getByPlaceholderText('Optional notes, or what to change…'), {
       target: { value: 'too risky, keep the API' }
     })
-    fireEvent.click(screen.getByRole('button', { name: 'questions.requestChanges' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Request changes' }))
     const r = await run
     expect(r.content).toContain('too risky, keep the API')
     expect(useProviderStore.getState().agentModeFor('s1')).toBe('plan')

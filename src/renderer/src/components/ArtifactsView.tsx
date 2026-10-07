@@ -1,18 +1,17 @@
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useArtifactsStore, type Artifact } from '../stores/artifacts'
 import { openFileInPanel } from '../stores/filesPanel'
 import { formatDateTime } from '../utils/messageTime'
 import './ArtifactsView.css'
 
-function kindLabel(kind: Artifact['kind'], t: (k: string) => string): string {
-  return t(`rightPanel.artifacts.kinds.${kind}`)
+function kindLabel(kind: Artifact['kind']): string {
+  return tx(`rightPanel.artifacts.kinds.${kind}`)
 }
 
 
 export default function ArtifactsView(): React.JSX.Element {
-  const { t, i18n } = useTranslation()
   const { items, remove, clear } = useArtifactsStore()
-  const formatTime = (ms: number): string => formatDateTime(ms, i18n.language)
+  const formatTime = (ms: number): string => formatDateTime(ms, 'en')
 
   const openPath = (path: string): void => {
     openFileInPanel(path)
@@ -29,7 +28,7 @@ export default function ArtifactsView(): React.JSX.Element {
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       window.dispatchEvent(
-        new CustomEvent('pawn:toast', { detail: { message: t('artifacts.revealFailed', { error: msg.slice(0, 120) }) } })
+        new CustomEvent('pawn:toast', { detail: { message: `Couldn't reveal the file: ${msg.slice(0, 120)}` } })
       )
     }
   }
@@ -43,8 +42,8 @@ export default function ArtifactsView(): React.JSX.Element {
   if (items.length === 0) {
     return (
       <div className="artifacts-empty">
-        <div className="artifacts-empty-title">{t('rightPanel.artifacts.emptyTitle')}</div>
-        <div className="artifacts-empty-desc">{t('rightPanel.artifacts.emptyDesc')}</div>
+        <div className="artifacts-empty-title">{'No deliverables yet'}</div>
+        <div className="artifacts-empty-desc">{'Automation reports and spreadsheet reads show up here so results do not get buried in chat.'}</div>
       </div>
     )
   }
@@ -52,16 +51,16 @@ export default function ArtifactsView(): React.JSX.Element {
   return (
     <div className="artifacts-view">
       <div className="artifacts-toolbar">
-        <span className="artifacts-count">{t('rightPanel.artifacts.count', { count: items.length })}</span>
+        <span className="artifacts-count">{`${items.length} items`}</span>
         <button type="button" className="artifacts-clear" onClick={() => clear()}>
-          {t('rightPanel.artifacts.clear')}
+          {'Clear'}
         </button>
       </div>
       <div className="artifacts-list">
         {items.map((a) => (
           <div key={a.id} className="artifact-card">
             <div className="artifact-card-top">
-              <span className="artifact-kind">{kindLabel(a.kind, t)}</span>
+              <span className="artifact-kind">{kindLabel(a.kind)}</span>
               <span className="artifact-time">{formatTime(a.createdAt)}</span>
             </div>
             <div className="artifact-title">{a.title}</div>
@@ -75,13 +74,13 @@ export default function ArtifactsView(): React.JSX.Element {
             <div className="artifact-actions">
               {a.path && (
                 <>
-                  <button type="button" onClick={() => openPath(a.path!)}>{t('rightPanel.artifacts.open')}</button>
-                  <button type="button" onClick={() => void reveal(a.path!)}>{t('rightPanel.artifacts.reveal')}</button>
-                  <button type="button" onClick={() => void copyPath(a.path!)}>{t('rightPanel.artifacts.copyPath')}</button>
+                  <button type="button" onClick={() => openPath(a.path!)}>{'Open'}</button>
+                  <button type="button" onClick={() => void reveal(a.path!)}>{'Reveal'}</button>
+                  <button type="button" onClick={() => void copyPath(a.path!)}>{'Copy path'}</button>
                 </>
               )}
               <button type="button" className="artifact-remove" onClick={() => remove(a.id)}>
-                {t('common.delete')}
+                {'Delete'}
               </button>
             </div>
           </div>

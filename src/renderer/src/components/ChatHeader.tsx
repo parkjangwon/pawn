@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { AppWindow, ChevronDown, PanelLeft, PanelRight, Terminal } from 'lucide-react'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import NavControls from './NavControls'
@@ -73,7 +73,6 @@ const APP_PRESETS: OpenAppItem[] = [
 export default function ChatHeader({
   onToggleSidebar, projectName, gitBranch, projectPath, canGoBack, canGoForward, onGoBack, onGoForward
 }: ChatHeaderProps): React.JSX.Element {
-  const { t } = useTranslation()
   const bindings = useKeybindingsStore((s) => s.bindings)
   const panelShortcut = formatCombo(bindings['toggle-right-panel'])
   const terminalShortcut = formatCombo(bindings['toggle-terminal'])
@@ -208,28 +207,28 @@ export default function ChatHeader({
     setRunningScript(name)
     const res = await window.api.workspace.runScript(projectPath, name, packageManager)
     if (res.error) {
-      void window.api.notification?.send(t('notifications.scriptFailed'), res.error).catch(() => {})
+      void window.api.notification?.send('Script failed', res.error).catch(() => {})
     } else {
-      void window.api.notification?.send(t('notifications.scriptStarted'), `${packageManager} run ${name}`).catch(() => {})
+      void window.api.notification?.send('Script started', `${packageManager} run ${name}`).catch(() => {})
       try { (window as any).__openRightPanelTab?.('terminal') } catch {}
     }
     setRunningScript(null)
     setShowScriptMenu(false)
   }
 
-  const openButtonLabel = useMemo(() => (availableApps.length > 0 ? t('chatHeader.openIn') : t('chatHeader.open')), [availableApps.length, t])
+  const openButtonLabel = useMemo(() => (availableApps.length > 0 ? 'Open in' : 'Open'), [availableApps.length])
 
   return (
     <div className="chat-header chat-header-shell">
       <div className="chat-header-left">
-        <Tooltip label={t('contextBar.toggleSidebar')} shortcut={sidebarShortcut} placement="bottom">
-          <button className="sidebar-toggle-btn close-sidebar-btn" onClick={onToggleSidebar} aria-label={t('contextBar.toggleSidebar')}>
+        <Tooltip label={'Toggle sidebar'} shortcut={sidebarShortcut} placement="bottom">
+          <button className="sidebar-toggle-btn close-sidebar-btn" onClick={onToggleSidebar} aria-label={'Toggle sidebar'}>
             <PanelLeft size={18} />
           </button>
         </Tooltip>
         <NavControls canGoBack={canGoBack} canGoForward={canGoForward} onBack={onGoBack} onForward={onGoForward} />
         <div className="chat-header-title-block">
-          <span className="chat-header-title">{projectName || t('chatHeader.everyday')}</span>
+          <span className="chat-header-title">{projectName || 'Everyday work'}</span>
           {gitBranch && <span className="chat-header-branch">• {gitBranch}</span>}
         </div>
       </div>
@@ -238,7 +237,7 @@ export default function ChatHeader({
         {canRunScript && (
         <div className="chat-header-action-group">
           <button className="chat-header-btn" disabled={!!runningScript} onClick={() => { setShowScriptMenu((v) => !v); setShowOpenMenu(false) }}>
-            <span>{runningScript ? `${t('chatHeader.running')} ${runningScript}` : t('chatHeader.run')}</span>
+            <span>{runningScript ? `${'Running'} ${runningScript}` : 'Run'}</span>
             <ChevronDown size={12} />
           </button>
           {showScriptMenu && (
@@ -271,19 +270,19 @@ export default function ChatHeader({
                   {app.label}
                 </button>
               ))}
-              {availableApps.length === 0 && <div className="chat-header-menu-empty">{t('chatHeader.noApps')}</div>}
+              {availableApps.length === 0 && <div className="chat-header-menu-empty">{'No supported apps found'}</div>}
             </div>
           )}
         </div>
         )}
 
-        <Tooltip label={t('contextBar.toggleTerminal')} shortcut={terminalShortcut} placement="bottom">
-          <button className="sidebar-toggle-btn terminal-toggle" onClick={() => (window as any).__toggleTerminal?.()} aria-label={t('contextBar.toggleTerminal')}>
+        <Tooltip label={'Toggle terminal'} shortcut={terminalShortcut} placement="bottom">
+          <button className="sidebar-toggle-btn terminal-toggle" onClick={() => (window as any).__toggleTerminal?.()} aria-label={'Toggle terminal'}>
             <Terminal size={18} />
           </button>
         </Tooltip>
-        <Tooltip label={t('contextBar.toggleRightPanel')} shortcut={panelShortcut} placement="bottom">
-          <button className="sidebar-toggle-btn right-panel-toggle" onClick={() => (window as any).__toggleRightPanel?.()} aria-label={t('contextBar.toggleRightPanel')}>
+        <Tooltip label={'Toggle side panel'} shortcut={panelShortcut} placement="bottom">
+          <button className="sidebar-toggle-btn right-panel-toggle" onClick={() => (window as any).__toggleRightPanel?.()} aria-label={'Toggle side panel'}>
             <PanelRight size={18} />
           </button>
         </Tooltip>

@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import type { Message } from '../stores/app'
 import { buildTurnItems, turnBarVisual } from '../utils/turnNavigator'
 
@@ -21,7 +21,6 @@ const ACTIVE_LINE = 0.35
  * clicking scrolls the conversation to that prompt.
  */
 function TurnNavigatorImpl({ messages, scrollEl, busy, onJump }: TurnNavigatorProps): React.JSX.Element | null {
-  const { t } = useTranslation()
   const items = useMemo(() => buildTurnItems(messages), [messages])
   const [activeIndex, setActiveIndex] = useState(items.length - 1)
   const [hoverIndex, setHoverIndex] = useState<number | null>(null)
@@ -102,7 +101,7 @@ function TurnNavigatorImpl({ messages, scrollEl, busy, onJump }: TurnNavigatorPr
   const lastIndex = items.length - 1
 
   return (
-    <nav ref={navRef} className="turn-nav" aria-label={t('chat.turnNav.label')} data-find-ignore="true">
+    <nav ref={navRef} className="turn-nav" aria-label={'Conversation'} data-find-ignore="true">
       <div
         ref={railRef}
         className="turn-nav-rail"
@@ -122,7 +121,7 @@ function TurnNavigatorImpl({ messages, scrollEl, busy, onJump }: TurnNavigatorPr
               type="button"
               className={`turn-nav-item${active ? ' active' : ''}${busy && i === lastIndex ? ' running' : ''}`}
               aria-current={active ? 'location' : undefined}
-              aria-label={t('chat.turnNav.jumpTo', { index: i + 1, total: items.length })}
+              aria-label={`Jump to prompt ${i + 1} of ${items.length}`}
               onPointerEnter={() => showPreview(i)}
               onFocus={() => showPreview(i)}
               onBlur={() => setHoverIndex(null)}
@@ -142,12 +141,12 @@ function TurnNavigatorImpl({ messages, scrollEl, busy, onJump }: TurnNavigatorPr
       {hovered && (
         <div className="turn-nav-preview" style={{ top: hoverTop }} role="tooltip">
           <div className="turn-nav-preview-index">
-            {t('chat.turnNav.position', { index: (hoverIndex ?? 0) + 1, total: items.length })}
+            {`Prompt ${(hoverIndex ?? 0) + 1} / ${items.length}`}
           </div>
-          <p className="turn-nav-preview-user">{hovered.userPreview || t('chat.turnNav.attachmentOnly')}</p>
+          <p className="turn-nav-preview-user">{hovered.userPreview || '(attachment only)'}</p>
           <p className={`turn-nav-preview-reply${hovered.replyPreview ? '' : ' muted'}`}>
             {hovered.replyPreview ??
-              (busy && hoverIndex === lastIndex ? t('chat.turnNav.working') : t('chat.turnNav.noReply'))}
+              (busy && hoverIndex === lastIndex ? 'Working on it…' : 'No reply yet')}
           </p>
         </div>
       )}

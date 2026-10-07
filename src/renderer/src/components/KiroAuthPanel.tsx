@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import Button from './Button'
 import Input from './Input'
 
@@ -11,7 +11,6 @@ type Form = null | 'idc' | 'apiKey'
  * Credentials never reach the renderer — the main process holds them.
  */
 export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void }): React.JSX.Element {
-  const { t } = useTranslation()
   const api = window.api?.kiro
   const [status, setStatus] = useState<KiroStatusDto | null>(null)
   const [usage, setUsage] = useState<{ used?: number; limit?: number } | null>(null)
@@ -43,18 +42,18 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
         setError('')
         void refresh()
         onSignedIn?.()
-      } else setError(r.error || t('settings.providerSection.kiro.failed'))
+      } else setError(r.error || 'Kiro sign-in failed')
     })
-  }, [api, refresh, onSignedIn, t])
+  }, [api, refresh, onSignedIn])
 
-  if (!api) return <div className="settings-row-desc">{t('settings.providerSection.kiro.desktopOnly')}</div>
+  if (!api) return <div className="settings-row-desc">{'Kiro sign-in is available in the desktop app.'}</div>
 
   const run = async (fn: () => Promise<{ ok: boolean; error?: string }>, after?: () => void): Promise<void> => {
     setBusy(true)
     setError('')
     try {
       const r = await fn()
-      if (!r.ok) setError(r.error || t('settings.providerSection.kiro.failed'))
+      if (!r.ok) setError(r.error || 'Kiro sign-in failed')
       else {
         setForm(null)
         after?.()
@@ -81,8 +80,8 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
   }
 
   const via = (s: KiroStatusDto): string => {
-    if (s.mode === 'api-key') return t('settings.providerSection.kiro.viaApiKey')
-    if (s.mode === 'import') return t('settings.providerSection.kiro.viaImport', { source: s.importSource === 'kiro-ide' ? 'Kiro IDE' : 'Kiro CLI', provider: s.provider || '' })
+    if (s.mode === 'api-key') return 'API key'
+    if (s.mode === 'import') return `${s.importSource === 'kiro-ide' ? 'Kiro IDE' : 'Kiro CLI'} login ${s.provider || ''}`
     return s.provider || s.mode || ''
   }
 
@@ -90,24 +89,24 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
     <div className="kiro-auth">
       {status?.signedIn ? (
         <div className="settings-row-desc">
-          {t('settings.providerSection.kiro.signedIn', { via: via(status), region: status.region || 'us-east-1' })}
+          {`Signed in to Kiro via ${via(status)} (${status.region || 'us-east-1'})`}
           {usage && typeof usage.used === 'number' && typeof usage.limit === 'number'
-            ? ` · ${t('settings.providerSection.kiro.credits', { used: Math.round(usage.used), limit: Math.round(usage.limit) })}`
+            ? ` · ${`${Math.round(usage.used)} / ${Math.round(usage.limit)} credits used`}`
             : ''}
           {status.error ? ` · ${status.error}` : ''}
         </div>
       ) : (
-        <div className="settings-row-desc">{t('settings.providerSection.kiro.signedOut')}</div>
+        <div className="settings-row-desc">{'Not signed in to Kiro.'}</div>
       )}
 
       {device && (
         <div className="settings-row-desc kiro-device">
-          {t('settings.providerSection.kiro.enterCode')} <strong className="kiro-code">{device.userCode}</strong>{' '}
+          {'Confirm this code in your browser:'} <strong className="kiro-code">{device.userCode}</strong>{' '}
           <a href={device.url} target="_blank" rel="noreferrer">
-            {t('settings.providerSection.kiro.openPage')}
+            {'Open sign-in page'}
           </a>{' '}
           <button type="button" className="test-btn" onClick={() => void api.cancelLogin().then(() => (setDevice(null), setBusy(false)))}>
-            {t('common.cancel')}
+            {'Cancel'}
           </button>
         </div>
       )}
@@ -116,26 +115,26 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
         <div className="form-actions kiro-actions">
           {status?.signedIn ? (
             <button type="button" className="test-btn" disabled={busy} onClick={() => void run(() => api.signOut())}>
-              {t('settings.providerSection.kiro.signOut')}
+              {'Sign out'}
             </button>
           ) : (
             <>
               <Button type="button" disabled={busy} onClick={() => void startDevice('builder-id')}>
-                {t('settings.providerSection.kiro.builderId')}
+                {'Sign in with AWS Builder ID'}
               </Button>
               <span
                 style={{ fontSize: 'var(--font-xs)', color: 'var(--success)', fontWeight: 600, alignSelf: 'center' }}
               >
-                ✓ {t('kiro.recommended')}
+                ✓ {'Recommended'}
               </span>
               <button type="button" className="test-btn" disabled={busy} onClick={() => setForm(form === 'idc' ? null : 'idc')}>
-                {t('settings.providerSection.kiro.idc')}
+                {'IAM Identity Center…'}
               </button>
               <button type="button" className="test-btn" disabled={busy} onClick={() => void run(() => api.importLogin('auto'), onSignedIn)}>
-                {t('settings.providerSection.kiro.import')}
+                {'Use Kiro CLI / IDE login'}
               </button>
               <button type="button" className="test-btn" disabled={busy} onClick={() => setForm(form === 'apiKey' ? null : 'apiKey')}>
-                {t('settings.providerSection.kiro.apiKey')}
+                {'API key…'}
               </button>
             </>
           )}
@@ -145,18 +144,18 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
       {form === 'idc' && (
         <div className="add-form kiro-form">
           <Input placeholder="https://your-org.awsapps.com/start" value={startUrl} onChange={(e) => setStartUrl(e.target.value)} />
-          <Input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={t('settings.providerSection.kiro.region')} />
+          <Input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={'Region'} />
           <Button type="button" disabled={busy || !startUrl.trim()} onClick={() => void startDevice('idc')}>
-            {t('settings.providerSection.kiro.continue')}
+            {'Continue'}
           </Button>
         </div>
       )}
       {form === 'apiKey' && (
         <div className="add-form kiro-form">
           <Input type="password" placeholder="ksk_…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus />
-          <Input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={t('settings.providerSection.kiro.region')} />
+          <Input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={'Region'} />
           <Button type="button" disabled={busy || !apiKey.trim()} onClick={() => void run(() => api.setApiKey(apiKey.trim(), region.trim()), () => (setApiKey(''), onSignedIn?.()))}>
-            {t('common.save')}
+            {'Save'}
           </Button>
         </div>
       )}
@@ -165,7 +164,7 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
           {error}
         </div>
       )}
-      <div className="settings-row-desc kiro-note">{t('settings.providerSection.kiro.note')}</div>
+      <div className="settings-row-desc kiro-note">{'Kiro has no official public model API for third-party apps; Pawn talks to Kiro\'s service protocol directly. It may change without notice — use at your own risk. The Kiro CLI / IDE login is used read-only and never refreshed by Pawn.'}</div>
     </div>
   )
 }

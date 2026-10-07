@@ -12,10 +12,10 @@ import Button from './Button'
 import Input from './Input'
 import Select from './Select'
 import Switch from './Switch'
+import { tx } from '../i18n'
 
 export default function ProvidersSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     providers,
     syncResult,
     syncFailed,
@@ -44,8 +44,8 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
 
   return (
     <div className="settings-section">
-      <h2>{t('settings.providerSection.title')}</h2>
-      <p className="settings-desc">{t('settings.providerSection.desc')}</p>
+      <h2>{'Providers'}</h2>
+      <p className="settings-desc">{'Manage AI provider connections'}</p>
       <div className="settings-card">
         {providers.map((p) => {
           const isOpenRouter = isOpenRouterProvider(p)
@@ -77,17 +77,17 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                     className="test-btn"
                     onClick={() => handleSyncModels(p.id)}
                     disabled={syncingId === p.id}
-                    title={t('settings.providerSection.syncHint')}
+                    title={'Fetch the live model catalog from GET {baseUrl}/models and merge it into your list'}
                   >
-                    {syncingId === p.id ? t('common.loading') : t('settings.providerSection.syncModels')}
+                    {syncingId === p.id ? 'Loading…' : 'Sync models'}
                   </button>
                 ) : (
                   <button
                     className="test-btn disabled"
                     disabled
-                    title={t('settings.providerSection.openRouterManualOnly')}
+                    title={'OpenRouter offers hundreds of models; please register specific models manually to prevent clutter.'}
                   >
-                    {t('settings.providerSection.manualOnly')}
+                    {'Manual add only'}
                   </button>
                 )}
                 <button
@@ -95,16 +95,16 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                   onClick={() => handleTestProvider(p.id)}
                   disabled={testingId === p.id}
                 >
-                  {testingId === p.id ? t('common.loading') : t('settings.providerSection.test')}
+                  {testingId === p.id ? 'Loading…' : 'Test connection'}
                 </button>
               <Switch
                 checked={p.enabled}
                 onCheckedChange={(v) => updateProvider(p.id, { enabled: v })}
-                aria-label={t('settings.providerSection.enableToggle', { name: p.name })}
+                aria-label={`Enable ${p.name}`}
               />
               <button
                 className="delete-btn"
-                aria-label={t('common.delete') + ': ' + p.name}
+                aria-label={'Delete' + ': ' + p.name}
                 onClick={() => setConfirmDelete({ type: 'provider', id: p.id, name: p.name })}
               >
                 <Trash2 size={14} />
@@ -112,17 +112,17 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             </div>
             {testResult[p.id] && (
               <div className={'settings-form-error provider-test-line' + (testResult[p.id]?.ok ? ' test-ok' : '')} role="status">
-                {testResult[p.id]?.ok ? '✓ ' + t('settings.providerSection.testOk') : '✗ ' + testResult[p.id]?.message}
+                {testResult[p.id]?.ok ? '✓ ' + 'Connected' : '✗ ' + testResult[p.id]?.message}
               </div>
             )}
           </div>
         )
       })}
-        {providers.length === 0 && <div className="settings-empty">{t('settings.providerSection.empty')}</div>}
+        {providers.length === 0 && <div className="settings-empty">{'No providers configured'}</div>}
       </div>
 
       <div className="preset-section">
-        <div className="settings-row-desc preset-section-label">{t('settings.providerSection.presetDesc')}</div>
+        <div className="settings-row-desc preset-section-label">{'Well-known providers — paste an API key and go. Model lists refresh from each provider’s API when possible.'}</div>
         <div className="preset-grid">
           {PROVIDER_PRESETS.map((preset) => {
             const isAlreadyAdded = providers.some(
@@ -147,7 +147,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             <div className="settings-row-label">{presetPicking.name}</div>
             <div className="settings-row-desc">{presetPicking.baseUrl}</div>
             <div className="settings-row-desc">
-              {presetPicking.keyHintKey ? t(presetPicking.keyHintKey) : presetPicking.keyHint}
+              {presetPicking.keyHintKey ? tx(presetPicking.keyHintKey) : presetPicking.keyHint}
             </div>
             {!presetPicking.localNoKey && !presetPicking.signIn && (
               <>
@@ -155,8 +155,8 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                   type="password"
                   placeholder={
                     presetPicking.optionalKey
-                      ? t('settings.providerSection.xai.keyOptional')
-                      : t('settings.providerSection.pasteApiKey')
+                      ? 'API key (optional if you sign in)'
+                      : 'Paste your API key'
                   }
                   value={presetKey}
                   onChange={(e) => {
@@ -175,9 +175,9 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                 onClick={() => handleAddFromPreset(presetPicking, presetKey)}
                 disabled={!presetPicking.localNoKey && !presetPicking.signIn && !presetPicking.optionalKey && !presetKey.trim()}
               >
-                {t('settings.providerSection.addWithModels', { count: presetPicking.models.length })}
+                {`Add (includes ${presetPicking.models.length} models)`}
               </Button>
-              <Button variant="secondary" onClick={() => setPresetPicking(null)}>{t('common.cancel')}</Button>
+              <Button variant="secondary" onClick={() => setPresetPicking(null)}>{'Cancel'}</Button>
             </div>
           </div>
         )}
@@ -191,22 +191,22 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             void handleAddProvider()
           }}
         >
-          <Input placeholder={t('settings.providerSection.namePlaceholder')} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); if (formError) setFormError('') }} />
-          <Select aria-label={t('settings.providerSection.namePlaceholder')} value={form.apiFormat} onChange={(e) => setForm({ ...form, apiFormat: e.target.value as ApiFormat })}>
-            <option value="openai">{t('settings.providerSection.openai')}</option>
-            <option value="claude">{t('settings.providerSection.claude')}</option>
+          <Input placeholder={'My provider'} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); if (formError) setFormError('') }} />
+          <Select aria-label={'My provider'} value={form.apiFormat} onChange={(e) => setForm({ ...form, apiFormat: e.target.value as ApiFormat })}>
+            <option value="openai">{'OpenAI'}</option>
+            <option value="claude">{'Claude'}</option>
             <option value="kiro">Kiro</option>
           </Select>
-          <Input placeholder={t('settings.providerSection.baseUrlPlaceholder')} value={form.baseUrl} onChange={(e) => { setForm({ ...form, baseUrl: e.target.value }); if (formError) setFormError('') }} />
-          <Input type="password" placeholder={t('settings.providerSection.apiKeyPlaceholder')} value={form.apiKey} onChange={(e) => { setForm({ ...form, apiKey: e.target.value }); if (formError) setFormError('') }} />
+          <Input placeholder={'https://api.example.com'} value={form.baseUrl} onChange={(e) => { setForm({ ...form, baseUrl: e.target.value }); if (formError) setFormError('') }} />
+          <Input type="password" placeholder={'sk-…'} value={form.apiKey} onChange={(e) => { setForm({ ...form, apiKey: e.target.value }); if (formError) setFormError('') }} />
           {formError && <div className="settings-form-error" role="alert">{formError}</div>}
           <div className="form-actions">
-            <Button type="submit">{t('common.save')}</Button>
-            <Button variant="secondary" type="button" onClick={() => setShowAddProvider(false)}>{t('common.cancel')}</Button>
+            <Button type="submit">{'Save'}</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowAddProvider(false)}>{'Cancel'}</Button>
           </div>
         </form>
       ) : (
-        <button className="add-btn-full" onClick={() => setShowAddProvider(true)}>{t('settings.providerSection.add')}</button>
+        <button className="add-btn-full" onClick={() => setShowAddProvider(true)}>{'Add custom provider'}</button>
       )}
     </div>
   )

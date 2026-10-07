@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronLeft, WrapText } from 'lucide-react'
 import { languageForPath, highlightCode } from '../utils/syntaxHighlight'
 import ConfirmDialog from './ConfirmDialog'
@@ -45,7 +45,6 @@ function humanSize(bytes: number): string {
 }
 
 export default function FileEditor({ filePath, fileName, onClose }: FileEditorProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [content, setContent] = useState('')
   const [original, setOriginal] = useState('')
   const [status, setStatus] = useState<Status>('loading')
@@ -205,7 +204,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
     return (
       <div className="rp-file-editor">
         <div className="rp-fe-header">
-          <button className="rp-fe-btn" onClick={requestClose} title={t('fileEditor.back')} aria-label={t('fileEditor.back')}>
+          <button className="rp-fe-btn" onClick={requestClose} title={'Back to files'} aria-label={'Back to files'}>
             {chevron}
           </button>
           <span className="rp-fe-name" title={filePath}>{fileName}</span>
@@ -213,11 +212,11 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
           <span className="rp-fe-meta">{humanSize(fileSize)}</span>
           {/\.svg$/i.test(filePath) && (
             <button className="rp-fe-btn rp-fe-text-btn" onClick={() => setShowSource(true)}>
-              {t('fileEditor.viewSource')}
+              {'Source'}
             </button>
           )}
           <button className="rp-fe-btn rp-fe-text-btn" onClick={() => window.api?.workspace?.reveal?.(filePath)?.catch?.(() => {})}>
-            {t('fileEditor.reveal')}
+            {'Reveal'}
           </button>
         </div>
         <div className="rp-fe-image">
@@ -231,19 +230,19 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
     return (
       <div className="rp-file-editor">
         <div className="rp-fe-header">
-          <button className="rp-fe-btn" onClick={requestClose} title={t('fileEditor.back')}>
+          <button className="rp-fe-btn" onClick={requestClose} title={'Back to files'}>
             {chevron}
           </button>
           <span className="rp-fe-name" title={filePath}>{fileName}</span>
         </div>
         <div className="rp-fe-status">
-          {status === 'loading' && t('common.loading')}
-          {status === 'binary' && t('fileEditor.binary')}
+          {status === 'loading' && 'Loading…'}
+          {status === 'binary' && 'Binary file — cannot display as text'}
           {status === 'tooLarge' &&
-            `${t('fileEditor.tooLarge', { max: humanSize(MAX_BYTES) })} (${humanSize(fileSize)})`}
+            `${`File too large to open (max ${humanSize(MAX_BYTES)})`} (${humanSize(fileSize)})`}
           {status === 'error' && (
             <span className="rp-fe-error">
-              {t('fileEditor.readError')}
+              {'Could not read file'}
               {errorMsg ? `: ${errorMsg}` : ''}
             </span>
           )}
@@ -255,7 +254,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
   return (
     <div className="rp-file-editor">
       <div className="rp-fe-header">
-        <button className="rp-fe-btn" onClick={requestClose} title={t('fileEditor.back')}>
+        <button className="rp-fe-btn" onClick={requestClose} title={'Back to files'}>
           {chevron}
         </button>
         <span className={`rp-fe-name ${dirty ? 'is-dirty' : ''}`} title={filePath}>
@@ -263,29 +262,29 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
           {fileName}
         </span>
         <div className="rp-fe-spacer" />
-        <span className="rp-fe-meta">{lineCount} {t('fileEditor.linesUnit')}</span>
+        <span className="rp-fe-meta">{lineCount} {'lines'}</span>
         {isMarkdown && (
           <button
             className={`rp-fe-btn rp-fe-text-btn ${preview ? 'is-active' : ''}`}
             onClick={() => setPreview((p) => !p)}
-            title={preview ? t('fileEditor.viewCode') : t('fileEditor.preview')}
+            title={preview ? 'Code' : 'Preview'}
             aria-pressed={preview}
           >
-            {preview ? t('fileEditor.viewCode') : t('fileEditor.preview')}
+            {preview ? 'Code' : 'Preview'}
           </button>
         )}
         {!preview && (
           <button
             className={`rp-fe-btn ${wrap ? 'is-active' : ''}`}
             onClick={() => setWrap((w) => !w)}
-            title={t('fileEditor.wrap')}
+            title={'Word wrap'}
             aria-pressed={wrap}
           >
             <WrapText size={14} />
           </button>
         )}
         <button className="rp-fe-save" onClick={save} disabled={!dirty || saving}>
-          {saving ? t('fileEditor.saving') : savedFlash ? t('fileEditor.saved') : t('common.save')}
+          {saving ? 'Saving…' : savedFlash ? 'Saved' : 'Save'}
         </button>
       </div>
       {preview ? (
@@ -328,10 +327,10 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
       )}
       {confirmClose && (
         <ConfirmDialog
-          title={t('fileEditor.unsavedTitle')}
-          message={t('fileEditor.unsavedConfirm')}
-          confirmLabel={t('fileEditor.discard')}
-          cancelLabel={t('common.cancel')}
+          title={'Unsaved changes'}
+          message={'You have unsaved changes. Discard them and close?'}
+          confirmLabel={'Discard & close'}
+          cancelLabel={'Cancel'}
           onConfirm={() => { setConfirmClose(false); onClose() }}
           onCancel={() => setConfirmClose(false)}
         />

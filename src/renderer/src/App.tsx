@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect, useLayoutEffect, useRef, Suspense, lazy } from 'react'
-import { useTranslation } from 'react-i18next'
 import { useEffectiveTheme, useThemeStore } from './stores/theme'
 import { useAppStore } from './stores/app'
 import { useProviderStore } from './stores/provider'
@@ -37,7 +36,6 @@ interface NavState {
 }
 
 export default function App(): React.JSX.Element {
-  const { t } = useTranslation()
   const theme = useEffectiveTheme()
   const [showSettings, setShowSettings] = useState(false)
   const [showCommandPalette, setShowCommandPalette] = useState(false)
@@ -103,7 +101,7 @@ export default function App(): React.JSX.Element {
       void window.api.checkForUpdates()
         .then((r) => {
           if (!r.updateAvailable || !r.latest) return
-          setAppToast(t('app.updateAvailable', { latest: r.latest, current: r.current }))
+          setAppToast(`Pawn ${r.latest} is available (you're on ${r.current}). Update in Settings → System.`)
           window.setTimeout(() => setAppToast(null), 8000)
         })
         .catch(() => {})
@@ -132,7 +130,7 @@ export default function App(): React.JSX.Element {
       const msg = e.reason instanceof Error ? e.reason.message : String(e.reason ?? '')
       try {
         window.dispatchEvent(
-          new CustomEvent('pawn:toast', { detail: { message: t('app.unexpectedError', { error: msg.slice(0, 120) }) } })
+          new CustomEvent('pawn:toast', { detail: { message: `Something failed: ${msg.slice(0, 120)}` } })
         )
       } catch {
         /* ignore */
@@ -140,7 +138,7 @@ export default function App(): React.JSX.Element {
     }
     window.addEventListener('unhandledrejection', onRejection)
     return () => window.removeEventListener('unhandledrejection', onRejection)
-  }, [t])
+  }, [])
 
   const closeSidebar = useCallback(() => setSidebarOpen(false), [])
   const toggleSidebar = useCallback(() => {
@@ -293,13 +291,13 @@ export default function App(): React.JSX.Element {
       useChatStore.getState().stopStreaming()
       try {
         window.dispatchEvent(
-          new CustomEvent('pawn:toast', { detail: { message: t('computer.stoppedByUser') } })
+          new CustomEvent('pawn:toast', { detail: { message: 'Stopped — you pressed Esc twice. Pawn released the mouse and keyboard.' } })
         )
       } catch {
         /* ignore */
       }
     })
-  }, [t])
+  }, [])
 
   // Electron: main-process forwarding dispatches every bound action here.
   useEffect(() => {
@@ -356,7 +354,7 @@ export default function App(): React.JSX.Element {
         </div>
       )}
       <a href="#main-content" className="skip-link">
-        {t('common.skipToContent')}
+        {'Skip to content'}
       </a>
       {sidebarOpen && (
         <div className="sidebar-overlay" onClick={closeSidebar} role="presentation" />

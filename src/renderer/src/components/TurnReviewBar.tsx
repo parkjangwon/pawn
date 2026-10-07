@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Terminal } from 'lucide-react'
 import { useChangeLedger, type RevertConflict } from '../stores/changeLedger'
 import { focusDiffInPanel } from '../stores/filesPanel'
@@ -7,12 +7,12 @@ import ConfirmDialog from './ConfirmDialog'
 import { formatMessageTimeFull } from '../utils/messageTime'
 import './TurnReviewBar.css'
 
-function relativeTime(ts: number, t: (k: string, o?: Record<string, unknown>) => string): string {
+function relativeTime(ts: number): string {
   const sec = Math.max(0, Math.floor((Date.now() - ts) / 1000))
-  if (sec < 45) return t('turnReview.justNow')
-  if (sec < 3600) return t('turnReview.minutesAgo', { count: Math.floor(sec / 60) })
-  if (sec < 86400) return t('turnReview.hoursAgo', { count: Math.floor(sec / 3600) })
-  return t('turnReview.daysAgo', { count: Math.floor(sec / 86400) })
+  if (sec < 45) return 'just now'
+  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`
+  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`
+  return `${Math.floor(sec / 86400)}d ago`
 }
 
 function computeChangeStats(c: { before?: string | null; after?: string; op: string }): { label: string; kind: 'add' | 'del' | 'mod' } | null {
@@ -37,7 +37,6 @@ function computeChangeStats(c: { before?: string | null; after?: string; op: str
 }
 
 export default function TurnReviewBar({ sessionId }: { sessionId: string | null }): React.JSX.Element | null {
-  const { t, i18n } = useTranslation()
   const turns = useChangeLedger((s) => s.turns)
   const turn = useChangeLedger((s) => s.latestTurn(sessionId))
   const [busy, setBusy] = useState(false)
@@ -75,12 +74,12 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
     if (r.ok) {
       setMsg(
         r.skipped
-          ? t('turnReview.revertedSkipped', { count: r.reverted, skipped: r.skipped })
-          : t('turnReview.reverted', { count: r.reverted })
+          ? `Reverted ${r.reverted} files, kept ${r.skipped} you changed`
+          : `Reverted ${r.reverted} files`
       )
     } else {
       // Internal reasons are English diagnostics: show the localized message, keep the detail in the tooltip.
-      setMsg(t('turnReview.failed'))
+      setMsg('Revert failed')
       if (r.error) console.warn('[undo]', r.error)
     }
   }
@@ -96,14 +95,14 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
   })()
 
   return (
-    <div className="turn-review-bar" role="region" aria-label={t('turnReview.label')}>
+    <div className="turn-review-bar" role="region" aria-label={'Files the agent changed'}>
       <div className="turn-review-left">
-        <span className="turn-review-label">{t('turnReview.label')}</span>
-        <span className="turn-review-meta" title={formatMessageTimeFull(turn.createdAt, i18n.language) || ''}>
-          {relativeTime(turn.createdAt, t)}
+        <span className="turn-review-label">{'Files the agent changed'}</span>
+        <span className="turn-review-meta" title={formatMessageTimeFull(turn.createdAt, 'en') || ''}>
+          {relativeTime(turn.createdAt)}
           {turn.label ? ` · ${turn.label}` : ''}
         </span>
-        <span className="turn-review-count">{t('turnReview.files', { count: applied.length })}</span>
+        <span className="turn-review-count">{`${applied.length} files`}</span>
         <div className="turn-review-files">
           {files.map((c) => {
             const stats = computeChangeStats(c)
@@ -112,7 +111,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
                 key={c.path}
                 type="button"
                 className="turn-review-chip"
-                title={`${c.path}\n${c.byCommand ? t('turnReview.byCommand') : t('turnReview.chipHint')}`}
+                title={`${c.path}\n${c.byCommand ? 'Created by a command' : 'Click to view the diff'}`}
                 onClick={() => focusDiffInPanel(c.path)}
               >
                 <span className="turn-review-op" data-op={c.op}>
@@ -120,7 +119,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
                 </span>
                 <span className="turn-review-fname">{(c.rel || c.path).split('/').pop()}</span>
                 {c.byCommand && (
-                  <Terminal size={10} className="turn-review-by-cmd" role="img" aria-label={t('turnReview.byCommand')} />
+                  <Terminal size={10} className="turn-review-by-cmd" role="img" aria-label={'Created by a command'} />
                 )}
                 {stats && (
                   <span className={`turn-review-stat stat-${stats.kind}`}>
@@ -136,7 +135,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
               className="turn-review-more"
               onClick={() => setExpanded((v) => !v)}
             >
-              {expanded ? t('turnReview.showLess') : t('turnReview.showMore', { count: applied.length - 8 })}
+              {expanded ? 'Show less' : `+${applied.length - 8} more`}
             </button>
           )}
         </div>
@@ -145,7 +144,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
         {msg && <span className="turn-review-msg">{msg}</span>}
         {sessionTurns.length > 1 && (
           <details className="turn-review-history">
-            <summary>{t('turnReview.history', { count: sessionTurns.length })}</summary>
+            <summary>{`History (${sessionTurns.length})`}</summary>
             <ul>
               {sessionTurns.slice(0, 8).map((tr) => (
                 <li key={tr.id}>
@@ -155,7 +154,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
                     onClick={() => void undoTurn(tr.id)}
                     title={tr.label}
                   >
-                    {relativeTime(tr.createdAt, t)} · {t('turnReview.files', { count: tr.changes.filter((c) => c.status === 'applied').length })}
+                    {relativeTime(tr.createdAt)} · {`${tr.changes.filter((c) => c.status === 'applied').length} files`}
                   </button>
                 </li>
               ))}
@@ -171,7 +170,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
             } catch { /* ignore */ }
           }}
         >
-          {t('turnReview.openDiff')}
+          {'View changes'}
         </button>
         {revealTarget && (
           <button
@@ -180,7 +179,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
             title={revealTarget}
             onClick={() => void window.api.workspace?.reveal?.(revealTarget)?.catch?.(() => {})}
           >
-            {window.api?.platform === 'darwin' ? t('turnReview.reveal') : t('turnReview.revealFolder')}
+            {window.api?.platform === 'darwin' ? 'Show in Finder' : 'Show in folder'}
           </button>
         )}
         <button
@@ -188,31 +187,31 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
           className="turn-review-undo"
           disabled={busy}
           onClick={() => void undoTurn()}
-          title={t('turnReview.undoTurnHint')}
+          title={'Restore the files this answer changed'}
         >
-          {busy ? t('turnReview.undoing') : t('turnReview.undoTurn')}
+          {busy ? 'Reverting…' : 'Undo these changes'}
         </button>
       </div>
       {pending && (
         <ConfirmDialog
-          title={t('turnReview.conflictTitle')}
-          message={t('turnReview.conflictMessage', { count: pending.conflicts.length })}
+          title={'Some files changed since the agent edited them'}
+          message={`${pending.conflicts.length} files were modified after this answer (by you, a formatter, or a later answer). Reverting them would discard those changes.`}
           details={
             <ul>
               {pending.conflicts.map((c) => (
                 <li key={c.path}>
                   <code title={c.path}>{c.path.split('/').slice(-2).join('/')}</code>
-                  <span className="confirm-reason">{t(`turnReview.conflictReason.${c.reason}`)}</span>
+                  <span className="confirm-reason">{tx(`turnReview.conflictReason.${c.reason}`)}</span>
                 </li>
               ))}
             </ul>
           }
-          cancelLabel={t('common.cancel')}
+          cancelLabel={'Cancel'}
           secondaryLabel={
-            pending.conflicts.length < applied.length ? t('turnReview.revertSafeOnly') : undefined
+            pending.conflicts.length < applied.length ? 'Revert the rest' : undefined
           }
           onSecondary={() => void undoTurn(pending.turnId, 'skip')}
-          confirmLabel={t('turnReview.overwriteAll')}
+          confirmLabel={'Overwrite anyway'}
           onConfirm={() => void undoTurn(pending.turnId, 'force')}
           onCancel={() => setPending(null)}
         />

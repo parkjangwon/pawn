@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { getModRuntime, listActiveModLine, reloadMods, useModsUiStore } from '../agent/mods'
 import { modConflictLine, modEventLabel } from '../agent/mods/eventLabel'
 import { useAppStore } from '../stores/app'
@@ -19,7 +19,6 @@ export default function ModsChrome({
 }: {
   onOpenSettings?: () => void
 }): React.JSX.Element | null {
-  const { t } = useTranslation()
   const statusByPlugin = useModsUiStore((s) => s.statusByPlugin)
   const toasts = useModsUiStore((s) => s.toasts)
   const notices = useModsUiStore((s) => s.notices)
@@ -153,8 +152,8 @@ export default function ModsChrome({
     activeMods.length === 0
       ? ''
       : activeMods.length === 1
-        ? t('chat.mods.chipOne', { name: activeMods[0].name })
-        : t('chat.mods.chipMany', { count: activeMods.length })
+        ? `${activeMods[0].name} active`
+        : `${activeMods.length} mods active`
 
   return (
     <>
@@ -168,7 +167,7 @@ export default function ModsChrome({
                 aria-expanded={menuOpen}
                 aria-haspopup="dialog"
                 onClick={() => setMenuOpen((v) => !v)}
-                title={t('chat.mods.activeTitle')}
+                title={'Active mods'}
               >
                 <span className="mods-chrome-dot" aria-hidden />
                 <span>{chipLabel}</span>
@@ -178,9 +177,9 @@ export default function ModsChrome({
                   ref={menuRef}
                   className="mods-chrome-menu"
                   role="dialog"
-                  aria-label={t('chat.mods.menuTitle')}
+                  aria-label={'Mods in this chat'}
                 >
-                  <div className="mods-chrome-menu-head">{t('chat.mods.menuTitle')}</div>
+                  <div className="mods-chrome-menu-head">{'Mods in this chat'}</div>
                   <ul className="mods-chrome-menu-list">
                     {activeMods.map((mod) => (
                       <li key={mod.id} className="mods-chrome-menu-row">
@@ -196,7 +195,7 @@ export default function ModsChrome({
                           <input
                             type="checkbox"
                             checked={mod.enabled}
-                            aria-label={t('chat.mods.toggleNamed', { name: mod.name })}
+                            aria-label={`Turn ${mod.name} on`}
                             onChange={(e) => void toggleMod(mod.name, e.target.checked)}
                           />
                         </label>
@@ -205,7 +204,7 @@ export default function ModsChrome({
                   </ul>
                   {conflicts.length > 0 && (
                     <div className="mods-chrome-menu-cmds">
-                      <div className="mods-chrome-menu-head">{t('chat.mods.conflicts')}</div>
+                      <div className="mods-chrome-menu-head">{'Hook conflicts'}</div>
                       {conflicts.map((c) => (
                         <div key={c.event} className="mods-chrome-conflict-block">
                           <p className="mods-chrome-conflict-line">{modConflictLine(c.event, c.plugins)}</p>
@@ -214,18 +213,18 @@ export default function ModsChrome({
                               <span key={name} className="mods-chrome-order-item">
                                 <button
                                   type="button"
-                                  aria-label={t('chat.mods.moveEarlier', { name })}
+                                  aria-label={`Run ${name} sooner`}
                                   onClick={() => void moveMod(name, -1)}
                                 >
-                                  {t('chat.mods.earlier')}
+                                  {'Sooner'}
                                 </button>
                                 <span>{name}</span>
                                 <button
                                   type="button"
-                                  aria-label={t('chat.mods.moveLater', { name })}
+                                  aria-label={`Run ${name} later`}
                                   onClick={() => void moveMod(name, 1)}
                                 >
-                                  {t('chat.mods.later')}
+                                  {'Later'}
                                 </button>
                               </span>
                             ))}
@@ -236,7 +235,7 @@ export default function ModsChrome({
                   )}
                   {commands.length > 0 && (
                     <div className="mods-chrome-menu-cmds">
-                      <div className="mods-chrome-menu-head">{t('chat.mods.commands')}</div>
+                      <div className="mods-chrome-menu-head">{'Commands'}</div>
                       {commands.map((cmd) => (
                         <div key={`${cmd.plugin}:${cmd.name}`} className="mods-chrome-cmd">
                           <code>/{cmd.name}</code>
@@ -246,7 +245,7 @@ export default function ModsChrome({
                     </div>
                   )}
                   <button type="button" className="mods-chrome-menu-settings" onClick={openSettings}>
-                    {t('chat.mods.openSettings')}
+                    {'Manage mods'}
                   </button>
                 </div>
               )}
@@ -255,7 +254,7 @@ export default function ModsChrome({
 
           {conflicts.length > 0 && (
             <div className="mods-chrome-conflicts" role="status">
-              <span className="mods-chrome-origin">{t('chat.mods.conflicts')}</span>
+              <span className="mods-chrome-origin">{'Hook conflicts'}</span>
               <span className="mods-chrome-status-preview">
                 {modConflictLine(conflicts[0].event, conflicts[0].plugins)}
                 {conflicts.length > 1 ? `  +${conflicts.length - 1}` : ''}
@@ -271,7 +270,7 @@ export default function ModsChrome({
                 aria-expanded={timelineOpen}
                 onClick={() => setTimelineOpen((v) => !v)}
               >
-                <span className="mods-chrome-origin">{t('chat.mods.timeline')}</span>
+                <span className="mods-chrome-origin">{'Intervention log'}</span>
                 <span className="mods-chrome-status-preview">
                   {timeline[timeline.length - 1]?.text}
                   {` · ${timeline.length}`}
@@ -289,7 +288,7 @@ export default function ModsChrome({
                     </div>
                   ))}
                   <button type="button" className="mods-chrome-menu-settings" onClick={() => clearTimeline()}>
-                    {t('chat.mods.clearTimeline')}
+                    {'Clear log'}
                   </button>
                 </div>
               )}
@@ -327,7 +326,7 @@ export default function ModsChrome({
               <button
                 type="button"
                 className="mods-chrome-dismiss"
-                aria-label={t('common.close')}
+                aria-label={'Close'}
                 onClick={() => dismissNotice(n.id)}
               >
                 <CloseIcon />
@@ -340,7 +339,7 @@ export default function ModsChrome({
               key={band.plugin}
               className="mods-chrome-above"
               role="region"
-              aria-label={t('chat.mods.abovePrompt')}
+              aria-label={'Mod prompt band'}
             >
               <ModTree tree={band.tree} plugin={band.plugin} surfaceId={`above-prompt-${band.plugin}`} />
             </div>
@@ -354,7 +353,7 @@ export default function ModsChrome({
                 <button
                   type="button"
                   className="mods-chrome-dismiss"
-                  aria-label={t('common.close')}
+                  aria-label={'Close'}
                   onClick={() => closePane(pane.id)}
                 >
                   <CloseIcon />
@@ -364,7 +363,7 @@ export default function ModsChrome({
                 {pane.tree != null ? (
                   <ModTree tree={pane.tree} plugin={pane.plugin} surfaceId={pane.id} />
                 ) : (
-                  <span className="mods-chrome-pane-empty">{t('chat.mods.paneEmpty', { plugin: pane.plugin })}</span>
+                  <span className="mods-chrome-pane-empty">{`${pane.plugin} opened a panel, but there is nothing to show yet.`}</span>
                 )}
               </div>
             </div>
@@ -382,7 +381,7 @@ export default function ModsChrome({
                 <button
                   type="button"
                   className="mods-chrome-dismiss"
-                  aria-label={t('common.close')}
+                  aria-label={'Close'}
                   onClick={() => dismissToast(toast.id)}
                 >
                   <CloseIcon />

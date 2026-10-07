@@ -1,5 +1,5 @@
 import { useEffect, useId, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Trash2 } from 'lucide-react'
 import { useDecisionStore } from '../stores/decision'
 import ConfirmDialog from './ConfirmDialog'
@@ -87,7 +87,6 @@ const FEATURES: Array<{ key: keyof DecisionFeaturesDto; label: string; desc: str
 ]
 
 export default function DecisionModelsSettingsPanel(): React.JSX.Element {
-  const { t } = useTranslation()
   const { status, available, refresh, saveProvider, removeProvider, setEnabled, setFeatures } = useDecisionStore()
   const [form, setForm] = useState<FormState | null>(null)
   const [formError, setFormError] = useState('')
@@ -108,9 +107,9 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
   if (!available) {
     return (
       <div className="settings-section">
-        <h2>{t('settings.decisionSection.title')}</h2>
-        <p className="settings-desc">{t('settings.decisionSection.desc')}</p>
-        <div className="settings-empty">{t('settings.decisionSection.desktopOnly')}</div>
+        <h2>{'Decision models'}</h2>
+        <p className="settings-desc">{'Optional. A decision model answers typed questions (pick one, score, yes or no) with calibrated probabilities in milliseconds instead of writing text. Pawn works the same without one; with one, the agent makes faster, cheaper judgments.'}</p>
+        <div className="settings-empty">{'Decision models are available in the desktop app.'}</div>
       </div>
     )
   }
@@ -169,7 +168,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
         apiKey: form.apiKey.trim() ? form.apiKey.trim() : form.clearKey ? '' : form.id ? undefined : ''
       })
       if (!r.ok) {
-        setFormError(r.error || t('common.error'))
+        setFormError(r.error || 'Error')
         return
       }
       setForm(null)
@@ -188,7 +187,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
       if (r.ok) {
         setTests((s) => ({
           ...s,
-          [id]: { ok: true, text: t('settings.decisionSection.testOk', { model: r.model, ms: r.latencyMs }) }
+          [id]: { ok: true, text: `Works · ${r.model} · answered in ${r.latencyMs} ms` }
         }))
       } else {
         setTests((s) => ({ ...s, [id]: { ok: false, text: r.error } }))
@@ -215,8 +214,8 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
 
   return (
     <div className="settings-section decision-settings">
-      <h2>{t('settings.decisionSection.title')}</h2>
-      <p className="settings-desc">{t('settings.decisionSection.desc')}</p>
+      <h2>{'Decision models'}</h2>
+      <p className="settings-desc">{'Optional. A decision model answers typed questions (pick one, score, yes or no) with calibrated probabilities in milliseconds instead of writing text. Pawn works the same without one; with one, the agent makes faster, cheaper judgments.'}</p>
 
       <div className="settings-card">
         {providers.map((p) => {
@@ -226,12 +225,12 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
               <div className="settings-row-info">
                 <span className="settings-row-label decision-provider-name">
                   {p.name}
-                  <span className="settings-badge">{p.local ? t('settings.decisionSection.local') : t('settings.decisionSection.hosted')}</span>
-                  {p.enabled && <span className="settings-badge decision-active-badge">{t('settings.decisionSection.active')}</span>}
+                  <span className="settings-badge">{p.local ? 'Local' : 'Hosted'}</span>
+                  {p.enabled && <span className="settings-badge decision-active-badge">{'In use'}</span>}
                 </span>
                 <span className="settings-row-desc">
                   <code>{p.model}</code> · {p.baseUrl}
-                  {p.hasKey && p.keyHint ? ` · ${t('settings.decisionSection.keySaved', { hint: p.keyHint })}` : ''}
+                  {p.hasKey && p.keyHint ? ` · ${tx('settings.decisionSection.keySaved', { hint: p.keyHint })}` : ''}
                 </span>
                 {test && (
                   <span className={`settings-row-desc decision-test-result ${test.ok ? 'ok' : 'fail'}`} role="status">
@@ -246,16 +245,16 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
                   onClick={() => void runTest(p.id)}
                   disabled={testing === p.id}
                 >
-                  {testing === p.id ? t('settings.decisionSection.testing') : t('settings.decisionSection.test')}
+                  {testing === p.id ? 'Testing…' : 'Test'}
                 </button>
                 <button type="button" className="test-btn" onClick={() => openEdit(p)}>
-                  {t('settings.decisionSection.edit')}
+                  {'Edit'}
                 </button>
-                <label className="toggle-switch" title={t('settings.decisionSection.activeHint')}>
+                <label className="toggle-switch" title={'Use this provider. Only one decision model is active at a time.'}>
                   <input
                     type="checkbox"
                     checked={p.enabled}
-                    aria-label={t('settings.decisionSection.useProvider', { name: p.name })}
+                    aria-label={`Use ${p.name}`}
                     onChange={(e) => void toggleActive(p, e.target.checked)}
                   />
                   <span className="toggle-slider" />
@@ -263,8 +262,8 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
                 <button
                   type="button"
                   className="delete-btn"
-                  aria-label={t('settings.decisionSection.remove', { name: p.name })}
-                  title={t('settings.decisionSection.remove', { name: p.name })}
+                  aria-label={`Remove ${p.name}`}
+                  title={`Remove ${p.name}`}
                   onClick={() => setConfirmRemove(p)}
                 >
                   <Trash2 size={14} aria-hidden />
@@ -273,13 +272,13 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
             </div>
           )
         })}
-        {providers.length === 0 && <div className="settings-empty">{t('settings.decisionSection.empty')}</div>}
+        {providers.length === 0 && <div className="settings-empty">{'No decision model yet. Add TypeSafe for hosted Jev, or Ollaya to run open models on this machine.'}</div>}
         {rowError && <div className="decision-error" role="alert">{rowError}</div>}
       </div>
 
       {!form && (
         <div className="preset-section">
-          <div className="settings-row-desc preset-section-label">{t('settings.decisionSection.addDesc')}</div>
+          <div className="settings-row-desc preset-section-label">{'Add a provider'}</div>
           <div className="decision-preset-grid">
             {PRESETS.map((p) => (
               <button
@@ -289,11 +288,11 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
                 onClick={() => openAdd(p.kind)}
               >
                 <span className="decision-preset-name">
-                  {p.kind === 'custom' ? t('settings.decisionSection.customName') : p.name}
-                  {p.kind === 'typesafe' && <span className="decision-preset-tag">{t('settings.decisionSection.recommended')}</span>}
-                  {p.kind === 'ollaya' && <span className="decision-preset-tag local">{t('settings.decisionSection.local')}</span>}
+                  {p.kind === 'custom' ? 'Custom' : p.name}
+                  {p.kind === 'typesafe' && <span className="decision-preset-tag">{'Recommended'}</span>}
+                  {p.kind === 'ollaya' && <span className="decision-preset-tag local">{'Local'}</span>}
                 </span>
-                <span className="decision-preset-desc">{t(p.descKey)}</span>
+                <span className="decision-preset-desc">{tx(p.descKey)}</span>
               </button>
             ))}
           </div>
@@ -304,33 +303,33 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
         <form className="settings-card add-form decision-form" onSubmit={(e) => void submit(e)}>
           <div className="settings-row-label">
             {form.id
-              ? t('settings.decisionSection.editTitle', { name: form.name || preset.name })
-              : t('settings.decisionSection.addTitle', { name: form.kind === 'custom' ? t('settings.decisionSection.customName') : preset.name })}
+              ? `Edit ${form.name || preset.name}`
+              : `Add ${form.kind === 'custom' ? 'Custom' : preset.name}`}
           </div>
           <div className="settings-row-desc">
-            {t(preset.hintKey)}
+            {tx(preset.hintKey)}
             {preset.link && (
               <>
                 {' '}
                 <a href={preset.link.href} target="_blank" rel="noopener noreferrer">
-                  {t(preset.link.labelKey)}
+                  {tx(preset.link.labelKey)}
                 </a>
               </>
             )}
           </div>
 
           <label className="decision-field" htmlFor={`${uid}-name`}>
-            <span>{t('settings.decisionSection.fields.name')}</span>
+            <span>{'Name'}</span>
             <Input
               id={`${uid}-name`}
               value={form.name}
-              placeholder={preset.kind === 'custom' ? t('settings.decisionSection.fields.namePlaceholder') : preset.name}
+              placeholder={preset.kind === 'custom' ? 'My decision server' : preset.name}
               onChange={(e) => setForm({ ...form, name: e.target.value })}
             />
           </label>
 
           <label className="decision-field" htmlFor={`${uid}-url`}>
-            <span>{t('settings.decisionSection.fields.baseUrl')}</span>
+            <span>{'Base URL'}</span>
             <Input
               id={`${uid}-url`}
               value={form.baseUrl}
@@ -343,8 +342,8 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
 
           <label className="decision-field" htmlFor={`${uid}-key`}>
             <span>
-              {t('settings.decisionSection.fields.apiKey')}
-              {!keyRequired && <em className="decision-optional"> {t('settings.decisionSection.fields.optional')}</em>}
+              {'API key'}
+              {!keyRequired && <em className="decision-optional"> {'(optional)'}</em>}
             </span>
             <Input
               id={`${uid}-key`}
@@ -354,10 +353,10 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
               required={keyRequired && !form.hasKey}
               placeholder={
                 form.hasKey && !form.clearKey
-                  ? t('settings.decisionSection.fields.apiKeyKeep')
+                  ? 'Saved — leave empty to keep it'
                   : keyRequired
-                    ? t('settings.decisionSection.fields.apiKeyPlaceholder')
-                    : t('settings.decisionSection.fields.apiKeyLocal')
+                    ? 'Paste your API key'
+                    : 'Not needed for a local server'
               }
               onChange={(e) => setForm({ ...form, apiKey: e.target.value })}
             />
@@ -365,12 +364,12 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
           {form.hasKey && (
             <label className="decision-check">
               <input type="checkbox" checked={form.clearKey} onChange={(e) => setForm({ ...form, clearKey: e.target.checked, apiKey: '' })} />
-              <span>{t('settings.decisionSection.fields.clearKey')}</span>
+              <span>{'Remove the saved key'}</span>
             </label>
           )}
 
           <label className="decision-field" htmlFor={`${uid}-model`}>
-            <span>{t('settings.decisionSection.fields.model')}</span>
+            <span>{'Model'}</span>
             <span className="decision-model-row">
               <Input
                 id={`${uid}-model`}
@@ -388,7 +387,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
                   disabled={modelsState === 'loading'}
                   onClick={() => void loadModels(form.id!, preset.models)}
                 >
-                  {modelsState === 'loading' ? t('common.loading') : t('settings.decisionSection.fields.loadModels')}
+                  {modelsState === 'loading' ? 'Loading…' : 'Load models'}
                 </button>
               )}
             </span>
@@ -401,42 +400,42 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
           {modelsState === 'error' && <div className="settings-row-desc decision-test-result fail">{modelsError}</div>}
 
           <div className="settings-row-desc decision-privacy">
-            {localForm ? t('settings.decisionSection.privacyLocal') : t('settings.decisionSection.privacyHosted')}
+            {localForm ? 'Decisions run on this machine or your network. Nothing goes to a cloud service.' : 'Decision requests go to this provider. Pawn redacts secrets such as API keys and tokens first.'}
           </div>
           {formError && <div className="decision-error" role="alert">{formError}</div>}
           <div className="form-actions">
             <Button type="submit" disabled={saving}>
-              {form.id ? t('common.save') : t('settings.decisionSection.addAndTest')}
+              {form.id ? 'Save' : 'Add and test'}
             </Button>
             <Button type="button" variant="secondary" onClick={() => setForm(null)}>
-              {t('common.cancel')}
+              {'Cancel'}
             </Button>
           </div>
         </form>
       )}
 
-      <h3 className="decision-subtitle">{t('settings.decisionSection.harnessTitle')}</h3>
+      <h3 className="decision-subtitle">{'How the agent uses it'}</h3>
       <p className="settings-desc">
         {active
-          ? t('settings.decisionSection.harnessDesc', { name: active.name, model: active.model })
-          : t('settings.decisionSection.harnessInactive')}
+          ? `Pawn uses ${active.name} (${active.model}) in the places below. Each one falls back to normal behavior when the model is slow or unreachable.`
+          : 'Turn on a decision model above to use these.'}
       </p>
       <div className={`settings-card${active ? '' : ' decision-disabled'}`}>
         {FEATURES.map((f) => (
           <div key={f.key} className="settings-row">
             <div className="settings-row-info">
-              <span className="settings-row-label">{t(f.label)}</span>
-              <span className="settings-row-desc">{t(f.desc)}</span>
+              <span className="settings-row-label">{tx(f.label)}</span>
+              <span className="settings-row-desc">{tx(f.desc)}</span>
             </div>
             <label className="toggle-switch">
               <input
                 type="checkbox"
                 checked={!!features?.[f.key]}
                 disabled={!active}
-                aria-label={t(f.label)}
+                aria-label={tx(f.label)}
                 onChange={(e) => {
                   setRowError('')
-                  setFeatures({ [f.key]: e.target.checked }).catch(() => setRowError(t('common.operationFailed')))
+                  setFeatures({ [f.key]: e.target.checked }).catch(() => setRowError('Something failed — see the console for details.'))
                 }}
               />
               <span className="toggle-slider" />
@@ -446,16 +445,16 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
       </div>
       {active && (
         <p className="settings-desc decision-privacy">
-          {active.local ? t('settings.decisionSection.privacyLocal') : t('settings.decisionSection.privacyActiveHosted', { name: active.name })}
+          {active.local ? 'Decisions run on this machine or your network. Nothing goes to a cloud service.' : `Decision requests go to ${active.name}. Pawn redacts secrets such as API keys and tokens first, and keeps the key encrypted on this device.`}
         </p>
       )}
 
       {confirmRemove && (
         <ConfirmDialog
-          title={t('settings.decisionSection.remove', { name: confirmRemove.name })}
-          message={t('settings.decisionSection.removeConfirm')}
-          confirmLabel={t('confirmDialog.confirm')}
-          cancelLabel={t('confirmDialog.cancel')}
+          title={`Remove ${confirmRemove.name}`}
+          message={'Remove this decision model? Its saved API key is deleted from this device.'}
+          confirmLabel={'Confirm'}
+          cancelLabel={'Cancel'}
           onConfirm={() => {
             const id = confirmRemove.id
             setConfirmRemove(null)

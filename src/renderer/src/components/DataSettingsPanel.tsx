@@ -5,7 +5,6 @@ import ConfirmDialog from './ConfirmDialog'
 
 export default function DataSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     providers,
     models,
     routingMode,
@@ -25,15 +24,15 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
         <ConfirmDialog
           title={
             confirmAction === 'backup'
-              ? t('settings.dataSection.fullBackup')
-              : t('settings.dataSection.import')
+              ? 'Full local backup'
+              : 'Import data'
           }
           message={
             confirmAction === 'backup'
-              ? t('settings.dataSection.backupFullConfirm')
-              : t('settings.dataSection.restoreConfirm')
+              ? 'Full backup includes API keys and connection tokens. Store the zip securely. Continue?'
+              : 'Restore will replace local Pawn data (~/.pawn). A copy of the current folder is kept. Restart Pawn after restore. Continue?'
           }
-          confirmLabel={confirmAction === 'backup' ? t('settings.dataSection.fullBackup') : t('settings.dataSection.import')}
+          confirmLabel={confirmAction === 'backup' ? 'Full local backup' : 'Import data'}
           danger={confirmAction === 'restore'}
           onCancel={() => setConfirmAction(null)}
           onConfirm={() => {
@@ -41,39 +40,37 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
             setConfirmAction(null)
             if (action === 'backup') {
               void window.api.exportBackup?.({ excludeSecrets: false }).then((r) => {
-                if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
+                if (r.cancelled) setBackupMsg('Backup cancelled')
                 else if (r.ok && r.path)
-                  setBackupMsg(t('settings.dataSection.backupOk', { path: r.path }))
-                else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
-              }).catch(() => setBackupMsg(t('settings.dataSection.backupFailed')))
+                  setBackupMsg(`Saved backup to ${r.path}`)
+                else setBackupMsg(r.error || 'Backup failed')
+              }).catch(() => setBackupMsg('Backup failed'))
             } else if (action === 'restore') {
               void window.api.importBackup?.().then((r) => {
-                if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
+                if (r.cancelled) setBackupMsg('Backup cancelled')
                 else if (r.ok)
                   setBackupMsg(
-                    t('settings.dataSection.restoreOk', {
-                      path: r.backupOfPrevious || ''
-                    })
+                    `Restored. Previous data saved at ${r.backupOfPrevious || ''}. Please restart Pawn.`
                   )
-                else setBackupMsg(r.error || t('settings.dataSection.restoreFailed'))
-              }).catch(() => setBackupMsg(t('settings.dataSection.restoreFailed')))
+                else setBackupMsg(r.error || 'Restore failed')
+              }).catch(() => setBackupMsg('Restore failed'))
             }
           }}
         />
       )}
-      <h2>{t('settings.dataSection.title')}</h2>
-      <p className="settings-desc">{t('settings.dataSection.desc')}</p>
+      <h2>{'Data'}</h2>
+      <p className="settings-desc">{'Manage your data and configuration'}</p>
       <div className="settings-card">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.dataSection.export')}</span>
-            <span className="settings-row-desc">{t('settings.dataSection.exportDesc')}</span>
+            <span className="settings-row-label">{'Export data'}</span>
+            <span className="settings-row-desc">{'Export all settings and configuration to a file'}</span>
           </div>
           <button
             className="btn-action"
             onClick={() => {
               const data = {
-                _note: t('settings.dataSection.exportKeyNote'),
+                _note: 'API keys are not exported; re-enter keys after import.',
                 providers: providers.map((p) => {
                   const { apiKey, ...rest } = p
                   return rest
@@ -88,17 +85,17 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
               a.download = 'pawn-settings.json'
               a.click()
               URL.revokeObjectURL(url)
-              setImportMsg(t('settings.dataSection.exported', { file: 'pawn-settings.json' }))
+              setImportMsg(`Exported ${'pawn-settings.json'}`)
             }}
           >
-            {t('settings.dataSection.export')}
+            {'Export data'}
           </button>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.dataSection.import')}</span>
+            <span className="settings-row-label">{'Import data'}</span>
             <span className="settings-row-desc">
-              {importMsg || t('settings.dataSection.importDesc')}
+              {importMsg || 'Import settings from a previously exported file'}
             </span>
           </div>
           <button
@@ -131,34 +128,32 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
                     })
                   }
                   if (n === 0) {
-                    setImportMsg(t('settings.dataSection.importEmpty'))
+                    setImportMsg('No providers or models found in that file')
                   } else {
-                    setImportMsg(t('settings.dataSection.importOk', { count: n }))
+                    setImportMsg(`Imported ${n} items`)
                   }
                 } catch (err) {
                   setImportMsg(
-                    t('settings.dataSection.importFailed', {
-                      error: err instanceof Error ? err.message : String(err)
-                    })
+                    `Import failed: ${err instanceof Error ? err.message : String(err)}`
                   )
                 }
               }
               input.click()
             }}
           >
-            {t('settings.dataSection.import')}
+            {'Import data'}
           </button>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.dataSection.fullBackup')}</span>
+            <span className="settings-row-label">{'Full local backup'}</span>
             {backupMsg ? (
               <span className="settings-row-desc">{backupMsg}</span>
             ) : (
-              <span className="settings-row-desc">{t('settings.dataSection.fullBackupDesc')}</span>
+              <span className="settings-row-desc">{'Zip ~/.pawn (config, chats DB, memory). API keys in config.json are included — store the zip safely.'}</span>
             )}
             <span className="settings-row-desc vision-fallback-warn">
-              {t('settings.dataSection.backupWarn')}
+              {'The full backup includes API keys — store the file somewhere safe.'}
             </span>
           </div>
           <div className="settings-row-actions">
@@ -166,44 +161,44 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
               className="btn-action"
               onClick={() => {
                 if (!window.api?.exportBackup) {
-                  setBackupMsg(t('settings.dataSection.desktopOnly'))
+                  setBackupMsg('Available in the desktop app')
                   return
                 }
                 void window.api.exportBackup({ excludeSecrets: true }).then((r) => {
-                  if (r.cancelled) setBackupMsg(t('settings.dataSection.backupCancelled'))
+                  if (r.cancelled) setBackupMsg('Backup cancelled')
                   else if (r.ok && r.path)
                     setBackupMsg(
-                      t('settings.dataSection.backupOkSafe', { path: r.path })
+                      `Safe backup saved to ${r.path} (API keys stripped)`
                     )
-                  else setBackupMsg(r.error || t('settings.dataSection.backupFailed'))
-                }).catch(() => setBackupMsg(t('settings.dataSection.backupFailed')))
+                  else setBackupMsg(r.error || 'Backup failed')
+                }).catch(() => setBackupMsg('Backup failed'))
               }}
             >
-              {t('settings.dataSection.fullBackupSafe')}
+              {'Backup (no secrets)'}
             </button>
             <button
               className="btn-action"
               onClick={() => {
                 if (!window.api?.exportBackup) {
-                  setBackupMsg(t('settings.dataSection.desktopOnly'))
+                  setBackupMsg('Available in the desktop app')
                   return
                 }
                 setConfirmAction('backup')
               }}
             >
-              {t('settings.dataSection.fullBackup')}
+              {'Full local backup'}
             </button>
             <button
               className="btn-action"
               onClick={() => {
                 if (!window.api?.importBackup) {
-                  setBackupMsg(t('settings.dataSection.desktopOnly'))
+                  setBackupMsg('Available in the desktop app')
                   return
                 }
                 setConfirmAction('restore')
               }}
             >
-              {t('settings.dataSection.restoreBackup')}
+              {'Restore backup'}
             </button>
           </div>
         </div>
@@ -211,25 +206,25 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
       <div className="settings-card">
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.dataSection.configFile')}</span>
-            <span className="settings-row-desc">{t('settings.dataSection.configFileDesc')}</span>
+            <span className="settings-row-label">{'Config file'}</span>
+            <span className="settings-row-desc">{'View and edit the raw configuration file'}</span>
             {pawnPaths?.configPath && <span className="plugin-source">{pawnPaths.configPath}</span>}
           </div>
           <div className="settings-row-actions">
             <button className="btn-action" disabled={!pawnPaths?.configPath} onClick={() => { if (pawnPaths) void window.api.workspace.openPath(pawnPaths.configPath) }}>
-              {t('settings.dataSection.open')}
+              {'Open'}
             </button>
           </div>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.dataSection.database')}</span>
-            <span className="settings-row-desc">{t('settings.dataSection.databaseDesc')}</span>
+            <span className="settings-row-label">{'Database'}</span>
+            <span className="settings-row-desc">{'Manage the local database'}</span>
             {pawnPaths?.dataDir && <span className="plugin-source">{pawnPaths.dataDir}</span>}
           </div>
           <div className="settings-row-actions">
             <button className="btn-action" disabled={!pawnPaths?.dataDir} onClick={() => { if (pawnPaths) void window.api.workspace.openPath(pawnPaths.dataDir) }}>
-              {t('settings.dataSection.open')}
+              {'Open'}
             </button>
           </div>
         </div>

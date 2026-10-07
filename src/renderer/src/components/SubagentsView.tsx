@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import {
@@ -47,7 +47,6 @@ async function copyText(text: string): Promise<boolean> {
 }
 
 export default function SubagentsView(): React.JSX.Element {
-  const { t } = useTranslation()
   const activeSessionId = useAppStore((s) => s.activeSessionId)
   const activeProjectId = useAppStore((s) => s.activeProjectId)
   const projects = useAppStore((s) => s.projects)
@@ -115,11 +114,11 @@ export default function SubagentsView(): React.JSX.Element {
   const handleRerun = (run: SubagentRun): void => {
     const prompt = run.promptFull || run.promptPreview
     if (!prompt?.trim()) {
-      showToast(t('subagents.rerunNoPrompt'))
+      showToast('Nothing saved to run again')
       return
     }
     if (!activeSessionId) {
-      showToast(t('subagents.rerunNoSession'))
+      showToast('No active chat')
       return
     }
     const handle = spawnBackgroundSubagent(
@@ -136,7 +135,7 @@ export default function SubagentsView(): React.JSX.Element {
         projectPath
       }
     )
-    showToast(t('subagents.rerunStarted', { id: handle.runId }))
+    showToast(`Started again (${handle.runId})`)
     setExpanded(handle.runId)
   }
 
@@ -151,7 +150,7 @@ export default function SubagentsView(): React.JSX.Element {
         .filter(Boolean)
         .join('\n')
     const ok = await copyText(text)
-    showToast(ok ? t('subagents.copied') : t('subagents.copyFailed'))
+    showToast(ok ? 'Copied' : 'Copy failed')
   }
 
   return (
@@ -163,11 +162,11 @@ export default function SubagentsView(): React.JSX.Element {
               ◆
             </div>
             <div>
-              <h3>{t('subagents.title')}</h3>
+              <h3>{'Agents'}</h3>
               <span className="subagents-count">
                 {stats.running > 0
-                  ? t('subagents.runningCount', { count: stats.running })
-                  : t('subagents.idle')}
+                  ? `${stats.running} running`
+                  : 'Idle'}
               </span>
             </div>
           </div>
@@ -178,7 +177,7 @@ export default function SubagentsView(): React.JSX.Element {
                 className="subagents-btn danger"
                 onClick={() => cancelAllForSession(activeSessionId)}
               >
-                {t('subagents.cancelAll')}
+                {'Stop all'}
               </button>
             )}
             <button
@@ -190,23 +189,23 @@ export default function SubagentsView(): React.JSX.Element {
                   : clearFinished()
               }
             >
-              {t('subagents.clearDone')}
+              {'Clear finished'}
             </button>
           </div>
         </div>
 
-        <div className="subagents-stats" aria-label={t('subagents.statsLabel')}>
+        <div className="subagents-stats" aria-label={'Helper stats'}>
           <div className="subagents-stat">
             <span className="subagents-stat-val running">{stats.running}</span>
-            <span className="subagents-stat-label">{t('subagents.statRunning')}</span>
+            <span className="subagents-stat-label">{'Running'}</span>
           </div>
           <div className="subagents-stat">
             <span className="subagents-stat-val ok">{stats.ok}</span>
-            <span className="subagents-stat-label">{t('subagents.statDone')}</span>
+            <span className="subagents-stat-label">{'Done'}</span>
           </div>
           <div className="subagents-stat">
             <span className="subagents-stat-val fail">{stats.failed}</span>
-            <span className="subagents-stat-label">{t('subagents.statFailed')}</span>
+            <span className="subagents-stat-label">{'Failed'}</span>
           </div>
           <div className="subagents-stat subagents-stat-wide">
             <span className="subagents-stat-val cost">
@@ -216,7 +215,7 @@ export default function SubagentsView(): React.JSX.Element {
                 · {Math.round(stats.cacheHitRate * 100)}%
               </span>
             </span>
-            <span className="subagents-stat-label">{t('subagents.statCost')}</span>
+            <span className="subagents-stat-label">{'Cost · cache'}</span>
           </div>
         </div>
 
@@ -227,23 +226,23 @@ export default function SubagentsView(): React.JSX.Element {
               className={scope === 'session' ? 'active' : ''}
               onClick={() => setScope('session')}
             >
-              {t('subagents.thisSession')}
+              {'This chat'}
             </button>
             <button
               type="button"
               className={scope === 'all' ? 'active' : ''}
               onClick={() => setScope('all')}
             >
-              {t('subagents.all')}
+              {'All chats'}
             </button>
           </div>
           <div className="subagents-filter status" role="tablist">
             {(
               [
-                ['all', t('subagents.filterAll')],
-                ['running', t('subagents.filterRunning')],
-                ['done', t('subagents.filterDone')],
-                ['failed', t('subagents.filterFailed')]
+                ['all', 'All'],
+                ['running', 'Live'],
+                ['done', 'Done'],
+                ['failed', 'Failed']
               ] as const
             ).map(([key, label]) => (
               <button
@@ -263,8 +262,8 @@ export default function SubagentsView(): React.JSX.Element {
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={t('subagents.searchPh')}
-          aria-label={t('subagents.searchPh')}
+          placeholder={'Search runs…'}
+          aria-label={'Search runs…'}
         />
       </div>
 
@@ -275,12 +274,12 @@ export default function SubagentsView(): React.JSX.Element {
           <div className="subagents-empty-glyph" aria-hidden>
             ✦
           </div>
-          <p className="subagents-empty-title">{t('subagents.emptyTitle')}</p>
-          <p>{t('subagents.empty')}</p>
+          <p className="subagents-empty-title">{'Ready when you are'}</p>
+          <p>{'When the main chat hands work to helpers, you’ll see live status, cost, and file changes here.'}</p>
           <ul className="subagents-empty-tips">
-            <li>{t('subagents.emptyTip1')}</li>
-            <li>{t('subagents.emptyTip2')}</li>
-            <li>{t('subagents.emptyTip3')}</li>
+            <li>{'Independent tasks can run side by side (up to six at once)'}</li>
+            <li>{'Long jobs can finish in the background while you keep chatting'}</li>
+            <li>{'Implementers work in an isolated copy, then bring successful edits back'}</li>
           </ul>
         </div>
       ) : (
@@ -314,16 +313,16 @@ export default function SubagentsView(): React.JSX.Element {
                       </span>
                     )}
                     {run.isolation === 'worktree' && (
-                      <span className="subagents-chip">{t('subagents.chipWorktree')}</span>
+                      <span className="subagents-chip">{'isolated'}</span>
                     )}
                     {run.applied && (
-                      <span className="subagents-chip ok">{t('subagents.chipApplied')}</span>
+                      <span className="subagents-chip ok">{'applied'}</span>
                     )}
                     {run.applyPending && (
-                      <span className="subagents-chip warn">{t('subagents.chipPendingApply')}</span>
+                      <span className="subagents-chip warn">{'review'}</span>
                     )}
                     {run.applyConflicts && run.applyConflicts.length > 0 && (
-                      <span className="subagents-chip warn">{t('subagents.chipConflicts')}</span>
+                      <span className="subagents-chip warn">{'conflicts'}</span>
                     )}
                     <span className="subagents-meta">
                       r{run.rounds}
@@ -341,7 +340,7 @@ export default function SubagentsView(): React.JSX.Element {
                       className="subagents-cancel"
                       onClick={() => cancel(run.id)}
                     >
-                      {t('subagents.cancel')}
+                      {'Stop'}
                     </button>
                   )}
                 </div>
@@ -353,7 +352,7 @@ export default function SubagentsView(): React.JSX.Element {
                         className="subagents-mini-btn"
                         onClick={() => void handleCopy(run)}
                       >
-                        {t('subagents.copy')}
+                        {'Copy summary'}
                       </button>
                       {(run.promptFull || run.promptPreview) && (
                         <button
@@ -361,7 +360,7 @@ export default function SubagentsView(): React.JSX.Element {
                           className="subagents-mini-btn"
                           onClick={() => handleRerun(run)}
                         >
-                          {t('subagents.rerun')}
+                          {'Run again'}
                         </button>
                       )}
                       {run.applyPending && run.worktreePath && (
@@ -371,22 +370,22 @@ export default function SubagentsView(): React.JSX.Element {
                             className="subagents-mini-btn primary"
                             onClick={() => {
                               void applyPendingWorktree(run.id).then((r) =>
-                                showToast(r.ok ? t('subagents.applyOk') : r.error || t('subagents.applyFail'))
+                                showToast(r.ok ? 'Applied to project' : r.error || 'Apply failed')
                               )
                             }}
                           >
-                            {t('subagents.applyChanges')}
+                            {'Apply changes'}
                           </button>
                           <button
                             type="button"
                             className="subagents-mini-btn"
                             onClick={() => {
                               void discardPendingWorktree(run.id).then((r) =>
-                                showToast(r.ok ? t('subagents.discardOk') : r.error || t('subagents.discardFail'))
+                                showToast(r.ok ? 'Worktree discarded' : r.error || 'Discard failed')
                               )
                             }}
                           >
-                            {t('subagents.discardChanges')}
+                            {'Discard'}
                           </button>
                         </>
                       )}
@@ -407,29 +406,24 @@ export default function SubagentsView(): React.JSX.Element {
                     )}
                     {run.usage && run.usage.calls > 0 && (
                       <div className="subagents-usage">
-                        {t('subagents.usageLine', {
-                          cost: run.usage.cost.toFixed(4),
-                          hit: Math.round(run.usage.cacheHitRate * 100),
-                          model: run.usage.modelLabel || '—',
-                          calls: run.usage.calls
-                        })}
+                        {`$${run.usage.cost.toFixed(4)} · cache ${Math.round(run.usage.cacheHitRate * 100)}% · ${run.usage.modelLabel || '—'} · ${run.usage.calls} calls`}
                       </div>
                     )}
                     {run.toolsUsed.length > 0 && (
                       <div className="subagents-tools">
-                        <span className="subagents-body-label">{t('subagents.tools')}</span>
+                        <span className="subagents-body-label">{'Tools'}</span>
                         {[...new Set(run.toolsUsed)].join(', ')}
                       </div>
                     )}
                     {run.filesChanged && run.filesChanged.length > 0 && (
                       <div className="subagents-files">
-                        <span className="subagents-body-label">{t('subagents.files')}</span>
+                        <span className="subagents-body-label">{'Files'}</span>
                         {run.filesChanged.slice(0, 24).join(', ')}
                       </div>
                     )}
                     {run.applyConflicts && run.applyConflicts.length > 0 && (
                       <div className="subagents-conflicts">
-                        <span className="subagents-body-label">{t('subagents.conflicts')}</span>
+                        <span className="subagents-body-label">{'Conflicts'}</span>
                         {run.applyConflicts.slice(0, 16).join(', ')}
                       </div>
                     )}

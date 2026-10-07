@@ -50,11 +50,11 @@ describe('MessageList', () => {
       configurable: true
     })
     renderList({ messages: [msg('u1', 'user', 'hello'), msg('a1', 'assistant', 'world')] })
-    const buttons = screen.getAllByRole('button', { name: 'chat.copy' })
+    const buttons = screen.getAllByRole('button', { name: 'Copy' })
     expect(buttons).toHaveLength(2)
     // User copies the raw text; assistant copies the markdown source.
     fireEvent.click(buttons[0])
-    expect(await screen.findByText('chat.copied')).toBeInTheDocument()
+    expect(await screen.findByText('Copied')).toBeInTheDocument()
   })
 
   it('slices from startIndex and offers to reveal earlier messages at the top', () => {
@@ -62,18 +62,18 @@ describe('MessageList', () => {
     renderList({ messages, startIndex: 3, nearTop: true })
     expect(screen.queryByText('text0')).not.toBeInTheDocument()
     expect(screen.getByText('text3')).toBeInTheDocument()
-    expect(screen.getByText('chat.showEarlier:3')).toBeInTheDocument()
+    expect(screen.getByText('Show earlier messages (3)')).toBeInTheDocument()
   })
 
   it('hides the load-earlier button when the user is not near the top', () => {
     renderList({ messages: [msg('a', 'assistant', 'x')], startIndex: 1, nearTop: false })
-    expect(screen.queryByText('chat.showEarlier:1')).not.toBeInTheDocument()
+    expect(screen.queryByText('Show earlier messages (1)')).not.toBeInTheDocument()
   })
 
   it('fires onShowEarlier from the button', () => {
     const onShowEarlier = vi.fn()
     renderList({ messages: [msg('a', 'assistant', 'x')], startIndex: 1, nearTop: true, onShowEarlier })
-    fireEvent.click(screen.getByText('chat.showEarlier:1'))
+    fireEvent.click(screen.getByText('Show earlier messages (1)'))
     expect(onShowEarlier).toHaveBeenCalledTimes(1)
   })
 
@@ -86,11 +86,11 @@ describe('MessageList', () => {
       ]
     })
     // Collapsed by default: the header (name + status) shows, the body doesn't.
-    expect(screen.getByText('toolMessage.statusOk')).toBeInTheDocument()
+    expect(screen.getByText('OK')).toBeInTheDocument()
     expect(screen.queryByText('line one')).not.toBeInTheDocument()
     // No message-role label or copy button for the tool row — only the two
     // real chat bubbles get one.
-    expect(screen.getAllByRole('button', { name: 'chat.copy' })).toHaveLength(2)
+    expect(screen.getAllByRole('button', { name: 'Copy' })).toHaveLength(2)
   })
 
   it('shows live streaming content and falls back to stored content after the flush', () => {
@@ -129,7 +129,7 @@ describe('MessageList', () => {
     __flushStreamingForTests()
     const { rerender } = renderList({ messages: [msg('m1', 'assistant', 'stored')], isStreaming: true })
     // Live: single compact line only — the reasoning body stays hidden.
-    expect(screen.getByText('chat.thinkingLive')).toBeInTheDocument()
+    expect(screen.getByText('Thinking…')).toBeInTheDocument()
     expect(screen.queryByText(/deep reasoning/)).not.toBeInTheDocument()
 
     // After flush: one-line toggle, full text on demand.
@@ -144,9 +144,9 @@ describe('MessageList', () => {
         onShowEarlier={() => {}}
       />
     )
-    expect(screen.getByText('chat.thinking')).toBeInTheDocument()
+    expect(screen.getByText('Thinking')).toBeInTheDocument()
     expect(screen.queryByText(/deep reasoning/)).not.toBeInTheDocument()
-    fireEvent.click(screen.getByText('chat.thinking'))
+    fireEvent.click(screen.getByText('Thinking'))
     expect(screen.getByText('deep reasoning text')).toBeInTheDocument()
   })
 
@@ -159,7 +159,7 @@ describe('MessageList', () => {
   it('shows how long the agent worked on a finished turn', () => {
     const done: Message = { ...msg('a1', 'assistant', 'done'), durationMs: 65_000 }
     renderList({ messages: [msg('u1', 'user', 'q'), done] })
-    expect(document.querySelector('.message-worked')).toHaveTextContent('chat.duration.worked')
+    expect(document.querySelector('.message-worked')).toHaveTextContent('Worked for 1m 5s')
   })
 
   it('renders a hover timestamp for real send times only', () => {
@@ -189,10 +189,10 @@ describe('MessageList turn grouping', () => {
       ]
     })
     // Two turns → two Assistant labels (not four) + two You labels.
-    expect(screen.getAllByText('chat.assistant')).toHaveLength(2)
-    expect(screen.getAllByText('chat.you')).toHaveLength(2)
+    expect(screen.getAllByText('Assistant')).toHaveLength(2)
+    expect(screen.getAllByText('You')).toHaveLength(2)
     // Copy on each user message + the last block of each turn only.
-    expect(screen.getAllByRole('button', { name: 'chat.copy' })).toHaveLength(4)
+    expect(screen.getAllByRole('button', { name: 'Copy' })).toHaveLength(4)
     const a1 = document.querySelector('[data-message-id="a1"]')!
     const a2 = document.querySelector('[data-message-id="a2"]')!
     const a3 = document.querySelector('[data-message-id="a3"]')!
@@ -217,7 +217,7 @@ describe('MessageList Repeat this', () => {
         msg('a2', 'assistant', 'Anytime.')
       ]
     })
-    const repeat = screen.getAllByRole('button', { name: 'chat.repeat' })
+    const repeat = screen.getAllByRole('button', { name: 'Repeat this' })
     expect(repeat).toHaveLength(2)
     fireEvent.click(repeat[0])
     expect(useAutomationDraftStore.getState().take()).toMatchObject({ prompt: 'Summarize AI news with links', projectId: 'p1' })

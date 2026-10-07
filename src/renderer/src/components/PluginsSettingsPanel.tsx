@@ -9,12 +9,12 @@ import ModsSettingsPanel from './ModsSettingsPanel'
 import Input from './Input'
 import Switch from './Switch'
 import './ModsSettingsPanel.css'
+import { tx } from '../i18n'
 
 type PluginsTab = 'skills' | 'extensions'
 
 export default function PluginsSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     contextAdditionCount,
     enabledSkillCount,
     loadedSkills,
@@ -51,10 +51,10 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
 
   return (
     <div className="settings-section">
-      <h2>{t('settings.pluginSection.title')}</h2>
-      <p className="settings-desc">{t('settings.pluginSection.desc')}</p>
+      <h2>{'Plugins'}</h2>
+      <p className="settings-desc">{'Skills, context sources, and mods that run while you chat.'}</p>
 
-      <div className="plugins-tabs" role="tablist" aria-label={t('settings.pluginSection.tabsLabel')}>
+      <div className="plugins-tabs" role="tablist" aria-label={'Plugin areas'}>
         <button
           type="button"
           role="tab"
@@ -62,7 +62,7 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
           className={`plugins-tab ${tab === 'skills' ? 'active' : ''}`}
           onClick={() => setTab('skills')}
         >
-          {t('settings.pluginSection.tabSkills')}
+          {'Skills & context'}
         </button>
         <button
           type="button"
@@ -71,7 +71,7 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
           className={`plugins-tab ${tab === 'extensions' ? 'active' : ''}`}
           onClick={() => setTab('extensions')}
         >
-          {t('settings.pluginSection.tabExtensions')}
+          {'Mods'}
           {activeCount > 0 && <span className="plugins-tab-badge">{activeCount}</span>}
         </button>
       </div>
@@ -81,31 +81,27 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
       ) : (
         <div className="settings-card">
           <div className="plugin-context-head">
-            <span className="settings-row-label">{t('settings.pluginSection.contextTitle')}</span>
+            <span className="settings-row-label">{'Claude-compatible context'}</span>
             <span className="settings-row-desc">
-              {t('settings.pluginSection.contextApplied', {
-                count: contextAdditionCount,
-                enabled: enabledSkillCount,
-                total: loadedSkills.length
-              })}
+              {`Injected ${contextAdditionCount} context blocks · Enabled skills ${enabledSkillCount}/${loadedSkills.length}`}
             </span>
           </div>
           <div className="plugin-context-list">
             {contextSignals.map((signal) => (
               <div key={signal.id} className="plugin-context-item">
                 <div className="plugin-context-main">
-                  <span className="plugin-context-label">{t(`settings.pluginSection.sources.${signal.id}`)}</span>
-                  <span className="plugin-context-path">{signal.path || t('settings.pluginSection.noProjectPath')}</span>
+                  <span className="plugin-context-label">{tx(`settings.pluginSection.sources.${signal.id}`)}</span>
+                  <span className="plugin-context-path">{signal.path || 'No active project path'}</span>
                 </div>
                 <span className={`plugin-context-status ${signal.detected ? 'ok' : 'off'}`}>
-                  {signal.detected ? t('settings.pluginSection.detected') : t('settings.pluginSection.missing')}
+                  {signal.detected ? 'Detected' : 'Missing'}
                   {signal.details ? ` (${signal.details})` : ''}
                 </span>
               </div>
             ))}
           </div>
           <div className="plugin-toolbar">
-            <div className="plugin-scope-toggle" role="tablist" aria-label={t('settings.pluginSection.scopeLabel')}>
+            <div className="plugin-scope-toggle" role="tablist" aria-label={'Skill scope'}>
               {(['all', 'project', 'device', 'builtin'] as SettingsSkillScope[]).map((scope) => (
                 <button
                   key={scope}
@@ -114,7 +110,7 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
                   className={`plugin-scope-btn ${skillScope === scope ? 'active' : ''}`}
                   onClick={() => setSkillScope(scope)}
                 >
-                  {t(`settings.pluginSection.scope.${scope}`)} ({scopeCounts[scope]})
+                  {tx(`settings.pluginSection.scope.${scope}`)} ({scopeCounts[scope]})
                 </button>
               ))}
             </div>
@@ -122,12 +118,12 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
               className="plugin-search-input"
               value={skillSearch}
               onChange={(e) => setSkillSearch(e.target.value)}
-              placeholder={t('settings.pluginSection.searchPlaceholder')}
+              placeholder={'Search skills…'}
             />
           </div>
-          {skillsLoading && <div className="settings-empty">{t('common.loading')}</div>}
+          {skillsLoading && <div className="settings-empty">{'Loading…'}</div>}
           {!skillsLoading && visibleSkills.length === 0 && (
-            <div className="settings-empty">{t('settings.pluginSection.emptySkills')}</div>
+            <div className="settings-empty">{'No skills found'}</div>
           )}
           {!skillsLoading &&
             visibleSkills.map((skill) => {
@@ -137,7 +133,7 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
                   <div className="settings-row-info">
                     <span className="settings-row-label">
                       {skill.name}
-                      <span className="plugin-kind">{t(`settings.pluginSection.kind.${skill.kind}`)}</span>
+                      <span className="plugin-kind">{tx(`settings.pluginSection.kind.${skill.kind}`)}</span>
                     </span>
                     <span className="settings-row-desc">{skillSummary(skill) || skill.source}</span>
                     <span className="plugin-source">{skill.source}</span>

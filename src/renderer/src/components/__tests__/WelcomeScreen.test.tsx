@@ -35,17 +35,24 @@ describe('WelcomeScreen', () => {
       />
     )
     expect(document.querySelector('.welcome-logo svg')).toBeTruthy()
-    expect(document.querySelector('.welcome-greeting')?.textContent).toMatch(/^chat\.greeting\./)
+    expect([
+      'Good afternoon — keep going.',
+      'Up early — quiet hours.',
+      'Good evening — nice work today.',
+      "Midday — how's it going?",
+      "Good morning — let's build.",
+      'Late night — one more thing?',
+    ]).toContain(document.querySelector('.welcome-greeting')?.textContent)
     // ZCode order: greeting -> composer -> suggestion cards.
     const order = Array.from(document.querySelectorAll('.welcome-greeting, .welcome-composer, .welcome-actions'))
       .map((el) => el.className)
     expect(order).toEqual(['welcome-greeting', 'welcome-composer', 'welcome-actions'])
     expect(screen.getByTestId('home-composer')).toBeTruthy()
-    expect(screen.getByText('chat.home.codeTitle')).toBeTruthy()
-    expect(screen.getByText('chat.home.browseTitle')).toBeTruthy()
-    expect(screen.getByText('chat.home.computerTitle')).toBeTruthy()
-    expect(screen.getByText('chat.home.autoTitle')).toBeTruthy()
-    expect(screen.getByText('chat.home.codeDesc')).toBeTruthy()
+    expect(screen.getByText('Fix failing tests')).toBeTruthy()
+    expect(screen.getByText('Research any topic')).toBeTruthy()
+    expect(screen.getByText('Use the computer')).toBeTruthy()
+    expect(screen.getByText('Automate a routine')).toBeTruthy()
+    expect(screen.getByText('Run the test suite and patch what breaks.')).toBeTruthy()
     expect(document.querySelector('.welcome-checklist')).toBeNull()
   })
 })

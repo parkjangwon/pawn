@@ -1,4 +1,4 @@
-import i18n from '../../i18n'
+import { tx } from '../../i18n'
 
 const EVENT_KEYS: Record<string, string> = {
   'session.start': 'chat.mods.events.sessionStart',
@@ -18,13 +18,10 @@ const EVENT_KEYS: Record<string, string> = {
 export function modEventLabel(event: string): string {
   const key = EVENT_KEYS[event]
   if (!key) return event
-  const label = i18n.t(key)
+  const label = tx(key)
   return label === key ? event : label
 }
 
 export function modConflictLine(event: string, plugins: string[]): string {
-  return i18n.t('chat.mods.conflictLine', {
-    event: modEventLabel(event),
-    plugins: plugins.join(', ')
-  })
+  return `${plugins.join(', ')} share the same ${modEventLabel(event)}.`
 }

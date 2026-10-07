@@ -9,7 +9,7 @@
  */
 
 import { createContext, useContext, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { openFileInPanel } from '../stores/filesPanel'
 
 /** Working folder relative chat paths resolve against. */
@@ -117,16 +117,15 @@ export async function openLocalPath(path: string, opts: { reveal?: boolean; notF
 }
 
 export function LocalFileLink({ path, children }: { path: string; children?: React.ReactNode }): React.JSX.Element {
-  const { t } = useTranslation()
   return (
     <a
       className="md-file-link"
       href={`file://${encodeURI(path)}`}
-      title={`${path}\n${t('markdown.fileLinkHint')}`}
+      title={`${path}\n${'Click to open in Pawn · ⌘/Ctrl-click to reveal in Finder'}`}
       onClick={(e) => {
         e.preventDefault()
         e.stopPropagation()
-        void openLocalPath(path, { reveal: e.metaKey || e.ctrlKey, notFound: t('markdown.fileNotFound') })
+        void openLocalPath(path, { reveal: e.metaKey || e.ctrlKey, notFound: 'File not found' })
       }}
     >
       {children}
@@ -146,7 +145,6 @@ export function LocalImage({
   alt: string
   onOpen: (src: string, alt: string) => void
 }): React.JSX.Element {
-  const { t } = useTranslation()
   const cached = imageCache.get(path)
   const [src, setSrc] = useState<string | null>(cached && Date.now() - cached.at < 5000 ? cached.dataUrl : null)
   const [error, setError] = useState<string | null>(null)
@@ -160,7 +158,7 @@ export function LocalImage({
     }
     const read = window.api?.fs?.readImage
     if (!read) {
-      setError(t('markdown.imageUnavailable'))
+      setError('Image preview is unavailable here')
       return
     }
     void read(path)
@@ -178,16 +176,16 @@ export function LocalImage({
     return () => {
       cancelled = true
     }
-  }, [path, t])
+  }, [path])
 
   if (error) {
     return (
       <span className="md-image-missing" title={path}>
-        {alt || path.split('/').pop()} — {error === 'File not found' ? t('markdown.fileNotFound') : error}
+        {alt || path.split('/').pop()} — {error === 'File not found' ? 'File not found' : error}
       </span>
     )
   }
-  if (!src) return <span className="md-image-loading" aria-label={t('markdown.imageLoading')} title={path} />
+  if (!src) return <span className="md-image-loading" aria-label={'Loading image'} title={path} />
   return (
     <span className="md-local-image">
       <img
@@ -195,7 +193,7 @@ export function LocalImage({
         src={src}
         alt={alt}
         loading="lazy"
-        title={`${path}\n${t('chat.imageExpandHint')}`}
+        title={`${path}\n${'Double-click to enlarge'}`}
         role="button"
         tabIndex={0}
         onDoubleClick={(e) => {

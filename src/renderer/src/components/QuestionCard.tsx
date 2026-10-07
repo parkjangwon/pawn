@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { X } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import { useQuestionStore, type UserQuestion } from '../stores/userQuestions'
@@ -17,7 +17,6 @@ export default function QuestionCard({ sessionId }: { sessionId: string | null }
 }
 
 function QuestionCardInner({ question }: { question: UserQuestion }): React.JSX.Element {
-  const { t } = useTranslation()
   const answer = useQuestionStore((s) => s.answer)
   const [selected, setSelected] = useState<string[]>([])
   const [other, setOther] = useState('')
@@ -88,7 +87,7 @@ function QuestionCardInner({ question }: { question: UserQuestion }): React.JSX.
       onKeyDown={onKeyDown}
     >
       <div className="question-card-head">
-        <span className="question-card-badge">{isPlan ? t('questions.planBadge') : t('questions.badge')}</span>
+        <span className="question-card-badge">{isPlan ? 'Plan' : 'Question'}</span>
         <h3 id={`${question.id}-title`} className="question-card-title">
           {question.question}
         </h3>
@@ -96,8 +95,8 @@ function QuestionCardInner({ question }: { question: UserQuestion }): React.JSX.
           type="button"
           className="question-card-close"
           onClick={() => answer(question.id, { selected: [], dismissed: true })}
-          aria-label={t('questions.dismiss')}
-          title={t('questions.dismiss')}
+          aria-label={'Dismiss (Esc)'}
+          title={'Dismiss (Esc)'}
         >
           <X size={14} aria-hidden />
         </button>
@@ -106,7 +105,7 @@ function QuestionCardInner({ question }: { question: UserQuestion }): React.JSX.
       {question.details && (
         <div className="question-card-details">
           <button type="button" className="question-card-details-toggle" onClick={() => setShowPlan((v) => !v)} aria-expanded={showPlan}>
-            {showPlan ? t('questions.hidePlan') : t('questions.showPlan')}
+            {showPlan ? 'Hide plan' : 'Show plan'}
           </button>
           {showPlan && (
             <div className="question-card-plan">
@@ -124,8 +123,8 @@ function QuestionCardInner({ question }: { question: UserQuestion }): React.JSX.
             rows={2}
             value={other}
             onChange={(e) => setOther(e.target.value)}
-            placeholder={t('questions.planFeedbackPlaceholder')}
-            aria-label={t('questions.planFeedbackPlaceholder')}
+            placeholder={'Optional notes, or what to change…'}
+            aria-label={'Optional notes, or what to change…'}
           />
           <div className="question-card-buttons">
             <button
@@ -134,14 +133,14 @@ function QuestionCardInner({ question }: { question: UserQuestion }): React.JSX.
               disabled={!other.trim()}
               onClick={() => reviseLabel && answer(question.id, { selected: [reviseLabel], text: other.trim() })}
             >
-              {t('questions.requestChanges')}
+              {'Request changes'}
             </button>
             <button
               type="button"
               className="question-card-btn primary"
               onClick={() => approveLabel && answer(question.id, { selected: [approveLabel], text: other.trim() || undefined })}
             >
-              {t('questions.approveAndBuild')}
+              {'Approve & build'}
             </button>
           </div>
         </div>
@@ -177,15 +176,15 @@ function QuestionCardInner({ question }: { question: UserQuestion }): React.JSX.
               rows={1}
               value={other}
               onChange={(e) => setOther(e.target.value)}
-              placeholder={question.options.length ? t('questions.otherPlaceholder') : t('questions.answerPlaceholder')}
-              aria-label={question.options.length ? t('questions.otherPlaceholder') : t('questions.answerPlaceholder')}
+              placeholder={question.options.length ? 'Or type your own answer…' : 'Type your answer…'}
+              aria-label={question.options.length ? 'Or type your own answer…' : 'Type your answer…'}
             />
           )}
           {(question.multiSelect || question.allowOther) && (
             <div className="question-card-buttons">
-              <span className="question-card-hint">{t('questions.keyboardHint')}</span>
+              <span className="question-card-hint">{'1-9 to pick · Enter to send · Esc to dismiss'}</span>
               <button type="button" className="question-card-btn primary" disabled={!canSubmit} onClick={() => submit()}>
-                {t('questions.submit')}
+                {'Answer'}
               </button>
             </div>
           )}

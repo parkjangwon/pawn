@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { ChevronRight, File } from 'lucide-react'
 import FileEditor from './FileEditor'
 import { useFilesPanelStore } from '../stores/filesPanel'
@@ -15,7 +15,6 @@ interface FilesViewProps {
 }
 
 export default function FilesView({ projectPath }: FilesViewProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [rootEntries, setRootEntries] = useState<FileEntry[]>([])
   const [expandedDirs, setExpandedDirs] = useState<Set<string>>(new Set())
   const [childEntries, setChildEntries] = useState<Record<string, FileEntry[]>>({})
@@ -101,7 +100,7 @@ export default function FilesView({ projectPath }: FilesViewProps): React.JSX.El
     )
   }
 
-  if (!projectPath) return <div className="rp-files-empty">{t('rightPanel.files.noProject')}</div>
+  if (!projectPath) return <div className="rp-files-empty">{'No project folder — open a project to browse its files'}</div>
 
   if (selectedFile) {
     return (
@@ -119,9 +118,9 @@ export default function FilesView({ projectPath }: FilesViewProps): React.JSX.El
         <span>{currentPath.split('/').filter(Boolean).pop() || 'root'}</span>
       </div>
       <div className="rp-files-body">
-        {loading && <div className="rp-files-empty">{t('common.loading')}</div>}
+        {loading && <div className="rp-files-empty">{'Loading…'}</div>}
         {!loading && rootEntries.map((entry) => renderEntry(entry, 0, rootEntries))}
-        {!loading && rootEntries.length === 0 && <div className="rp-files-empty">{t('fileTree.empty')}</div>}
+        {!loading && rootEntries.length === 0 && <div className="rp-files-empty">{'No files to display'}</div>}
       </div>
     </div>
   )

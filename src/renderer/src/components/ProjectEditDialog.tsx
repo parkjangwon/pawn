@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Folder, FolderPlus, X } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { useEffectiveTheme } from '../stores/theme'
@@ -16,7 +16,6 @@ interface ProjectEditDialogProps {
 }
 
 export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDialogProps): React.JSX.Element {
-  const { t } = useTranslation()
   const theme = useEffectiveTheme()
   const { projects, addProject, updateProjectName, updateProjectPaths } = useAppStore()
   const existing = projectId ? projects.find((p) => p.id === projectId) : null
@@ -78,8 +77,8 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
           onClick={(e) => e.stopPropagation()}
         >
           <div className="ped-header">
-            <h3 id="ped-title">{existing ? t("projectEdit.edit") : t("projectEdit.create")}</h3>
-            <button type="button" className="ped-close" onClick={onClose} aria-label={t('common.close')} title={t('common.close')}>
+            <h3 id="ped-title">{existing ? 'Edit project' : 'Create project'}</h3>
+            <button type="button" className="ped-close" onClick={onClose} aria-label={'Close'} title={'Close'}>
               <X size={14} />
             </button>
           </div>
@@ -90,27 +89,27 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
                 className="ped-name-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder={t("projectEdit.namePlaceholder")}
+                placeholder={'Project name'}
                 autoFocus
               />
             </div>
 
             <div className="ped-field">
-              <label className="ped-label">{t("projectEdit.sourceFolders")}</label>
+              <label className="ped-label">{'Source folders'}</label>
               <div className="ped-paths">
                 {paths.map((p, i) => (
                   <div key={i} className="ped-path-item">
                     <Folder size={12} />
                     <span className="ped-path-text">{p.split('/').pop() || p}</span>
                     <span className="ped-path-full">{p}</span>
-                    <button type="button" className="ped-path-remove" onClick={() => handleRemovePath(i)} aria-label={t('projectEdit.removeFolder', { path: p })} title={t('projectEdit.removeFolder', { path: p })}>
+                    <button type="button" className="ped-path-remove" onClick={() => handleRemovePath(i)} aria-label={`Remove folder ${p}`} title={`Remove folder ${p}`}>
                       <X size={10} />
                     </button>
                   </div>
                 ))}
                 <button className="ped-add-folder" onClick={handleAddFolder}>
                   <FolderPlus size={12} />
-                  <span>{t("projectEdit.addFolder")}</span>
+                  <span>{'Add folder'}</span>
                 </button>
               </div>
             </div>
@@ -119,12 +118,12 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
           <div className="ped-footer">
             {existing && (
               <button className="ped-btn danger" onClick={() => setShowDeleteConfirm(true)}>
-                {t("projectEdit.delete")}
+                {'Remove'}
               </button>
             )}
             <div className="ped-footer-right">
-              <button className="ped-btn cancel" onClick={onClose}>{t("common.cancel")}</button>
-              <button className="ped-btn save" onClick={handleSave} disabled={!name.trim()}>{t("common.save")}</button>
+              <button className="ped-btn cancel" onClick={onClose}>{'Cancel'}</button>
+              <button className="ped-btn save" onClick={handleSave} disabled={!name.trim()}>{'Save'}</button>
             </div>
           </div>
         </div>
@@ -135,10 +134,10 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
 
         {showDeleteConfirm && existing && (
           <ConfirmDialog
-            title={`${existing.name} ${t('common.delete')}`}
-            message={t('sidebar.deleteProjectConfirm')}
-            confirmLabel={t('confirmDialog.confirm')}
-            cancelLabel={t('confirmDialog.cancel')}
+            title={`${existing.name} ${'Delete'}`}
+            message={'Delete this project? This can\'t be undone.'}
+            confirmLabel={'Confirm'}
+            cancelLabel={'Cancel'}
             onConfirm={() => { useAppStore.getState().removeProject(existing.id); setShowDeleteConfirm(false); onClose() }}
             onCancel={() => setShowDeleteConfirm(false)}
           />

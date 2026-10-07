@@ -12,7 +12,6 @@ import { enqueueDbWrite } from '../utils/dbWriteQueue'
 import { stripDisplayImages, type ChatAttachment } from '../utils/attachments'
 import type { ModelTier } from '../types/provider'
 import type { ToolCall } from '../agent/tools'
-import i18n from '../i18n'
 
 /** Anthropic ephemeral cache TTL is ~5 min. After that the warm prefix is gone
  *  and the router must not assume a cache hit on the resumed session. */
@@ -86,7 +85,7 @@ export async function loadTranscript(projectId: string, sessionId: string): Prom
         // doesn't assume a warm prefix and misjudge downgrade economics.
        if (parsed.lastActivity && Date.now() - parsed.lastActivity > CACHE_STALE_MS) {
          clearSessionRoute(sessionId)
-          useUsageStore.getState().noteDiagnostic(sessionId, 'warn', i18n.t('chat.diagnostics.coldStart'))
+          useUsageStore.getState().noteDiagnostic(sessionId, 'warn', 'Cold start — the cache expired and needs to be re-primed.')
        } else if (parsed.warmFor) {
          // Resume the sticky route so the first call of a resumed session reuses
          // the still-live ephemeral cache instead of paying a re-prime.

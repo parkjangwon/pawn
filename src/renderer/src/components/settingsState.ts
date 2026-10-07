@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
 import { useMcpStore } from '../stores/mcp'
@@ -74,7 +74,6 @@ const TEST_TIMEOUT_MS = 15_000
 
 export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChange: (width: number) => void }) {
   // --- body (state, effects, handlers) ---
-  const { t, i18n } = useTranslation()
   const { theme, set } = useThemeStore()
   const { servers: mcpServers, toggleServer: toggleMcpServer } = useMcpStore()
   const {
@@ -240,7 +239,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     const trimmedKey = apiKey.trim()
     if (!preset.localNoKey && !preset.signIn && !preset.optionalKey) {
       if (!trimmedKey || keyLooksInvalid(trimmedKey)) {
-        setPresetKeyError(t('settings.providerKeyInvalid'))
+        setPresetKeyError('That key looks too short or contains spaces — paste the full key from the provider.')
         return
       }
     }
@@ -276,18 +275,14 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
           const r = await syncModelsFromProvider(created.id)
           setSyncResult((s) => ({
             ...s,
-            [created.id]: t('settings.providerSection.syncOk', {
-              added: r.added,
-              updated: r.updated,
-              total: r.remoteCount
-            })
+            [created.id]: `Synced ${r.remoteCount} models (+${r.added} new, ${r.updated} updated)`
           }))
         } catch (err) {
           const msg = err instanceof Error ? err.message : String(err)
           setSyncFailed((s) => ({ ...s, [created.id]: true }))
           setSyncResult((s) => ({
             ...s,
-            [created.id]: t('settings.providerSection.syncSeedOnly', { error: msg.slice(0, 120) })
+            [created.id]: `Seed models kept (live sync failed: ${msg.slice(0, 120)})`
           }))
         } finally {
           setSyncingId(null)
@@ -311,18 +306,14 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       setSyncFailed((s) => ({ ...s, [providerId]: false }))
       setSyncResult((s) => ({
         ...s,
-        [providerId]: t('settings.providerSection.syncOk', {
-          added: r.added,
-          updated: r.updated,
-          total: r.remoteCount
-        })
+        [providerId]: `Synced ${r.remoteCount} models (+${r.added} new, ${r.updated} updated)`
       }))
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       setSyncFailed((s) => ({ ...s, [providerId]: true }))
       setSyncResult((s) => ({
         ...s,
-        [providerId]: t('settings.providerSection.syncFail', { error: msg.slice(0, 160) })
+        [providerId]: `Sync failed: ${msg.slice(0, 160)}`
       }))
     } finally {
       setSyncingId(null)
@@ -331,12 +322,12 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
 
   const handleAddProvider = (): void => {
     if (!form.name.trim() || !form.baseUrl.trim()) {
-      setFormError(t('settings.providerFormRequired'))
+      setFormError('Name and base URL are required.')
       return
     }
     const trimmedKey = form.apiKey.trim()
     if (trimmedKey && keyLooksInvalid(trimmedKey)) {
-      setFormError(t('settings.providerKeyInvalid'))
+      setFormError('That key looks too short or contains spaces — paste the full key from the provider.')
       return
     }
     setFormError('')
@@ -420,7 +411,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       setMcpForm({ id: '', command: '', args: '', env: '' })
       setShowAddMcpServer(false)
     } else {
-      setMcpFormError(res.error || t('settings.mcpSection.addFailed'))
+      setMcpFormError(res.error || 'Couldn\'t add the server.')
     }
   }
 
@@ -445,13 +436,13 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         ])
         const ok = Boolean(r?.ok)
         __providerTestOutcome[providerId] = ok ? 'ok' : 'fail'
-        setTestResult((res) => ({ ...res, [providerId]: { ok, message: ok ? '' : (r?.error || t('settings.providerSection.testFailed')).slice(0, 120) } }))
+        setTestResult((res) => ({ ...res, [providerId]: { ok, message: ok ? '' : (r?.error || 'Connection failed').slice(0, 120) } }))
         return
       }
       const modelId = pickTestModelId(providerId, useProviderStore.getState().models, p.apiFormat)
       if (!modelId) {
         __providerTestOutcome[providerId] = 'fail'
-        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: t('settings.providerSection.testNoModel') } }))
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: 'No model to test — sync models for this provider first' } }))
         return
       }
       const call = await prepareSideCall(p, buildTestRequestBody(p.apiFormat, modelId))
@@ -485,9 +476,9 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       __providerTestOutcome[providerId] = 'fail'
       const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.message === 'timeout')
       if (timedOut) {
-        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: t('settings.providerTestTimeout') } }))
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: 'Timed out after 15s' } }))
       } else {
-        const msg = err instanceof Error ? err.message : t('common.operationFailed')
+        const msg = err instanceof Error ? err.message : 'Something failed — see the console for details.'
         setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: msg.slice(0, 60) } }))
       }
     } finally {
@@ -495,7 +486,6 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     }
   }
 
-  const languages = [{ code: 'en', label: 'English' }, { code: 'ko', label: '한국어' }, { code: 'ja', label: '日本語' }, { code: 'zh', label: '中文' }]
 
   // Capture the next key combination while a shortcut row is recording.
   useEffect(() => {
@@ -520,7 +510,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     }
   }, [recording, setKeybinding])
 
-  const shortcutLabel = (id: KeyBindingId): string => t(`settings.shortcutSection.${id}`)
+  const shortcutLabel = (id: KeyBindingId): string => tx(`settings.shortcutSection.${id}`)
   const comboConflict = (id: KeyBindingId): KeyBindingId | null => {
     const combo = keybindings[id]
     return KEYBINDING_IDS.find(
@@ -718,28 +708,28 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       }
       // Main sends a phase; the words are ours (localized), not its English message.
       if (payload.phase === 'browser') {
-        setConnMsg(payload.provider === 'google' ? t('settings.connectionsSection.finishGoogle') : t('settings.connectionsSection.finishInBrowser'))
+        setConnMsg(payload.provider === 'google' ? 'Finish Google sign-in in your browser…' : 'Finish signing in in your browser…')
       }
     })
   }, [])
 
   const handleConnect = async (provider: 'google' | 'github'): Promise<void> => {
     if (!window.api.connections) {
-      setConnMsg(t('settings.connectionsSection.desktopOnly'))
+      setConnMsg('Service connections are only available in the desktop app.')
       return
     }
     setConnBusy(provider)
-    setConnMsg(t('settings.connectionsSection.connectingHint'))
+    setConnMsg('Complete sign-in in the browser…')
     setDeviceAuth(null)
     setPatFormOpen(null)
     try {
       const res = await window.api.connections.connect(provider)
       if (res.cancelled) {
-        setConnMsg(t('settings.connectionsSection.cancelled'))
+        setConnMsg('Connection cancelled')
       } else if (res.error && res.error !== 'Cancelled') {
         setConnMsg(res.error)
       } else if (res.ok) {
-        setConnMsg(t('settings.connectionsSection.connected', { account: res.accountLabel || provider }))
+        setConnMsg(`Connected as ${res.accountLabel || provider}`)
       }
       await refreshConnections()
     } catch (e) {
@@ -766,11 +756,11 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
 
   const handleConnectPat = async (provider: PatConnProvider): Promise<void> => {
     if (!window.api.connections?.connectPat) {
-      setConnMsg(t('settings.connectionsSection.desktopOnly'))
+      setConnMsg('Service connections are only available in the desktop app.')
       return
     }
     setConnBusy(provider)
-    setConnMsg(t('settings.connectionsSection.patConnecting'))
+    setConnMsg('Validating credentials…')
     try {
       const credentials =
         provider === 'gitlab'
@@ -785,7 +775,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       if (res.error) {
         setConnMsg(res.error)
       } else if (res.ok) {
-        setConnMsg(t('settings.connectionsSection.connected', { account: res.accountLabel || provider }))
+        setConnMsg(`Connected as ${res.accountLabel || provider}`)
         setPatFormOpen(null)
         setPatForm({
           baseUrl: '',
@@ -807,7 +797,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   const handleCancelConnect = async (provider: ConnProvider): Promise<void> => {
     if (!window.api.connections?.cancel) return
     await window.api.connections.cancel(provider)
-    setConnMsg(t('settings.connectionsSection.cancelled'))
+    setConnMsg('Connection cancelled')
     setDeviceAuth(null)
     // connect() promise will settle and clear connBusy
   }
@@ -820,7 +810,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     if (patFormOpen === provider) setPatFormOpen(null)
     try {
       await window.api.connections.disconnect(provider)
-      setConnMsg(t('settings.connectionsSection.disconnected', { provider }))
+      setConnMsg(`Disconnected ${provider}`)
       await refreshConnections()
     } finally {
       setConnBusy(null)
@@ -828,22 +818,21 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   }
 
   const connProviderLabel = (provider: ConnProvider): string => {
-    if (provider === 'google') return t('settings.connectionsSection.google')
-    if (provider === 'github') return t('settings.connectionsSection.github')
-    if (provider === 'gitlab') return t('settings.connectionsSection.gitlab')
-    return t('settings.connectionsSection.codecommit')
+    if (provider === 'google') return 'Google'
+    if (provider === 'github') return 'GitHub'
+    if (provider === 'gitlab') return 'GitLab'
+    return 'AWS CodeCommit'
   }
 
   const copyDeviceCode = async (): Promise<void> => {
     if (!deviceAuth?.userCode) return
     try {
       await navigator.clipboard.writeText(deviceAuth.userCode)
-      setConnMsg(t('settings.connectionsSection.codeCopied'))
+      setConnMsg('Code copied')
     } catch { /* ignore */ }
   }
 
   return {
-    t, i18n,
     theme, set,
     mcpServers, toggleMcpServer,
     sleepPrevention, setSleepPrevention, taskNotificationsEnabled, setTaskNotificationsEnabled,
@@ -875,7 +864,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     handleAddMcpServer, handleRemoveMcpServer, handleTestProvider, shortcutLabel, comboConflict,
     fileExists, countMarkdownFiles, countSubdirs, detectContextSignals, groups, visibleSkills, scopeCounts,
     enabledSkillCount, toggleSkill, handleConfirmDelete, refreshConnections, handleConnect, openPatForm,
-    handleConnectPat, handleCancelConnect, handleDisconnect, connProviderLabel, copyDeviceCode, languages
+    handleConnectPat, handleCancelConnect, handleDisconnect, connProviderLabel, copyDeviceCode
   }
 }
 

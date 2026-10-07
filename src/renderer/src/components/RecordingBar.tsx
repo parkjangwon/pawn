@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { useRecordingStore, type RecordingSources } from '../stores/recording'
 import './RecordingBar.css'
 
@@ -14,7 +14,6 @@ function Dot({ live }: { live: boolean }): React.JSX.Element {
 
 /** Setup form: what to show, what changes, what to record. */
 function RecordingSetup(): React.JSX.Element {
-  const { t } = useTranslation()
   const { readiness, starting, error, start, closeSetup, refreshReadiness } = useRecordingStore()
   const [goal, setGoal] = useState('')
   const [inputsHint, setInputsHint] = useState('')
@@ -59,17 +58,17 @@ function RecordingSetup(): React.JSX.Element {
     >
       <div className="rec-head">
         <Dot live={false} />
-        <strong id={`${uid}-title`}>{t('record.setup.title')}</strong>
-        <span className="rec-sub">{t('record.setup.subtitle')}</span>
+        <strong id={`${uid}-title`}>{'Record a workflow'}</strong>
+        <span className="rec-sub">{'Show Pawn once, get a reusable skill'}</span>
       </div>
       <label className="rec-field" htmlFor={`${uid}-goal`}>
-        <span>{t('record.setup.goal')}</span>
+        <span>{'What will you show?'}</span>
         <textarea
           id={`${uid}-goal`}
           ref={goalRef}
           rows={2}
           value={goal}
-          placeholder={t('record.setup.goalPlaceholder')}
+          placeholder={'e.g. File this month’s phone bill as an expense in Expensify'}
           onChange={(e) => setGoal(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
@@ -81,17 +80,17 @@ function RecordingSetup(): React.JSX.Element {
       </label>
       <label className="rec-field" htmlFor={`${uid}-inputs`}>
         <span>
-          {t('record.setup.inputs')} <em>{t('record.setup.optional')}</em>
+          {'What changes each time?'} <em>{'(optional)'}</em>
         </span>
-        <input id={`${uid}-inputs`} value={inputsHint} placeholder={t('record.setup.inputsPlaceholder')} onChange={(e) => setInputsHint(e.target.value)} />
+        <input id={`${uid}-inputs`} value={inputsHint} placeholder={'e.g. the amount, the receipt file, the month'} onChange={(e) => setInputsHint(e.target.value)} />
       </label>
       <fieldset className="rec-sources">
-        <legend>{t('record.setup.sources')}</legend>
+        <legend>{'Record'}</legend>
         <label className="rec-check">
           <input type="checkbox" checked={sources.browser} onChange={(e) => setSources({ ...sources, browser: e.target.checked })} />
           <span>
-            <strong>{t('record.setup.browser')}</strong>
-            <small>{t('record.setup.browserDesc')}</small>
+            <strong>{'Pawn browser'}</strong>
+            <small>{'Clicks, typing and pages in Pawn’s browser, by element name'}</small>
           </span>
         </label>
         <label className={`rec-check${desktopUsable ? '' : ' disabled'}`}>
@@ -102,17 +101,17 @@ function RecordingSetup(): React.JSX.Element {
             onChange={(e) => setSources({ ...sources, desktop: e.target.checked })}
           />
           <span>
-            <strong>{t('record.setup.desktop')}</strong>
+            <strong>{'Mac apps'}</strong>
             <small>
               {!desktop
-                ? t('common.loading')
+                ? 'Loading…'
                 : !desktop.supported
-                  ? desktop.error || t('record.setup.desktopUnsupported')
+                  ? desktop.error || 'Not available right now'
                   : !desktop.accessibility
-                    ? t('record.setup.needAccessibility')
+                    ? 'Needs the Accessibility permission'
                     : desktop.screenRecording
-                      ? t('record.setup.desktopDesc')
-                      : t('record.setup.noScreenRecording')}
+                      ? 'Clicks, shortcuts, typing and app switches in other apps, with screenshots'
+                      : 'Works without screenshots: Screen Recording is off'}
             </small>
           </span>
         </label>
@@ -120,21 +119,21 @@ function RecordingSetup(): React.JSX.Element {
           <div className="rec-perm-actions">
             {!desktop.accessibility && (
               <button type="button" className="rec-link" onClick={() => window.api.recorder?.openPermissions('accessibility')?.catch?.(() => {})}>
-                {t('record.setup.openAccessibility')}
+                {'Open Accessibility settings'}
               </button>
             )}
             {!desktop.screenRecording && (
               <button type="button" className="rec-link" onClick={() => window.api.recorder?.openPermissions('screen')?.catch?.(() => {})}>
-                {t('record.setup.openScreenRecording')}
+                {'Open Screen Recording settings'}
               </button>
             )}
           </div>
         )}
       </fieldset>
       <ul className="rec-tips">
-        <li>{t('record.setup.tipShort')}</li>
-        <li>{t('record.setup.tipSecrets')}</li>
-        <li>{t('record.setup.tipStop')}</li>
+        <li>{'Keep it short: do the task once from start to finish, then stop.'}</li>
+        <li>{'Passwords and one-time codes are never recorded. The raw recording is deleted once the skill is written.'}</li>
+        <li>{'Stop here, from the menu bar, or press Esc twice.'}</li>
       </ul>
       {error && (
         <div className="rec-error" role="alert">
@@ -143,11 +142,11 @@ function RecordingSetup(): React.JSX.Element {
       )}
       <div className="rec-actions">
         <button type="button" className="rec-btn" onClick={closeSetup}>
-          {t('common.cancel')}
+          {'Cancel'}
         </button>
         <button type="submit" className="rec-btn primary rec-start" disabled={starting || nothing}>
           <Dot live={false} />
-          {starting ? t('record.setup.starting') : t('record.setup.start')}
+          {starting ? 'Starting…' : 'Start recording'}
         </button>
       </div>
     </form>
@@ -156,7 +155,6 @@ function RecordingSetup(): React.JSX.Element {
 
 /** Live recording: elapsed, steps, last step, Stop / Discard. */
 function RecordingLive(): React.JSX.Element {
-  const { t } = useTranslation()
   const { status, stop, cancel, error } = useRecordingStore()
   const [now, setNow] = useState(Date.now())
   const [stopping, setStopping] = useState(false)
@@ -165,19 +163,19 @@ function RecordingLive(): React.JSX.Element {
     return () => window.clearInterval(id)
   }, [])
   const elapsed = status.startedAt ? now - status.startedAt : status.elapsedMs || 0
-  const sources = (status.sources || []).map((s) => (s === 'browser' ? t('record.setup.browser') : t('record.setup.desktop'))).join(' · ')
+  const sources = (status.sources || []).map((s) => (s === 'browser' ? 'Pawn browser' : 'Mac apps')).join(' · ')
 
   return (
     <div className="rec-card rec-live" role="status" aria-live="polite">
       <div className="rec-head">
         <Dot live />
-        <strong>{t('record.live.title')}</strong>
+        <strong>{'Recording'}</strong>
         <span className="rec-num">{clock(elapsed)}</span>
-        <span className="rec-sub">{t('record.live.steps', { count: status.steps || 0 })}</span>
+        <span className="rec-sub">{((status.steps || 0) === 1 ? `${status.steps || 0} step` : `${status.steps || 0} steps`)}</span>
         <span className="rec-sub rec-sources-label">{sources}</span>
         <span className="rec-spacer" />
         <button type="button" className="rec-btn" onClick={() => void cancel()} disabled={stopping}>
-          {t('record.live.discard')}
+          {'Discard'}
         </button>
         <button
           type="button"
@@ -189,11 +187,11 @@ function RecordingLive(): React.JSX.Element {
           }}
         >
           <span className="rec-square" aria-hidden />
-          {stopping ? t('record.live.stopping') : t('record.live.stop')}
+          {stopping ? 'Stopping…' : 'Stop and write skill'}
         </button>
       </div>
       {status.goal && <div className="rec-goal">{status.goal}</div>}
-      <div className="rec-last">{status.lastStep ? t('record.live.last', { step: status.lastStep }) : t('record.live.waiting')}</div>
+      <div className="rec-last">{status.lastStep ? `Last: ${status.lastStep}` : 'Go ahead and do the task. Your steps show up here.'}</div>
       {(status.notes || []).map((n) => (
         <div key={n} className="rec-note">
           {n}
@@ -210,7 +208,6 @@ function RecordingLive(): React.JSX.Element {
 
 /** Drafting / failed jobs for the chat on screen. */
 function DraftJobs({ sessionId }: { sessionId: string | null }): React.JSX.Element | null {
-  const { t } = useTranslation()
   const jobs = useRecordingStore((s) => s.jobs)
   const retry = useRecordingStore((s) => s.retry)
   const discard = useRecordingStore((s) => s.discard)
@@ -223,24 +220,24 @@ function DraftJobs({ sessionId }: { sessionId: string | null }): React.JSX.Eleme
           <div key={id} className="rec-card rec-drafting" role="status" aria-live="polite">
             <div className="rec-head">
               <span className="rec-spinner" aria-hidden />
-              <strong>{t('record.draft.writing')}</strong>
-              <span className="rec-sub">{t('record.draft.fromSteps', { count: job.steps })}</span>
+              <strong>{'Writing the skill from your recording…'}</strong>
+              <span className="rec-sub">{(job.steps === 1 ? `${job.steps} step` : `${job.steps} steps`)}</span>
             </div>
           </div>
         ) : (
           <div key={id} className="rec-card rec-failed" role="alert">
             <div className="rec-head">
-              <strong>{t('record.draft.failed')}</strong>
+              <strong>{'Could not write the skill'}</strong>
               <span className="rec-spacer" />
               <button type="button" className="rec-btn" onClick={() => discard(id)}>
-                {t('record.draft.discard')}
+                {'Discard recording'}
               </button>
               <button type="button" className="rec-btn primary" onClick={() => void retry(id)}>
-                {t('record.draft.retry')}
+                {'Try again'}
               </button>
             </div>
             {job.error && <div className="rec-error">{job.error}</div>}
-            <div className="rec-note">{t('record.draft.memoryOnly')}</div>
+            <div className="rec-note">{'The recording is kept in memory until the skill is written, and is gone if you quit.'}</div>
           </div>
         )
       )}

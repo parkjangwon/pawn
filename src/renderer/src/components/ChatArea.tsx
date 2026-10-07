@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import {
   ArrowDown,
   ArrowUp,
@@ -102,7 +102,6 @@ function prefersReducedMotion(): boolean {
 export default function ChatArea({
   onToggleSidebar, onOpenSettings, canGoBack, canGoForward, onGoBack, onGoForward
 }: ChatAreaProps): React.JSX.Element {
-  const { t } = useTranslation()
   const [input, setInput] = useState('')
   const [showModelPicker, setShowModelPicker] = useState(false)
   const [showPermPicker, setShowPermPicker] = useState(false)
@@ -266,7 +265,7 @@ export default function ChatArea({
           if (typeof reader.result === 'string') {
             addAttachment({
               id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-              name: file.name || t('chat.attachedImage'),
+              name: file.name || 'Pasted image',
               kind: 'image',
               dataUrl: reader.result,
               bytes: file.size
@@ -278,7 +277,7 @@ export default function ChatArea({
         void file.text().then((content) => {
           addAttachment({
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            name: file.name || t('chat.attachedText'),
+            name: file.name || 'Attached file',
             kind: 'text',
             content: truncateText(content).text,
             bytes: file.size
@@ -573,7 +572,7 @@ export default function ChatArea({
             try {
               window.dispatchEvent(
                 new CustomEvent('pawn:toast', {
-                  detail: { kind: 'info', message: t('chat.exportedTo', { path: r.path }) }
+                  detail: { kind: 'info', message: `Exported to ${r.path}` }
                 })
               )
             } catch {
@@ -616,12 +615,12 @@ export default function ChatArea({
     const ic = (d: React.ReactNode): React.ReactNode => (
       <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">{d}</svg>
     )
-    const builtinGroup = t('chat.slash.groupBuiltin')
-    const modsGroup = t('chat.slash.groupMods')
-    const skillsGroup = t('chat.slash.groupSkills')
+    const builtinGroup = 'Built-in'
+    const modsGroup = 'Mods'
+    const skillsGroup = 'Skills'
     return [
       {
-        id: 'new', label: t('chat.slash.new'), description: t('chat.slash.newDesc'),
+        id: 'new', label: 'New chat', description: 'Start a new chat',
         group: builtinGroup,
         icon: <Plus size={15} />,
         action: () => {
@@ -630,51 +629,51 @@ export default function ChatArea({
         }
       },
       {
-        id: 'clear', label: t('chat.slash.clear'), description: t('chat.slash.clearDesc'),
+        id: 'clear', label: 'Clear chat', description: 'Clear the messages in this chat',
         group: builtinGroup,
         icon: <Trash2 size={15} />,
         action: () => { if (activeProjectId && activeSessionId) setShowClearConfirm(true) }
       },
       {
-        id: 'model', label: t('chat.slash.model'), description: t('chat.slash.modelDesc'),
+        id: 'model', label: 'Model', description: 'Choose the active model',
         group: builtinGroup,
         icon: <Crosshair size={15} />,
         action: () => { setShowModelPicker(true); setShowPermPicker(false) }
       },
       {
-        id: 'theme', label: t('chat.slash.theme'), description: t('chat.slash.themeDesc'),
+        id: 'theme', label: 'Theme', description: 'Toggle light / dark',
         group: builtinGroup,
         icon: <Sun size={15} />,
         action: () => toggleTheme()
       },
       {
-        id: 'settings', label: t('chat.slash.settings'), description: t('chat.slash.settingsDesc'),
+        id: 'settings', label: 'Settings', description: 'Open preferences',
         group: builtinGroup,
         icon: <Settings size={15} />,
         action: () => onOpenSettings()
       },
       {
-        id: 'export', label: t('chat.slash.export'), description: t('chat.slash.exportDesc'),
+        id: 'export', label: 'Export', description: 'Save the chat as Markdown',
         group: builtinGroup,
         icon: <Download size={15} />,
         action: () => handleExport()
       },
       {
-        id: 'plan', label: t('chat.slash.plan'), description: t('chat.slash.planDesc'),
+        id: 'plan', label: 'plan', description: 'Switch to Plan mode (read-only)',
         group: builtinGroup,
         icon: <ClipboardCheck size={15} />,
         action: () => setAgentMode('plan', activeSessionId)
       },
       {
-        id: 'build', label: t('chat.slash.build'), description: t('chat.slash.buildDesc'),
+        id: 'build', label: 'build', description: 'Switch to Build mode (full tools)',
         group: builtinGroup,
         icon: <ArrowUp size={15} />,
         action: () => setAgentMode('build', activeSessionId)
       },
       {
         id: 'ultra-work',
-        label: t('ultraWork.slashLabel'),
-        description: t('ultraWork.slashDesc'),
+        label: 'ultra-work',
+        description: 'Token-maxing autonomous mode: keeps working until the goal is verified done ($ulw)',
         group: builtinGroup,
         hint: '$ulw',
         icon: <Zap size={15} />,
@@ -684,8 +683,8 @@ export default function ChatArea({
         ? [
             {
               id: 'record',
-              label: t('record.slash.label'),
-              description: t('record.slash.desc'),
+              label: 'record',
+              description: 'Show a workflow once and turn it into a skill',
               group: builtinGroup,
               icon: <Disc size={15} />,
               action: () => useRecordingStore.getState().openSetup({ projectId: activeProjectId ?? undefined, sessionId: activeSessionId ?? undefined })
@@ -694,8 +693,8 @@ export default function ChatArea({
         : []),
       {
         id: 'issue-pr',
-        label: t('chat.slash.issuePr'),
-        description: t('chat.slash.issuePrDesc'),
+        label: 'issue-pr',
+        description: 'Fix an issue and prepare a PR (#42 or URL)',
         group: builtinGroup,
         icon: <CirclePlus size={15} />,
         insert: '/issue-pr '
@@ -703,7 +702,7 @@ export default function ChatArea({
       ...getModRuntime().getCommands().map((cmd) => ({
         id: `mod-cmd:${cmd.plugin}:${cmd.name}`,
         label: cmd.name,
-        description: cmd.description || t('settings.modsSection.commandHint'),
+        description: cmd.description || 'Mod command',
         group: modsGroup,
         hint: cmd.argumentHint || cmd.plugin,
         insert: `/${cmd.name} `,
@@ -734,14 +733,14 @@ export default function ChatArea({
       {
         id: 'git',
         label: 'git',
-        description: t('chat.mention.gitDesc'),
+        description: 'Inject git status & branch',
         hint: 'special',
         icon: fileIcon
       },
       {
         id: 'diff',
         label: 'diff',
-        description: t('chat.mention.diffDesc'),
+        description: 'Inject git diff HEAD',
         hint: 'special',
         icon: fileIcon
       }
@@ -753,7 +752,7 @@ export default function ChatArea({
       icon: f.isDirectory ? folderIcon : fileIcon
     }))
     return [...specials, ...files]
-  }, [fileIndex, t])
+  }, [fileIndex])
 
   const loadFiles = async (): Promise<void> => {
     const roots = projectPaths.length ? projectPaths : effectivePath ? [effectivePath] : []
@@ -787,8 +786,8 @@ export default function ChatArea({
   const gambitItems = (query: string): TriggerItem[] =>
     matchGambits(query).map((g) => ({
       id: `gambit:${g.keyword}`,
-      label: `$${g.keyword}${g.argKey ? ` ${t(g.argKey)}` : ''}`,
-      description: `${t(g.labelKey)} · ${t(g.descKey)}`,
+      label: `$${g.keyword}${g.argKey ? ` ${tx(g.argKey)}` : ''}`,
+      description: `${tx(g.labelKey)} · ${tx(g.descKey)}`,
       hint: g.aliases.map((a) => `$${a}`).join(' ') || undefined,
       icon: gambitIcon,
       insert: `$${g.keyword} `
@@ -904,7 +903,7 @@ export default function ChatArea({
     if (ultra && !ultra.goal) {
       // "$ulw" alone: nothing to pursue yet.
       sendingRef.current = false
-      window.dispatchEvent(new CustomEvent('pawn:toast', { detail: { message: t('ultraWork.needGoal') } }))
+      window.dispatchEvent(new CustomEvent('pawn:toast', { detail: { message: 'Add a goal after $ulw — e.g. "$ulw make all tests pass"' } }))
       return
     }
     const typedPrompt = ultra ? ultra.goal : input.trim()
@@ -943,7 +942,7 @@ export default function ChatArea({
               modelLabel: plugin
             })
           } else if (text) {
-            window.dispatchEvent(new CustomEvent('pawn:toast', { detail: { message: t('chat.mods.commandToast', { plugin, text }) } }))
+            window.dispatchEvent(new CustomEvent('pawn:toast', { detail: { message: `${plugin} · ${text}` } }))
           }
         } catch (err) {
           window.dispatchEvent(
@@ -1259,8 +1258,8 @@ export default function ChatArea({
         <div className="chat-drop-overlay">
           <div className="chat-drop-card">
 <Upload size={32} />
-            <span className="chat-drop-title">{t('chat.dropFilesTitle')}</span>
-            <span className="chat-drop-desc">{t('chat.dropFilesDesc')}</span>
+            <span className="chat-drop-title">{'Attach files & images'}</span>
+            <span className="chat-drop-desc">{'Drop here to attach to conversation context'}</span>
           </div>
         </div>
       )}
@@ -1275,7 +1274,7 @@ export default function ChatArea({
         onGoForward={onGoForward}
       />
       {projectPaths.length > 1 && (
-        <div className="multi-root-bar" role="group" aria-label={t('chat.projectRoots')}>
+        <div className="multi-root-bar" role="group" aria-label={'Project folders'}>
           {projectPaths.map((p, i) => {
             const label = p.split('/').filter(Boolean).pop() || p
             return (
@@ -1303,7 +1302,7 @@ export default function ChatArea({
       )}
       <div className={sessionPaneClass} key={activeSessionId || 'none'}>
         {sessionLoading ? (
-          <div className="chat-skeleton" aria-busy="true" aria-label={t('chat.loadingMessages')}>
+          <div className="chat-skeleton" aria-busy="true" aria-label={'Loading messages'}>
             <div className="chat-skeleton-row user">
               <div className="chat-skeleton-line short" />
               <div className="chat-skeleton-bubble" />
@@ -1375,11 +1374,11 @@ export default function ChatArea({
                 type="button"
                 className={`jump-latest${sessionStreaming ? ' live' : ''}`}
                 onClick={jumpToLatest}
-                aria-label={t('chat.jumpToLatest')}
-                title={t('chat.jumpToLatest')}
+                aria-label={'Jump to latest'}
+                title={'Jump to latest'}
               >
 <ArrowDown size={14} aria-hidden />
-                <span>{t('chat.jumpToLatest')}</span>
+                <span>{'Jump to latest'}</span>
               </button>
             )}
           </>
@@ -1401,10 +1400,10 @@ export default function ChatArea({
       )}
       {showClearConfirm && (
         <ConfirmDialog
-          title={t('chat.slash.clear')}
-          message={t('confirmDialog.clearSessionConfirm')}
-          confirmLabel={t('confirmDialog.confirm')}
-          cancelLabel={t('confirmDialog.cancel')}
+          title={'Clear chat'}
+          message={'Clear all messages in this chat? This can\'t be undone.'}
+          confirmLabel={'Confirm'}
+          cancelLabel={'Cancel'}
           onConfirm={() => {
             if (activeProjectId && activeSessionId) {
               clearMessages(activeProjectId, activeSessionId)

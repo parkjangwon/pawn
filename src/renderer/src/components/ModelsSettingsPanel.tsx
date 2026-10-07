@@ -8,7 +8,6 @@ import Switch from './Switch'
 
 export default function ModelsSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
-    t,
     models,
     providers,
     updateModel,
@@ -23,8 +22,8 @@ export default function ModelsSettingsPanel({ state }: { state: SettingsState })
 
   return (
     <div className="settings-section">
-      <h2>{t('settings.modelSection.title')}</h2>
-      <p className="settings-desc">{t('settings.modelSection.desc')}</p>
+      <h2>{'Models'}</h2>
+      <p className="settings-desc">{'Manage available models. Prefer Sync models on a provider so the list comes from their API instead of stale seeds. Mark vision capability so text-only models can fall back automatically.'}</p>
       <div className="settings-card">
         {models.map((m) => {
           const visionState = m.supportsVision === true ? 'yes' : m.supportsVision === false ? 'no' : 'auto'
@@ -34,35 +33,35 @@ export default function ModelsSettingsPanel({ state }: { state: SettingsState })
                 <span className="settings-row-label">
                   {m.label || m.modelId}
                   {m.supportsVision === true && (
-                    <span className="settings-badge vision-badge vision-yes" title={t('settings.modelSection.visionYes')}>
-                      {t('settings.modelSection.visionBadge')}
+                    <span className="settings-badge vision-badge vision-yes" title={'Vision'}>
+                      {'Vision'}
                     </span>
                   )}
                   {m.supportsVision === false && (
-                    <span className="settings-badge vision-badge vision-no" title={t('settings.modelSection.visionNo')}>
-                      {t('settings.modelSection.visionTextOnly')}
+                    <span className="settings-badge vision-badge vision-no" title={'Text only'}>
+                      {'Text'}
                     </span>
                   )}
                 </span>
                 <span className="settings-row-desc">
                   {providers.find((p) => p.id === m.providerId)?.name} / {m.tier}
                   {m.pricing
-                    ? t('settings.modelSection.pricingFormat', { input: m.pricing.input, output: m.pricing.output })
-                    : t('settings.modelSection.pricingUnknown')}
+                    ? ` · $${m.pricing.input}/$${m.pricing.output} per 1M (in/out)`
+                    : ' · pricing unknown — cost tracking disabled'}
                 </span>
               </div>
               <div className="settings-row-actions">
                 <Switch
                   checked={m.enabled !== false}
                   onCheckedChange={(v) => updateModel(m.id, { enabled: v })}
-                  aria-label={t('settings.modelSection.enableToggle', { name: m.label || m.modelId })}
-                  title={t('settings.modelSection.enableToggle', { name: m.label || m.modelId })}
+                  aria-label={`Use ${m.label || m.modelId}`}
+                  title={`Use ${m.label || m.modelId}`}
                 />
                 <Select
                   className="vision-select"
                   value={visionState}
-                  aria-label={t('settings.modelSection.visionLabel')}
-                  title={t('settings.modelSection.visionHint')}
+                  aria-label={'Vision (images)'}
+                  title={'Yes = can see attached images/screenshots. No = text only (router will fall back). Auto = guess from the model id.'}
                   onChange={(e) => {
                     const v = e.target.value
                     updateModel(m.id, {
@@ -70,13 +69,13 @@ export default function ModelsSettingsPanel({ state }: { state: SettingsState })
                     })
                   }}
                 >
-                  <option value="auto">{t('settings.modelSection.visionAuto')}</option>
-                  <option value="yes">{t('settings.modelSection.visionYes')}</option>
-                  <option value="no">{t('settings.modelSection.visionNo')}</option>
+                  <option value="auto">{'Auto'}</option>
+                  <option value="yes">{'Vision'}</option>
+                  <option value="no">{'Text only'}</option>
                 </Select>
                 <button
                   className="delete-btn"
-                  aria-label={t('common.delete') + ': ' + (m.label || m.modelId)}
+                  aria-label={'Delete' + ': ' + (m.label || m.modelId)}
                   onClick={() => setConfirmDelete({ type: 'model', id: m.id, name: m.label || m.modelId })}
                 >
                   <Trash2 size={14} />
@@ -87,10 +86,10 @@ export default function ModelsSettingsPanel({ state }: { state: SettingsState })
         })}
         {models.length === 0 && (
           <div className="settings-empty">
-            {t('settings.modelSection.empty')}
+            {'No models configured'}
             <div>
               <button type="button" className="test-btn" onClick={() => openSettingsSection('providers')}>
-                {t('models.emptyAddProvider')}
+                {'Add a provider in Settings → Providers, then sync models.'}
               </button>
             </div>
           </div>
@@ -104,44 +103,44 @@ export default function ModelsSettingsPanel({ state }: { state: SettingsState })
             void handleAddModel()
           }}
         >
-          <Select aria-label={t('settings.modelSection.selectProvider')} value={modelForm.providerId} onChange={(e) => setModelForm({ ...modelForm, providerId: e.target.value })}>
-            <option value="">{t('settings.modelSection.selectProvider')}</option>
+          <Select aria-label={'Select provider'} value={modelForm.providerId} onChange={(e) => setModelForm({ ...modelForm, providerId: e.target.value })}>
+            <option value="">{'Select provider'}</option>
             {providers.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </Select>
-          <Input placeholder={t('settings.modelSection.modelIdPlaceholder')} value={modelForm.modelId} onChange={(e) => applyModelIdGuess(e.target.value)} />
-          <Input placeholder={t('settings.modelSection.displayNamePlaceholder')} value={modelForm.label} onChange={(e) => setModelForm({ ...modelForm, label: e.target.value })} />
-          <Select aria-label={t('settings.modelSection.tierMid')} value={modelForm.tier} onChange={(e) => setModelForm({ ...modelForm, tier: e.target.value as 'low' | 'mid' | 'high' })}>
-            <option value="low">{t('settings.modelSection.tierLow')}</option>
-            <option value="mid">{t('settings.modelSection.tierMid')}</option>
-            <option value="high">{t('settings.modelSection.tierHigh')}</option>
+          <Input placeholder={'gpt-4o'} value={modelForm.modelId} onChange={(e) => applyModelIdGuess(e.target.value)} />
+          <Input placeholder={'GPT-4o'} value={modelForm.label} onChange={(e) => setModelForm({ ...modelForm, label: e.target.value })} />
+          <Select aria-label={'Mid'} value={modelForm.tier} onChange={(e) => setModelForm({ ...modelForm, tier: e.target.value as 'low' | 'mid' | 'high' })}>
+            <option value="low">{'Low'}</option>
+            <option value="mid">{'Mid'}</option>
+            <option value="high">{'High'}</option>
           </Select>
-          <label className="settings-field-label">{t('settings.modelSection.visionLabel')}</label>
+          <label className="settings-field-label">{'Vision (images)'}</label>
           <Select value={modelForm.vision} onChange={(e) => setModelForm({ ...modelForm, vision: e.target.value as '' | 'yes' | 'no' })}>
-            <option value="">{t('settings.modelSection.visionAuto')}</option>
-            <option value="yes">{t('settings.modelSection.visionYes')}</option>
-            <option value="no">{t('settings.modelSection.visionNo')}</option>
+            <option value="">{'Auto'}</option>
+            <option value="yes">{'Vision'}</option>
+            <option value="no">{'Text only'}</option>
           </Select>
-          <div className="settings-row-desc">{t('settings.modelSection.visionHint')}</div>
-          <div className="settings-row-desc" style={{ marginTop: 4 }}>{t('settings.modelSection.pricingDesc')}</div>
+          <div className="settings-row-desc">{'Yes = can see attached images/screenshots. No = text only (router will fall back). Auto = guess from the model id.'}</div>
+          <div className="settings-row-desc" style={{ marginTop: 4 }}>{'Pricing (USD / 1M tokens) — used for router cost math and cache savings. Leave blank if unknown.'}</div>
           <div className="pricing-grid">
-            <Input placeholder={t('settings.modelSection.priceInput')} type="number" step="0.01" aria-label={t('settings.modelSection.priceInput')} value={modelForm.input} onChange={(e) => setModelForm({ ...modelForm, input: e.target.value })} />
-            <Input placeholder={t('settings.modelSection.priceOutput')} type="number" step="0.01" aria-label={t('settings.modelSection.priceOutput')} value={modelForm.output} onChange={(e) => setModelForm({ ...modelForm, output: e.target.value })} />
-            <Input placeholder={t('settings.modelSection.priceCacheRead')} type="number" step="0.01" aria-label={t('settings.modelSection.priceCacheRead')} value={modelForm.cacheRead} onChange={(e) => setModelForm({ ...modelForm, cacheRead: e.target.value })} />
-            <Input placeholder={t('settings.modelSection.priceCacheWrite')} type="number" step="0.01" aria-label={t('settings.modelSection.priceCacheWrite')} value={modelForm.cacheWrite} onChange={(e) => setModelForm({ ...modelForm, cacheWrite: e.target.value })} />
+            <Input placeholder={'Input price'} type="number" step="0.01" aria-label={'Input price'} value={modelForm.input} onChange={(e) => setModelForm({ ...modelForm, input: e.target.value })} />
+            <Input placeholder={'Output price'} type="number" step="0.01" aria-label={'Output price'} value={modelForm.output} onChange={(e) => setModelForm({ ...modelForm, output: e.target.value })} />
+            <Input placeholder={'Cache read'} type="number" step="0.01" aria-label={'Cache read'} value={modelForm.cacheRead} onChange={(e) => setModelForm({ ...modelForm, cacheRead: e.target.value })} />
+            <Input placeholder={'Cache write'} type="number" step="0.01" aria-label={'Cache write'} value={modelForm.cacheWrite} onChange={(e) => setModelForm({ ...modelForm, cacheWrite: e.target.value })} />
           </div>
-          <Input placeholder={t('settings.modelSection.contextWindow')} type="number" aria-label={t('settings.modelSection.contextWindow')} value={modelForm.contextWindow} onChange={(e) => setModelForm({ ...modelForm, contextWindow: e.target.value })} />
+          <Input placeholder={'Context window (tokens, optional)'} type="number" aria-label={'Context window (tokens, optional)'} value={modelForm.contextWindow} onChange={(e) => setModelForm({ ...modelForm, contextWindow: e.target.value })} />
           {showAddModel && !modelForm.providerId && (
-            <div className="settings-row-desc">{t('settings.modelSection.selectProviderHint')}</div>
+            <div className="settings-row-desc">{'Choose a provider to enable saving.'}</div>
           )}
           <div className="form-actions">
             <Button type="submit" disabled={!modelForm.providerId || !modelForm.modelId.trim()}>
-              {t('common.save')}
+              {'Save'}
             </Button>
-            <Button variant="secondary" type="button" onClick={() => setShowAddModel(false)}>{t('common.cancel')}</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowAddModel(false)}>{'Cancel'}</Button>
           </div>
         </form>
       ) : (
-        <button className="add-btn-full" onClick={() => setShowAddModel(true)}>{t('settings.modelSection.add')}</button>
+        <button className="add-btn-full" onClick={() => setShowAddModel(true)}>{'Add model'}</button>
       )}
     </div>
   )

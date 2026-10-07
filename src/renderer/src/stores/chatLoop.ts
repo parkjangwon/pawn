@@ -82,7 +82,7 @@ import { ultraWorkPreamble } from '../agent/ultraWork'
 import { getConnectedProviders, hiddenToolNames, refreshConnectedProviders } from '../agent/toolsets'
 import { classifyComplexity, refreshDecisionStatus } from '../agent/decision'
 import { TOOLS } from '../agent/toolDefinitions'
-import i18n from '../i18n'
+import { tx } from '../i18n'
 
 // Round ceiling and compaction ratio come from the harness profile
 // (default 50 rounds / 0.6; eco 25 / 0.45; maxing 80 / 0.7).
@@ -118,7 +118,7 @@ export async function agentLoop(
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
     const noProviderError: MessageErrorInfo = { kind: 'generic', detail: '', settingsTarget: 'providers' }
-    systemError(projectId, sessionId, i18n.t('chat.errors.noProvider'), noProviderError)
+    systemError(projectId, sessionId, 'No provider or model configured. Open Settings → Providers, then Settings → Models.', noProviderError)
     if (epoch === getSessionEpoch(sessionId)) {
       setSessionStreamingFlags(set, get, sessionId, false)
       processQueue(set, get, sessionId)
@@ -334,7 +334,7 @@ export async function agentLoop(
         })
           .then((r) => {
             if (r?.saved) {
-              useUsageStore.getState().noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.lessonLearned', { rule: r.rule.slice(0, 120) }))
+              useUsageStore.getState().noteDiagnostic(sessionId, 'info', `Learned from your correction: ${r.rule.slice(0, 120)}`)
             }
           })
           .catch(() => {})
@@ -400,7 +400,7 @@ export async function agentLoop(
           systemError(
             projectId,
             sessionId,
-            submit.reason || i18n.t('chat.errors.hookBlocked')
+            submit.reason || 'Blocked by hook (UserPromptSubmit)'
           )
           return
         }
@@ -475,12 +475,7 @@ export async function agentLoop(
           useUsageStore.getState().noteDiagnostic(
             sessionId,
             'info',
-            i18n.t('chat.diagnostics.decisionComplexity', {
-              from: complexity,
-              to: judged.complexity,
-              pct: Math.round(judged.probability * 100),
-              model: judged.model
-            })
+            `Decision model rated this request ${judged.complexity} (${Math.round(judged.probability * 100)}%, ${judged.model}); the heuristic said ${complexity}`
           )
         }
         complexity = judged.complexity
@@ -561,7 +556,7 @@ export async function agentLoop(
           useUsageStore.getState().noteDiagnostic(
             sessionId,
             'info',
-            i18n.t('chat.diagnostics.toolResultsCleared', { count: cleared.cleared, tokens: Math.round(cleared.tokensSaved / 1000) })
+            `Cleared ${cleared.cleared} old tool results (~${Math.round(cleared.tokensSaved / 1000)}k tokens) to keep the context focused — full text stays available to the agent`
           )
           useUsageStore.getState().noteContext(sessionId, tokenEst, contextWindow, true)
         }
@@ -590,7 +585,7 @@ export async function agentLoop(
           .noteDiagnostic(
             sessionId,
             'info',
-            i18n.t(compacted?.usedModel ? 'chat.diagnostics.compactedSmart' : 'chat.diagnostics.compacted')
+            tx(compacted?.usedModel ? 'chat.diagnostics.compactedSmart' : 'chat.diagnostics.compacted')
           )
         useUsageStore
           .getState()
@@ -616,10 +611,7 @@ export async function agentLoop(
             started: Date.now(),
             promise: executeTool(tc, turnToolCwd, signal, { sessionId, projectId }).catch((err) => ({
               toolCallId: tc.id,
-              content: i18n.t('chat.toolMessage.toolError', {
-                name: tc.name,
-                message: String(err).replace(/^Error: /, '').slice(0, 300)
-              }),
+              content: `${tc.name} failed: ${String(err).replace(/^Error: /, '').slice(0, 300)}`,
               isError: true
             }))
           })
@@ -648,7 +640,7 @@ export async function agentLoop(
           useUsageStore.getState().noteDiagnostic(
             sessionId,
             'warn',
-            i18n.t('chat.diagnostics.visionDemoted')
+            'No vision model available — screenshots demoted to text stubs. Set a Vision fallback (e.g. Gemini) under Settings → Agent for full computer use.'
           )
           decision = route({
             sessionId,
@@ -668,10 +660,7 @@ export async function agentLoop(
           useUsageStore.getState().noteDiagnostic(
             sessionId,
             'info',
-            i18n.t('chat.diagnostics.routing', {
-              model: decision.model.label || decision.model.modelId,
-              reason: decision.reason
-            })
+            `Routing: ${decision.model.label || decision.model.modelId} — ${decision.reason}`
           )
         }
 
@@ -735,7 +724,7 @@ export async function agentLoop(
             if (hasTools) {
               useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
             } else {
-              const emptyMsg = i18n.t('chat.errors.emptyResponse')
+              const emptyMsg = 'The model returned an empty reply. Try again, or switch to a stronger model.'
               useAppStore.getState().updateMessageContent(
                 projectId, sessionId, assistantMsgId, emptyMsg
               )
@@ -762,10 +751,7 @@ export async function agentLoop(
           // the user never loses text they already read; the next attempt gets
           // a fresh assistant bubble.
           if (streamed.trim()) {
-            const note = i18n.t('chat.diagnostics.partialPreserved', {
-              model: decision.model.label || decision.model.modelId,
-              error: message.slice(0, 120)
-            })
+            const note = `_(Stream interrupted on ${decision.model.label || decision.model.modelId} — partial reply preserved. Retrying…)_`
             useAppStore.getState().updateMessageContent(
               projectId,
               sessionId,
@@ -793,9 +779,7 @@ export async function agentLoop(
             useUsageStore.getState().noteDiagnostic(
               sessionId,
               'info',
-              i18n.t('chat.diagnostics.visionFallback', {
-                model: decision.model.label || decision.model.modelId
-              })
+              `${decision.model.label || decision.model.modelId} cannot handle images — trying a vision-capable model.`
             )
             transientFailures = 0
           } else if ((err as { transient?: boolean }).transient !== false) {
@@ -813,7 +797,7 @@ export async function agentLoop(
             systemError(
               projectId,
               sessionId,
-              i18n.t('chat.errors.allAttemptsFailed', { error: message }),
+              `All model attempts failed. Last error: ${message}`,
               classifyLlmError(message)
             )
           }
@@ -831,13 +815,13 @@ export async function agentLoop(
                 : code === 'no_vision_models'
                   ? 'chat.errors.noVisionModel'
                   : 'chat.errors.noVisionModel'
-          systemError(projectId, sessionId, i18n.t(detailKey), {
+          systemError(projectId, sessionId, tx(detailKey), {
             kind: 'generic',
             detail: '',
             settingsTarget: 'models'
           })
         } else {
-          systemError(projectId, sessionId, i18n.t('chat.errors.noUsableModel'), {
+          systemError(projectId, sessionId, 'No usable model. Check that a provider is enabled and has models attached.', {
             kind: 'generic',
             detail: '',
             settingsTarget: 'models'
@@ -911,7 +895,7 @@ export async function agentLoop(
           try {
             // Up to 90s of silent checking reads as a hang — label the wait.
             if (lastAssistantMsgId) {
-              useStreamingStore.getState().setActivity(lastAssistantMsgId, i18n.t('chat.checksRunning'))
+              useStreamingStore.getState().setActivity(lastAssistantMsgId, 'Running project checks…')
             }
             const checkText = await runProjectChecks(toolCwd, gateKind, 90, targetSandboxOpts(projectId))
             const noCmd =
@@ -934,7 +918,7 @@ export async function agentLoop(
                   useUsageStore.getState().noteDiagnostic(
                     sessionId,
                     'info',
-                    i18n.t('chat.diagnostics.escalateOnVerifyFail')
+                    'Checks failed twice — escalating the fix to a stronger model.'
                   )
                 }
                 verifyEscalate = needEscalate
@@ -965,20 +949,20 @@ export async function agentLoop(
               {
                 sessionId,
                 kind: 'question',
-                question: i18n.t('chat.verifyAsk.question', { kind: gateKind }),
+                question: `Edits were made this turn. Run ${gateKind} to verify them?`,
                 options: [
-                  { label: i18n.t('chat.verifyAsk.run') },
-                  { label: i18n.t('chat.verifyAsk.skip') }
+                  { label: 'Run checks' },
+                  { label: 'Skip' }
                 ],
                 multiSelect: false,
                 allowOther: false
               },
               signal
             )
-            const runLabel = i18n.t('chat.verifyAsk.run')
+            const runLabel = 'Run checks'
             if (!answer.aborted && !answer.dismissed && answer.selected.includes(runLabel)) {
               if (lastAssistantMsgId) {
-                useStreamingStore.getState().setActivity(lastAssistantMsgId, i18n.t('chat.checksRunning'))
+                useStreamingStore.getState().setActivity(lastAssistantMsgId, 'Running project checks…')
               }
               const checkText = await runProjectChecks(toolCwd, gateKind, 90, targetSandboxOpts(projectId))
               const noCmd =
@@ -1049,7 +1033,7 @@ export async function agentLoop(
         systemError(
           projectId,
           sessionId,
-          i18n.t('chat.errors.toolLoop', { names, rounds: MAX_REPEATED_TOOL_ROUNDS })
+          `Tool loop detected: repeated the same calls (${names}) ${MAX_REPEATED_TOOL_ROUNDS} rounds without progress. Stopping.`
         )
         break
       }
@@ -1159,8 +1143,8 @@ export async function agentLoop(
         const raw = resultsById.get(tc.id) ?? {
           toolCallId: tc.id,
           content: signal.aborted
-            ? i18n.t('chat.toolMessage.aborted')
-            : i18n.t('chat.toolMessage.noResult'),
+            ? 'Tool was not executed (run aborted).'
+            : 'Tool produced no result.',
           isError: true
         }
         if (raw.isError) roundErrors++
@@ -1263,13 +1247,13 @@ export async function agentLoop(
         useUsageStore.getState().noteDiagnostic(
           sessionId,
           'warn',
-          i18n.t('chat.diagnostics.stuckRecovery', { level: step.level, action: step.action, detail: step.signal.detail.slice(0, 140) })
+          `Agent looked stuck (level ${step.level}, ${step.action}): ${step.signal.detail.slice(0, 140)}`
         )
         let nudge = step.nudge
         if (step.action === 'escalate') stuckEscalate = 1
         if (step.action === 'rollback') stuckEscalate = 2
         if (step.action === 'second_opinion') {
-          if (lastAssistantMsgId) useStreamingStore.getState().setActivity(lastAssistantMsgId, i18n.t('chat.secondOpinion'))
+          if (lastAssistantMsgId) useStreamingStore.getState().setActivity(lastAssistantMsgId, 'Asking another model for a second opinion…')
           const opinion = await requestSecondOpinion(stuckDigest(userContent, toolHistory, step.signal), {
             currentKey: decision.key,
             sessionId,
@@ -1289,7 +1273,7 @@ export async function agentLoop(
         appendToLastToolResult(entries, nudge)
         if (step.action === 'ask_user') {
           persistTranscript(sessionId, entries, decision.key, decision.tier)
-          systemError(projectId, sessionId, i18n.t('chat.errors.stuckAskUser', { detail: step.signal.detail.slice(0, 200) }))
+          systemError(projectId, sessionId, `The agent stopped because it kept getting stuck (${step.signal.detail.slice(0, 200)}). It summarized what it tried above — tell it how to proceed.`)
           break
         }
       }
@@ -1320,11 +1304,11 @@ export async function agentLoop(
     }
 
     if (round >= harness.maxToolRounds) {
-      systemError(projectId, sessionId, i18n.t('chat.errors.maxRounds', { rounds: harness.maxToolRounds }))
+      systemError(projectId, sessionId, `Stopped after ${harness.maxToolRounds} tool rounds without a final answer.`)
     }
   } catch (err) {
     if (!signal.aborted) {
-      systemError(projectId, sessionId, i18n.t('chat.errors.agentError', { error: String(err) }))
+      systemError(projectId, sessionId, `Agent loop error: ${String(err)}`)
       // Keep checkpoint on unexpected error so cold start can resume.
       turnEnd = 'failed'
       if (entries.length > 0) {
@@ -1410,7 +1394,7 @@ export async function agentLoop(
           (r) => r.sessionId === sessionId && useRoutineStore.getState().runningIds.has(r.id)
         )
         if (!runningRoutine && !document.hasFocus()) {
-          window.api?.notification?.send?.('Pawn', i18n.t('notifications.taskComplete'))?.catch(() => {})
+          window.api?.notification?.send?.('Pawn', 'Task complete')?.catch(() => {})
         }
       }
       // Ultra Work: evaluate the goal and auto-continue (or end the run).
@@ -1475,7 +1459,7 @@ async function continueUltraWork(
       lastReason: decision.reason
     })
     if (decision.status === 'achieved' && !document.hasFocus()) {
-      window.api?.notification?.send?.('Pawn · Ultra Work', i18n.t('ultraWork.notifyAchieved'))?.catch?.(() => {})
+      window.api?.notification?.send?.('Pawn · Ultra Work', 'Goal achieved')?.catch?.(() => {})
     }
     processQueue(set, get, sessionId)
     return

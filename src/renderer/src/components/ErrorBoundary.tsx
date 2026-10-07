@@ -1,7 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { withTranslation, type WithTranslation } from 'react-i18next'
 
-interface Props extends WithTranslation {
+interface Props {
   children: ReactNode
 }
 
@@ -59,7 +58,6 @@ class ErrorBoundary extends Component<Props, State> {
 
   render(): ReactNode {
     if (this.state.hasError) {
-      const { t } = this.props
       return (
         <div
           style={{
@@ -73,13 +71,13 @@ class ErrorBoundary extends Component<Props, State> {
           }}
         >
           <div style={{ maxWidth: 560, padding: 32 }}>
-            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>{t('errorBoundary.title')}</h2>
+            <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>{'Something went wrong'}</h2>
             <p style={{ fontSize: 13, color: 'var(--text-secondary)', marginBottom: 16 }}>
-              {t('errors.boundaryReassure')}
+              {'Your chats and settings are saved on this device and are safe.'}
             </p>
             <details>
               <summary style={{ cursor: 'pointer', fontSize: 13, color: 'var(--text-muted)', marginBottom: 12 }}>
-                {t('errors.boundaryStack')}
+                {'Technical details'}
               </summary>
               <pre
                 style={{
@@ -102,13 +100,13 @@ class ErrorBoundary extends Component<Props, State> {
             </details>
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={() => this.setState({ hasError: false, error: null })} style={btnPrimary}>
-                {t('errorBoundary.tryAgain')}
+                {'Try again'}
               </button>
               <button onClick={() => window.location.reload()} style={btnSecondary}>
-                {t('errorBoundary.reload')}
+                {'Reload app'}
               </button>
               <button onClick={this.copyDetails} style={btnSecondary}>
-                {this.state.copied ? t('errors.boundaryCopied') : t('errors.boundaryCopy')}
+                {this.state.copied ? 'Copied' : 'Copy details'}
               </button>
             </div>
           </div>
@@ -120,4 +118,4 @@ class ErrorBoundary extends Component<Props, State> {
   }
 }
 
-export default withTranslation()(ErrorBoundary)
+export default ErrorBoundary

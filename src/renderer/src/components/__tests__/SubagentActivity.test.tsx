@@ -54,7 +54,7 @@ describe('SubagentActivity', () => {
   it('shows a collapsed bar while runs are live and expands to task rows', () => {
     seedRuns(makeRun(), makeRun({ id: 'r2', name: 'review', status: 'running' }))
     const { container } = render(<SubagentActivity sessionId="s1" />)
-    expect(screen.getByText('subagents.inlineWorking')).toBeInTheDocument()
+    expect(screen.getByText('2 agents working…')).toBeInTheDocument()
     // Collapsed: no run rows yet.
     expect(screen.queryByText('scan')).not.toBeInTheDocument()
 
@@ -77,7 +77,7 @@ describe('SubagentActivity', () => {
     vi.setSystemTime(1_700_000_000_000)
     seedRuns(makeRun({ status: 'ok', finishedAt: Date.now() - 5000, rounds: 4 }))
     const { container } = render(<SubagentActivity sessionId="s1" />)
-    expect(screen.getByText('subagents.inlineDone')).toBeInTheDocument()
+    expect(screen.getByText('Helpers finished')).toBeInTheDocument()
 
     // Advance past the 15s recent-done window → widget hides itself.
     act(() => { vi.advanceTimersByTime(16_000) })
@@ -94,7 +94,7 @@ describe('SubagentActivity', () => {
     fireEvent.click(screen.getByRole('button', { expanded: false }))
     expect(screen.queryByText('foreign')).not.toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'subagents.cancel' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Stop' }))
     expect(cancel).toHaveBeenCalledWith('r1')
     cancel.mockRestore()
   })

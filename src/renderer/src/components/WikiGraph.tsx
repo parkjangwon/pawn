@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 
 interface WikiGraphProps {
   graph: WikiGraphDto
@@ -56,7 +56,6 @@ function clampZoom(k: number): number {
  * space resets the view), hover/select lights up the neighborhood.
  */
 export default function WikiGraph({ graph, selected, onSelect }: WikiGraphProps): React.JSX.Element {
-  const { t } = useTranslation()
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const nodesRef = useRef<SimNode[]>([])
   const posRef = useRef<Map<string, SimNode>>(new Map())
@@ -469,7 +468,7 @@ export default function WikiGraph({ graph, selected, onSelect }: WikiGraphProps)
   }, [graph, selected, onSelect, energize])
 
   if (showEmpty) {
-    return <div className="settings-empty wiki-graph-empty">{t('settings.wikiSection.empty')}</div>
+    return <div className="settings-empty wiki-graph-empty">{'No pages yet. Ask the agent to remember something, or create a page.'}</div>
   }
   return <canvas ref={canvasRef} className="wiki-graph-canvas" />
 }

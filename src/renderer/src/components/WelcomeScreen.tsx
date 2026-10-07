@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Calendar, Code, Globe, Monitor } from 'lucide-react'
 import { useProviderStore } from '../stores/provider'
 import { openPluginsExtensions, __providerTestOutcome } from './settingsState'
@@ -48,7 +48,6 @@ export default function WelcomeScreen({
   onPick,
   composer
 }: WelcomeScreenProps): React.JSX.Element {
-  const { t } = useTranslation()
   const providers = useProviderStore((s) => s.providers)
   // "Add a key" is only done when a working provider exists: enabled, with a
   // credential (or a sign-in format that needs none), and not failed by the
@@ -95,11 +94,11 @@ export default function WelcomeScreen({
             <rect x="7.2" y="17.5" width="9.6" height="2" rx="1" />
           </svg>
         </div>
-        <h1 className="welcome-greeting">{t(getGreetingKey(hour))}</h1>
+        <h1 className="welcome-greeting">{tx(getGreetingKey(hour))}</h1>
         <p className="welcome-sub">
           {activeProject
-            ? t('chat.welcomeProject', { name: activeProject.name })
-            : t('chat.welcomeSub')}
+            ? `What should we build in ${activeProject.name}?`
+            : 'Code, browse, automate — all in one place.'}
         </p>
       </div>
 
@@ -107,13 +106,14 @@ export default function WelcomeScreen({
 
       {providerReady && !hasExtension && (
         <div className="welcome-mod-cta">
-          <p>{t('chat.mods.welcomeHint')}</p>
+          <p>{`You can try a mod from here.
+The sample installs in one click.`}</p>
           <button
             type="button"
             className="welcome-mod-cta-btn"
             onClick={() => openPluginsExtensions()}
           >
-            {t('chat.mods.welcomeCta')}
+            {'Open mods'}
           </button>
         </div>
       )}
@@ -124,15 +124,15 @@ export default function WelcomeScreen({
             key={card.id}
             type="button"
             className="welcome-btn"
-            aria-label={t(card.titleKey)}
-            onClick={() => { onPick(t(card.promptKey)) }}
+            aria-label={tx(card.titleKey)}
+            onClick={() => { onPick(tx(card.promptKey)) }}
           >
             <span className="welcome-btn-icon" aria-hidden="true">
               <CardIcon icon={card.icon} />
             </span>
             <span className="welcome-btn-text">
-              <span className="welcome-btn-title">{t(card.titleKey)}</span>
-              <span className="welcome-btn-desc">{t(card.descKey)}</span>
+              <span className="welcome-btn-title">{tx(card.titleKey)}</span>
+              <span className="welcome-btn-desc">{tx(card.descKey)}</span>
             </span>
           </button>
         ))}

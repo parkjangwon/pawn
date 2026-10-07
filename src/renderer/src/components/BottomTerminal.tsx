@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { Terminal, X } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
@@ -34,7 +34,6 @@ function persistHeight(h: number): void {
  * Wider horizontal space makes shell work far more usable than a side strip.
  */
 export default function BottomTerminal(): React.JSX.Element {
-  const { t } = useTranslation()
   const [panelHeight, setPanelHeight] = useState(readStoredHeight)
   const [visible, setVisible] = useState(false)
   const [closing, setClosing] = useState(false)
@@ -207,17 +206,17 @@ export default function BottomTerminal(): React.JSX.Element {
       <div className="bt-header">
         <div className="bt-title">
           <Terminal size={14} aria-hidden />
-          <span>{t('rightPanel.tools.terminal')}</span>
+          <span>{'Terminal'}</span>
           {projectPath && (
             <span className="bt-path" title={projectPath}>{projectPath}</span>
           )}
         </div>
-        <Tooltip label={t('bottomTerminal.close')} shortcut={terminalShortcut} placement="top">
+        <Tooltip label={'Close terminal'} shortcut={terminalShortcut} placement="top">
           <button
             type="button"
             className="bt-close"
             onClick={requestHide}
-            aria-label={t('bottomTerminal.close')}
+            aria-label={'Close terminal'}
           >
             <X size={12} />
           </button>

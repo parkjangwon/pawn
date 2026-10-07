@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import { RefreshCw } from 'lucide-react'
 import { Terminal } from '@xterm/xterm'
 import type { ILink } from '@xterm/xterm'
@@ -28,7 +28,6 @@ function openTerminalUrl(url: string): void {
 
 
 export default function TerminalView({ projectPath }: TerminalViewProps): React.JSX.Element {
-  const { t } = useTranslation()
   const elRef = useRef<HTMLDivElement>(null)
   const termRef = useRef<Terminal | null>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
@@ -183,8 +182,8 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
       <button
         className="terminal-restart-btn"
         onClick={() => setGeneration((g) => g + 1)}
-        title={t('rightPanel.terminalRestart')}
-        aria-label={t('rightPanel.terminalRestart')}
+        title={'Restart terminal'}
+        aria-label={'Restart terminal'}
       >
         <RefreshCw size={14} />
       </button>

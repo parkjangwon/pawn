@@ -1,7 +1,7 @@
 import { ultraWorkTriggerLength } from '../agent/ultraWork'
 import './UltraWork.css'
 import { useMemo, useRef, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import {
   ArrowUp,
   Check,
@@ -72,7 +72,6 @@ interface ComposerProps {
 }
 
 export default function Composer(props: ComposerProps): React.JSX.Element {
-  const { t } = useTranslation()
   const fileInputRef = useRef<HTMLInputElement>(null)
   const {
     models, providers, activeModelId, setActiveModel, permissionMode, setPermissionMode,
@@ -94,10 +93,10 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   )
   const [compacting, setCompacting] = useState(false)
   const currentModel = models.find((m) => m.id === activeModelId) || models.find((m) => m.enabled)
-  const currentModelLabel = currentModel?.label || currentModel?.modelId || t('modelPicker.noModel')
+  const currentModelLabel = currentModel?.label || currentModel?.modelId || 'No model'
   // No provider configured: hint at Settings in the placeholder instead of a banner.
   const hasProvider = providers.some((p) => p.enabled)
-  const composerPlaceholder = hasProvider ? t('chat.placeholder') : t('chat.noProviderPlaceholder')
+  const composerPlaceholder = hasProvider ? 'Ask, build, or automate…' : 'Add a provider in Settings to get started'
 
   // Images attached for a model that cannot see them: say where they go.
   const visionNote = useMemo(() => {
@@ -105,21 +104,21 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
     const target = routingMode === 'auto' ? undefined : currentModel
     const { sees, fallback } = previewVisionTarget(target)
     if (sees) return null
-    if (routingMode === 'auto') return fallback ? null : t('chat.visionNoneAuto')
+    if (routingMode === 'auto') return fallback ? null : 'No enabled model can see images — the image won\'t be read. Enable a vision model in Settings → Models.'
     const name = currentModel?.label || currentModel?.modelId || ''
     return fallback
-      ? t('chat.visionFallbackNote', { model: name, fallback: fallback.label || fallback.modelId })
-      : t('chat.visionNone', { model: name })
-  }, [props.attachments, routingMode, currentModel, t])
-  const permLabels: Record<string, string> = { ask: t('permission.ask'), auto: t('permission.auto'), yolo: t('permission.yolo') }
-  const permDescs: Record<string, string> = { ask: t('permission.askDesc'), auto: t('permission.autoDesc'), yolo: t('permission.yoloDesc') }
+      ? `${name} can't see images — this message goes to ${fallback.label || fallback.modelId} instead.`
+      : `${name} can't see images, and no vision model is enabled — the image won't be read. Add or enable a vision model in Settings → Models.`
+  }, [props.attachments, routingMode, currentModel])
+  const permLabels: Record<string, string> = { ask: 'Ask', auto: 'Auto-approve', yolo: 'Full auto' }
+  const permDescs: Record<string, string> = { ask: 'Ask me before it changes files or runs commands', auto: 'Do everyday actions on its own; ask for risky ones', yolo: 'Never ask — only for trusted work' }
   const reasoningLabels: Record<string, string> = {
-    auto: t('modelPicker.reasoningAuto'), low: t('modelPicker.reasoningLow'),
-    medium: t('modelPicker.reasoningMedium'), high: t('modelPicker.reasoningHigh')
+    auto: 'Reasoning auto', low: 'Reasoning low',
+    medium: 'Reasoning medium', high: 'Reasoning high'
   }
   const reasoningDescs: Record<string, string> = {
-    auto: t('modelPicker.reasoningAutoDesc'), low: t('modelPicker.reasoningLowDesc'),
-    medium: t('modelPicker.reasoningMediumDesc'), high: t('modelPicker.reasoningHighDesc')
+    auto: 'Pick automatically based on the task', low: 'Faster responses',
+    medium: 'Balanced', high: 'Deeper thinking'
   }
   const triggerOpen = props.trigger !== null
   const { trigger, triggerItems, menuIndex, onMenuIndexChange, filesLoading, onSelect } = props
@@ -155,7 +154,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
         if (typeof reader.result === 'string') {
           onAddAttachment({
             id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-            name: file.name || t('chat.attachedImage'),
+            name: file.name || 'Pasted image',
             kind: 'image',
             dataUrl: reader.result,
             bytes: file.size
@@ -169,7 +168,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
       void file.text().then((content) => {
         onAddAttachment({
           id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-          name: file.name || t('chat.attachedText'),
+          name: file.name || 'Attached file',
           kind: 'text',
           content: truncateText(content).text,
           bytes: file.size
@@ -195,7 +194,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
       e.preventDefault()
       onAddAttachment({
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-        name: t('chat.pastedText'),
+        name: 'Pasted text',
         kind: 'text',
         content: truncateText(text).text,
         bytes: text.length
@@ -224,8 +223,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
             items={triggerItems}
             selectedIndex={Math.min(menuIndex, Math.max(triggerItems.length - 1, 0))}
             loading={trigger?.type === '@' && filesLoading}
-            emptyText={trigger?.type === '@' ? t('chat.mention.noResults') : trigger?.type === '$' ? t('gambits.noResults') : t('chat.slash.noResults')}
-            title={trigger?.type === '@' ? t('chat.mention.title') : trigger?.type === '$' ? t('gambits.title') : t('chat.slash.title')}
+            emptyText={trigger?.type === '@' ? 'No matching files' : trigger?.type === '$' ? 'No matching gambits' : 'No matching commands'}
+            title={trigger?.type === '@' ? 'Files & folders' : trigger?.type === '$' ? 'Gambits · keyword modes' : 'Commands'}
             onSelect={onSelect}
             onHover={onMenuIndexChange}
           />
@@ -240,10 +239,10 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   aria-haspopup="dialog"
                   aria-expanded={showProjectPicker}
                   onClick={() => { setShowProjectPicker(!showProjectPicker); setShowPermPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}
-                  title={t('contextBar.switchProject')}
+                  title={'Switch project'}
                 >
                   <Folder size={12} />
-                  <span>{activeProject && activeProject.id !== '__general__' ? activeProject.name : t('chatHeader.everyday')}</span>
+                  <span>{activeProject && activeProject.id !== '__general__' ? activeProject.name : 'Everyday work'}</span>
                   <ChevronDown size={8} />
                 </button>
                 {showProjectPicker && (
@@ -265,7 +264,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     <div className="picker-footer">
                       <button className="picker-item" onClick={() => { onSelectProject('__general__') }}>
                         <X size={12} />
-                        <span>{t('contextBar.workWithoutProject')}</span>
+                        <span>{'Work without a project'}</span>
                       </button>
                     </div>
                   </div>
@@ -289,8 +288,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
           <div className="chat-input-box">
             {ulwArmed && (
               <div className="ulw-input-hint" aria-live="polite">
-                <span className="ulw-rainbow-text">{t('ultraWork.wordmark')}</span>
-                <span className="ulw-hint-text">{t('ultraWork.armedHint')}</span>
+                <span className="ulw-rainbow-text">{'ULTRA WORK'}</span>
+                <span className="ulw-hint-text">{'Keeps working until the goal is verified done · Build + Maxing · Enter to start'}</span>
               </div>
             )}
             {visionNote && (
@@ -310,8 +309,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     <button
                       className="attachment-chip-x"
                       onClick={() => onRemoveAttachment(a.id)}
-                      aria-label={t('chat.removeAttachment')}
-                      title={t('chat.removeAttachment')}
+                      aria-label={'Remove attachment'}
+                      title={'Remove attachment'}
                     >×</button>
                   </span>
                 ))}
@@ -330,7 +329,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
             <div className="input-actions">
               {/* Left: permission mode */}
               <div className="input-actions-left">
-                <button className="attach-btn" onClick={() => fileInputRef.current?.click()} title={t('chat.attach')} aria-label={t('chat.attach')}>
+                <button className="attach-btn" onClick={() => fileInputRef.current?.click()} title={'Attach files'} aria-label={'Attach files'}>
                   <Paperclip size={15} />
                 </button>
                 {recordSupported && (
@@ -343,8 +342,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       else if (recordSetupOpen) rec.closeSetup()
                       else rec.openSetup({ projectId: activeProjectId ?? undefined, sessionId: props.activeSessionId ?? undefined })
                     }}
-                    title={recording ? t('record.button.stop') : t('record.button.start')}
-                    aria-label={recording ? t('record.button.stop') : t('record.button.start')}
+                    title={recording ? 'Stop recording' : 'Record a workflow'}
+                    aria-label={recording ? 'Stop recording' : 'Record a workflow'}
                     aria-pressed={recording || recordSetupOpen}
                   >
                     {recording ? <Square size={15} /> : <Disc size={15} />}
@@ -367,11 +366,11 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         props.activeSessionId
                       )
                     }
-                    title={agentMode === 'plan' ? t('contextBar.agentPlanHint') : t('contextBar.agentBuildHint')}
-                    aria-label={agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}
+                    title={agentMode === 'plan' ? 'Plan: look around and propose a plan — nothing gets changed. Alt+P switches.' : 'Build: actually does the work (edits files, runs commands). Alt+P switches to Plan.'}
+                    aria-label={agentMode === 'plan' ? 'Plan' : 'Build'}
                   >
                     {agentMode === 'plan' ? <ClipboardCheck size={11} /> : <ArrowUp size={11} />}
-                    <span className="agent-label">{agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}</span>
+                    <span className="agent-label">{agentMode === 'plan' ? 'Plan' : 'Build'}</span>
                   </button>
                   <span className="mode-segment-sep" aria-hidden="true" />
                   <button
@@ -398,11 +397,11 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       {/* Checks after code edits: only meaningful in a code project. */}
                       {activeProject && activeProject.id !== '__general__' && (activeProject.paths?.length ?? 0) > 0 && (
                       <div className="picker-group">
-                        <div className="picker-group-label">{t('contextBar.doneGateLabel')}</div>
+                        <div className="picker-group-label">{'Done gate'}</div>
                         {([
-                          { id: 'off' as const, label: t('contextBar.doneGateOff'), desc: t('contextBar.doneGateOffDesc') },
-                          { id: 'typecheck' as const, label: t('contextBar.doneGateTypecheck'), desc: t('contextBar.doneGateTypecheckDesc') },
-                          { id: 'test' as const, label: t('contextBar.doneGateTest'), desc: t('contextBar.doneGateTestDesc') }
+                          { id: 'off' as const, label: 'Off', desc: 'Do not auto-run checks after edits' },
+                          { id: 'typecheck' as const, label: 'Typecheck', desc: 'Auto typecheck after code edits (auto/yolo)' },
+                          { id: 'test' as const, label: 'Test', desc: 'Auto test after code edits (auto/yolo)' }
                         ]).map((g) => (
                           <button
                             key={g.id}
@@ -432,8 +431,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       aria-haspopup="dialog"
                       aria-expanded={showUsagePopover}
                       onClick={() => { setShowUsagePopover(!showUsagePopover); setShowProjectPicker(false); setShowPermPicker(false); setShowModelPicker(false) }}
-                      title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : t('contextBar.usageTitle')}
-                      aria-label={t('contextBar.usageTitle')}
+                      title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : 'Usage in this chat'}
+                      aria-label={'Usage in this chat'}
                     >
                       <DollarSign size={12} />
                       {usageTotals && usageTotals.calls > 0 && (
@@ -442,27 +441,23 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       {contextMeter && (
                         <span
                           className={`usage-chip-ctx ${contextMeter.ratio >= 0.6 ? 'warn' : ''} ${contextMeter.ratio >= 0.85 ? 'hot' : ''}`}
-                          title={t('contextBar.contextFill', {
-                            pct: Math.round(contextMeter.ratio * 100),
-                            used: formatTokens(contextMeter.tokens),
-                            total: formatTokens(contextMeter.window)
-                          })}
+                          title={`${Math.round(contextMeter.ratio * 100)}% context (${formatTokens(contextMeter.tokens)} / ${formatTokens(contextMeter.window)})`}
                         >
                           {usageTotals && usageTotals.calls > 0 ? '· ' : ''}
                           {Math.round(contextMeter.ratio * 100)}%
                         </span>
                       )}
                       {usageTotals && usageTotals.cacheHitRate > 0.01 && (
-                        <span className="usage-chip-cache">· {Math.round(usageTotals.cacheHitRate * 100)}% {t('contextBar.cached')}</span>
+                        <span className="usage-chip-cache">· {Math.round(usageTotals.cacheHitRate * 100)}% {'cached'}</span>
                       )}
                     </button>
                     {showUsagePopover && (
                       <div className="project-picker usage-popover">
-                        <div className="picker-item-label">{t('contextBar.usageTitle')}</div>
+                        <div className="picker-item-label">{'Usage in this chat'}</div>
                         {contextMeter && (
                           <>
                             <div className="usage-popover-row">
-                              <span>{t('contextBar.contextWindow')}</span>
+                              <span>{'Context window'}</span>
                               <span>
                                 {formatTokens(contextMeter.tokens)} / {formatTokens(contextMeter.window)}
                               </span>
@@ -474,27 +469,27 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                               />
                             </div>
                             {contextMeter.compacted && (
-                              <div className="usage-popover-route">{t('contextBar.contextCompacted')}</div>
+                              <div className="usage-popover-route">{'Transcript was compacted to free space'}</div>
                             )}
                           </>
                         )}
                         {usageTotals && usageTotals.calls > 0 && (
                           <>
-                            <div className="usage-popover-row"><span>{t('contextBar.usageInput')}</span><span>{formatTokens(usageTotals.inputTokens)}</span></div>
-                            <div className="usage-popover-row"><span>{t('contextBar.usageOutput')}</span><span>{formatTokens(usageTotals.outputTokens)}</span></div>
-                            <div className="usage-popover-row"><span>{t('contextBar.usageCacheRead')}</span><span>{formatTokens(usageTotals.cacheReadTokens)}</span></div>
-                            <div className="usage-popover-row"><span>{t('contextBar.usageCacheWrite')}</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
-                            <div className="usage-popover-row"><span>{t('contextBar.usageCacheHitRate')}</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
-                            <div className="usage-popover-row total"><span>{t('contextBar.usageTotalCost')}</span><span>{formatCost(usageTotals.cost)}</span></div>
+                            <div className="usage-popover-row"><span>{'Input'}</span><span>{formatTokens(usageTotals.inputTokens)}</span></div>
+                            <div className="usage-popover-row"><span>{'Output'}</span><span>{formatTokens(usageTotals.outputTokens)}</span></div>
+                            <div className="usage-popover-row"><span>{'Cache read'}</span><span>{formatTokens(usageTotals.cacheReadTokens)}</span></div>
+                            <div className="usage-popover-row"><span>{'Cache write'}</span><span>{formatTokens(usageTotals.cacheWriteTokens)}</span></div>
+                            <div className="usage-popover-row"><span>{'Cache hit rate'}</span><span>{Math.round(usageTotals.cacheHitRate * 100)}%</span></div>
+                            <div className="usage-popover-row total"><span>{'Total cost'}</span><span>{formatCost(usageTotals.cost)}</span></div>
                             {usageTotals.savedCost > 0 && (
-                              <div className="usage-popover-row saved"><span>{t('contextBar.usageSaved')}</span><span>{formatCost(usageTotals.savedCost)}</span></div>
+                              <div className="usage-popover-row saved"><span>{'Saved by cache'}</span><span>{formatCost(usageTotals.savedCost)}</span></div>
                             )}
                           </>
                         )}
                         {lastRoute && <div className="usage-popover-route">{lastRoute.label} — {lastRoute.reason}</div>}
                         {touchedFiles.length > 0 && (
                           <div className="usage-files">
-                            <div className="picker-item-label">{t('usage.filesTouched')}</div>
+                            <div className="picker-item-label">{'Files in this chat'}</div>
                             {touchedFiles.map((f) => (
                               <div key={f} className="usage-popover-route usage-file-row" title={f}>
                                 {f.replace(/^\/Users\/[^/]+/, '~')}
@@ -513,21 +508,21 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                               void compactSessionNow(props.activeSessionId).finally(() => setCompacting(false))
                             }}
                           >
-                            {compacting ? t('contextBar.compacting') : t('contextBar.compactNow')}
+                            {compacting ? 'Compacting…' : 'Compact context now'}
                           </button>
                         )}
                         {props.activeSessionId && props.activeProjectId && (
                           <button
                             type="button"
                             className="usage-compact-btn"
-                            title={t('chat.handoff.hint')}
+                            title={'Start a new chat seeded with a summary of this one — fresh context, same goal.'}
                             onClick={() => {
                               if (!props.activeSessionId || !props.activeProjectId) return
                               useChatStore.getState().handoffToNewSession(props.activeProjectId, props.activeSessionId)
                               setShowUsagePopover(false)
                             }}
                           >
-                            {t('chat.handoff.button')}
+                            {'Continue in a fresh chat'}
                           </button>
                         )}
                         {sessionDiags && sessionDiags.length > 0 && (
@@ -551,20 +546,20 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     aria-haspopup="dialog"
                     aria-expanded={showModelPicker}
                     onClick={() => { setShowModelPicker(!showModelPicker); setShowProjectPicker(false); setShowPermPicker(false); setShowUsagePopover(false) }}
-                    title={routingMode === 'auto' ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel')) : currentModelLabel}
-                    aria-label={`${t('modelPicker.title')}: ${routingMode === 'auto' ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel')) : currentModelLabel}`}
+                    title={routingMode === 'auto' ? (lastRoute ? `${'Auto'} · ${lastRoute.label}` : 'Auto') : currentModelLabel}
+                    aria-label={`${'Model'}: ${routingMode === 'auto' ? (lastRoute ? `${'Auto'} · ${lastRoute.label}` : 'Auto') : currentModelLabel}`}
                   >
                     <Clock size={12} />
                     <span>{routingMode === 'auto'
-                      ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel'))
+                      ? (lastRoute ? `${'Auto'} · ${lastRoute.label}` : 'Auto')
                       : currentModelLabel}</span>
                     <ChevronDown size={8} />
                   </button>
                   {showModelPicker && (
                     <div className="project-picker model-picker">
                       <button className={`picker-item ${routingMode === 'auto' ? 'active' : ''}`} onClick={() => { setActiveModel(null); setRoutingMode('auto'); setShowModelPicker(false) }}>
-                        <span className="picker-item-label">{t('modelPicker.autoLabel')}</span>
-                        <span className="picker-item-desc">{t('modelPicker.autoDesc')}</span>
+                        <span className="picker-item-label">{'Auto'}</span>
+                        <span className="picker-item-desc">{'Pick the model automatically based on the task'}</span>
                         {routingMode === 'auto' && <Check size={12} />}
                       </button>
                       {providers.filter((p) => p.enabled).map((provider) => (
@@ -579,10 +574,10 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         </div>
                       ))}
                       {models.filter((m) => m.enabled).length === 0 && (
-                        <div className="picker-empty">{t('modelPicker.noModels')}</div>
+                        <div className="picker-empty">{'No models available'}</div>
                       )}
                       <div className="picker-group">
-                        <div className="picker-group-label">{t('modelPicker.reasoningLabel')}</div>
+                        <div className="picker-group-label">{'Reasoning'}</div>
                         {(['auto', 'low', 'medium', 'high'] as const).map((e) => (
                           <button key={e} className={`picker-item ${reasoningEffort === e ? 'active' : ''}`} onClick={() => { setReasoningEffort(e); setShowModelPicker(false) }}>
                             <span className="picker-item-label">{reasoningLabels[e]}</span>
@@ -602,19 +597,19 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         className="steer-btn"
                         onClick={onSteer}
                         disabled={noProviders || (!input.trim() && attachments.length === 0)}
-                        title={t('contextBar.sendSteerHint')}
-                        aria-label={t('contextBar.sendSteer')}
+                        title={'Interrupt and steer with a new message'}
+                        aria-label={'Steer'}
                       >
                         <ArrowUp size={12} />
-                        <span>{t('contextBar.sendSteer')}</span>
+                        <span>{'Steer'}</span>
                       </button>
                     )}
                     <button
                       type="button"
                       className="stop-btn"
                       onClick={onStop}
-                      title={t('chat.stop')}
-                      aria-label={t('chat.stop')}
+                      title={'Stop'}
+                      aria-label={'Stop'}
                     >
                       <Square size={14} fill="currentColor" />
                     </button>
@@ -623,13 +618,13 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   <>
                     {noProviders && (
                       <div className="composer-need-provider">
-                        <span>{t('composer.needProvider')}</span>
+                        <span>{'Add an AI provider to start'}</span>
                         <button
                           type="button"
                           className="composer-add-provider"
                           onClick={() => openSettingsSection('providers')}
                         >
-                          {t('composer.addProvider')}
+                          {'Add provider'}
                         </button>
                       </div>
                     )}
@@ -638,8 +633,8 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       className="send-btn"
                       onClick={() => onSend()}
                       disabled={noProviders || (!input.trim() && attachments.length === 0)}
-                      title={t('chat.send')}
-                      aria-label={t('chat.send')}
+                      title={'Send'}
+                      aria-label={'Send'}
                     >
                       <ArrowUp size={16} />
                     </button>

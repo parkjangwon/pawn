@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import {
   AppWindow,
   ChevronLeft,
@@ -44,7 +44,6 @@ export default function BrowserView(): React.JSX.Element {
 // --- Electron: native WebContentsView, positioned over a placeholder div ---
 
 function NativeBrowserView(): React.JSX.Element {
-  const { t } = useTranslation()
   const containerRef = useRef<HTMLDivElement>(null)
   const [url, setUrl] = useState('')
   const [state, setState] = useState<{ url: string; title: string; loading: boolean; canGoBack: boolean; canGoForward: boolean }>({
@@ -153,8 +152,8 @@ function NativeBrowserView(): React.JSX.Element {
     let cancelled = false
     void window.api.browser
       .pickStart(
-        t('rightPanel.browser.feedbackPlaceholder'),
-        t('rightPanel.browser.bubbleHint')
+        'What should the agent change or check? (optional)',
+        '↵ Enter to send · ⇧↵ newline · Esc cancel'
       )
       .catch(() => {})
     const poll = async (): Promise<void> => {
@@ -190,7 +189,7 @@ function NativeBrowserView(): React.JSX.Element {
       const res = await window.api.browser.tabSwitch(id)
       if (res.error) setError(res.error)
     } catch (err) {
-      setError(t('rightPanel.browser.tabSwitchFailed', { error: String(err) }))
+      setError(`Couldn't switch tabs: ${String(err)}`)
     }
   }
 
@@ -199,7 +198,7 @@ function NativeBrowserView(): React.JSX.Element {
       const res = await window.api.browser.tabClose(id)
       if (res.error) setError(res.error)
     } catch (err) {
-      setError(t('rightPanel.browser.tabCloseFailed', { error: String(err) }))
+      setError(`Couldn't close the tab: ${String(err)}`)
     }
   }
 
@@ -213,7 +212,7 @@ function NativeBrowserView(): React.JSX.Element {
       setError(null)
       urlInputRef.current?.focus()
     } catch (err) {
-      setError(t('rightPanel.browser.newTabFailed', { error: String(err) }))
+      setError(`Couldn't open a new tab: ${String(err)}`)
     }
   }
 
@@ -273,12 +272,12 @@ function NativeBrowserView(): React.JSX.Element {
             onClick={() => void switchTab(tab.id)}
             title={tab.url || tab.title || tab.id}
           >
-            <span className="rp-browser-tab-title">{tab.title || tab.url || t('rightPanel.browser.newTab')}</span>
+            <span className="rp-browser-tab-title">{tab.title || tab.url || 'New tab'}</span>
             <button
               className="rp-browser-tab-close"
               onClick={(e) => { e.stopPropagation(); void closeTab(tab.id) }}
-              title={t('rightPanel.browser.closeTab')}
-              aria-label={t('rightPanel.browser.closeTab')}
+              title={'Close tab'}
+              aria-label={'Close tab'}
             >
               ×
             </button>
@@ -287,18 +286,18 @@ function NativeBrowserView(): React.JSX.Element {
         <button
           className="rp-browser-tab-add"
           onClick={() => void newTab()}
-          title={t('rightPanel.browser.newTab')}
-          aria-label={t('rightPanel.browser.newTab')}
+          title={'New tab'}
+          aria-label={'New tab'}
         >
           +
         </button>
       </div>
       <div className="rp-browser-toolbar">
         <div className="rp-browser-nav">
-          <button className="rp-browser-navbtn" onClick={() => window.api.browser.back()} disabled={!state.canGoBack} title={t('rightPanel.browser.back')}>
+          <button className="rp-browser-navbtn" onClick={() => window.api.browser.back()} disabled={!state.canGoBack} title={'Back'}>
             <ChevronLeft size={14} />
           </button>
-          <button className="rp-browser-navbtn" onClick={() => window.api.browser.reload()} title={t('rightPanel.browser.reload')}>
+          <button className="rp-browser-navbtn" onClick={() => window.api.browser.reload()} title={'Reload'}>
             <RefreshCw size={14} />
           </button>
         </div>
@@ -309,11 +308,11 @@ function NativeBrowserView(): React.JSX.Element {
             value={url}
             onChange={(e) => setUrl(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={t('rightPanel.browser.enterUrl')}
+            placeholder={'Enter URL…'}
             onFocus={(e) => e.target.select()}
             ref={urlInputRef}
           />
-          <button className="rp-browser-go" onClick={() => navigate(url)} title={t('rightPanel.browser.go')}>
+          <button className="rp-browser-go" onClick={() => navigate(url)} title={'Go'}>
             <CornerUpLeft size={14} />
           </button>
         </div>
@@ -323,14 +322,14 @@ function NativeBrowserView(): React.JSX.Element {
             className={`rp-browser-modebtn ${pickActive ? 'active' : ''}`}
             onClick={() => setPickActive((a) => !a)}
             disabled={!state.url || sending}
-            title={t('rightPanel.browser.pick')}
+            title={'Point at a UI element or text for the agent'}
           >
             <Crosshair size={14} />
           </button>
-          <button className={`rp-browser-modebtn ${showConsole ? 'active' : ''}`} onClick={() => setShowConsole(!showConsole)} title={t('rightPanel.browser.console')}>
+          <button className={`rp-browser-modebtn ${showConsole ? 'active' : ''}`} onClick={() => setShowConsole(!showConsole)} title={'Console (page logs)'}>
             <CodeXml size={14} />
           </button>
-          <button className="rp-browser-modebtn" onClick={() => window.api.browser.devtools()} title={t('rightPanel.browser.devtools')}>
+          <button className="rp-browser-modebtn" onClick={() => window.api.browser.devtools()} title={'Open DevTools'}>
             <AppWindow size={14} />
           </button>
         </div>
@@ -344,7 +343,7 @@ function NativeBrowserView(): React.JSX.Element {
         {!state.url && !error && (
           <div className="rp-browser-content">
             <Globe size={32} opacity={0.3} />
-            <span>{t('rightPanel.browser.emptyHint')}</span>
+            <span>{'Enter a URL, or let the agent navigate here'}</span>
           </div>
         )}
         {error && (
@@ -352,7 +351,7 @@ function NativeBrowserView(): React.JSX.Element {
             <div className="rp-browser-error">
               <CircleX size={32} />
               <div className="rp-browser-error-text">{error}</div>
-              <button className="rp-browser-error-btn secondary" onClick={() => window.api.browser.reload()}>{t('rightPanel.browser.retry')}</button>
+              <button className="rp-browser-error-btn secondary" onClick={() => window.api.browser.reload()}>{'Retry'}</button>
             </div>
           </div>
         )}
@@ -361,20 +360,20 @@ function NativeBrowserView(): React.JSX.Element {
       {pickActive && (
         <div className="rp-browser-pick-hint">
           <span className="rp-browser-pick-dot" />
-          {t('rightPanel.browser.pickHint')}
+          {'Click an element or drag-select text, then tell the agent what to change'}
         </div>
       )}
 
       {showConsole && (
         <div className="rp-browser-devtools">
           <div className="rp-browser-devtools-header">
-            <span>{t('rightPanel.browser.console')}</span>
-            <button onClick={() => setLogs([])} title={t('rightPanel.browser.clear')}>
+            <span>{'Console (page logs)'}</span>
+            <button onClick={() => setLogs([])} title={'Clear'}>
               <Trash2 size={12} />
             </button>
           </div>
           <div className="rp-browser-devtools-body">
-            {logs.length === 0 && <div className="rp-browser-devtools-empty">{t('rightPanel.browser.noConsole')}</div>}
+            {logs.length === 0 && <div className="rp-browser-devtools-empty">{'No console messages yet'}</div>}
             {logs.map((log, i) => (
               <div key={i} className={`rp-browser-log rp-browser-log-${log.startsWith('[error]') ? 'error' : log.startsWith('[warn]') ? 'warn' : 'info'}`}>
                 <span className="rp-browser-log-num">{i + 1}</span>
@@ -391,7 +390,6 @@ function NativeBrowserView(): React.JSX.Element {
 // --- Browser (dev:web) fallback: sandboxed iframe, manual browsing only ---
 
 function IframeBrowserView(): React.JSX.Element {
-  const { t } = useTranslation()
   const [url, setUrl] = useState('')
   const [currentUrl, setCurrentUrl] = useState('')
   const [loading, setLoading] = useState(false)
@@ -443,26 +441,26 @@ function IframeBrowserView(): React.JSX.Element {
     <div className="rp-browser">
       <div className="rp-browser-toolbar">
         <div className="rp-browser-nav">
-          <button className="rp-browser-navbtn" onClick={goBack} disabled={historyIndex <= 0} title={t('rightPanel.browser.back')}>
+          <button className="rp-browser-navbtn" onClick={goBack} disabled={historyIndex <= 0} title={'Back'}>
             <ChevronLeft size={14} />
           </button>
-          <button className="rp-browser-navbtn" onClick={goForward} disabled={historyIndex >= history.length - 1} title={t('rightPanel.browser.forward')}>
+          <button className="rp-browser-navbtn" onClick={goForward} disabled={historyIndex >= history.length - 1} title={'Forward'}>
             <ChevronRight size={14} />
           </button>
-          <button className="rp-browser-navbtn" onClick={refresh} title={t('rightPanel.browser.refresh')}>
+          <button className="rp-browser-navbtn" onClick={refresh} title={'Refresh'}>
             <RefreshCw size={14} />
           </button>
         </div>
 
         <div className="rp-browser-urlbar">
-          <Input className="rp-browser-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={handleKeyDown} placeholder={t('rightPanel.browser.enterUrl')} onFocus={(e) => e.target.select()} />
-          <button className="rp-browser-go" onClick={handleGo} title={t('rightPanel.browser.go')}>
+          <Input className="rp-browser-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={handleKeyDown} placeholder={'Enter URL…'} onFocus={(e) => e.target.select()} />
+          <button className="rp-browser-go" onClick={handleGo} title={'Go'}>
             <CornerUpLeft size={14} />
           </button>
         </div>
 
         <div className="rp-browser-modes">
-          <button className={`rp-browser-modebtn ${useProxy ? 'active' : ''}`} onClick={() => setUseProxy(!useProxy)} title={t('rightPanel.browser.proxyMode')}>
+          <button className={`rp-browser-modebtn ${useProxy ? 'active' : ''}`} onClick={() => setUseProxy(!useProxy)} title={'Proxy mode (bypass X-Frame-Options)'}>
             <Sun size={14} />
           </button>
         </div>
@@ -477,7 +475,7 @@ function IframeBrowserView(): React.JSX.Element {
                 <div className="rp-browser-error">
                   <CircleX size={32} />
                   <div className="rp-browser-error-text">{loadError}</div>
-                  <button className="rp-browser-error-btn" onClick={() => setUseProxy(true)}>{t('rightPanel.browser.enableProxy')}</button>
+                  <button className="rp-browser-error-btn" onClick={() => setUseProxy(true)}>{'Enable proxy mode'}</button>
                 </div>
               </div>
             )}
@@ -486,7 +484,7 @@ function IframeBrowserView(): React.JSX.Element {
         ) : (
           <div className="rp-browser-content">
             <Globe size={32} opacity={0.3} />
-            <span>{t('rightPanel.browser.emptyHintWeb')}</span>
+            <span>{'Enter a URL above to start browsing (agent automation requires the desktop app)'}</span>
           </div>
         )}
       </div>

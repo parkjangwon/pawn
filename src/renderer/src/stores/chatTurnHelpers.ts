@@ -4,7 +4,6 @@
  * and processQueue stay in chatLoop.ts because they call back into each other.
  */
 
-import i18n from '../i18n'
 import { useAppStore } from './app'
 import { usePlanStore } from './plan'
 import { usePrefsStore } from './prefs'
@@ -67,15 +66,9 @@ export async function checkSpendBudget(sessionId: string): Promise<string | null
     useUsageStore.getState().noteDiagnostic(
       sessionId,
       'warn',
-      i18n.t('chat.diagnostics.sessionBudget', {
-        cost: sessionCost.toFixed(2),
-        cap: sessionBudgetUsd.toFixed(2)
-      })
+      `Chat budget reached ($${sessionCost.toFixed(2)} / $${sessionBudgetUsd.toFixed(2)})`
     )
-    return i18n.t('chat.errors.sessionBudgetHit', {
-      cost: sessionCost.toFixed(2),
-      cap: sessionBudgetUsd.toFixed(2)
-    })
+    return `Stopped: this chat's spend reached $${sessionCost.toFixed(2)} (cap $${sessionBudgetUsd.toFixed(2)}). Raise the limit in Settings → Usage, or start a new chat.`
   }
   if (dailyBudgetUsd > 0 && window.api?.db?.getUsageSummary) {
     try {
@@ -89,15 +82,9 @@ export async function checkSpendBudget(sessionId: string): Promise<string | null
         useUsageStore.getState().noteDiagnostic(
           sessionId,
           'warn',
-          i18n.t('chat.diagnostics.dailyBudget', {
-            cost: dayCost.toFixed(2),
-            cap: dailyBudgetUsd.toFixed(2)
-          })
+          `Daily budget hit ($${dayCost.toFixed(2)} / $${dailyBudgetUsd.toFixed(2)})`
         )
-        return i18n.t('chat.errors.dailyBudgetHit', {
-          cost: dayCost.toFixed(2),
-          cap: dailyBudgetUsd.toFixed(2)
-        })
+        return `Stopped: today's spend reached $${dayCost.toFixed(2)} (cap $${dailyBudgetUsd.toFixed(2)}). Raise the limit under Settings → Usage.`
       }
     } catch {
       /* accounting optional */
@@ -124,7 +111,7 @@ export function setCompactingActivity(projectId: string, sessionId: string, on: 
       .projects.find((p) => p.id === projectId)
       ?.sessions.find((s) => s.id === sessionId)
     const last = session?.messages.filter((m) => m.role === 'assistant').pop()
-    if (last) useStreamingStore.getState().setActivity(last.id, on ? i18n.t('chat.compacting') : null)
+    if (last) useStreamingStore.getState().setActivity(last.id, on ? 'Compacting context…' : null)
   } catch {
     /* cosmetic */
   }
@@ -168,7 +155,7 @@ export async function compactSessionNow(sessionId: string): Promise<boolean> {
     useUsageStore.getState().noteContext(sessionId, after, DEFAULT_CONTEXT_WINDOW, true)
     useUsageStore
       .getState()
-      .noteDiagnostic(sessionId, 'info', i18n.t('chat.diagnostics.compactedManual'))
+      .noteDiagnostic(sessionId, 'info', 'Context compacted manually')
     return true
   } catch {
     return false

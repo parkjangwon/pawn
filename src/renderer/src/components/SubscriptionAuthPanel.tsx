@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useTranslation } from 'react-i18next'
+import { tx } from '../i18n'
 import Input from './Input'
 
 type Kind = 'chatgpt' | 'claude' | 'antigravity'
@@ -47,7 +47,6 @@ export default function SubscriptionAuthPanel({
   kind: Kind
   onSignedIn?: () => void
 }): React.JSX.Element {
-  const { t } = useTranslation()
   const copy = COPY[kind]
   const api = apiFor(kind)
   const [signedIn, setSignedIn] = useState(false)
@@ -75,11 +74,11 @@ export default function SubscriptionAuthPanel({
         setError('')
         void refresh()
         onSignedIn?.()
-      } else setError(result.error || t(`${copy.ns}.failed`))
+      } else setError(result.error || tx(`${copy.ns}.failed`))
     })
-  }, [api, refresh, onSignedIn, t, copy.ns])
+  }, [api, refresh, onSignedIn, copy.ns])
 
-  if (!api) return <div className="settings-row-desc">{t(`${copy.ns}.desktopOnly`)}</div>
+  if (!api) return <div className="settings-row-desc">{tx(`${copy.ns}.desktopOnly`)}</div>
 
   const start = async (): Promise<void> => {
     setBusy(true)
@@ -105,7 +104,7 @@ export default function SubscriptionAuthPanel({
     const result = await api.submitCode(paste).catch((err: unknown) => ({ ok: false as const, error: String(err) }))
     setBusy(false)
     if (!result.ok) {
-      setError(result.error || t(`${copy.ns}.failed`))
+      setError(result.error || tx(`${copy.ns}.failed`))
       return
     }
     setDevice(null)
@@ -118,20 +117,20 @@ export default function SubscriptionAuthPanel({
     <div className="kiro-auth">
       <div className="settings-row-desc">
         {signedIn
-          ? t(`${copy.ns}.signedIn`, { email: email || t(`${copy.ns}.account`) })
-          : t(`${copy.ns}.signedOut`)}
+          ? tx(`${copy.ns}.signedIn`, { email: email || tx(`${copy.ns}.account`) })
+          : tx(`${copy.ns}.signedOut`)}
       </div>
       {device && (
         <div className="settings-row-desc">
           {device.userCode && (
             <>
-              {t(`${copy.ns}.enterCode`)} <strong className="kiro-code">{device.userCode}</strong>{' '}
+              {tx(`${copy.ns}.enterCode`)} <strong className="kiro-code">{device.userCode}</strong>{' '}
             </>
           )}
-          {copy.mode === 'browser' && <span>{t(`${copy.ns}.waiting`)} </span>}
+          {copy.mode === 'browser' && <span>{tx(`${copy.ns}.waiting`)} </span>}
           {device.url && (
             <a href={device.url} target="_blank" rel="noreferrer">
-              {t('settings.providerSection.xai.openPage')}
+              {'Open sign-in page'}
             </a>
           )}{' '}
           <button
@@ -143,22 +142,22 @@ export default function SubscriptionAuthPanel({
               setBusy(false)
             })}
           >
-            {t('common.cancel')}
+            {'Cancel'}
           </button>
           {copy.mode === 'paste' && (
             <div className="form-actions kiro-actions">
               <Input
                 type="text"
                 value={paste}
-                placeholder={t(`${copy.ns}.pastePlaceholder`)}
+                placeholder={tx(`${copy.ns}.pastePlaceholder`)}
                 onChange={(e) => setPaste(e.target.value)}
               />
               <button type="button" className="test-btn" disabled={busy || !paste.trim()} onClick={() => void submit()}>
-                {t(`${copy.ns}.submitCode`)}
+                {tx(`${copy.ns}.submitCode`)}
               </button>
             </div>
           )}
-          {copy.mode === 'paste' && <div className="settings-row-desc">{t(`${copy.ns}.pastePrompt`)}</div>}
+          {copy.mode === 'paste' && <div className="settings-row-desc">{tx(`${copy.ns}.pastePrompt`)}</div>}
         </div>
       )}
       {!device && (
@@ -170,17 +169,17 @@ export default function SubscriptionAuthPanel({
               disabled={busy}
               onClick={() => void api.signOut().then(() => refresh())}
             >
-              {t(`${copy.ns}.signOut`)}
+              {tx(`${copy.ns}.signOut`)}
             </button>
           ) : (
             <button type="button" className="test-btn" disabled={busy} onClick={() => void start()}>
-              {t(`${copy.ns}.signIn`)}
+              {tx(`${copy.ns}.signIn`)}
             </button>
           )}
         </div>
       )}
       {error && <div className="settings-row-desc kiro-error">{error}</div>}
-      <div className="settings-row-desc kiro-note">{t(`${copy.ns}.note`)}</div>
+      <div className="settings-row-desc kiro-note">{tx(`${copy.ns}.note`)}</div>
     </div>
   )
 }
