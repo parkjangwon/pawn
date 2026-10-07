@@ -17,7 +17,7 @@ src/
     agent/       LLM calls, router, tools, permissions, subagents (see agent/AGENTS.md)
     stores/      Zustand stores; chatLoop.ts = agentLoop (see stores/AGENTS.md)
     components/  flat React components + co-located CSS (see components/AGENTS.md)
-    i18n/        en/ko/ja/zh JSON; key parity enforced by tests
+    i18n/        English-only UI strings (src/renderer/src/i18n/strings.ts); no locales, no switching (2026-10-08 decision)
     types/       global.d.ts = ambient window.api typing (1372 LOC)
     utils/ hooks/ styles/global.css
   headless/      pawn-headless CLI + eval harness, runs renderer stores in Node (see src/headless/AGENTS.md)
@@ -39,7 +39,7 @@ docs/agent/      GUIDE.md (+ ko/ja/zh)
 | SQLite schema / CRUD | `src/main/db.ts` (`getStmt` cache) |
 | App boot, CSP, single-instance | `src/main/index.ts` |
 | Settings section | `components/settingsMeta.ts` SECTIONS + `Settings.tsx` render branch |
-| New UI language | `i18n/locales/xx.json` + `i18n/index.ts` + Settings selector |
+| New UI string | inline English literal, or add to `i18n/strings.ts` for dynamic lookups |
 | Headless / CI runs | `src/headless/cli.ts`, `nodeApi.ts` |
 
 ## CONVENTIONS
@@ -53,7 +53,7 @@ docs/agent/      GUIDE.md (+ ko/ja/zh)
 - Test hooks are prefixed `__` (`__resetToolsetsForTests`, ...) and exported from prod modules.
 - Local state lives under `~/.pawn`. `config.toml` is read with smol-toml; arrays replace wholesale on save.
 - There is no ESLint or Prettier. The quality gate is `typecheck -> test -> build`.
-- UI copy comes from i18n in all four locales (en/ko/ja/zh, parity + voice enforced by `i18n/__tests__`); Korean stays 해요체, ja/zh must not contain 3+ consecutive English words.
+- UI is English-only (2026-10-08 decision): inline English literals, dynamic lookups via `i18n/strings.ts`. Guide docs in `docs/agent/` stay multilingual (ko/ja/zh), but feature names are never translated — always use the English UI string as-is (e.g. "Automations", not "자동화").
 - Design tokens are enforced by `styles/__tests__/designTokens.test.ts`: z-index only via `--z-*`, status colors only via `--success/--danger/--warning/--primary` (never raw hex). `settings.<id>` nav keys are plain strings — group sub-keys live at `settings.<id>Section.*`.
 - No emojis in the UI; use SVG icons (CONTRIBUTING). Shared glyphs come from `components/icons.tsx`; do not re-inline duplicated paths in new code.
 
