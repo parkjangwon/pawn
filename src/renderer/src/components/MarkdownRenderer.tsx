@@ -1,13 +1,21 @@
-import React, { memo, useCallback, useContext, useEffect, useRef, useState, useMemo } from 'react'
+import React, { memo, useCallback, useContext, useEffect, useId, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import { tx } from '../i18n'
 import { Check, ChevronDown, X } from 'lucide-react'
-import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
-import remarkGfm from 'remark-gfm'
-import rehypeHighlight from 'rehype-highlight'
-import 'highlight.js/styles/github-dark.css'
+import {
+  Streamdown,
+  defaultRehypePlugins,
+  defaultRemarkPlugins,
+} from 'streamdown'
+import type { CjkPlugin, StreamdownProps } from 'streamdown'
+import { code as codeHighlighter } from '@streamdown/code'
+import type { HighlightResult } from '@streamdown/code'
+import { createMathPlugin } from '@streamdown/math'
+import { mermaid as mermaidPlugin } from '@streamdown/mermaid'
+import { cjk } from '@streamdown/cjk'
+import { harden } from 'rehype-harden'
+import rehypeSanitize, { defaultSchema } from 'rehype-sanitize'
+import 'katex/dist/katex.min.css'
 import './MarkdownRenderer.css'
-import { HIGHLIGHT_LANGUAGES } from '../utils/highlightLanguages'
 import { isInlineImageSrc } from '../utils/safeUrl'
 import { REVEAL_EVENT } from '../utils/conversationFind'
 import { IMAGE_EXT, LocalFileLink, LocalImage, MarkdownBaseDirContext, PathCode, resolveLocalPath } from './LocalFileLinks'
@@ -17,6 +25,9 @@ export const CODE_FOLD_THRESHOLD_LINES = 30
 
 interface Props {
   content: string
+  /** True while the message is still streaming in: repairs incomplete
+   *  markdown, skips async highlight/diagram work until the text settles. */
+  streaming?: boolean
 }
 
 interface LightboxState {
@@ -24,22 +35,230 @@ interface LightboxState {
   alt: string
 }
 
+type RemarkPluginList = NonNullable<StreamdownProps['remarkPlugins']>
+type RehypePluginList = NonNullable<StreamdownProps['rehypePlugins']>
+
 /**
- * react-markdown's defaultUrlTransform only allows http(s)/mailto/… and
- * strips data: URLs, which turns user-attached images (`![x](data:image/…)`
- * from buildDisplayContent) into broken <img> placeholders. Allow image data
- * URLs while keeping other schemes blocked.
+ * Rendering approach ported from ZCode's Streamdown-based MessageResponse
+ * (Apache-2.0, see DESIGN.md): streamdown parsing with shiki code
+ * highlighting, KaTeX math, mermaid diagrams and CJK-friendly GFM.
+ * Reimplemented for pawn: no workspace/editor/citation machinery, and
+ * pawn's own link/image security model (no remote fetches, no scriptable
+ * schemes) is preserved.
  */
-function safeUrlTransform(url: string): string {
-  if (/^data:image\/[a-zA-Z0-9.+-]+;base64,/i.test(url)) return url
-  if (/^file:/i.test(url)) return url
-  // Absolute local paths (/Users/…, C:\…) are resolved by the link / image
-  // components; defaultUrlTransform would keep them anyway, but be explicit.
-  if (url.startsWith('/') || /^[A-Za-z]:[\\/]/.test(url)) return url
-  return defaultUrlTransform(url)
+
+// Single `$...$` inline math needs a guard: `$5-$10` prices and `$HOME`
+// paths must keep rendering as plain text. Escape lone dollars unless the
+// enclosed content looks like math (a TeX command, math symbols, or a bare
+// identifier), skipping fenced blocks and inline code spans.
+const TEX_COMMAND = /\\[A-Za-z]+/
+const MATH_CHARS = /[\\{}^_=+\-*/<>|()[\]]/
+const BARE_MATH_WORD = /^(?:[A-Za-z]|[a-z][A-Za-z0-9]{1,2}|\d+(?:\.\d+)?)$/
+const CURRENCY_PREFIX = /^(?:\d[\d,]*(?:\.\d+)?|\.\d+)[+\-*/]$/
+const FENCE_LINE = /^(?: {0,3})(`{3,}|~{3,})/
+
+function isEscaped(text: string, index: number): boolean {
+  let slashes = 0
+  for (let i = index - 1; i >= 0 && text[i] === '\\'; i--) slashes++
+  return slashes % 2 === 1
 }
 
-function MarkdownRendererInner({ content }: Props): React.JSX.Element {
+function isDollar(text: string, index: number): boolean {
+  return text[index] === '$' && text[index - 1] !== '$' && text[index + 1] !== '$' && !isEscaped(text, index)
+}
+
+function normalizeInlineMathText(text: string): string {
+  if (!text.includes('$')) return text
+  let out = ''
+  for (let i = 0; i < text.length; i++) {
+    if (!isDollar(text, i)) {
+      out += text[i]
+      continue
+    }
+    let close = -1
+    for (let j = i + 1; j < text.length; j++) {
+      if (isDollar(text, j)) {
+        close = j
+        break
+      }
+    }
+    if (close === -1) {
+      out += text[i]
+      continue
+    }
+    const inner = text.slice(i + 1, close)
+    if (!inner || inner !== inner.trim() || /[\r\n]/.test(inner)) {
+      out += '\\$'
+      continue
+    }
+    const next = text.slice(close + 1)
+    if ((TEX_COMMAND.test(inner) || MATH_CHARS.test(inner) || BARE_MATH_WORD.test(inner)) &&
+        !(CURRENCY_PREFIX.test(inner) && /^(?:\d|\.\d)/.test(next))) {
+      out += text.slice(i, close + 1)
+      i = close
+    } else {
+      out += '\\$'
+    }
+  }
+  return out
+}
+
+function normalizeInlineMathLine(line: string): string {
+  let out = ''
+  let cursor = 0
+  while (cursor < line.length) {
+    const tick = line.indexOf('`', cursor)
+    if (tick === -1) {
+      out += normalizeInlineMathText(line.slice(cursor))
+      break
+    }
+    out += normalizeInlineMathText(line.slice(cursor, tick))
+    let end = tick + 1
+    while (line[end] === '`') end++
+    const marker = line.slice(tick, end)
+    const stop = line.indexOf(marker, end)
+    if (stop === -1) {
+      out += normalizeInlineMathText(line.slice(tick))
+      break
+    }
+    out += line.slice(tick, stop + marker.length)
+    cursor = stop + marker.length
+  }
+  return out
+}
+
+function normalizeSingleDollarMath(markdown: string): string {
+  if (!markdown.includes('$')) return markdown
+  const lines = markdown.split('\n')
+  let fence: { marker: string; length: number } | null = null
+  return lines.map((line) => {
+    if (fence) {
+      const m = FENCE_LINE.exec(line)
+      if (m && m[1][0] === fence.marker && m[1].length >= fence.length) fence = null
+      return line
+    }
+    const m = FENCE_LINE.exec(line)
+    if (m) {
+      fence = { marker: m[1][0], length: m[1].length }
+      return line
+    }
+    return normalizeInlineMathLine(line)
+  }).join('\n')
+}
+
+// remark-gfm and the CJK strikethrough extension both enable single-tilde
+// `~text~` strikethrough; GFM treats it as literal text, so switch it off
+// in both to keep pawn's previous rendering.
+function withoutSingleTilde(plugin: unknown): unknown {
+  if (!Array.isArray(plugin)) {
+    return typeof plugin === 'function' ? [plugin, { singleTilde: false }] : plugin
+  }
+  const [attacher, options] = plugin as [unknown, unknown]
+  return [attacher, {
+    ...((typeof options === 'object' && options !== null ? options : {}) as Record<string, unknown>),
+    singleTilde: false,
+  }]
+}
+
+const mathPlugin = createMathPlugin({ singleDollarTextMath: true })
+
+const cjkPlugin = {
+  ...cjk,
+  remarkPlugins: [...cjk.remarkPluginsBefore, ...cjk.remarkPluginsAfter.map(withoutSingleTilde)],
+  remarkPluginsAfter: cjk.remarkPluginsAfter.map(withoutSingleTilde),
+} as unknown as CjkPlugin
+
+const remarkPlugins = [
+  ...Object.entries(defaultRemarkPlugins).map(([name, plugin]) =>
+    name === 'gfm' ? withoutSingleTilde(plugin) : plugin,
+  ),
+] as unknown as RemarkPluginList
+
+interface HastNode {
+  type?: string
+  tagName?: string
+  properties?: Record<string, unknown>
+  children?: HastNode[]
+}
+
+/**
+ * Local targets never survive Streamdown's hardening (the `file:` protocol
+ * is blocked outright, and relative image sources can't resolve without an
+ * origin), so stash them in a same-origin envelope the pipeline passes
+ * through untouched, and recover the original in the custom renderers.
+ * The envelope host never hits the network: it is unwrapped before render
+ * and never assigned to a fetchable attribute.
+ */
+const LOCAL_REF_PREFIX = 'https://pawn.local/__pawn_local__?src='
+
+function encodeLocalRef(original: string): string {
+  return `${LOCAL_REF_PREFIX}${encodeURIComponent(original)}`
+}
+
+function decodeLocalRef(value: string): string | null {
+  if (!value.startsWith(LOCAL_REF_PREFIX)) return null
+  const query = value.slice(LOCAL_REF_PREFIX.length).split('&')[0]
+  try {
+    return decodeURIComponent(query)
+  } catch {
+    return null
+  }
+}
+
+function stashLocalTarget(value: string): string | null {
+  const raw = value.trim()
+  if (!raw || raw.startsWith('#')) return null
+  if (/^[a-z][a-z0-9+.-]*:/i.test(raw) && !/^file:/i.test(raw) && !/^[A-Za-z]:[\\/]/.test(raw)) return null
+  return encodeLocalRef(raw)
+}
+
+function pawnLocalRefRehypePlugin() {
+  const visit = (node: HastNode): void => {
+    const attr = node.tagName === 'a' ? 'href' : node.tagName === 'img' ? 'src' : null
+    if (node.type === 'element' && attr && typeof node.properties?.[attr] === 'string') {
+      const stashed = stashLocalTarget(node.properties[attr] as string)
+      if (stashed) node.properties[attr] = stashed
+    }
+    node.children?.forEach(visit)
+  }
+  return (tree: HastNode): void => {
+    visit(tree)
+  }
+}
+
+const { sanitize: _builtinSanitize, harden: _builtinHarden, ...rehypeRest } = defaultRehypePlugins as Record<string, unknown>
+void _builtinSanitize
+void _builtinHarden
+const sanitizeSchema = {
+  ...defaultSchema,
+  protocols: {
+    ...defaultSchema.protocols,
+    src: [...(defaultSchema.protocols?.src ?? []), 'data', 'blob'],
+  },
+}
+const rehypePlugins = [
+  ...Object.values(rehypeRest),
+  pawnLocalRefRehypePlugin,
+  [rehypeSanitize, sanitizeSchema],
+  // Pawn's own link/image renderers enforce the security model (no
+  // scriptable schemes, no remote fetches), so hardening only needs to
+  // defuse what slips past: blocked targets degrade to plain text.
+  [harden, {
+    allowedImagePrefixes: ['*'],
+    allowedLinkPrefixes: ['*'],
+    allowedProtocols: ['*'],
+    allowDataImages: true,
+    linkBlockPolicy: 'text-only',
+    imageBlockPolicy: 'text-only',
+  }],
+] as unknown as RehypePluginList
+
+function resolveHref(href: string | undefined): string {
+  if (!href) return ''
+  return decodeLocalRef(href) ?? href
+}
+
+function MarkdownRendererInner({ content, streaming = false }: Props): React.JSX.Element {
   const baseDir = useContext(MarkdownBaseDirContext)
   const [lightbox, setLightbox] = useState<LightboxState | null>(null)
 
@@ -67,14 +286,20 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
     setLightbox({ src, alt })
   }, [])
 
+  const targetMarkdown = useMemo(
+    () => normalizeSingleDollarMath(content),
+    [content],
+  )
+
   const components = useMemo(() => ({
     a: ({ href, children }: { href?: string; children?: React.ReactNode }) => {
+      const resolved = resolveHref(href)
       // Local files (file://, absolute, or relative to the chat's folder)
       // open inside Pawn; ⌘/Ctrl-click reveals them in Finder/Explorer.
-      const local = resolveLocalPath(href, baseDir)
+      const local = resolveLocalPath(resolved, baseDir)
       if (local) return <LocalFileLink path={local}>{children}</LocalFileLink>
-      const safe = safeHref(href)
-      if (!safe || safe.startsWith('file://') || !/^(https?:|mailto:)/i.test(safe)) {
+      const safe = safeHref(resolved)
+      if (!safe || !/^(https?:|mailto:)/i.test(safe)) {
         // Never render javascript:/data: links; the renderer holds
         // privileged window.api access.
         return <span>{children}</span>
@@ -83,21 +308,22 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
     },
     img: ({ src, alt }: { src?: string; alt?: string }) => {
       if (!src) return null
+      const resolved = resolveHref(src)
       const label = alt || 'Pasted image'
-      if (!isInlineImageSrc(src)) {
+      if (!isInlineImageSrc(resolved)) {
         // Local images load through the main process (never file:/remote fetches).
-        const local = resolveLocalPath(src, baseDir)
+        const local = resolveLocalPath(resolved, baseDir)
         if (local && IMAGE_EXT.test(local)) return <LocalImage path={local} alt={label} onOpen={openLightbox} />
         if (local) return <LocalFileLink path={local}>{label}</LocalFileLink>
         // Remote images never auto-load; show a plain link the user can choose to open.
-        const safe = safeHref(src)
+        const safe = safeHref(resolved)
         if (!safe || !/^https?:/i.test(safe)) return <span>{label}</span>
         return <a href={safe} target="_blank" rel="noopener noreferrer">{label}</a>
       }
       return (
         <img
           className="md-inline-image"
-          src={src}
+          src={resolved}
           alt={label}
           loading="lazy"
           title={'Double-click to enlarge'}
@@ -106,32 +332,61 @@ function MarkdownRendererInner({ content }: Props): React.JSX.Element {
           onDoubleClick={(e) => {
             e.preventDefault()
             e.stopPropagation()
-            openLightbox(src, label)
+            openLightbox(resolved, label)
           }}
           onKeyDown={(e) => {
             if (e.key === 'Enter' || e.key === ' ') {
               e.preventDefault()
-              openLightbox(src, label)
+              openLightbox(resolved, label)
             }
           }}
         />
       )
     },
-    code: ({ className, children }: { className?: string; children?: React.ReactNode }) =>
-      className ? <code className={className}>{children}</code> : <PathCode text={getNodeText(children)}>{children}</PathCode>,
-    pre: ({ children }: { children?: React.ReactNode }) => <CodeBlock>{children}</CodeBlock>
-  }), [openLightbox, baseDir])
+    code: ({ className, children, ...rest }: {
+      className?: string
+      children?: React.ReactNode
+      node?: unknown
+      'data-block'?: unknown
+    }) => {
+      if (!('data-block' in rest)) {
+        if (className) return <code className={className}>{children}</code>
+        return <PathCode text={getNodeText(children)}>{children}</PathCode>
+      }
+      const text = getNodeText(children).replace(/\n$/, '')
+      const lang = className?.match(/(?:^|\s)language-([^\s]+)/)?.[1] ?? 'text'
+      // Inline-code file paths that exist open inside Pawn.
+      if ((lang === 'text' || lang === 'txt' || !className) && !text.includes('\n')) {
+        return <PathCode text={text}>{children}</PathCode>
+      }
+      if (lang.toLowerCase() === 'mermaid' || lang.toLowerCase() === 'mmd') {
+        return <MermaidBlock code={text} streaming={streaming} />
+      }
+      return <CodeBlock code={text} lang={lang} streaming={streaming} />
+    },
+    table: ({ children }: { children?: React.ReactNode }) => (
+      <div className="md-table-scroll">
+        <table>{children}</table>
+      </div>
+    ),
+  }), [openLightbox, baseDir, streaming])
 
   return (
     <div className="markdown-body">
-      <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
-        rehypePlugins={[[rehypeHighlight, { languages: HIGHLIGHT_LANGUAGES }]]}
-        urlTransform={safeUrlTransform}
+      <Streamdown
+        mode={streaming ? 'streaming' : 'static'}
+        parseIncompleteMarkdown={streaming}
         components={components}
+        remarkPlugins={remarkPlugins}
+        rehypePlugins={rehypePlugins}
+        plugins={{ cjk: cjkPlugin, math: mathPlugin, mermaid: mermaidPlugin }}
+        controls={false}
+        linkSafety={{ enabled: false }}
+        animated={false}
+        isAnimating={false}
       >
-        {content}
-      </ReactMarkdown>
+        {targetMarkdown}
+      </Streamdown>
       {lightbox && createPortal(
         <ImageLightbox src={lightbox.src} alt={lightbox.alt} onClose={closeLightbox} />,
         document.body
@@ -202,12 +457,116 @@ function getNodeText(node: React.ReactNode): string {
   return ''
 }
 
-function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Element {
+/** Shiki token colors; fontStyle is shiki's bitmask (1 italic, 2 bold, 4 underline). */
+function tokenStyle(token: { color?: string; fontStyle?: number }): React.CSSProperties {
+  const style: React.CSSProperties = {}
+  if (token.color) style.color = token.color
+  if (token.fontStyle) {
+    if (token.fontStyle & 1) style.fontStyle = 'italic'
+    if (token.fontStyle & 2) style.fontWeight = 'bold'
+    if (token.fontStyle & 4) style.textDecoration = 'underline'
+  }
+  return style
+}
+
+function ShikiCode({ code, language }: { code: string; language: string }): React.JSX.Element {
+  const [result, setResult] = useState<HighlightResult | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    setResult(null)
+    if (!code) return
+    const lang = language.trim().toLowerCase()
+    if (lang === 'text' || lang === 'txt' || lang === 'plain') return
+    let supported = false
+    try {
+      supported = codeHighlighter.supportsLanguage(lang as Parameters<typeof codeHighlighter.supportsLanguage>[0])
+    } catch {
+      supported = false
+    }
+    if (!supported) return
+    const theme = document.querySelector('.app.dark') ? 'github-dark' : 'github-light'
+    try {
+      const out = codeHighlighter.highlight(
+        {
+          code,
+          language: lang as Parameters<typeof codeHighlighter.highlight>[0]['language'],
+          themes: [theme, theme],
+        },
+        (res) => {
+          if (!cancelled) setResult(res)
+        },
+      )
+      if (out && !cancelled) setResult(out)
+    } catch {
+      /* plain-text fallback */
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [code, language])
+  if (!result) return <>{code}</>
+  return (
+    <>
+      {result.tokens.map((line, i) => (
+        <span key={i} className="shiki-line">
+          {line.map((token, j) => (
+            <span key={j} style={tokenStyle(token)}>{token.content}</span>
+          ))}
+          {'\n'}
+        </span>
+      ))}
+    </>
+  )
+}
+
+function MermaidBlock({ code, streaming }: { code: string; streaming: boolean }): React.JSX.Element {
+  const [svg, setSvg] = useState<string | null>(null)
+  const [failed, setFailed] = useState(false)
+  const id = useId().replace(/[^a-zA-Z0-9]/g, '')
+  useEffect(() => {
+    if (streaming || !code.trim()) return
+    let cancelled = false
+    setFailed(false)
+    setSvg(null)
+    try {
+      const dark = Boolean(document.querySelector('.app.dark'))
+      mermaidPlugin.getMermaid({ theme: dark ? 'dark' : 'default' }).render(`pawn-mmd-${id}`, code)
+        .then(({ svg: rendered }) => {
+          if (!cancelled) setSvg(rendered)
+        })
+        .catch(() => {
+          if (!cancelled) setFailed(true)
+        })
+    } catch {
+      if (!cancelled) setFailed(true)
+    }
+    return () => {
+      cancelled = true
+    }
+  }, [code, streaming, id])
+  if (svg && !failed) {
+    return (
+      <div className="code-block-wrapper md-mermaid">
+        <div className="code-block-header" data-find-ignore="true">
+          <span className="code-lang">diagram</span>
+        </div>
+        <div className="md-mermaid-body" dangerouslySetInnerHTML={{ __html: svg }} />
+      </div>
+    )
+  }
+  return <CodeBlock code={code} lang="mermaid" streaming={streaming} highlight={failed || streaming} />
+}
+
+function CodeBlock({ code, lang, streaming, highlight = true }: {
+  code: string
+  lang: string
+  streaming: boolean
+  highlight?: boolean
+}): React.JSX.Element {
   const [copied, setCopied] = useState(false)
   const [expanded, setExpanded] = useState(false)
   const wrapperRef = useRef<HTMLDivElement>(null)
-  const lang = extractLang(children)
-  const text = useMemo(() => getNodeText(children).replace(/\n$/, ''), [children])
+  const text = useMemo(() => code, [code])
   const lineCount = text ? text.split('\n').length : 0
   const foldable = lineCount > CODE_FOLD_THRESHOLD_LINES
   const folded = foldable && !expanded
@@ -255,7 +614,7 @@ function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Elem
         </button>
       </div>
       <div className="code-block-body">
-        <pre>{children}</pre>
+        <pre><code className={lang ? `language-${lang}` : undefined}>{highlight && !streaming ? <ShikiCode code={text} language={lang} /> : text}</code></pre>
       </div>
       {foldable && (
         <button
@@ -282,12 +641,4 @@ function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Elem
       )}
     </div>
   )
-}
-
-function extractLang(children: React.ReactNode): string {
-  if (React.isValidElement<{ className?: string }>(children) && children.props?.className) {
-    const match = children.props.className.match(/language-(\w+)/)
-    return match?.[1] || ''
-  }
-  return ''
 }

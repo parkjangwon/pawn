@@ -123,8 +123,8 @@
   margin-left: auto;
   flex-shrink: 0;
   font-size: var(--text-ui-xs);
-  padding: 1px 6px;
-  border-radius: var(--radius-xs);
+  padding: 1px 8px;
+  border-radius: 999px;
   font-weight: 600;
   letter-spacing: 0.3px;
   /* The status word stays whole. The command beside it ellipsizes. */

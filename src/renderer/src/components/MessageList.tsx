@@ -80,7 +80,7 @@ const StreamingMarkdown = memo(function StreamingMarkdown({
   const tail = nl >= 0 ? text.slice(nl + 1) : text
   return (
     <div className="message-content streaming message-content-live">
-      {complete ? <MarkdownRenderer content={complete} /> : null}
+      {complete ? <MarkdownRenderer content={complete} streaming /> : null}
       <span className="streaming-tail">
         {tail}
         <span className="cursor-blink">▍</span>

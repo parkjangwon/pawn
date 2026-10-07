@@ -622,7 +622,8 @@
 
 .message-content {
   font-size: var(--chat-font-size, var(--text-ui-base));
-  line-height: 1.7;
+  line-height: 1.75;
+  letter-spacing: 0.025em;
   color: var(--text-primary);
   white-space: pre-wrap;
   word-break: break-word;

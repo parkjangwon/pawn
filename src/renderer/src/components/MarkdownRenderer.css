@@ -1,17 +1,26 @@
 .markdown-body {
   font-size: var(--text-ui-base);
-  line-height: 1.6;
+  line-height: 1.75;
+  letter-spacing: 0.025em;
   color: var(--text-primary);
   word-break: break-word;
-  /* .message-content sets white-space: pre-wrap for plain text; react-markdown's
-     output has whitespace-only text nodes between block tags (e.g. between <li>
-     and <p> in loose lists), and pre-wrap renders those as real line breaks —
-     splitting list markers from their text. Reset to normal for parsed markdown. */
+  /* .message-content sets white-space: pre-wrap for plain text; parsed
+     markdown output has whitespace-only text nodes between block tags (e.g.
+     between <li> and <p> in loose lists), and pre-wrap renders those as real
+     line breaks — splitting list markers from their text. */
   white-space: normal;
 }
 
+.markdown-body > *:first-child {
+  margin-top: 0;
+}
+
+.markdown-body > *:last-child {
+  margin-bottom: 0;
+}
+
 .markdown-body p {
-  margin: 0 0 4px;
+  margin: 0 0 8px;
 }
 
 .markdown-body p:last-child {
@@ -20,23 +29,34 @@
 
 .markdown-body h1, .markdown-body h2, .markdown-body h3,
 .markdown-body h4, .markdown-body h5, .markdown-body h6 {
-  margin: 8px 0 2px;
-  font-weight: 600;
+  margin: 24px 0 16px;
   color: var(--text-primary);
+  text-wrap: balance;
 }
 
-.markdown-body h1 { font-size: 1.5em; }
-.markdown-body h2 { font-size: 1.3em; }
-.markdown-body h3 { font-size: 1.1em; }
+.markdown-body h1 { font-size: 1.5em; font-weight: 600; }
+.markdown-body h2 { font-size: 1.3em; font-weight: 600; }
+.markdown-body h3 { font-size: 1.15em; font-weight: 600; }
+.markdown-body h4 { font-size: 1em; font-weight: 600; }
+.markdown-body h5 { font-size: 1em; font-weight: 500; }
+.markdown-body h6 { font-size: 1em; font-weight: 400; }
+
+.markdown-body strong {
+  font-weight: 500;
+}
 
 .markdown-body ul, .markdown-body ol {
   padding-left: 24px;
-  margin: 2px 0;
+  margin: 8px 0;
 }
 
 .markdown-body li {
-  margin: 3px 0;
-  line-height: 1.5;
+  margin: 4px 0;
+  line-height: 1.75;
+}
+
+.markdown-body li::marker {
+  color: var(--text-muted);
 }
 
 .markdown-body li p {
@@ -45,25 +65,34 @@
 
 .markdown-body blockquote {
   border-left: 2px solid var(--border-strong, var(--border-color));
-  padding-left: 12px;
-  margin: 4px 0;
+  padding: 2px 12px 2px 12px;
+  margin: 8px 0;
+  border-radius: 0 var(--radius-xs) var(--radius-xs) 0;
+  background: color-mix(in srgb, var(--text-muted) 7%, transparent);
   color: var(--text-secondary);
 }
 
+.markdown-body blockquote > *:last-child {
+  margin-bottom: 0;
+}
+
 .markdown-body code:not(pre code) {
-  background: var(--bg-hover);
+  background: var(--bg-active);
   color: var(--text-primary);
-  padding: 2px 6px;
-  border-radius: var(--radius-xs);
-  font-size: 0.9em;
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
-  border: 1px solid var(--border-color);
+  margin: 0 2px;
+  padding: 1.5px 6px;
+  border-radius: var(--radius-sm);
+  font-size: 0.875em;
+  font-family: var(--font-mono, 'SF Mono', 'Fira Code', 'Cascadia Code', monospace);
+  white-space: break-spaces;
 }
 
 .markdown-body a {
-  color: var(--text-primary);
+  color: var(--accent);
+  font-weight: 500;
   text-decoration: none;
   text-underline-offset: 4px;
+  overflow-wrap: anywhere;
 }
 
 .markdown-body a.md-file-link {
@@ -72,7 +101,7 @@
 }
 
 .markdown-body a:hover {
-  text-decoration: underline;
+  text-decoration: underline dotted;
 }
 
 /* User-attached / inline screenshots (data:image markdown). */
@@ -165,49 +194,73 @@
   outline-offset: 2px;
 }
 
+.markdown-body .md-table-scroll {
+  margin: 16px 0;
+  overflow: auto;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--text-muted) 5%, transparent);
+}
+
 .markdown-body table {
   border-collapse: collapse;
   width: 100%;
-  margin: 6px 0;
+  margin: 0;
+  font-size: var(--text-ui-sm);
 }
 
 .markdown-body th, .markdown-body td {
-  border: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+  border-right: 1px solid var(--border-color);
   padding: 8px 12px;
   text-align: left;
+  white-space: nowrap;
+}
+
+.markdown-body th:last-child, .markdown-body td:last-child {
+  border-right: none;
+}
+
+.markdown-body tr:last-child th, .markdown-body tr:last-child td {
+  border-bottom: none;
 }
 
 .markdown-body th {
   background: var(--bg-secondary);
   font-weight: 600;
+  white-space: nowrap;
 }
 
 .markdown-body hr {
   border: none;
   border-top: 1px solid var(--border-color);
-  margin: 8px 0;
+  margin: 16px 0;
 }
 
 /* Code block */
 .code-block-wrapper {
-  margin: 6px 0;
+  margin: 16px 0;
   border-radius: var(--radius-md);
   overflow: hidden;
   border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
 }
 
 .code-block-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 8px 8px 8px 12px;
   background: var(--bg-secondary);
   border-bottom: 1px solid var(--border-color);
 }
 
 .code-lang {
   font-size: var(--text-ui-sm);
+  font-weight: 500;
   color: var(--text-muted);
+  text-transform: lowercase;
 }
 
 .code-lines {
@@ -301,6 +354,7 @@
   overflow-x: auto;
   background: var(--bg-input);
   color: var(--text-primary);
+  font-family: var(--font-mono, 'SF Mono', 'Fira Code', 'Cascadia Code', monospace);
   font-size: var(--text-ui-sm);
   line-height: 1.5;
 }
@@ -317,29 +371,49 @@
 }
 
 .code-block-wrapper pre code {
-  font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+  font-family: var(--font-mono, 'SF Mono', 'Fira Code', 'Cascadia Code', monospace);
   background: none;
   padding: 0;
   color: var(--text-primary);
 }
 
+.code-block-wrapper pre code .shiki-line {
+  display: inline;
+}
+
+/* Rendered mermaid diagram: breathing room, card backdrop, contained svg. */
+.md-mermaid-body {
+  padding: 16px;
+  overflow-x: auto;
+  background: var(--bg-input);
+  text-align: center;
+}
+
+.app.dark .md-mermaid-body {
+  background: var(--bg-elevated);
+}
+
+.md-mermaid-body svg {
+  max-width: 100%;
+  height: auto;
+}
+
+/* KaTeX math inherits the message color and scrolls instead of overflowing. */
+.markdown-body .katex {
+  color: inherit;
+  font-size: 1.02em;
+}
+
+.markdown-body .katex-display {
+  margin: 16px 0;
+  padding: 4px 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+
 .code-block-wrapper pre ::selection {
   background: var(--accent);
   color: var(--on-accent);
-}
-
-/* Light mode: ensure inline code has enough contrast */
-.app.light .markdown-body code:not(pre code) {
-  background: var(--bg-elevated);
-  color: var(--danger);
-  border-color: var(--border-color);
-}
-
-/* Dark mode: inline code contrast */
-.app.dark .markdown-body code:not(pre code) {
-  background: var(--bg-elevated);
-  color: var(--danger);
-  border-color: var(--border-color);
 }
 
 /* Table readability */

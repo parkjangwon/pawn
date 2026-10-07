@@ -155,7 +155,6 @@ describe('MarkdownRenderer', () => {
     expect(container.querySelector('.code-block-wrapper')).not.toHaveAttribute('data-folded')
     expect(screen.queryByRole('button', { name: /Show all/ })).not.toBeInTheDocument()
   })
-
   it('unfolds when conversation find reveals a match inside', () => {
     const code = Array.from({ length: 40 }, (_, i) => `row ${i}`).join('\n')
     const { container } = render(<MarkdownRenderer content={'```\n' + code + '\n```'} />)
@@ -164,5 +163,28 @@ describe('MarkdownRenderer', () => {
       wrapper.dispatchEvent(new CustomEvent('pawn:reveal'))
     })
     expect(wrapper).not.toHaveAttribute('data-folded')
+  })
+
+  it('renders math blocks and single-dollar inline math via KaTeX', () => {
+    const { container } = render(<MarkdownRenderer content={'$$x^2$$ and $E=mc^2$'} />)
+    expect(container.querySelectorAll('.katex').length).toBeGreaterThan(0)
+  })
+
+  it('leaves prices and shell variables as plain text, not math', () => {
+    const { container } = render(<MarkdownRenderer content={'$5-$10 and $HOME'} />)
+    expect(container.querySelector('.katex')).not.toBeInTheDocument()
+    expect(container.textContent).toMatch(/\$5-\$10/)
+  })
+
+  it('renders mermaid fences without crashing (diagram or code fallback)', () => {
+    const { container } = render(<MarkdownRenderer content={'```mermaid\ngraph TD\n```'} />)
+    expect(
+      container.querySelector('.md-mermaid-body svg') ?? container.querySelector('.code-block-wrapper')
+    ).toBeInTheDocument()
+  })
+
+  it('accepts the streaming flag for in-progress messages', () => {
+    const { container } = render(<MarkdownRenderer content={'# Hi\n\n```ts\nconst a = 1\n```'} streaming />)
+    expect(container.querySelector('.markdown-body')).toBeInTheDocument()
   })
 })
