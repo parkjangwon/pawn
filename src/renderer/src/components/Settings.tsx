@@ -261,7 +261,7 @@ export default function Settings({
           </div>
         )}
         {activeSection === 'plugins' && <PluginsSettingsPanel state={state} />}
-        {activeSection === 'skillStore' && <SkillStorePanel t={state.t} />}
+        {activeSection === 'skillStore' && <SkillStorePanel state={state} />}
         {activeSection === 'mcp' && <McpSettingsPanel state={state} />}
         {activeSection === 'connections' && <ConnectionsSettingsPanel state={state} />}
         {activeSection === 'telegram' && <TelegramSettingsPanel />}

@@ -81,7 +81,7 @@ export default function UsageSettingsPanel(): React.JSX.Element {
       <p className="settings-desc">{t('settings.usageSection.desc')}</p>
 
       <div className="usage-toolbar">
-        <div className="theme-toggle usage-range" role="group">
+        <div className="theme-toggle usage-range" role="group" aria-label={t('settings.usageSection.title')}>
           {(
             [
               ['1d', 'settings.usageSection.range1d'],

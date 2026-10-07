@@ -16,7 +16,8 @@
     "error": "Error",
     "noResults": "No results found",
     "skipToContent": "Skip to content",
-    "clear": "Clear"
+    "clear": "Clear",
+    "operationFailed": "Something failed — see the console for details."
   },
   "sidebar": {
     "project": "Project",
@@ -677,7 +678,11 @@
       "remotePath": "Remote path",
       "remotePathHint": "Absolute repo path on the host",
       "securityNote": "Commands run with the host account’s permissions. The first connection trusts the host key (accept-new).",
-      "search": "remote ssh host execution server"
+      "search": "remote ssh host execution server",
+      "addFailed": "Could not add the host.",
+      "removeFailed": "Operation failed",
+      "passwordSaved": "password saved",
+      "removeConfirm": "Remove {{label}}? Sessions configured to run there will fall back to local."
     },
     "appearanceSection": {
       "title": "Appearance",
@@ -794,7 +799,11 @@
         "waiting": "Finish sign-in in your browser. Pawn updates when it completes.",
         "failed": "Antigravity sign-in failed",
         "note": "Sign-in uses Antigravity's desktop login. Google can change or refuse it. If it fails, use the Google (Gemini) preset with an API key."
-      }
+      },
+      "enableToggle": "Enable {{name}}",
+      "testOk": "Connected",
+      "testFailed": "Connection failed",
+      "testNoModel": "No model to test — sync models for this provider first"
     },
     "modelSection": {
       "title": "Models",
@@ -824,7 +833,9 @@
       "visionYes": "Vision",
       "visionNo": "Text only",
       "visionBadge": "Vision",
-      "visionTextOnly": "Text"
+      "visionTextOnly": "Text",
+      "enableToggle": "Use {{name}}",
+      "selectProviderHint": "Choose a provider to enable saving."
     },
     "agentSection": {
       "title": "Agent",
@@ -880,7 +891,10 @@
       "groupBehavior": "Run behavior",
       "groupSafety": "Safety & approvals",
       "groupContext": "Context & compaction",
-      "groupTools": "Models & tools"
+      "groupTools": "Models & tools",
+      "yoloWarn": "YOLO runs every tool without asking. Only use in throwaway environments.",
+      "shellNetworkNeedsSandbox": "Only applies while the shell sandbox is on.",
+      "computerFailed": "Check failed: {{detail}}"
     },
     "agentsSection": {
       "title": "Subagents",
@@ -970,7 +984,8 @@
       "template_reviewer": "Reviewer",
       "parallelHint": "When work can be split up, Pawn can run several helpers at the same time (up to six) so independent tasks finish faster. Watch them live in the chat, or open the Agents panel for full history.",
       "applyReview": "Review before applying",
-      "confirmDeleteTitle": "Delete this agent?"
+      "confirmDeleteTitle": "Delete this agent?",
+      "modelMeta": "Model: {{model}} · Max steps: {{turns}}"
     },
     "hooksSection": {
       "title": "Hooks",
@@ -1113,7 +1128,12 @@
       "deleteSelectedConfirm": "Delete {{n}} pages? Links pointing at them will break (the health check lists them).",
       "clearSelection": "Clear selection",
       "selectAll": "Select all pages",
-      "colLinks": "Links"
+      "colLinks": "Links",
+      "discardTitle": "Discard changes?",
+      "discardConfirm": "You have unsaved edits on this page. Discard them?",
+      "discard": "Discard",
+      "refresh": "Refresh",
+      "bodyLabel": "Page body"
     },
     "pluginSection": {
       "title": "Plugins",
@@ -1158,7 +1178,7 @@
       "tabsLabel": "Plugin areas",
       "tabSkills": "Skills & context",
       "tabExtensions": "Mods",
-      "search": "plugins skills enable disable store mods hooks consent"
+      "search": "plugins skills enable disable store mods extensions consent"
     },
     "mcpSection": {
       "title": "MCP",
@@ -1186,7 +1206,9 @@
       "addFailed": "Couldn't add the server.",
       "templates": "Templates",
       "templatesDesc": "One-click install common MCP servers (stdio or HTTP). Add secrets in env after install.",
-      "search": "mcp servers tools remote stdio http"
+      "search": "mcp servers tools remote stdio http",
+      "deleteConfirmTitle": "Remove MCP server?",
+      "deleteConfirm": "Remove {{id}}? Its tools disappear from the agent until re-added."
     },
     "dataSection": {
       "title": "Data",
@@ -1219,7 +1241,9 @@
       "fullBackupSafe": "Backup (no secrets)",
       "backupOkSafe": "Safe backup saved to {{path}} (API keys stripped)",
       "backupFullConfirm": "Full backup includes API keys and connection tokens. Store the zip securely. Continue?",
-      "search": "export import backup reset wipe storage"
+      "search": "export import backup reset wipe storage",
+      "backupWarn": "The full backup includes API keys — store the file somewhere safe.",
+      "exported": "Exported {{file}}"
     },
     "system": "System",
     "connectionsSection": {
@@ -1267,7 +1291,8 @@
       "writeScopesReady": "Write scopes ready",
       "finishInBrowser": "Finish signing in in your browser…",
       "finishGoogle": "Finish Google sign-in in your browser…",
-      "search": "github gitlab google connect account issues pulls calendar"
+      "search": "github gitlab google connect account issues pulls calendar codecommit aws pat token",
+      "refresh": "Refresh"
     },
     "automationSection": {
       "title": "Automations",
@@ -1349,7 +1374,9 @@
       "open-command-palette": "Open command palette",
       "open-settings": "Open settings",
       "new-session": "New chat",
-      "close-layer": "Close layer (panel / chat / window)"
+      "close-layer": "Close layer (panel / chat / window)",
+      "help": "View all shortcuts",
+      "clear": "Clear"
     },
     "quitDialog": {
       "message": "Quit Pawn?",

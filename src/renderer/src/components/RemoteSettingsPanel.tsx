@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import ConfirmDialog from './ConfirmDialog'
 import './RemoteSettingsPanel.css'
 
 interface HostRow {
@@ -40,6 +41,8 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
   const [password, setPassword] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
+  const [pendingRemove, setPendingRemove] = useState<HostRow | null>(null)
+  const [removeError, setRemoveError] = useState<string | null>(null)
 
   const reload = useCallback(async () => {
     const res = await window.api?.ssh?.list()?.catch?.(() => undefined)
@@ -84,7 +87,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
         setPassword('')
         await reload()
       } else if (res && !res.ok) {
-        setFormError(res.error || String(res))
+        setFormError(res.error || t('settings.remoteSection.addFailed'))
       }
     } finally {
       setBusy(false)
@@ -92,7 +95,9 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
   }
 
   const removeHost = async (id: string): Promise<void> => {
-    await window.api?.ssh?.remove(id)?.catch?.(() => {})
+    setRemoveError(null)
+    const res = await window.api?.ssh?.remove(id)?.catch?.(() => undefined)
+    if (res && !res.ok) setRemoveError(res.error || t('settings.remoteSection.removeFailed'))
     await reload()
   }
 
@@ -102,17 +107,39 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
     const result = res?.result
     setTests((s) => ({
       ...s,
-      [id]: result?.ok ? { state: 'ok', detail: result.uname } : { state: 'fail', detail: result?.error || 'Failed' }
+      [id]: result?.ok ? { state: 'ok', detail: result.uname } : { state: 'fail', detail: result?.error || t('settings.remoteSection.removeFailed') }
     }))
+  }
+
+  if (!window.api?.ssh) {
+    return (
+      <div className="settings-section remote-panel">
+        <h2>{t('settings.remoteSection.title')}</h2>
+        <p className="settings-desc">{t('settings.remoteSection.desc')}</p>
+        <div className="settings-empty">{t('settings.remoteSection.desktopOnly')}</div>
+      </div>
+    )
   }
 
   return (
     <div className="settings-section remote-panel">
+      {pendingRemove && (
+        <ConfirmDialog
+          title={t('settings.remoteSection.remove')}
+          message={t('settings.remoteSection.removeConfirm', { label: pendingRemove.label || pendingRemove.host })}
+          confirmLabel={t('settings.remoteSection.remove')}
+          danger
+          onConfirm={() => {
+            const target = pendingRemove
+            setPendingRemove(null)
+            void removeHost(target.id)
+          }}
+          onCancel={() => setPendingRemove(null)}
+        />
+      )}
       <h2>{t('settings.remoteSection.title')}</h2>
       <p className="settings-desc">{t('settings.remoteSection.desc')}</p>
-      {!window.api?.ssh && (
-        <p className="settings-desc">{t('settings.remoteSection.desktopOnly')}</p>
-      )}
+      {removeError && <p className="remote-note remote-error">{removeError}</p>}
 
       <div className="settings-card">
         <div className="settings-row settings-row-stack">
@@ -132,6 +159,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                   {h.host}
                   {h.port && h.port !== 22 ? `:${h.port}` : ''} ·{' '}
                   {h.auth === 'password' ? t('settings.remoteSection.authPassword') : t('settings.remoteSection.authKey')}
+                  {h.hasPassword && h.auth === 'password' ? ' · ' + t('settings.remoteSection.passwordSaved') : ''}
                 </span>
                 {test.state === 'ok' && <span className="remote-test-ok">{t('settings.remoteSection.testOk', { uname: test.detail || '' })}</span>}
                 {test.state === 'fail' && <span className="remote-test-fail">{t('settings.remoteSection.testFail', { error: test.detail || '' })}</span>}
@@ -140,7 +168,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                 <button type="button" className="btn-cancel" disabled={test.state === 'testing'} onClick={() => void testHost(h.id)}>
                   {test.state === 'testing' ? t('settings.remoteSection.testing') : t('settings.remoteSection.test')}
                 </button>
-                <button type="button" className="btn-cancel" onClick={() => void removeHost(h.id)}>
+                <button type="button" className="btn-cancel" onClick={() => setPendingRemove(h)}>
                   {t('settings.remoteSection.remove')}
                 </button>
               </div>
@@ -243,11 +271,17 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                   </select>
                   <input
                     className="remote-path-input"
-                    value={p.remotePath || ''}
+                    defaultValue={p.remotePath || ''}
+                    key={p.id + ':' + (p.remotePath || '')}
                     disabled={!isRemote}
+                    aria-label={t('settings.remoteSection.remotePathHint')}
                     placeholder={t('settings.remoteSection.remotePathHint')}
-                    onChange={(e) => setProjectExecutionTarget(p.id, p.executionHost || '', e.target.value)}
-                    onBlur={(e) => setProjectExecutionTarget(p.id, p.executionHost || '', e.target.value.trim())}
+                    onBlur={(e) => {
+                      const v = e.target.value.trim()
+                      if (v !== (p.remotePath || '')) {
+                        setProjectExecutionTarget(p.id, p.executionHost || '', v)
+                      }
+                    }}
                   />
                 </div>
               </div>

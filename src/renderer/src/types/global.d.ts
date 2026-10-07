@@ -993,7 +993,7 @@ declare global {
         setConfirmQuit: (enabled: boolean) => Promise<{ ok?: boolean; confirmQuit?: boolean }>
       }
       mcp: {
-        listTools: (projectPath?: string) => Promise<McpServerStatus[]>
+        listTools: (projectPath?: string, serverId?: string) => Promise<McpServerStatus[]>
         status: (projectPath?: string) => Promise<McpServerStatus[]>
         callTool: (
           projectPath: string | undefined,

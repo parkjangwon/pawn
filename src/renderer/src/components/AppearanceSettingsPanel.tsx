@@ -16,9 +16,15 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
             <span className="settings-row-label">{t('settings.appearanceSection.theme')}</span>
             <span className="settings-row-desc">{t('settings.appearanceSection.themeDesc')}</span>
           </div>
-          <div className="theme-segmented-control">
+          <div
+            className="theme-segmented-control"
+            role="radiogroup"
+            aria-label={t('settings.appearanceSection.theme')}
+          >
             <button
               type="button"
+              role="radio"
+              aria-checked={theme === 'light'}
               className={`theme-segment-btn ${theme === 'light' ? 'active' : ''}`}
               onClick={() => set('light')}
             >
@@ -37,6 +43,8 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={theme === 'dark'}
               className={`theme-segment-btn ${theme === 'dark' ? 'active' : ''}`}
               onClick={() => set('dark')}
             >
@@ -47,6 +55,8 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
             </button>
             <button
               type="button"
+              role="radio"
+              aria-checked={theme === 'system'}
               className={`theme-segment-btn ${theme === 'system' ? 'active' : ''}`}
               onClick={() => set('system')}
             >

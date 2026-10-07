@@ -16,7 +16,8 @@
     "error": "오류",
     "noResults": "검색 결과가 없어요",
     "skipToContent": "본문으로 건너뛰기",
-    "clear": "지우기"
+    "clear": "지우기",
+    "operationFailed": "무언가 실패했어요 — 자세한 내용은 콘솔을 확인해 주세요."
   },
   "sidebar": {
     "project": "프로젝트",
@@ -677,7 +678,11 @@
       "remotePath": "원격 경로",
       "remotePathHint": "호스트의 절대 저장소 경로",
       "securityNote": "명령은 호스트 계정 권한으로 실행돼요. 첫 연결 때 호스트 키를 신뢰해요(accept-new).",
-      "search": "원격 ssh 호스트 실행 서버"
+      "search": "원격 ssh 호스트 실행 서버",
+      "addFailed": "호스트를 추가하지 못했어요.",
+      "removeFailed": "작업이 실패했어요",
+      "passwordSaved": "비밀번호 저장됨",
+      "removeConfirm": "{{label}}을(를) 제거할까요? 거기서 실행하던 채팅은 로컬로 돌아가요."
     },
     "appearanceSection": {
       "title": "외관",
@@ -794,7 +799,11 @@
         "waiting": "브라우저에서 로그인을 마치세요. 끝나면 Pawn이 갱신해요.",
         "failed": "Antigravity 로그인에 실패했어요",
         "note": "Antigravity 데스크톱 로그인을 사용해요. Google이 바꾸거나 거부할 수 있어요. 실패하면 Google (Gemini) 프리셋의 API 키를 쓰세요."
-      }
+      },
+      "enableToggle": "{{name}} 켜기",
+      "testOk": "연결됐어요",
+      "testFailed": "연결 실패",
+      "testNoModel": "테스트할 모델이 없어요 — 먼저 모델을 동기화해 주세요"
     },
     "modelSection": {
       "title": "모델",
@@ -824,7 +833,9 @@
       "visionYes": "Vision",
       "visionNo": "텍스트만",
       "visionBadge": "Vision",
-      "visionTextOnly": "Text"
+      "visionTextOnly": "Text",
+      "enableToggle": "{{name}} 사용",
+      "selectProviderHint": "저장하려면 먼저 프로바이더를 선택해 주세요."
     },
     "agentSection": {
       "title": "에이전트",
@@ -880,7 +891,10 @@
       "groupBehavior": "실행 동작",
       "groupSafety": "안전 및 승인",
       "groupContext": "컨텍스트 및 압축",
-      "groupTools": "모델 및 도구"
+      "groupTools": "모델 및 도구",
+      "yoloWarn": "YOLO는 모든 도구를 묻지 않고 실행해요. 임시 환경에서만 쓰는 걸 권해요.",
+      "shellNetworkNeedsSandbox": "셸 샌드박스가 켜져 있을 때만 적용돼요.",
+      "computerFailed": "확인 실패: {{detail}}"
     },
     "agentsSection": {
       "title": "서브에이전트",
@@ -970,7 +984,8 @@
       "template_reviewer": "리뷰",
       "parallelHint": "일을 나눌 수 있으면 에이전트 여러 명을 동시에 돌려요(최대 6명). 독립된 작업이 더 빨리 끝나요. 채팅에서 실시간으로 보고, 전체 기록은 에이전트 패널에서 확인하세요.",
       "applyReview": "적용 전 검토",
-      "confirmDeleteTitle": "이 에이전트를 삭제할까요?"
+      "confirmDeleteTitle": "이 에이전트를 삭제할까요?",
+      "modelMeta": "모델: {{model}} · 최대 단계: {{turns}}"
     },
     "hooksSection": {
       "title": "훅",
@@ -1113,7 +1128,12 @@
       "deleteSelectedConfirm": "선택한 {{n}}개 페이지를 삭제할까요? 이곳을 가리키던 링크는 깨져요(상태 점검이 알려줘요).",
       "clearSelection": "선택 해제",
       "selectAll": "전체 선택",
-      "colLinks": "링크"
+      "colLinks": "링크",
+      "discardTitle": "변경을 버릴까요?",
+      "discardConfirm": "저장하지 않은 편집이 있어요. 버릴까요?",
+      "discard": "버리기",
+      "refresh": "새로고침",
+      "bodyLabel": "페이지 본문"
     },
     "pluginSection": {
       "title": "플러그인",
@@ -1158,7 +1178,7 @@
       "tabsLabel": "플러그인 영역",
       "tabSkills": "스킬·맥락",
       "tabExtensions": "mods",
-      "search": "플러그인 스킬 켜기 끄기 스토어 mods 훅 동의"
+      "search": "플러그인 스킬 켜기 끄기 스토어 모드 확장 동의"
     },
     "mcpSection": {
       "title": "MCP",
@@ -1186,7 +1206,9 @@
       "templates": "템플릿",
       "templatesDesc": "자주 쓰는 MCP 서버(stdio/HTTP)를 한 번에 설치해요. 필요한 비밀 값은 설치 후 환경 변수에 넣으세요.",
       "retry": "다시 시도",
-      "search": "mcp 서버 도구 원격 stdio http"
+      "search": "mcp 서버 도구 원격 stdio http",
+      "deleteConfirmTitle": "MCP 서버를 제거할까요?",
+      "deleteConfirm": "{{id}}을(를) 제거할까요? 다시 추가하기 전까지 에이전트에서 도구가 사라져요."
     },
     "dataSection": {
       "title": "데이터",
@@ -1219,7 +1241,9 @@
       "fullBackupSafe": "백업 (시크릿 제외)",
       "backupOkSafe": "안전 백업 저장: {{path}} (API 키 제거됨)",
       "backupFullConfirm": "전체 백업에는 API 키와 연결 토큰이 들어가요. zip 파일을 안전하게 보관하세요. 계속할까요?",
-      "search": "내보내기 가져오기 백업 초기화 삭제 저장소"
+      "search": "내보내기 가져오기 백업 초기화 삭제 저장소",
+      "backupWarn": "전체 백업에는 API 키가 포함돼요 — 파일을 안전한 곳에 보관해 주세요.",
+      "exported": "{{file}}을(를) 내보냈어요"
     },
     "system": "시스템",
     "connectionsSection": {
@@ -1267,7 +1291,8 @@
       "writeScopesReady": "쓰기 권한 활성화됨",
       "finishInBrowser": "브라우저에서 로그인을 마쳐 주세요…",
       "finishGoogle": "브라우저에서 Google 로그인을 마쳐 주세요…",
-      "search": "깃허브 깃랩 구글 연결 계정 이슈 풀 캘린더"
+      "search": "깃허브 깃랩 구글 연결 계정 이슈 풀 캘린더 코드커밋 aws pat 토큰",
+      "refresh": "새로고침"
     },
     "automationSection": {
       "title": "자동화",
@@ -1349,7 +1374,9 @@
       "open-command-palette": "명령 팔레트 열기",
       "open-settings": "설정 열기",
       "new-session": "새 채팅",
-      "close-layer": "레이어 닫기 (패널 / 채팅 / 창)"
+      "close-layer": "레이어 닫기 (패널 / 채팅 / 창)",
+      "help": "전체 단축키 보기",
+      "clear": "해제"
     },
     "quitDialog": {
       "message": "Pawn을 종료할까요?",

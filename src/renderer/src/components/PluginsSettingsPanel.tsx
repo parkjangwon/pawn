@@ -35,9 +35,16 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
     return getModRuntime().getActiveMods().length
   })()
 
+  // Deep links (palette / error cards) fire while this panel may already be
+  // mounted — consume the pending tab on every open-settings event too.
   useEffect(() => {
-    const pending = consumePendingPluginsTab()
-    if (pending) setTab(pending)
+    const consume = (): void => {
+      const pending = consumePendingPluginsTab()
+      if (pending) setTab(pending)
+    }
+    consume()
+    window.addEventListener('pawn:open-settings', consume)
+    return () => window.removeEventListener('pawn:open-settings', consume)
   }, [])
 
   return (
@@ -135,7 +142,12 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
                   </div>
                   <div className="settings-row-actions">
                     <label className="toggle-switch">
-                      <input type="checkbox" checked={enabled} onChange={() => toggleSkill(skill.name)} />
+                      <input
+                        type="checkbox"
+                        checked={enabled}
+                        aria-label={skill.name}
+                        onChange={() => toggleSkill(skill.name)}
+                      />
                       <span className="toggle-slider" />
                     </label>
                   </div>

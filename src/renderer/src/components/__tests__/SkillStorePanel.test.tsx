@@ -44,7 +44,7 @@ const names = (): string[] => Array.from(document.querySelectorAll('.skill-store
 
 describe('SkillStorePanel', () => {
   it('shows the most installed skills with descriptions, paged 12 at a time', async () => {
-    render(<SkillStorePanel t={t} />)
+    render(<SkillStorePanel state={{ t } as never} />)
     await flush()
     await flush()
     expect(api.search).toHaveBeenCalledWith('')
@@ -57,7 +57,7 @@ describe('SkillStorePanel', () => {
   })
 
   it('sorts by name and by newest (first-seen date)', async () => {
-    render(<SkillStorePanel t={t} />)
+    render(<SkillStorePanel state={{ t } as never} />)
     await flush()
     fireEvent.click(screen.getByRole('radio', { name: 'settings.skillStore.sort.newest' }))
     await flush()
@@ -68,7 +68,7 @@ describe('SkillStorePanel', () => {
   })
 
   it('searches by name, installs and removes', async () => {
-    render(<SkillStorePanel t={t} />)
+    render(<SkillStorePanel state={{ t } as never} />)
     await flush()
     // Installed skills show Remove instead of Install.
     const b = document.querySelectorAll('.skill-store-card')[1] as HTMLElement

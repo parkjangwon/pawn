@@ -143,7 +143,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   const [formError, setFormError] = useState('')
   const [showAddModel, setShowAddModel] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
-  const [testResult, setTestResult] = useState<Record<string, string>>({})
+  const [testResult, setTestResult] = useState<Record<string, { ok: boolean; message: string }>>({})
   const [syncingId, setSyncingId] = useState<string | null>(null)
   const [syncResult, setSyncResult] = useState<Record<string, string>>({})
   const [syncFailed, setSyncFailed] = useState<Record<string, boolean>>({})
@@ -213,12 +213,13 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     setModelForm((f) => ({
       ...f,
       modelId,
-      tier: guess?.tier || f.tier,
-      input: guess ? String(guess.input) : f.input,
-      output: guess ? String(guess.output) : f.output,
-      cacheRead: guess ? String(guess.cacheRead) : f.cacheRead,
-      cacheWrite: guess ? String(guess.cacheWrite) : f.cacheWrite,
-      contextWindow: guess ? String(guess.contextWindow) : f.contextWindow,
+      // Only fill fields the user has not typed into — never clobber.
+      tier: f.tier ? f.tier : guess?.tier || f.tier,
+      input: f.input || (guess ? String(guess.input) : f.input),
+      output: f.output || (guess ? String(guess.output) : f.output),
+      cacheRead: f.cacheRead || (guess ? String(guess.cacheRead) : f.cacheRead),
+      cacheWrite: f.cacheWrite || (guess ? String(guess.cacheWrite) : f.cacheWrite),
+      contextWindow: f.contextWindow || (guess ? String(guess.contextWindow) : f.contextWindow),
       // Only auto-fill vision when the user has not set it explicitly yet.
       vision: f.vision === '' && visionGuess !== undefined
         ? (visionGuess ? 'yes' : 'no')
@@ -339,7 +340,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       return
     }
     setFormError('')
-    addProvider({
+    const created = addProvider({
       id: '',
       name: form.name.trim(),
       apiFormat: form.apiFormat,
@@ -354,6 +355,9 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       apiKey: ''
     })
     setShowAddProvider(false)
+    // Verify the key right away (like the preset path) so a bad baseUrl/key
+    // is caught at setup time, not on the user's first message.
+    if (created) void handleTestProvider(created.id).catch(() => {})
   }
 
   const handleAddModel = (): void => {
@@ -431,7 +435,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     const p = useProviderStore.getState().providers.find((pr) => pr.id === providerId)
     if (!p) return
     setTestingId(providerId)
-    setTestResult((r) => ({ ...r, [providerId]: '' }))
+    setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: '' } }))
     const signal = AbortSignal.timeout(TEST_TIMEOUT_MS)
     try {
       if (p.apiFormat === 'kiro') {
@@ -441,13 +445,13 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         ])
         const ok = Boolean(r?.ok)
         __providerTestOutcome[providerId] = ok ? 'ok' : 'fail'
-        setTestResult((res) => ({ ...res, [providerId]: ok ? 'OK' : `FAIL: ${(r?.error || 'Kiro unavailable').slice(0, 120)}` }))
+        setTestResult((res) => ({ ...res, [providerId]: { ok, message: ok ? '' : (r?.error || t('settings.providerSection.testFailed')).slice(0, 120) } }))
         return
       }
       const modelId = pickTestModelId(providerId, useProviderStore.getState().models, p.apiFormat)
       if (!modelId) {
         __providerTestOutcome[providerId] = 'fail'
-        setTestResult((r) => ({ ...r, [providerId]: 'FAIL: no model' }))
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: t('settings.providerSection.testNoModel') } }))
         return
       }
       const call = await prepareSideCall(p, buildTestRequestBody(p.apiFormat, modelId))
@@ -468,23 +472,23 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       }
       if (response.ok) {
         __providerTestOutcome[providerId] = 'ok'
-        setTestResult((r) => ({ ...r, [providerId]: 'OK' }))
+        setTestResult((r) => ({ ...r, [providerId]: { ok: true, message: '' } }))
       } else {
         const text = await response.text().catch(() => '')
         __providerTestOutcome[providerId] = 'fail'
         setTestResult((r) => ({
           ...r,
-          [providerId]: summarizeProviderError(response.status, text)
+          [providerId]: { ok: false, message: summarizeProviderError(response.status, text) }
         }))
       }
     } catch (err) {
       __providerTestOutcome[providerId] = 'fail'
       const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.message === 'timeout')
       if (timedOut) {
-        setTestResult((r) => ({ ...r, [providerId]: `FAIL: ${t('settings.providerTestTimeout')}` }))
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: t('settings.providerTestTimeout') } }))
       } else {
-        const msg = err instanceof Error ? err.message : 'ERROR'
-        setTestResult((r) => ({ ...r, [providerId]: `ERROR: ${msg.slice(0, 60)}` }))
+        const msg = err instanceof Error ? err.message : t('common.operationFailed')
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: msg.slice(0, 60) } }))
       }
     } finally {
       setTestingId(null)
@@ -503,6 +507,9 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       e.stopPropagation()
       if (e.key === 'Escape') { setRecording(null); return }
       if (['Meta', 'Control', 'Alt', 'Shift'].includes(e.key)) return
+      // A modifier-less key ("a") would hijack plain typing app-wide —
+      // require at least one modifier for a global shortcut.
+      if (!e.altKey && !e.ctrlKey && !e.metaKey && !e.shiftKey) return
       setKeybinding(recording, comboToString({ alt: e.altKey, ctrl: e.ctrlKey, meta: e.metaKey, shift: e.shiftKey, key: e.key }))
       setRecording(null)
     }
@@ -848,21 +855,20 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     attachResizer,
     providers, models, routingMode, defaultSendMode, permissionMode, visionModelId,
     addProvider, removeProvider, updateProvider,
-    addModel, removeModel, updateModel, syncModelsFromProvider,
+    addModel, removeModel, updateModel,
     setRoutingMode, setDefaultSendMode, setPermissionMode,
     shellSandbox, setShellSandbox, shellNetwork, setShellNetwork,
     shellCwdJail, setShellCwdJail,
     setVisionModel,
     activeSection, setActiveSection, showAddProvider, setShowAddProvider, presetPicking, setPresetPicking,
     presetKey, setPresetKey, presetKeyError, setPresetKeyError, formError, setFormError,
-    syncFailed, showAddModel, setShowAddModel, testingId, setTestingId, testResult, setTestResult,
-    syncingId, setSyncingId, syncResult, setSyncResult, form, setForm, modelForm, setModelForm,
-    homeDir, setHomeDir, loadedSkills, setLoadedSkills, skillsLoading, setSkillsLoading,
-    skillScope, setSkillScope, skillSearch, setSkillSearch, disabledSkills, setDisabledSkills,
-    contextSignals, setContextSignals, contextAdditionCount, setContextAdditionCount,
-    mcpLoading, setMcpLoading, showAddMcpServer, setShowAddMcpServer, mcpForm, setMcpForm, mcpScope, setMcpScope,
+    syncFailed, showAddModel, setShowAddModel, testingId, setTestingId, testResult,
+    syncingId, setSyncingId, syncResult, form, setForm, modelForm, setModelForm,
+    homeDir, loadedSkills, skillsLoading, skillScope, setSkillScope, skillSearch, setSkillSearch, disabledSkills,
+    contextSignals, contextAdditionCount, mcpLoading,
+    showAddMcpServer, setShowAddMcpServer, mcpForm, setMcpForm, mcpScope, setMcpScope,
     mcpFormError, setMcpFormError, mcpAdding, setMcpAdding, confirmDelete, setConfirmDelete,
-    pawnPaths, setPawnPaths, connStatus, setConnStatus, connBusy, setConnBusy, connMsg, setConnMsg,
+    pawnPaths, connStatus, connBusy, setConnBusy, connMsg, setConnMsg,
     deviceAuth, setDeviceAuth, patFormOpen, setPatFormOpen, patForm, setPatForm,
     activeProject, activeProjectId, projectPath,
     applyModelIdGuess, visionCandidates, handleAddFromPreset, handleSyncModels, handleAddProvider, handleAddModel,

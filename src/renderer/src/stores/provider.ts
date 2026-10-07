@@ -56,7 +56,7 @@ interface ProviderState {
   initialized: boolean
   init: () => Promise<void>
 
-  addProvider: (provider: Provider) => void
+  addProvider: (provider: Provider) => Provider
   removeProvider: (id: string) => void
   updateProvider: (id: string, patch: Partial<Provider>) => void
   addModel: (model: ModelEntry) => void
@@ -247,6 +247,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   addProvider: (provider) => {
     const p = { ...provider, id: provider.id || uid() }
     set((s) => { const next = { ...s, providers: [...s.providers, p] }; saveToBackend(next); return { providers: next.providers } })
+    return p
   },
 
   removeProvider: (id) => {

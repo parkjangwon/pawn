@@ -32,10 +32,10 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
             <span className="settings-row-label">{t('settings.systemSection.sleepPrevention')}</span>
             <span className="settings-row-desc">{t('settings.systemSection.sleepPreventionDesc')}</span>
           </div>
-          <div className="theme-toggle">
-            <button className={sleepPrevention === 'off' ? 'active' : ''} onClick={() => setSleepPrevention('off')}>{t('settings.systemSection.sleepOff')}</button>
-            <button className={sleepPrevention === 'sleep' ? 'active' : ''} onClick={() => setSleepPrevention('sleep')}>{t('settings.systemSection.sleepSystem')}</button>
-            <button className={sleepPrevention === 'display' ? 'active' : ''} onClick={() => setSleepPrevention('display')}>{t('settings.systemSection.sleepDisplay')}</button>
+          <div className="theme-toggle" role="group" aria-label={t('settings.systemSection.sleepPrevention')}>
+            <button className={sleepPrevention === 'off' ? 'active' : ''} aria-pressed={sleepPrevention === 'off'} onClick={() => setSleepPrevention('off')}>{t('settings.systemSection.sleepOff')}</button>
+            <button className={sleepPrevention === 'sleep' ? 'active' : ''} aria-pressed={sleepPrevention === 'sleep'} onClick={() => setSleepPrevention('sleep')}>{t('settings.systemSection.sleepSystem')}</button>
+            <button className={sleepPrevention === 'display' ? 'active' : ''} aria-pressed={sleepPrevention === 'display'} onClick={() => setSleepPrevention('display')}>{t('settings.systemSection.sleepDisplay')}</button>
           </div>
         </div>
         <div className="settings-row">
@@ -47,6 +47,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
             <input
               type="checkbox"
               checked={taskNotificationsEnabled}
+              aria-label={t('settings.systemSection.taskNotifications')}
               onChange={(e) => setTaskNotificationsEnabled(e.target.checked)}
             />
             <span className="toggle-slider" />
@@ -61,6 +62,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
             <input
               type="checkbox"
               checked={trayVisible}
+              aria-label={t('settings.systemSection.trayEnabled')}
               onChange={(e) => {
                 const next = e.target.checked
                 setTrayVisible(next)
@@ -79,6 +81,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
             <input
               type="checkbox"
               checked={confirmQuit}
+              aria-label={t('settings.systemSection.confirmQuit')}
               onChange={(e) => setConfirmQuit(e.target.checked)}
             />
             <span className="toggle-slider" />
@@ -93,6 +96,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
             <input
               type="checkbox"
               checked={checkUpdatesOnLaunch}
+              aria-label={t('settings.systemSection.checkUpdatesOnLaunch')}
               onChange={(e) => setCheckUpdatesOnLaunch(e.target.checked)}
             />
             <span className="toggle-slider" />
@@ -105,7 +109,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
               {updateMsg || t('settings.systemSection.checkUpdatesDesc')}
             </span>
           </div>
-          <div className="settings-row-actions" style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <div className="settings-row-actions">
             <button
               type="button"
               className="btn-action"
@@ -136,7 +140,10 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
                       )
                     }
                   })
-                  .catch((e) => setUpdateMsg(String(e)))
+                  .catch((e) => {
+                    console.warn('[system-settings]', e)
+                    setUpdateMsg(t('common.operationFailed'))
+                  })
                   .finally(() => setUpdateChecking(false))
               }}
             >
@@ -174,7 +181,10 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
                       setUpdateMsg(r.error || t('settings.systemSection.downloadFailed'))
                     }
                   })
-                  .catch((e) => setUpdateMsg(String(e)))
+                  .catch((e) => {
+                    console.warn('[system-settings]', e)
+                    setUpdateMsg(t('common.operationFailed'))
+                  })
                   .finally(() => setUpdateChecking(false))
               }}
             >

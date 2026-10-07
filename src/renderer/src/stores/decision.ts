@@ -31,7 +31,7 @@ function isStatus(v: unknown): v is DecisionStatusDto {
   return !!v && typeof v === 'object' && Array.isArray((v as DecisionStatusDto).providers) && !!(v as DecisionStatusDto).features
 }
 
-export const useDecisionStore = create<DecisionState>((set) => {
+export const useDecisionStore = create<DecisionState>((set, get) => {
   const apply = (s: unknown): void => {
     if (isStatus(s)) set({ status: s, fetchedAt: Date.now(), available: true })
   }
@@ -102,8 +102,17 @@ export const useDecisionStore = create<DecisionState>((set) => {
       try {
         const r = await d.setFeatures(partial)
         apply(r.status)
-      } catch {
-        // Leave the optimistic state; the next status pull re-syncs.
+      } catch (err) {
+        // Roll the optimistic toggle back and let the caller show why.
+        const status = get().status
+        if (status) {
+          const reverted = { ...status.features }
+          for (const [k, v] of Object.entries(partial)) {
+            reverted[k as keyof DecisionFeaturesDto] = !v as never
+          }
+          set({ status: { ...status, features: reverted } })
+        }
+        throw err instanceof Error ? err : new Error(String(err))
       }
     }
   }

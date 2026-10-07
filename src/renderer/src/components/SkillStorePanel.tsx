@@ -1,14 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { TFunction } from 'i18next'
 import { clearProjectContextCache } from '../agent/skills'
 import { dedupeByName, formatInstalls, PAGE_SIZE, pageCount, pageSlice, sortSkills, type SkillSort, type StoreSkill } from '../utils/skillStore'
+import type { SettingsState } from './settingsState'
 
 /**
  * Settings → Skill store: search public skills (skills.sh), read what each
  * does, install into ~/.agents/skills (shared with Claude Code / Codex / …)
  * or remove again. Search · paging · sort (popular / newest / name).
  */
-export default function SkillStorePanel({ t }: { t: TFunction }): React.JSX.Element {
+export default function SkillStorePanel({ state }: { state: SettingsState }): React.JSX.Element {
+  const { t } = state
   const api = window.api?.skills
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<StoreSkill[]>([])
@@ -37,7 +38,7 @@ export default function SkillStorePanel({ t }: { t: TFunction }): React.JSX.Elem
     const timer = window.setTimeout(async () => {
       setLoading(true)
       setError(null)
-      const r = await api.search(q.length >= 2 ? q : '').catch((e: unknown) => ({ skills: [] as RegistrySkill[], error: String(e) }))
+      const r = await api.search(q.length >= 2 ? q : '').catch((e: unknown) => { console.warn('[skill-store]', e); return { skills: [] as RegistrySkill[], error: t('common.operationFailed') } })
       if (seq !== searchSeq.current) return
       setResults(dedupeByName(r.skills))
       setError(r.error || null)
@@ -94,7 +95,7 @@ export default function SkillStorePanel({ t }: { t: TFunction }): React.JSX.Elem
     if (!api) return
     setBusy((b) => ({ ...b, [s.id]: 'install' }))
     setNotice(null)
-    const r = await api.install(s.id).catch((e: unknown) => ({ ok: false as const, error: String(e) }))
+    const r = await api.install(s.id).catch((e: unknown) => { console.warn('[skill-store]', e); return { ok: false as const, error: t('common.operationFailed') } })
     setBusy((b) => {
       const { [s.id]: _, ...rest } = b
       return rest
@@ -111,7 +112,7 @@ export default function SkillStorePanel({ t }: { t: TFunction }): React.JSX.Elem
   const remove = async (s: StoreSkill): Promise<void> => {
     if (!api) return
     setBusy((b) => ({ ...b, [s.id]: 'remove' }))
-    const r = await api.remove(s.name).catch((e: unknown) => ({ ok: false, error: String(e) }))
+    const r = await api.remove(s.name).catch((e: unknown) => { console.warn('[skill-store]', e); return { ok: false, error: t('common.operationFailed') } })
     setBusy((b) => {
       const { [s.id]: _, ...rest } = b
       return rest

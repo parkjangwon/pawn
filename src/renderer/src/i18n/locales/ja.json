@@ -16,7 +16,8 @@
     "error": "エラー",
     "noResults": "検索結果が見つかりません",
     "skipToContent": "本文へスキップ",
-    "clear": "クリア"
+    "clear": "クリア",
+    "operationFailed": "処理に失敗しました — 詳細はコンソールを確認してください。"
   },
   "sidebar": {
     "project": "プロジェクト",
@@ -677,7 +678,11 @@
       "remotePath": "リモートパス",
       "remotePathHint": "ホスト上のリポジトリの絶対パス",
       "securityNote": "コマンドはホストアカウントの権限で実行されます。最初の接続でホスト鍵を信頼します（accept-new）。",
-      "search": "リモート ssh ホスト 実行 サーバー"
+      "search": "リモート ssh ホスト 実行 サーバー",
+      "addFailed": "ホストを追加できませんでした。",
+      "removeFailed": "操作に失敗しました",
+      "passwordSaved": "パスワード保存済み",
+      "removeConfirm": "{{label}} を削除しますか？そこで実行していたセッションはローカルに戻ります。"
     },
     "appearanceSection": {
       "title": "外観",
@@ -794,7 +799,11 @@
         "waiting": "ブラウザでサインインを完了してください。終わると Pawn が更新します。",
         "failed": "Antigravity のサインインに失敗しました",
         "note": "Antigravity のデスクトップログインを使います。Google が変更したり拒否したりすることがあります。失敗した場合は Google (Gemini) プリセットの API キーを使ってください。"
-      }
+      },
+      "enableToggle": "{{name}} を有効にする",
+      "testOk": "接続できました",
+      "testFailed": "接続に失敗しました",
+      "testNoModel": "テストするモデルがありません — 先にモデルを同期してください"
     },
     "modelSection": {
       "title": "モデル",
@@ -824,7 +833,9 @@
       "visionYes": "Vision",
       "visionNo": "テキストのみ",
       "visionBadge": "Vision",
-      "visionTextOnly": "Text"
+      "visionTextOnly": "Text",
+      "enableToggle": "{{name}} を使用",
+      "selectProviderHint": "保存するにはプロバイダーを選択してください。"
     },
     "agentSection": {
       "title": "エージェント",
@@ -880,7 +891,10 @@
       "groupBehavior": "実行動作",
       "groupSafety": "安全性と承認",
       "groupContext": "コンテキストと圧縮",
-      "groupTools": "モデルとツール"
+      "groupTools": "モデルとツール",
+      "yoloWarn": "YOLO はすべてのツールを確認なしで実行します。使い捨ての環境でのみ使ってください。",
+      "shellNetworkNeedsSandbox": "シェルサンドボックスが有効なときのみ適用されます。",
+      "computerFailed": "確認失敗: {{detail}}"
     },
     "agentsSection": {
       "title": "サブエージェント",
@@ -970,7 +984,8 @@
       "template_reviewer": "レビュー",
       "parallelHint": "仕事を分けられるときは、ヘルパーを同時に最大 6 体まで動かせます。独立した作業がより早く終わります。進捗はチャットでライブ確認でき、履歴は Agents パネルで確認できます。",
       "applyReview": "適用前に確認",
-      "confirmDeleteTitle": "このエージェントを削除しますか？"
+      "confirmDeleteTitle": "このエージェントを削除しますか？",
+      "modelMeta": "モデル: {{model}} · 最大ステップ: {{turns}}"
     },
     "hooksSection": {
       "title": "フック",
@@ -1113,7 +1128,12 @@
       "deleteSelectedConfirm": "選択した {{n}} ページを削除しますか？ここを指すリンクは壊れます（状態チェックで確認できます）。",
       "clearSelection": "選択を解除",
       "selectAll": "すべて選択",
-      "colLinks": "リンク"
+      "colLinks": "リンク",
+      "discardTitle": "変更を破棄しますか？",
+      "discardConfirm": "保存されていない編集があります。破棄しますか？",
+      "discard": "破棄",
+      "refresh": "再読み込み",
+      "bodyLabel": "ページ本文"
     },
     "pluginSection": {
       "title": "プラグイン",
@@ -1158,7 +1178,7 @@
       "tabsLabel": "プラグイン領域",
       "tabSkills": "スキルと文脈",
       "tabExtensions": "mods",
-      "search": "プラグイン スキル 有効 無効 ストア mods フック 同意"
+      "search": "プラグイン スキル 有効 無効 ストア モッド 拡張 同意"
     },
     "mcpSection": {
       "title": "MCP",
@@ -1186,7 +1206,9 @@
       "templates": "テンプレート",
       "templatesDesc": "よく使われるMCPサーバー（stdio/HTTP）をワンクリックでインストールします。必要なシークレットはインストール後に環境変数に追加してください。",
       "retry": "再試行",
-      "search": "mcp サーバー ツール リモート stdio http"
+      "search": "mcp サーバー ツール リモート stdio http",
+      "deleteConfirmTitle": "MCP サーバーを削除しますか？",
+      "deleteConfirm": "{{id}} を削除しますか？再追加するまでエージェントからツールが消えます。"
     },
     "dataSection": {
       "title": "データ",
@@ -1219,7 +1241,9 @@
       "fullBackupSafe": "バックアップ（秘密情報なし）",
       "backupOkSafe": "安全バックアップ保存: {{path}}（APIキー除去）",
       "backupFullConfirm": "フルバックアップには API キーと接続トークンが含まれます。zip を安全に保管してください。続けますか？",
-      "search": "エクスポート インポート バックアップ リセット 消去 ストレージ"
+      "search": "エクスポート インポート バックアップ リセット 消去 ストレージ",
+      "backupWarn": "完全バックアップには API キーが含まれます — ファイルは安全な場所に保管してください。",
+      "exported": "{{file}} を書き出しました"
     },
     "system": "システム",
     "connectionsSection": {
@@ -1267,7 +1291,8 @@
       "writeScopesReady": "書き込み権限が有効です",
       "finishInBrowser": "ブラウザでサインインを完了してください…",
       "finishGoogle": "ブラウザで Google サインインを完了してください…",
-      "search": "github・gitlab・google 接続 アカウント イシュー プル カレンダー"
+      "search": "github・gitlab・google 接続 アカウント issue プル カレンダー codecommit・aws・pat・トークン",
+      "refresh": "再読み込み"
     },
     "automationSection": {
       "title": "オートメーション",
@@ -1349,7 +1374,9 @@
       "open-command-palette": "コマンドパレットを開く",
       "open-settings": "設定を開く",
       "new-session": "新規セッション",
-      "close-layer": "レイヤーを閉じる（パネル / セッション / ウィンドウ）"
+      "close-layer": "レイヤーを閉じる（パネル / セッション / ウィンドウ）",
+      "help": "すべてのショートカットを見る",
+      "clear": "解除"
     },
     "quitDialog": {
       "message": "Pawn を終了しますか？",

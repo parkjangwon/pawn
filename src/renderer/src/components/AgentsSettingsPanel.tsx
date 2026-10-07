@@ -291,14 +291,19 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
   const handleDelete = async (p: AgentProfile): Promise<void> => {
     if (!p.sourcePath) return
     setPendingDelete(null)
-    const res = await deleteAgentProfile(p.sourcePath)
-    if (!res.ok) {
-      setError(res.error)
-      return
+    try {
+      const res = await deleteAgentProfile(p.sourcePath)
+      if (!res.ok) {
+        setError(res.error || t('common.operationFailed'))
+        return
+      }
+      setMessage(t('settings.agentsSection.deleted', { name: p.name }))
+      if (editorMode !== 'closed' && existingPath === p.sourcePath) closeEditor()
+      await refresh()
+    } catch (e) {
+      console.warn('[agents-settings]', e)
+      setError(t('common.operationFailed'))
     }
-    setMessage(t('settings.agentsSection.deleted', { name: p.name }))
-    if (editorMode !== 'closed' && existingPath === p.sourcePath) closeEditor()
-    await refresh()
   }
 
   const requestDelete = (p: AgentProfile): void => {
@@ -344,7 +349,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
         </div>
       </div>
       <div className="agents-settings-meta">
-        model={p.model} · maxTurns={p.maxTurns}
+        {t('settings.agentsSection.modelMeta', { model: p.model || t('settings.agentsSection.modelInherit'), turns: p.maxTurns })}
         {p.sourcePath ? ` · ${p.sourcePath}` : ''}
       </div>
       <div className="agents-card-actions">
@@ -386,7 +391,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
       )}
       <div className="agents-settings-head">
         <div>
-          <p className="settings-row-desc">{t('settings.agentsSection.desc')}</p>
+          <p className="settings-desc">{t('settings.agentsSection.desc')}</p>
           <p className="agents-settings-subhint">{t('settings.agentsSection.parallelHint')}</p>
         </div>
         <div className="agents-settings-head-actions">
@@ -480,6 +485,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
               <input
                 type="checkbox"
                 checked={autoOpenAgentsPanel}
+                aria-label={t('settings.agentsSection.autoOpenPanel')}
                 onChange={(e) => setAutoOpenAgentsPanel(e.target.checked)}
               />
               <span className="agents-switch-track" aria-hidden />

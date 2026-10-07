@@ -434,7 +434,10 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
                 checked={!!features?.[f.key]}
                 disabled={!active}
                 aria-label={t(f.label)}
-                onChange={(e) => void setFeatures({ [f.key]: e.target.checked })}
+                onChange={(e) => {
+                  setRowError('')
+                  setFeatures({ [f.key]: e.target.checked }).catch(() => setRowError(t('common.operationFailed')))
+                }}
               />
               <span className="toggle-slider" />
             </label>

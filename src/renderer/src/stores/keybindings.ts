@@ -146,7 +146,8 @@ export const useKeybindingsStore = create<KeybindingsState>((set, get) => ({
   },
 
   setBinding: (id, combo) => {
-    if (!parseCombo(combo)) return
+    // '' means "not set" — the settings Clear action writes it on purpose.
+    if (combo !== '' && !parseCombo(combo)) return
     const bindings = { ...get().bindings, [id]: combo }
     set({ bindings })
     window.api.config.save({ settings: { keybindings: bindings } }).catch(() => {})

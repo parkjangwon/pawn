@@ -9,6 +9,7 @@ export default function ShortcutsSettingsPanel({ state }: { state: SettingsState
     recording,
     setRecording,
     keybindings,
+    setKeybinding,
     resetKeybinding
   } = state
 
@@ -18,7 +19,7 @@ export default function ShortcutsSettingsPanel({ state }: { state: SettingsState
       <p className="settings-desc">{t('settings.shortcutSection.desc')}</p>
       <div>
         <button type="button" className="test-btn" onClick={() => window.dispatchEvent(new CustomEvent('pawn:shortcuts-help'))}>
-          {t('commandPalette.shortcuts')}
+          {t('settings.shortcutSection.help')}
         </button>
       </div>
       <div className="settings-card">
@@ -39,6 +40,14 @@ export default function ShortcutsSettingsPanel({ state }: { state: SettingsState
               <div className="settings-row-actions">
                 <button className={`test-btn ${recording === id ? 'ok' : ''}`} onClick={() => setRecording(recording === id ? null : id)}>
                   {recording === id ? t('settings.shortcutSection.cancel') : t('settings.shortcutSection.change')}
+                </button>
+                <button
+                  className="test-btn"
+                  onClick={() => setKeybinding(id, '')}
+                  disabled={!keybindings[id]}
+                  title={t('settings.shortcutSection.none')}
+                >
+                  {t('settings.shortcutSection.clear')}
                 </button>
                 <button className="test-btn" onClick={() => resetKeybinding(id)} disabled={keybindings[id] === DEFAULT_KEYBINDINGS[id]}>
                   {t('settings.shortcutSection.reset')}

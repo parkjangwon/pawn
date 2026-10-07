@@ -88,6 +88,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
               a.download = 'pawn-settings.json'
               a.click()
               URL.revokeObjectURL(url)
+              setImportMsg(t('settings.dataSection.exported', { file: 'pawn-settings.json' }))
             }}
           >
             {t('settings.dataSection.export')}
@@ -151,11 +152,16 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.dataSection.fullBackup')}</span>
-            <span className="settings-row-desc">
-              {backupMsg || t('settings.dataSection.fullBackupDesc')}
+            {backupMsg ? (
+              <span className="settings-row-desc">{backupMsg}</span>
+            ) : (
+              <span className="settings-row-desc">{t('settings.dataSection.fullBackupDesc')}</span>
+            )}
+            <span className="settings-row-desc vision-fallback-warn">
+              {t('settings.dataSection.backupWarn')}
             </span>
           </div>
-          <div className="settings-row-actions" style={{ display: 'flex', gap: 8 }}>
+          <div className="settings-row-actions">
             <button
               className="btn-action"
               onClick={() => {

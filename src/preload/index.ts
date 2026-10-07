@@ -583,7 +583,8 @@ const api = {
   },
 
   mcp: {
-    listTools: (projectPath?: string) => ipcRenderer.invoke('mcp:listTools', projectPath),
+    listTools: (projectPath?: string, serverId?: string) =>
+      ipcRenderer.invoke('mcp:listTools', projectPath, serverId),
     status: (projectPath?: string) => ipcRenderer.invoke('mcp:status', projectPath),
     callTool: (projectPath: string | undefined, serverId: string, toolName: string, args: Record<string, unknown>) =>
       ipcRenderer.invoke('mcp:callTool', projectPath, serverId, toolName, args),

@@ -65,9 +65,9 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="settings-row-label">{t('settings.agentSection.routing')}</span>
             <span className="settings-row-desc">{t('settings.agentSection.routingDesc')}</span>
           </div>
-          <div className="theme-toggle">
-            <button className={routingMode === 'auto' ? 'active' : ''} onClick={() => setRoutingMode('auto')}>{t('statusBar.auto')}</button>
-            <button className={routingMode === 'manual' ? 'active' : ''} onClick={() => setRoutingMode('manual')}>{t('statusBar.manual')}</button>
+          <div className="theme-toggle" role="group" aria-label={t('settings.agentSection.routing')}>
+            <button className={routingMode === 'auto' ? 'active' : ''} aria-pressed={routingMode === 'auto'} onClick={() => setRoutingMode('auto')}>{t('statusBar.auto')}</button>
+            <button className={routingMode === 'manual' ? 'active' : ''} aria-pressed={routingMode === 'manual'} onClick={() => setRoutingMode('manual')}>{t('statusBar.manual')}</button>
           </div>
         </div>
         <div className="settings-row settings-row-stack">
@@ -77,6 +77,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           </div>
           <select
             className="vision-fallback-select"
+            aria-label={t('settings.agentSection.visionFallback')}
             value={visionModelId || ''}
             onChange={(e) => setVisionModel(e.target.value || null)}
           >
@@ -99,7 +100,11 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="settings-row-label">{t('settings.agentSection.sendMode')}</span>
             <span className="settings-row-desc">{t('settings.agentSection.sendModeDesc')}</span>
           </div>
-          <select value={defaultSendMode} onChange={(e) => setDefaultSendMode(e.target.value as 'queue' | 'steer')}>
+          <select
+            aria-label={t('settings.agentSection.sendMode')}
+            value={defaultSendMode}
+            onChange={(e) => setDefaultSendMode(e.target.value as 'queue' | 'steer')}
+          >
             <option value="queue">{t('settings.agentSection.queue')}</option>
             <option value="steer">{t('settings.agentSection.steer')}</option>
           </select>
@@ -109,11 +114,14 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.agentSection.permissionMode')}</span>
             <span className="settings-row-desc">{t('settings.agentSection.permissionModeDesc')}</span>
+            {permissionMode === 'yolo' && (
+              <span className="settings-row-desc vision-fallback-warn">{t('settings.agentSection.yoloWarn')}</span>
+            )}
           </div>
-          <div className="theme-toggle">
-            <button className={permissionMode === 'ask' ? 'active' : ''} onClick={() => setPermissionMode('ask')}>{t('permission.ask')}</button>
-            <button className={permissionMode === 'auto' ? 'active' : ''} onClick={() => setPermissionMode('auto')}>{t('permission.auto')}</button>
-            <button className={permissionMode === 'yolo' ? 'active' : ''} onClick={() => setPermissionMode('yolo')}>{t('permission.yolo')}</button>
+          <div className="theme-toggle" role="group" aria-label={t('settings.agentSection.permissionMode')}>
+            <button className={permissionMode === 'ask' ? 'active' : ''} aria-pressed={permissionMode === 'ask'} onClick={() => setPermissionMode('ask')}>{t('permission.ask')}</button>
+            <button className={permissionMode === 'auto' ? 'active' : ''} aria-pressed={permissionMode === 'auto'} onClick={() => setPermissionMode('auto')}>{t('permission.auto')}</button>
+            <button className={permissionMode === 'yolo' ? 'active' : ''} aria-pressed={permissionMode === 'yolo'} onClick={() => setPermissionMode('yolo')}>{t('permission.yolo')}</button>
           </div>
         </div>
         <div className="settings-row">
@@ -144,27 +152,50 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="settings-row-desc">{t('settings.agentSection.shellSandboxDesc')}</span>
           </div>
           <label className="toggle-switch">
-            <input type="checkbox" checked={shellSandbox} onChange={(e) => setShellSandbox(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={shellSandbox}
+              aria-label={t('settings.agentSection.shellSandbox')}
+              onChange={(e) => setShellSandbox(e.target.checked)}
+            />
             <span className="toggle-slider" />
           </label>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.agentSection.shellNetwork')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.shellNetworkDesc')}</span>
+            <span className="settings-row-desc">
+              {shellSandbox
+                ? t('settings.agentSection.shellNetworkDesc')
+                : t('settings.agentSection.shellNetworkNeedsSandbox')}
+            </span>
           </div>
           <label className="toggle-switch">
-            <input type="checkbox" checked={shellNetwork} onChange={(e) => setShellNetwork(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={shellNetwork}
+              disabled={!shellSandbox}
+              aria-label={t('settings.agentSection.shellNetwork')}
+              onChange={(e) => setShellNetwork(e.target.checked)}
+            />
             <span className="toggle-slider" />
           </label>
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.agentSection.cwdJail')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.cwdJailDesc')}</span>
+            <span className="settings-row-desc">
+              {shellSandbox ? t('settings.agentSection.cwdJailDesc') : t('settings.agentSection.shellNetworkNeedsSandbox')}
+            </span>
           </div>
           <label className="toggle-switch">
-            <input type="checkbox" checked={shellCwdJail} onChange={(e) => setShellCwdJail(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={shellCwdJail}
+              disabled={!shellSandbox}
+              aria-label={t('settings.agentSection.cwdJail')}
+              onChange={(e) => setShellCwdJail(e.target.checked)}
+            />
             <span className="toggle-slider" />
           </label>
         </div>
@@ -176,6 +207,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           </div>
           <select
             className="settings-select"
+            aria-label={t('settings.agentSection.toolLoading')}
             value={toolLoading}
             onChange={(e) => setToolLoading(e.target.value === 'all' ? 'all' : 'smart')}
           >
@@ -189,7 +221,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="settings-row-desc">{t('settings.agentSection.smartCompactionDesc')}</span>
           </div>
           <label className="toggle-switch">
-            <input type="checkbox" checked={smartCompaction} onChange={(e) => setSmartCompaction(e.target.checked)} />
+            <input type="checkbox" checked={smartCompaction} aria-label={t('settings.agentSection.smartCompaction')} onChange={(e) => setSmartCompaction(e.target.checked)} />
             <span className="toggle-slider" />
           </label>
         </div>
@@ -217,10 +249,13 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
                   setComputerInfo(
                     r.ok
                       ? t('settings.agentSection.computerReady', { backend: r.backend, version: r.version || '' })
-                      : r.errors.join(' · ')
+                      : t('settings.agentSection.computerFailed', { detail: r.errors.join(' · ').slice(0, 160) })
                   )
                 )
-                .catch((e) => setComputerInfo(String(e)))
+                .catch((e) => {
+                  console.warn('[agent-settings]', e)
+                  setComputerInfo(t('common.operationFailed'))
+                })
                 .finally(() => setComputerBusy(false))
             }}
           >
@@ -233,7 +268,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="settings-row-desc">{t('settings.agentSection.nativeCodingToolsDesc')}</span>
           </div>
           <label className="toggle-switch">
-            <input type="checkbox" checked={nativeCodingTools} onChange={(e) => setNativeCodingTools(e.target.checked)} />
+            <input type="checkbox" checked={nativeCodingTools} aria-label={t('settings.agentSection.nativeCodingTools')} onChange={(e) => setNativeCodingTools(e.target.checked)} />
             <span className="toggle-slider" />
           </label>
         </div>
@@ -243,7 +278,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="settings-row-desc">{t('settings.agentSection.nativeComputerToolDesc')}</span>
           </div>
           <label className="toggle-switch">
-            <input type="checkbox" checked={nativeComputerTool} onChange={(e) => setNativeComputerTool(e.target.checked)} />
+            <input type="checkbox" checked={nativeComputerTool} aria-label={t('settings.agentSection.nativeComputerTool')} onChange={(e) => setNativeComputerTool(e.target.checked)} />
             <span className="toggle-slider" />
           </label>
         </div>

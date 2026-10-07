@@ -1,5 +1,7 @@
+import { useState } from 'react'
 import { MCP_TEMPLATES } from '../agent/mcpTemplates'
-import { useMcpStore } from '../stores/mcp'
+import { useMcpStore, type McpServerSummary } from '../stores/mcp'
+import ConfirmDialog from './ConfirmDialog'
 import type { SettingsState } from './settingsState'
 
 export default function McpSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
@@ -22,9 +24,33 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
     mcpFormError,
     handleAddMcpServer
   } = state
+  const [pendingDelete, setPendingDelete] = useState<McpServerSummary | null>(null)
+  const [retryingId, setRetryingId] = useState<string | null>(null)
+
+  const retryServer = (id: string): void => {
+    setRetryingId(id)
+    void useMcpStore
+      .getState()
+      .reconnectServer(projectPath || undefined, id)
+      .finally(() => setRetryingId(null))
+  }
 
   return (
     <div className="settings-section">
+      {pendingDelete && (
+        <ConfirmDialog
+          title={t('settings.mcpSection.deleteConfirmTitle')}
+          message={t('settings.mcpSection.deleteConfirm', { id: pendingDelete.id })}
+          confirmLabel={t('common.delete')}
+          danger
+          onConfirm={() => {
+            const target = pendingDelete
+            setPendingDelete(null)
+            void handleRemoveMcpServer(target)
+          }}
+          onCancel={() => setPendingDelete(null)}
+        />
+      )}
       <h2>{t('settings.mcpSection.title')}</h2>
       <p className="settings-desc">{t('settings.mcpSection.desc')}</p>
       <div className="settings-card">
@@ -53,7 +79,7 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
                     tpl.input as McpServerInput
                   )
                   setMcpAdding(false)
-                  if (!res.ok) setMcpFormError(res.error || 'Template install failed')
+                  if (!res.ok) setMcpFormError(res.error || t('settings.mcpSection.addFailed'))
                   else void useMcpStore.getState().refresh(projectPath || undefined)
                 })()
               }}
@@ -86,21 +112,32 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
               </span>
             </div>
             <div className="settings-row-actions">
-              {!server.disabled && server.status === 'error' && (
+              {!server.disabled && (server.status === 'error' || server.status === 'connecting') && (
                 <button
                   type="button"
                   className="btn-cancel"
-                  onClick={() => void useMcpStore.getState().reconnect(projectPath || undefined)}
+                  disabled={retryingId === server.id}
+                  onClick={() => retryServer(server.id)}
                 >
-                  {t('settings.mcpSection.retry')}
+                  {retryingId === server.id ? t('common.loading') : t('settings.mcpSection.retry')}
                 </button>
               )}
               <label className="toggle-switch">
-                <input type="checkbox" checked={!server.disabled} onChange={() => void toggleMcpServer(server.id)} />
+                <input
+                  type="checkbox"
+                  checked={!server.disabled}
+                  aria-label={server.id}
+                  onChange={() => void toggleMcpServer(server.id)}
+                />
                 <span className="toggle-slider" />
               </label>
               {server.source !== 'user-claude' && (
-                <button className="delete-btn" title={t('common.delete')} onClick={() => void handleRemoveMcpServer(server)}>
+                <button
+                  className="delete-btn"
+                  title={t('common.delete')}
+                  aria-label={t('common.delete') + ': ' + server.id}
+                  onClick={() => setPendingDelete(server)}
+                >
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
                 </button>
               )}

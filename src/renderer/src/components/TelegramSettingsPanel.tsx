@@ -33,7 +33,6 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
   const [replacing, setReplacing] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
   const copyTimer = useRef<number | null>(null)
-  const preview = window.api?.platform === 'browser'
 
   const reload = useCallback(async () => {
     const next = await window.api?.telegram?.status()?.catch?.(() => undefined)
@@ -75,13 +74,13 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
       return
     }
     if (result && result.ok === false) {
-      setFormError(result.error === 'invalid_token' ? t('settings.telegramSection.tokenInvalid') : result.error)
+      setFormError(result.error === 'invalid_token' ? t('settings.telegramSection.tokenInvalid') : errorText(result.error))
     }
   }
 
   /** Fire an IPC call and route both its result and any transport error into the UI. */
   const run = (p: Promise<TelegramStatusDto | { ok: false; error: string }> | undefined): void => {
-    p?.then((r) => void apply(r)).catch((err) => setFormError(err instanceof Error ? err.message : String(err)))
+    p?.then((r) => void apply(r)).catch((err) => { console.warn('[telegram]', err); setFormError(t('common.operationFailed')) })
   }
 
   const saveToken = async (): Promise<void> => {
@@ -96,7 +95,8 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
         setReplacing(false)
       }
     } catch (err) {
-      setFormError(err instanceof Error ? err.message : String(err))
+      console.warn('[telegram]', err)
+      setFormError(t('common.operationFailed'))
     } finally {
       setBusy(false)
     }
@@ -109,7 +109,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
     try {
       const result = await window.api?.telegram?.allowUser(value)
       if (result && result.ok === false) {
-        setUserError(result.error === 'bad_user' ? t('settings.telegramSection.addUserInvalid') : result.error)
+        setUserError(result.error === 'bad_user' ? t('settings.telegramSection.addUserInvalid') : t('common.operationFailed'))
         return
       }
       if (isStatus(result)) {
@@ -141,7 +141,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
     if (!code) return ''
     if (code === 'token_rejected') return t('settings.telegramSection.tokenRejected')
     if (code === 'conflict') return t('settings.telegramSection.conflict')
-    return code
+    return t('common.operationFailed') + ' (' + code.slice(0, 60) + ')'
   }
 
   const jump = (id: StepId): void => {
@@ -180,7 +180,6 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
     <div className="settings-section telegram-panel">
       <h2>{t('settings.telegramSection.title')}</h2>
       <p className="settings-desc">{t('settings.telegramSection.desc')}</p>
-      {preview && <p className="settings-desc">{t('settings.telegramSection.desktopOnly')}</p>}
 
       <ol className="telegram-steps" aria-label={t('settings.telegramSection.steps')}>
         {steps.map((step, index) => (

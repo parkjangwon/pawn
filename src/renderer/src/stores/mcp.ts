@@ -18,6 +18,8 @@ interface McpState {
   refresh: (projectPath?: string) => Promise<void>
   /** Force spawn/connect (user Retry). */
   reconnect: (projectPath?: string) => Promise<void>
+  /** Retry a single server; merges just that row. */
+  reconnectServer: (projectPath: string | undefined, id: string) => Promise<void>
   toggleServer: (id: string) => Promise<void>
   addServer: (
     scope: 'user' | 'project',
@@ -95,6 +97,29 @@ export const useMcpStore = create<McpState>((set, get) => ({
           error: r.status === 'error' ? r.error : undefined,
           disabled: disabled.has(r.id)
         }))
+      })
+    } catch { /* optional */ }
+  },
+
+  /** Per-server retry: reconnect only this server and merge the row. */
+  reconnectServer: async (projectPath, id) => {
+    try {
+      const rows = await window.api.mcp?.listTools?.(projectPath, id)
+      if (!Array.isArray(rows) || !rows.length) return
+      const r = rows[0]
+      const disabled = get().disabledIds
+      set({
+        servers: get().servers.map((s) =>
+          s.id === r.id
+            ? {
+                ...s,
+                status: r.status,
+                toolCount: r.status === 'connected' && 'tools' in r ? r.tools.length : 0,
+                error: r.status === 'error' ? r.error : undefined,
+                disabled: disabled.has(r.id)
+              }
+            : s
+        )
       })
     } catch { /* optional */ }
   },

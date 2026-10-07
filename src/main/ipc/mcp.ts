@@ -1,6 +1,6 @@
 import { handleTrusted } from './trust'
 import {
-  discoverConfigs, listAllTools, snapshotStatus, callTool, writeServerConfig, removeServerConfig,
+  discoverConfigs, ensureServer, listAllTools, snapshotStatus, callTool, writeServerConfig, removeServerConfig,
   type McpServerConfig, type McpServerInput
 } from '../mcpManager'
 
@@ -39,8 +39,14 @@ function asServerInput(value: unknown): McpServerInput | null {
 }
 
 export function registerMcpIpc(): void {
-  handleTrusted('mcp:listTools', async (_, projectPath) => {
+  handleTrusted('mcp:listTools', async (_, projectPath, serverId) => {
     const configs = await resolveConfigs(projectPath)
+    // Optional per-server retry: reconnect just one server, return one row.
+    if (typeof serverId === 'string' && serverId) {
+      const config = configs.find((c) => c.id === serverId)
+      if (!config) return []
+      return [await ensureServer(config)]
+    }
     return listAllTools(configs)
   })
 

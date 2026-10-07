@@ -54,6 +54,7 @@ export default function WikiPanel(): React.JSX.Element {
   const [total, setTotal] = useState(0)
   const [stats, setStats] = useState<{ pages: number; links: number; dir: string } | null>(null)
   const [filter, setFilter] = useState('')
+  const [appliedFilter, setAppliedFilter] = useState('')
   const [graph, setGraph] = useState<WikiGraphDto>({ nodes: [], edges: [] })
   const [log, setLog] = useState<LogEntry[]>([])
   const [lint, setLint] = useState<{ ok: boolean; issues: LintIssue[]; pages: number } | null>(null)
@@ -66,6 +67,8 @@ export default function WikiPanel(): React.JSX.Element {
   })
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
+  const [isDirty, setIsDirty] = useState(false)
+  const [confirmDiscard, setConfirmDiscard] = useState<(() => void) | null>(null)
   const [confirmDelete, setConfirmDelete] = useState<{ slugs: string[]; titles: string[] } | null>(null)
   const [selectedSlugs, setSelectedSlugs] = useState<Set<string>>(new Set())
   const [sortKey, setSortKey] = useState<'updated' | 'title' | 'links'>('updated')
@@ -78,13 +81,19 @@ export default function WikiPanel(): React.JSX.Element {
     if (!hasProject && scope === 'project') setScope('user')
   }, [hasProject, scope])
 
+  // Debounce the filter so typing does not fire an IPC query per keystroke.
+  useEffect(() => {
+    const id = setTimeout(() => setAppliedFilter(filter), 300)
+    return () => clearTimeout(id)
+  }, [filter])
+
   const refresh = useCallback(async () => {
     if (!window.api.wiki) return
     try {
       const [s, st, list] = await Promise.all([
         window.api.wiki.settings(),
         window.api.wiki.stats({ scope: effectiveScope, projectId }),
-        window.api.wiki.list({ scope: effectiveScope, projectId, query: filter || undefined, limit: 200 })
+        window.api.wiki.list({ scope: effectiveScope, projectId, query: appliedFilter || undefined, limit: 200 })
       ])
       setEnabled(s.enabled !== false)
       setInjectIndex(s.injectIndex !== false)
@@ -92,9 +101,10 @@ export default function WikiPanel(): React.JSX.Element {
       setItems(list.items)
       setTotal(list.total)
     } catch (e) {
-      setMsg(String(e))
+      console.warn('[wiki]', e)
+      setMsg(t('common.operationFailed'))
     }
-  }, [effectiveScope, projectId, filter])
+  }, [effectiveScope, projectId, appliedFilter, t])
 
   useEffect(() => {
     void refresh()
@@ -111,6 +121,7 @@ export default function WikiPanel(): React.JSX.Element {
 
   useEffect(() => {
     setSelected(null)
+    setIsDirty(false)
     setLint(null)
     if (!window.api.wiki) return
     if (tab === 'graph') {
@@ -125,17 +136,29 @@ export default function WikiPanel(): React.JSX.Element {
 
   const openPage = async (slug: string): Promise<void> => {
     if (!window.api.wiki) return
-    const res = await window.api.wiki.read({ ref: slug, scope: effectiveScope, projectId })
-    if (res.ok && res.page) {
+    const res = await window.api.wiki.read({ ref: slug, scope: effectiveScope, projectId }).catch(() => null)
+    if (res?.ok && res.page) {
       const page = res.page
-      setSelected({ ...page, body: page.body || '' })
-      setDraft({
-        title: page.title,
-        summary: page.summary,
-        tags: page.tags.join(', '),
-        body: page.body || ''
-      })
+      const apply = (): void => {
+        setSelected({ ...page, body: page.body || '' })
+        setDraft({
+          title: page.title,
+          summary: page.summary,
+          tags: page.tags.join(', '),
+          body: page.body || ''
+        })
+        setIsDirty(false)
+        // A page opened from graph/lint must land where the editor lives.
+        setTab('pages')
+      }
+      if (isDirty) setConfirmDiscard(() => apply)
+      else apply()
     }
+  }
+
+  const closeEditor = (): void => {
+    setSelected(null)
+    setIsDirty(false)
   }
 
   const patchSettings = async (patch: { enabled?: boolean; injectIndex?: boolean }): Promise<void> => {
@@ -146,6 +169,9 @@ export default function WikiPanel(): React.JSX.Element {
       setEnabled(next.enabled !== false)
       setInjectIndex(next.injectIndex !== false)
       setMsg(t('settings.wikiSection.saved'))
+    } catch (e) {
+      console.warn('[wiki]', e)
+      setMsg(t('common.operationFailed'))
     } finally {
       setBusy(false)
     }
@@ -165,12 +191,16 @@ export default function WikiPanel(): React.JSX.Element {
       })
       if (res.ok) {
         setMsg(t('settings.wikiSection.saved'))
+        setIsDirty(false)
         await refresh()
         if (tab === 'graph') await loadGraph()
-        if (selected && res.page) await openPage(res.page.slug)
+        if (res.page) await openPage(res.page.slug)
       } else {
-        setMsg(res.error || 'error')
+        setMsg(res.error || t('common.operationFailed'))
       }
+    } catch (e) {
+      console.warn('[wiki]', e)
+      setMsg(t('common.operationFailed'))
     } finally {
       setBusy(false)
     }
@@ -188,6 +218,9 @@ export default function WikiPanel(): React.JSX.Element {
     setBusy(true)
     try {
       setLint(await window.api.wiki.lint({ scope: effectiveScope, projectId, fix }))
+    } catch (e) {
+      console.warn('[wiki]', e)
+      setMsg(t('common.operationFailed'))
     } finally {
       setBusy(false)
     }
@@ -202,6 +235,9 @@ export default function WikiPanel(): React.JSX.Element {
       setMsg(n > 0 ? t('settings.wikiSection.autoLinked', { n }) : t('settings.wikiSection.autoLinkNone'))
       await refresh()
       await loadGraph()
+    } catch (e) {
+      console.warn('[wiki]', e)
+      setMsg(t('common.operationFailed'))
     } finally {
       setBusy(false)
     }
@@ -270,11 +306,17 @@ export default function WikiPanel(): React.JSX.Element {
       for (const slug of confirmDelete.slugs) {
         await window.api.wiki.delete({ slug, scope: effectiveScope, projectId })
       }
-      if (selected && confirmDelete.slugs.includes(selected.slug)) setSelected(null)
+      if (selected && confirmDelete.slugs.includes(selected.slug)) {
+        setSelected(null)
+        setIsDirty(false)
+      }
       setSelectedSlugs(new Set())
       setMsg('')
       await refresh()
       if (tab === 'graph') await loadGraph()
+    } catch (e) {
+      console.warn('[wiki]', e)
+      setMsg(t('common.operationFailed'))
     } finally {
       setBusy(false)
     }
@@ -286,6 +328,21 @@ export default function WikiPanel(): React.JSX.Element {
 
   return (
     <>
+      {confirmDiscard && (
+        <ConfirmDialog
+          title={t('settings.wikiSection.discardTitle')}
+          message={t('settings.wikiSection.discardConfirm')}
+          confirmLabel={t('settings.wikiSection.discard')}
+          danger
+          onConfirm={() => {
+            const action = confirmDiscard
+            setConfirmDiscard(null)
+            setIsDirty(false)
+            action()
+          }}
+          onCancel={() => setConfirmDiscard(null)}
+        />
+      )}
       {confirmDelete && (
         <ConfirmDialog
           title={t('settings.wikiSection.deleteConfirmTitle')}
@@ -312,6 +369,7 @@ export default function WikiPanel(): React.JSX.Element {
                 type="checkbox"
                 checked={enabled}
                 disabled={busy}
+                aria-label={t('settings.wikiSection.enabled')}
                 onChange={(e) => void patchSettings({ enabled: e.target.checked })}
               />
               <span className="toggle-slider" />
@@ -328,6 +386,7 @@ export default function WikiPanel(): React.JSX.Element {
                   type="checkbox"
                   checked={injectIndex}
                   disabled={busy}
+                  aria-label={t('settings.wikiSection.injectIndex')}
                   onChange={(e) => void patchSettings({ injectIndex: e.target.checked })}
                 />
                 <span className="toggle-slider" />
@@ -410,6 +469,9 @@ export default function WikiPanel(): React.JSX.Element {
                 </button>
               ))}
             </div>
+            <button type="button" className="test-btn" onClick={() => void refresh()} disabled={busy}>
+              {t('settings.wikiSection.refresh')}
+            </button>
           </div>
 
           {tab === 'pages' && (
@@ -419,11 +481,14 @@ export default function WikiPanel(): React.JSX.Element {
                   className="wiki-filter"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') void refresh()
-                  }}
+                  aria-label={t('settings.wikiSection.searchPlaceholder')}
                   placeholder={t('settings.wikiSection.searchPlaceholder')}
                 />
+                {filter && (
+                  <button type="button" className="test-btn" onClick={() => setFilter('')}>
+                    ×
+                  </button>
+                )}
                 <button type="button" className="test-btn" onClick={newPage}>
                   {t('settings.wikiSection.newPage')}
                 </button>
@@ -433,30 +498,47 @@ export default function WikiPanel(): React.JSX.Element {
                   <input
                     className="wiki-input"
                     value={draft.title}
-                    onChange={(e) => setDraft({ ...draft, title: e.target.value })}
+                    aria-label={t('settings.wikiSection.titlePlaceholder')}
+                    onChange={(e) => { setDraft({ ...draft, title: e.target.value }); setIsDirty(true) }}
                     placeholder={t('settings.wikiSection.titlePlaceholder')}
                   />
                   <input
                     className="wiki-input"
                     value={draft.summary}
-                    onChange={(e) => setDraft({ ...draft, summary: e.target.value })}
+                    aria-label={t('settings.wikiSection.summaryPlaceholder')}
+                    onChange={(e) => { setDraft({ ...draft, summary: e.target.value }); setIsDirty(true) }}
                     placeholder={t('settings.wikiSection.summaryPlaceholder')}
                   />
                   <input
                     className="wiki-input"
                     value={draft.tags}
-                    onChange={(e) => setDraft({ ...draft, tags: e.target.value })}
+                    aria-label={t('settings.wikiSection.tagsPlaceholder')}
+                    onChange={(e) => { setDraft({ ...draft, tags: e.target.value }); setIsDirty(true) }}
                     placeholder={t('settings.wikiSection.tagsPlaceholder')}
                   />
                   <textarea
                     className="wiki-body"
                     value={draft.body}
-                    onChange={(e) => setDraft({ ...draft, body: e.target.value })}
+                    aria-label={t('settings.wikiSection.bodyLabel')}
+                    onChange={(e) => { setDraft({ ...draft, body: e.target.value }); setIsDirty(true) }}
                     rows={12}
                   />
                   <div className="wiki-editor-actions">
                     <button type="button" className="test-btn" onClick={() => void savePage()} disabled={busy || !draft.title.trim()}>
                       {t('settings.wikiSection.save')}
+                    </button>
+                    <button
+                      type="button"
+                      className="test-btn"
+                      onClick={() => {
+                        if (isDirty) {
+                          setConfirmDiscard(() => closeEditor)
+                        } else {
+                          closeEditor()
+                        }
+                      }}
+                    >
+                      {t('common.cancel')}
                     </button>
                     {selected.slug && (
                       <>

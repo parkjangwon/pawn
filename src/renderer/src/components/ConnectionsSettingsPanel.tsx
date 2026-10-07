@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import logoGitlab from '../assets/logos/gitlab.svg'
 import logoCodeCommit from '../assets/logos/codecommit.svg'
 import type { SettingsState } from './settingsState'
@@ -19,8 +20,15 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
     handleConnectPat,
     deviceAuth,
     copyDeviceCode,
-    connMsg
+    connMsg,
+    refreshConnections
   } = state
+  // Statuses arrive async; block connect buttons until the first fetch lands
+  // so an unconfigured client can't be triggered from a stale UI.
+  const [statusLoaded, setStatusLoaded] = useState(false)
+  useEffect(() => {
+    void Promise.resolve(refreshConnections()).finally(() => setStatusLoaded(true))
+  }, [refreshConnections])
 
   return (
     <div className="settings-section">
@@ -28,6 +36,16 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
       <p className="settings-desc">{t('settings.connectionsSection.desc')}</p>
 
       <div className="settings-card conn-card">
+        <div className="conn-toolbar">
+          <button
+            type="button"
+            className="test-btn"
+            disabled={!statusLoaded}
+            onClick={() => void refreshConnections()}
+          >
+            {t('settings.connectionsSection.refresh')}
+          </button>
+        </div>
         {(['google', 'github', 'gitlab', 'codecommit'] as const).map((provider) => {
           const st = connStatus.find((s) => s.provider === provider)
           const connected = !!st?.connected
@@ -106,7 +124,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                   {connected ? (
                     <button
                       className="conn-action-btn conn-btn-disconnect"
-                      disabled={busy}
+                      disabled={busy || !statusLoaded}
                       onClick={() => void handleDisconnect(provider)}
                     >
                       {t('settings.connectionsSection.disconnect')}
@@ -121,7 +139,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                   ) : isPat ? (
                     <button
                       className={`conn-action-btn conn-btn-connect conn-connect-${provider}`}
-                      disabled={busy}
+                      disabled={busy || !statusLoaded}
                       onClick={() => {
                         if (patOpen) setPatFormOpen(null)
                         else openPatForm(provider)
@@ -134,7 +152,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                   ) : (
                     <button
                       className={`conn-action-btn conn-btn-connect conn-connect-${provider}`}
-                      disabled={!ready}
+                      disabled={!ready || !statusLoaded}
                       onClick={() => void handleConnect(provider)}
                     >
                       {t('settings.connectionsSection.connect')}

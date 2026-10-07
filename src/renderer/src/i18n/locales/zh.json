@@ -16,7 +16,8 @@
     "error": "错误",
     "noResults": "未找到结果",
     "skipToContent": "跳至主要内容",
-    "clear": "清除"
+    "clear": "清除",
+    "operationFailed": "操作失败 — 详情请查看控制台。"
   },
   "sidebar": {
     "project": "项目",
@@ -677,7 +678,11 @@
       "remotePath": "远程路径",
       "remotePathHint": "主机上的仓库绝对路径",
       "securityNote": "命令以主机账户权限运行。首次连接会信任主机密钥（accept-new）。",
-      "search": "远程 ssh 主机 执行 服务器"
+      "search": "远程 ssh 主机 执行 服务器",
+      "addFailed": "无法添加主机。",
+      "removeFailed": "操作失败",
+      "passwordSaved": "已保存密码",
+      "removeConfirm": "移除 {{label}}？配置为在该处运行的会话将回退到本地。"
     },
     "appearanceSection": {
       "title": "外观",
@@ -794,7 +799,11 @@
         "waiting": "请在浏览器中完成登录。完成后 Pawn 会更新。",
         "failed": "Antigravity 登录失败",
         "note": "登录使用 Antigravity 的桌面登录。Google 可能会更改或拒绝它。如果失败，请改用 Google (Gemini) 预设的 API 密钥。"
-      }
+      },
+      "enableToggle": "启用 {{name}}",
+      "testOk": "连接成功",
+      "testFailed": "连接失败",
+      "testNoModel": "没有可测试的模型 — 请先同步该提供商的模型"
     },
     "modelSection": {
       "title": "模型",
@@ -824,7 +833,9 @@
       "visionYes": "Vision",
       "visionNo": "仅文本",
       "visionBadge": "Vision",
-      "visionTextOnly": "Text"
+      "visionTextOnly": "Text",
+      "enableToggle": "使用 {{name}}",
+      "selectProviderHint": "请先选择提供商才能保存。"
     },
     "agentSection": {
       "title": "代理",
@@ -880,7 +891,10 @@
       "groupBehavior": "运行行为",
       "groupSafety": "安全与批准",
       "groupContext": "上下文与压缩",
-      "groupTools": "模型与工具"
+      "groupTools": "模型与工具",
+      "yoloWarn": "YOLO 会不经询问执行所有工具。请仅在一次性环境中使用。",
+      "shellNetworkNeedsSandbox": "仅在 Shell 沙箱开启时生效。",
+      "computerFailed": "检查失败：{{detail}}"
     },
     "agentsSection": {
       "title": "子代理",
@@ -970,7 +984,8 @@
       "template_reviewer": "评审",
       "parallelHint": "任务可以拆分时，Pawn 最多可同时运行 6 个助手，让彼此独立的工作更快完成。可在聊天中实时查看进度，完整历史请打开 Agents 面板。",
       "applyReview": "应用前审查",
-      "confirmDeleteTitle": "要删除此代理吗？"
+      "confirmDeleteTitle": "要删除此代理吗？",
+      "modelMeta": "模型：{{model}} · 最大步数：{{turns}}"
     },
     "hooksSection": {
       "title": "钩子",
@@ -1113,7 +1128,12 @@
       "deleteSelectedConfirm": "删除所选的 {{n}} 个页面？指向它们的链接会失效（健康检查会列出）。",
       "clearSelection": "取消选择",
       "selectAll": "全选",
-      "colLinks": "链接"
+      "colLinks": "链接",
+      "discardTitle": "放弃更改？",
+      "discardConfirm": "此页面有未保存的编辑，确定放弃吗？",
+      "discard": "放弃",
+      "refresh": "刷新",
+      "bodyLabel": "页面正文"
     },
     "pluginSection": {
       "title": "插件",
@@ -1158,7 +1178,7 @@
       "tabsLabel": "插件区域",
       "tabSkills": "技能与上下文",
       "tabExtensions": "mods",
-      "search": "插件 技能 启用 禁用 商店 mods 钩子 同意"
+      "search": "插件 技能 启用 停用 商店 模组 扩展 同意"
     },
     "mcpSection": {
       "title": "MCP",
@@ -1186,7 +1206,9 @@
       "templates": "模板",
       "templatesDesc": "一键安装常用 MCP 服务（stdio 或 HTTP）。安装后可在环境变量中配置密钥。",
       "retry": "重试",
-      "search": "mcp 服务器 工具 远程 stdio http"
+      "search": "mcp 服务器 工具 远程 stdio http",
+      "deleteConfirmTitle": "移除 MCP 服务器？",
+      "deleteConfirm": "移除 {{id}}？在重新添加之前，其工具将从智能体中消失。"
     },
     "dataSection": {
       "title": "数据",
@@ -1219,7 +1241,9 @@
       "fullBackupSafe": "备份（不含密钥）",
       "backupOkSafe": "安全备份已保存：{{path}}（已去除 API 密钥）",
       "backupFullConfirm": "完整备份包含 API 密钥与连接令牌。请妥善保管 zip。继续？",
-      "search": "导出 导入 备份 重置 清除 存储"
+      "search": "导出 导入 备份 重置 清除 存储",
+      "backupWarn": "完整备份包含 API 密钥 — 请妥善保管该文件。",
+      "exported": "已导出 {{file}}"
     },
     "system": "系统",
     "connectionsSection": {
@@ -1267,7 +1291,8 @@
       "writeScopesReady": "写入权限已就绪",
       "finishInBrowser": "请在浏览器中完成登录…",
       "finishGoogle": "请在浏览器中完成 Google 登录…",
-      "search": "github・gitlab・google 连接 账号 issue PR 日历"
+      "search": "github・gitlab・google 连接 账号 issue 拉取 日历 codecommit・aws・pat・令牌",
+      "refresh": "刷新"
     },
     "automationSection": {
       "title": "自动化",
@@ -1349,7 +1374,9 @@
       "open-command-palette": "打开命令面板",
       "open-settings": "打开设置",
       "new-session": "新建会话",
-      "close-layer": "关闭图层（面板 / 会话 / 窗口）"
+      "close-layer": "关闭图层（面板 / 会话 / 窗口）",
+      "help": "查看所有快捷键",
+      "clear": "清除"
     },
     "quitDialog": {
       "message": "要退出 Pawn 吗？",
