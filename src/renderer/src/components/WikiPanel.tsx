@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import ConfirmDialog from './ConfirmDialog'
+import Input, { Textarea } from './Input'
+import Switch from './Switch'
 import WikiGraph from './WikiGraph'
 
 interface WikiPageMeta {
@@ -364,16 +366,12 @@ export default function WikiPanel(): React.JSX.Element {
               <span className="settings-row-label">{t('settings.wikiSection.enabled')}</span>
               <span className="settings-row-desc">{t('settings.wikiSection.enabledDesc')}</span>
             </div>
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={enabled}
-                disabled={busy}
-                aria-label={t('settings.wikiSection.enabled')}
-                onChange={(e) => void patchSettings({ enabled: e.target.checked })}
-              />
-              <span className="toggle-slider" />
-            </label>
+            <Switch
+              checked={enabled}
+              disabled={busy}
+              aria-label={t('settings.wikiSection.enabled')}
+              onCheckedChange={(v) => void patchSettings({ enabled: v })}
+            />
           </div>
           {enabled && (
             <div className="settings-row">
@@ -381,16 +379,12 @@ export default function WikiPanel(): React.JSX.Element {
                 <span className="settings-row-label">{t('settings.wikiSection.injectIndex')}</span>
                 <span className="settings-row-desc">{t('settings.wikiSection.injectIndexDesc')}</span>
               </div>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={injectIndex}
-                  disabled={busy}
-                  aria-label={t('settings.wikiSection.injectIndex')}
-                  onChange={(e) => void patchSettings({ injectIndex: e.target.checked })}
-                />
-                <span className="toggle-slider" />
-              </label>
+              <Switch
+                checked={injectIndex}
+                disabled={busy}
+                aria-label={t('settings.wikiSection.injectIndex')}
+                onCheckedChange={(v) => void patchSettings({ injectIndex: v })}
+              />
             </div>
           )}
           <div className="wiki-stats">
@@ -477,7 +471,7 @@ export default function WikiPanel(): React.JSX.Element {
           {tab === 'pages' && (
             <>
               <div className="wiki-browser-head wiki-browser-head-sub">
-                <input
+                <Input
                   className="wiki-filter"
                   value={filter}
                   onChange={(e) => setFilter(e.target.value)}
@@ -495,28 +489,28 @@ export default function WikiPanel(): React.JSX.Element {
               </div>
               {selected && (
                 <div className="wiki-editor">
-                  <input
+                  <Input
                     className="wiki-input"
                     value={draft.title}
                     aria-label={t('settings.wikiSection.titlePlaceholder')}
                     onChange={(e) => { setDraft({ ...draft, title: e.target.value }); setIsDirty(true) }}
                     placeholder={t('settings.wikiSection.titlePlaceholder')}
                   />
-                  <input
+                  <Input
                     className="wiki-input"
                     value={draft.summary}
                     aria-label={t('settings.wikiSection.summaryPlaceholder')}
                     onChange={(e) => { setDraft({ ...draft, summary: e.target.value }); setIsDirty(true) }}
                     placeholder={t('settings.wikiSection.summaryPlaceholder')}
                   />
-                  <input
+                  <Input
                     className="wiki-input"
                     value={draft.tags}
                     aria-label={t('settings.wikiSection.tagsPlaceholder')}
                     onChange={(e) => { setDraft({ ...draft, tags: e.target.value }); setIsDirty(true) }}
                     placeholder={t('settings.wikiSection.tagsPlaceholder')}
                   />
-                  <textarea
+                  <Textarea
                     className="wiki-body"
                     value={draft.body}
                     aria-label={t('settings.wikiSection.bodyLabel')}

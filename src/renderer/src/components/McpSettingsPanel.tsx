@@ -4,6 +4,9 @@ import { MCP_TEMPLATES } from '../agent/mcpTemplates'
 import { useMcpStore, type McpServerSummary } from '../stores/mcp'
 import ConfirmDialog from './ConfirmDialog'
 import type { SettingsState } from './settingsState'
+import Button from './Button'
+import Input, { Textarea } from './Input'
+import Switch from './Switch'
 
 export default function McpSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -114,24 +117,20 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
             </div>
             <div className="settings-row-actions">
               {!server.disabled && (server.status === 'error' || server.status === 'connecting') && (
-                <button
+                <Button
                   type="button"
-                  className="btn-cancel"
+                  variant="secondary"
                   disabled={retryingId === server.id}
                   onClick={() => retryServer(server.id)}
                 >
                   {retryingId === server.id ? t('common.loading') : t('settings.mcpSection.retry')}
-                </button>
+                </Button>
               )}
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={!server.disabled}
-                  aria-label={server.id}
-                  onChange={() => void toggleMcpServer(server.id)}
-                />
-                <span className="toggle-slider" />
-              </label>
+              <Switch
+                checked={!server.disabled}
+                onCheckedChange={() => void toggleMcpServer(server.id)}
+                aria-label={server.id}
+              />
               {server.source !== 'user-claude' && (
                 <button
                   className="delete-btn"
@@ -155,10 +154,10 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
             <button className={mcpScope === 'user' ? 'active' : ''} onClick={() => setMcpScope('user')}>{t('settings.mcpSection.scopeUser')}</button>
           </div>
           {mcpScope === 'project' && !projectPath && <div className="settings-row-desc">{t('settings.mcpSection.noProjectForScope')}</div>}
-          <input placeholder={t('settings.mcpSection.idPlaceholder')} value={mcpForm.id} onChange={(e) => setMcpForm({ ...mcpForm, id: e.target.value })} />
-          <input placeholder={t('settings.mcpSection.commandPlaceholder')} value={mcpForm.command} onChange={(e) => setMcpForm({ ...mcpForm, command: e.target.value })} />
-          <input placeholder={t('settings.mcpSection.argsPlaceholder')} value={mcpForm.args} onChange={(e) => setMcpForm({ ...mcpForm, args: e.target.value })} />
-          <textarea
+          <Input placeholder={t('settings.mcpSection.idPlaceholder')} value={mcpForm.id} onChange={(e) => setMcpForm({ ...mcpForm, id: e.target.value })} />
+          <Input placeholder={t('settings.mcpSection.commandPlaceholder')} value={mcpForm.command} onChange={(e) => setMcpForm({ ...mcpForm, command: e.target.value })} />
+          <Input placeholder={t('settings.mcpSection.argsPlaceholder')} value={mcpForm.args} onChange={(e) => setMcpForm({ ...mcpForm, args: e.target.value })} />
+          <Textarea
             className="mcp-env-input"
             placeholder={t('settings.mcpSection.envPlaceholder')}
             value={mcpForm.env}
@@ -167,10 +166,10 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
           />
           {mcpFormError && <div className="settings-row-desc mcp-form-error">{mcpFormError}</div>}
           <div className="form-actions">
-            <button className="btn-primary" onClick={() => void handleAddMcpServer()} disabled={mcpAdding || !mcpForm.id.trim() || !mcpForm.command.trim() || (mcpScope === 'project' && !projectPath)}>
+            <Button onClick={() => void handleAddMcpServer()} disabled={mcpAdding || !mcpForm.id.trim() || !mcpForm.command.trim() || (mcpScope === 'project' && !projectPath)}>
               {mcpAdding ? t('common.loading') : t('common.save')}
-            </button>
-            <button className="btn-cancel" onClick={() => { setShowAddMcpServer(false); setMcpFormError(null) }}>{t('common.cancel')}</button>
+            </Button>
+            <Button variant="secondary" onClick={() => { setShowAddMcpServer(false); setMcpFormError(null) }}>{t('common.cancel')}</Button>
           </div>
         </div>
       ) : (

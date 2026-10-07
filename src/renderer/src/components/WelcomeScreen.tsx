@@ -37,10 +37,10 @@ const HOME_CARDS: HomeCard[] = [
 ]
 
 function CardIcon({ icon }: { icon: HomeCard['icon'] }): React.JSX.Element {
-  if (icon === 'code') return <Code size={18} aria-hidden="true" />
-  if (icon === 'globe') return <Globe size={18} aria-hidden="true" />
-  if (icon === 'monitor') return <Monitor size={18} aria-hidden="true" />
-  return <Calendar size={18} aria-hidden="true" />
+  if (icon === 'code') return <Code size={16} aria-hidden="true" />
+  if (icon === 'globe') return <Globe size={16} aria-hidden="true" />
+  if (icon === 'monitor') return <Monitor size={16} aria-hidden="true" />
+  return <Calendar size={16} aria-hidden="true" />
 }
 
 export default function WelcomeScreen({
@@ -86,20 +86,22 @@ export default function WelcomeScreen({
 
   return (
     <div className="chat-welcome">
-      <div className="welcome-logo" aria-hidden="true">
-        <svg width="44" height="44" viewBox="0 0 24 24" fill="currentColor">
-          <circle cx="12" cy="6.5" r="2.7" />
-          <rect x="8.6" y="9.9" width="6.8" height="1.7" rx="0.85" />
-          <path d="M10.1 12.4h3.8l1.3 5.1H8.8l1.3-5.1z" />
-          <rect x="7.2" y="17.5" width="9.6" height="2" rx="1" />
-        </svg>
+      <div className="welcome-hero">
+        <div className="welcome-logo" aria-hidden="true">
+          <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="12" cy="6.5" r="2.7" />
+            <rect x="8.6" y="9.9" width="6.8" height="1.7" rx="0.85" />
+            <path d="M10.1 12.4h3.8l1.3 5.1H8.8l1.3-5.1z" />
+            <rect x="7.2" y="17.5" width="9.6" height="2" rx="1" />
+          </svg>
+        </div>
+        <h1 className="welcome-greeting">{t(getGreetingKey(hour))}</h1>
+        <p className="welcome-sub">
+          {activeProject
+            ? t('chat.welcomeProject', { name: activeProject.name })
+            : t('chat.welcomeSub')}
+        </p>
       </div>
-      <h1 className="welcome-greeting">{t(getGreetingKey(hour))}</h1>
-      <p className="welcome-sub">
-        {activeProject
-          ? t('chat.welcomeProject', { name: activeProject.name })
-          : t('chat.welcomeSub')}
-      </p>
 
       <div className="welcome-composer">{composer}</div>
 

@@ -1,6 +1,7 @@
 import { Monitor, Moon, Sun } from 'lucide-react'
 import type { SettingsState } from './settingsState'
 import { CHAT_FONT_SIZES, DEFAULT_CHAT_FONT_SIZE, usePrefsStore } from '../stores/prefs'
+import Select from './Select'
 
 export default function AppearanceSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const { t, i18n, theme, set, languages } = state
@@ -87,7 +88,7 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
             <span className="settings-row-label">{t('settings.appearanceSection.language')}</span>
             <span className="settings-row-desc">{t('settings.appearanceSection.languageDesc')}</span>
           </div>
-          <select
+          <Select
             className="settings-select"
             value={i18n.language}
             onChange={(e) => i18n.changeLanguage(e.target.value)}
@@ -95,7 +96,7 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
             {languages.map((l) => (
               <option key={l.code} value={l.code}>{l.label}</option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
     </div>

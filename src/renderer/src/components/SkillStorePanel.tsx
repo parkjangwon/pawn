@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { clearProjectContextCache } from '../agent/skills'
 import { dedupeByName, formatInstalls, PAGE_SIZE, pageCount, pageSlice, sortSkills, type SkillSort, type StoreSkill } from '../utils/skillStore'
 import type { SettingsState } from './settingsState'
+import Button from './Button'
+import Input from './Input'
 
 /**
  * Settings → Skill store: search public skills (skills.sh), read what each
@@ -141,7 +143,7 @@ export default function SkillStorePanel({ state }: { state: SettingsState }): Re
       <p className="settings-desc">{t('settings.skillStore.desc')}</p>
 
       <div className="skill-store-toolbar">
-        <input
+        <Input
           className="plugin-search-input skill-store-search"
           type="search"
           value={query}
@@ -210,9 +212,9 @@ export default function SkillStorePanel({ state }: { state: SettingsState }): Re
                     {state === 'remove' ? t('settings.skillStore.removing') : t('settings.skillStore.remove')}
                   </button>
                 ) : (
-                  <button type="button" className="btn-primary skill-store-btn" disabled={!!state} onClick={() => void install(s)}>
+                  <Button type="button" className="skill-store-btn" disabled={!!state} onClick={() => void install(s)}>
                     {state === 'install' ? t('settings.skillStore.installing') : t('settings.skillStore.install')}
-                  </button>
+                  </Button>
                 )}
               </div>
             </article>

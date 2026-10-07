@@ -12,6 +12,7 @@ import {
   applyPendingWorktree,
   discardPendingWorktree
 } from '../agent/subagent'
+import Input from './Input'
 import './SubagentsView.css'
 
 function elapsed(run: SubagentRun, now: number): string {
@@ -257,7 +258,7 @@ export default function SubagentsView(): React.JSX.Element {
           </div>
         </div>
 
-        <input
+        <Input
           className="subagents-search"
           type="search"
           value={query}

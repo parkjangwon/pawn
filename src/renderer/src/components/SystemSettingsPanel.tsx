@@ -1,5 +1,6 @@
 import type { SettingsState } from './settingsState'
 import { IconGitHub } from './icons'
+import Switch from './Switch'
 
 const REPO_URL = 'https://github.com/parkjangwon/pawn'
 
@@ -43,64 +44,47 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
             <span className="settings-row-label">{t('settings.systemSection.taskNotifications')}</span>
             <span className="settings-row-desc">{t('settings.systemSection.taskNotificationsDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={taskNotificationsEnabled}
-              aria-label={t('settings.systemSection.taskNotifications')}
-              onChange={(e) => setTaskNotificationsEnabled(e.target.checked)}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={taskNotificationsEnabled}
+            onCheckedChange={setTaskNotificationsEnabled}
+            aria-label={t('settings.systemSection.taskNotifications')}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.systemSection.trayEnabled')}</span>
             <span className="settings-row-desc">{t('settings.systemSection.trayEnabledDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={trayVisible}
-              aria-label={t('settings.systemSection.trayEnabled')}
-              onChange={(e) => {
-                const next = e.target.checked
-                setTrayVisible(next)
-                void window.api.tray?.setEnabled?.(next)?.catch?.(() => {})
-              }}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={trayVisible}
+            onCheckedChange={(next) => {
+              setTrayVisible(next)
+              void window.api.tray?.setEnabled?.(next)?.catch?.(() => {})
+            }}
+            aria-label={t('settings.systemSection.trayEnabled')}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.systemSection.confirmQuit')}</span>
             <span className="settings-row-desc">{t('settings.systemSection.confirmQuitDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={confirmQuit}
-              aria-label={t('settings.systemSection.confirmQuit')}
-              onChange={(e) => setConfirmQuit(e.target.checked)}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={confirmQuit}
+            onCheckedChange={setConfirmQuit}
+            aria-label={t('settings.systemSection.confirmQuit')}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.systemSection.checkUpdatesOnLaunch')}</span>
             <span className="settings-row-desc">{t('settings.systemSection.checkUpdatesOnLaunchDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={checkUpdatesOnLaunch}
-              aria-label={t('settings.systemSection.checkUpdatesOnLaunch')}
-              onChange={(e) => setCheckUpdatesOnLaunch(e.target.checked)}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={checkUpdatesOnLaunch}
+            onCheckedChange={setCheckUpdatesOnLaunch}
+            aria-label={t('settings.systemSection.checkUpdatesOnLaunch')}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">

@@ -8,6 +8,10 @@ import XaiAuthPanel from './XaiAuthPanel'
 import SubscriptionAuthPanel from './SubscriptionAuthPanel'
 import { isXaiHost } from '../agent/xaiSession'
 import { isAntigravityBase, isChatGptCodexBase, isClaudeApiBase } from '../agent/subscriptionWire'
+import Button from './Button'
+import Input from './Input'
+import Select from './Select'
+import Switch from './Switch'
 
 export default function ProvidersSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -93,15 +97,11 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                 >
                   {testingId === p.id ? t('common.loading') : t('settings.providerSection.test')}
                 </button>
-              <label className="toggle-switch">
-                <input
-                  type="checkbox"
-                  checked={p.enabled}
-                  aria-label={t('settings.providerSection.enableToggle', { name: p.name })}
-                  onChange={(e) => updateProvider(p.id, { enabled: e.target.checked })}
-                />
-                <span className="toggle-slider" />
-              </label>
+              <Switch
+                checked={p.enabled}
+                onCheckedChange={(v) => updateProvider(p.id, { enabled: v })}
+                aria-label={t('settings.providerSection.enableToggle', { name: p.name })}
+              />
               <button
                 className="delete-btn"
                 aria-label={t('common.delete') + ': ' + p.name}
@@ -151,7 +151,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             </div>
             {!presetPicking.localNoKey && !presetPicking.signIn && (
               <>
-                <input
+                <Input
                   type="password"
                   placeholder={
                     presetPicking.optionalKey
@@ -171,14 +171,13 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               </>
             )}
             <div className="form-actions">
-              <button
-                className="btn-primary"
+              <Button
                 onClick={() => handleAddFromPreset(presetPicking, presetKey)}
                 disabled={!presetPicking.localNoKey && !presetPicking.signIn && !presetPicking.optionalKey && !presetKey.trim()}
               >
                 {t('settings.providerSection.addWithModels', { count: presetPicking.models.length })}
-              </button>
-              <button className="btn-cancel" onClick={() => setPresetPicking(null)}>{t('common.cancel')}</button>
+              </Button>
+              <Button variant="secondary" onClick={() => setPresetPicking(null)}>{t('common.cancel')}</Button>
             </div>
           </div>
         )}
@@ -192,18 +191,18 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             void handleAddProvider()
           }}
         >
-          <input placeholder={t('settings.providerSection.namePlaceholder')} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); if (formError) setFormError('') }} />
-          <select aria-label={t('settings.providerSection.namePlaceholder')} value={form.apiFormat} onChange={(e) => setForm({ ...form, apiFormat: e.target.value as ApiFormat })}>
+          <Input placeholder={t('settings.providerSection.namePlaceholder')} value={form.name} onChange={(e) => { setForm({ ...form, name: e.target.value }); if (formError) setFormError('') }} />
+          <Select aria-label={t('settings.providerSection.namePlaceholder')} value={form.apiFormat} onChange={(e) => setForm({ ...form, apiFormat: e.target.value as ApiFormat })}>
             <option value="openai">{t('settings.providerSection.openai')}</option>
             <option value="claude">{t('settings.providerSection.claude')}</option>
             <option value="kiro">Kiro</option>
-          </select>
-          <input placeholder={t('settings.providerSection.baseUrlPlaceholder')} value={form.baseUrl} onChange={(e) => { setForm({ ...form, baseUrl: e.target.value }); if (formError) setFormError('') }} />
-          <input type="password" placeholder={t('settings.providerSection.apiKeyPlaceholder')} value={form.apiKey} onChange={(e) => { setForm({ ...form, apiKey: e.target.value }); if (formError) setFormError('') }} />
+          </Select>
+          <Input placeholder={t('settings.providerSection.baseUrlPlaceholder')} value={form.baseUrl} onChange={(e) => { setForm({ ...form, baseUrl: e.target.value }); if (formError) setFormError('') }} />
+          <Input type="password" placeholder={t('settings.providerSection.apiKeyPlaceholder')} value={form.apiKey} onChange={(e) => { setForm({ ...form, apiKey: e.target.value }); if (formError) setFormError('') }} />
           {formError && <div className="settings-form-error" role="alert">{formError}</div>}
           <div className="form-actions">
-            <button className="btn-primary" type="submit">{t('common.save')}</button>
-            <button className="btn-cancel" type="button" onClick={() => setShowAddProvider(false)}>{t('common.cancel')}</button>
+            <Button type="submit">{t('common.save')}</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowAddProvider(false)}>{t('common.cancel')}</Button>
           </div>
         </form>
       ) : (

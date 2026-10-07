@@ -6,6 +6,8 @@ import type { SettingsSkillScope } from './settingsMeta'
 import type { SettingsState } from './settingsState'
 import { consumePendingPluginsTab } from './settingsState'
 import ModsSettingsPanel from './ModsSettingsPanel'
+import Input from './Input'
+import Switch from './Switch'
 import './ModsSettingsPanel.css'
 
 type PluginsTab = 'skills' | 'extensions'
@@ -116,7 +118,7 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
                 </button>
               ))}
             </div>
-            <input
+            <Input
               className="plugin-search-input"
               value={skillSearch}
               onChange={(e) => setSkillSearch(e.target.value)}
@@ -141,15 +143,11 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
                     <span className="plugin-source">{skill.source}</span>
                   </div>
                   <div className="settings-row-actions">
-                    <label className="toggle-switch">
-                      <input
-                        type="checkbox"
-                        checked={enabled}
-                        aria-label={skill.name}
-                        onChange={() => toggleSkill(skill.name)}
-                      />
-                      <span className="toggle-slider" />
-                    </label>
+                    <Switch
+                      checked={enabled}
+                      onCheckedChange={() => toggleSkill(skill.name)}
+                      aria-label={skill.name}
+                    />
                   </div>
                 </div>
               )

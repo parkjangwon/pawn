@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
+import Input from './Input'
+import Switch from './Switch'
 
 interface HooksSettings {
   enabled: boolean
@@ -176,60 +178,44 @@ export default function HooksSettingsPanel(): React.JSX.Element {
             <span className="settings-row-label">{t('settings.hooksSection.enabled')}</span>
             <span className="settings-row-desc">{t('settings.hooksSection.enabledDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={settings.enabled}
-              disabled={busy}
-              onChange={(e) => void patch({ enabled: e.target.checked })}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={settings.enabled}
+            disabled={busy}
+            onCheckedChange={(v) => void patch({ enabled: v })}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.hooksSection.readClaude')}</span>
             <span className="settings-row-desc">{t('settings.hooksSection.readClaudeDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={settings.readClaude}
-              disabled={busy || !settings.enabled}
-              onChange={(e) => void patch({ readClaude: e.target.checked })}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={settings.readClaude}
+            disabled={busy || !settings.enabled}
+            onCheckedChange={(v) => void patch({ readClaude: v })}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.hooksSection.readPawn')}</span>
             <span className="settings-row-desc">{t('settings.hooksSection.readPawnDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={settings.readPawn}
-              disabled={busy || !settings.enabled}
-              onChange={(e) => void patch({ readPawn: e.target.checked })}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={settings.readPawn}
+            disabled={busy || !settings.enabled}
+            onCheckedChange={(v) => void patch({ readPawn: v })}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.hooksSection.allowProjectHooks')}</span>
             <span className="settings-row-desc">{t('settings.hooksSection.allowProjectHooksDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={settings.allowProjectHooks}
-              disabled={busy || !settings.enabled}
-              onChange={(e) => void patch({ allowProjectHooks: e.target.checked })}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={settings.allowProjectHooks}
+            disabled={busy || !settings.enabled}
+            onCheckedChange={(v) => void patch({ allowProjectHooks: v })}
+          />
         </div>
         <div className="hooks-stats">
           {t('settings.hooksSection.stats', {
@@ -245,7 +231,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
       <div className="settings-card hooks-browser">
         <div className="hooks-toolbar">
           <span className="settings-row-label">{t('settings.hooksSection.loaded')}</span>
-          <input
+          <Input
             className="hooks-filter"
             value={filter}
             onChange={(e) => setFilter(e.target.value)}

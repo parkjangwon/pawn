@@ -220,16 +220,18 @@
   animation: slideDownIn var(--dur-fast) var(--ease-spring);
 }
 
-/* Welcome — sits in the upper half so the gap to the composer feels intentional */
+/* Welcome — ZCode ConversationTimeline homage: NOT vertically centered. A top
+   spacer (29dvh, min 52px) sets the position, then content, then a flexible
+   bottom spacer — so the composer's screen position never shifts when content
+   below it changes height. */
 .chat-welcome {
   flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: var(--space-sm);
-  /* Extra bottom padding pulls the block toward the input (ChatGPT-like) */
-  padding: var(--space-xl) var(--space-xl) clamp(48px, 12vh, 120px);
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 var(--space-xl);
   width: 100%;
   max-width: 42rem;
   margin: 0 auto;
@@ -237,12 +239,49 @@
   animation: riseIn var(--dur-med) var(--ease-spring);
 }
 
+.chat-welcome::before {
+  content: '';
+  display: block;
+  width: 100%;
+  flex: 0 1 29dvh;
+  min-height: 52px;
+}
+
+.chat-welcome::after {
+  content: '';
+  display: block;
+  width: 100%;
+  flex: 1 0 auto;
+  min-height: 16px;
+}
+
+.welcome-hero {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+/* Pawn chess piece as a subtle absolute watermark BEHIND the greeting
+   (ZCode ConversationDraftEmptyState homage: logo absolute-centered,
+   greeting z-10 above). */
 .welcome-logo {
-  margin-bottom: var(--space-xs);
-  color: var(--text-secondary);
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  color: var(--text-muted);
+  opacity: 0.16;
+  pointer-events: none;
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, transparent 75%);
+  mask-image: linear-gradient(to bottom, black 0%, transparent 75%);
 }
 
 .welcome-greeting {
+  position: relative;
+  /* Paints above .welcome-logo (earlier in DOM, both positioned). */
   font-size: 26px;
   font-weight: 400;
   letter-spacing: -0.0125em;
@@ -254,6 +293,7 @@
 }
 
 .welcome-sub {
+  position: relative;
   font-size: var(--text-ui-caption);
   color: var(--text-muted);
   text-align: center;
@@ -291,8 +331,8 @@
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--border-color);
+  padding: 12px;
+  border: 1px solid transparent;
   border-radius: 12px;
   background: transparent;
   color: var(--text-secondary);
@@ -327,9 +367,9 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
   background: var(--surface, var(--bg-hover));
   color: var(--text-muted);
 }
@@ -356,9 +396,7 @@
   font-size: var(--text-ui-sm);
   color: var(--text-muted);
   line-height: 1.35;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  overflow-wrap: break-word;
 }
 
 .welcome-btn.primary {
@@ -1832,7 +1870,7 @@
     padding: 0 var(--space-md) var(--space-md);
   }
   .chat-welcome {
-    padding: var(--space-lg) var(--space-md) var(--space-xl);
+    padding: 0 var(--space-md);
   }
   .welcome-actions {
     grid-template-columns: 1fr;

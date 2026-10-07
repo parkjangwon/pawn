@@ -16,6 +16,7 @@ import { stripDisplayImages } from '../utils/attachments'
 import { formatDuration, formatMessageTime, formatMessageTimeFull, normalizeTimestampMs } from '../utils/messageTime'
 import type { Message } from '../stores/app'
 import { openAutomationDraft } from '../stores/automationDraft'
+import { Textarea } from './Input'
 
 /** Localized fallback for a message whose markdown crashed the renderer. */
 function RenderErrorText({ error }: { error: Error | null }): React.JSX.Element {
@@ -275,7 +276,7 @@ const MessageRow = memo(function MessageRow({
         ) : null}
         {editing && msg.role === 'user' ? (
           <div className="message-edit">
-            <textarea
+            <Textarea
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               rows={4}

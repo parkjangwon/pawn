@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
+import Button from './Button'
+import Input from './Input'
+import Select from './Select'
+import Switch from './Switch'
 import './TelegramSettingsPanel.css'
 
 const BOT_FATHER = 'https://t.me/BotFather'
@@ -222,12 +226,12 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                   {t('settings.telegramSection.openBot', { username: status?.username })}
                 </a>
               )}
-              <button type="button" className="btn-cancel" onClick={() => setReplacing(true)}>
+              <Button type="button" variant="secondary" onClick={() => setReplacing(true)}>
                 {t('settings.telegramSection.replaceToken')}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn-cancel"
+                variant="secondary"
                 onClick={() => {
                   setReplacing(true)
                   setToken('')
@@ -235,7 +239,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 }}
               >
                 {t('settings.telegramSection.clearToken')}
-              </button>
+              </Button>
             </div>
           )}
           {showTokenForm && (
@@ -246,7 +250,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 void saveToken()
               }}
             >
-              <input
+              <Input
                 id="telegram-token"
                 type="password"
                 value={token}
@@ -256,16 +260,16 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 placeholder={t('settings.telegramSection.tokenPlaceholder')}
                 onChange={(e) => setToken(e.target.value)}
               />
-              <button type="submit" className="btn-primary" disabled={busy || !token.trim()}>
+              <Button type="submit" disabled={busy || !token.trim()}>
                 {t('settings.telegramSection.saveToken')}
-              </button>
+              </Button>
               <a className="btn-cancel telegram-link" href={BOT_FATHER} target="_blank" rel="noreferrer">
                 {t('settings.telegramSection.openBotFather')}
               </a>
               {replacing && (
-                <button
+                <Button
                   type="button"
-                  className="btn-cancel"
+                  variant="secondary"
                   onClick={() => {
                     setReplacing(false)
                     setToken('')
@@ -273,7 +277,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                   }}
                 >
                   {t('common.cancel')}
-                </button>
+                </Button>
               )}
             </form>
           )}
@@ -287,7 +291,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               {folders.length === 0 ? t('settings.telegramSection.noProjects') : t('settings.telegramSection.projectDesc')}
             </span>
           </div>
-          <select
+          <Select
             id="telegram-project"
             value={hasProject ? status?.projectId : ''}
             disabled={folders.length === 0}
@@ -301,7 +305,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 {p.name}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         <div className="settings-row" id="telegram-step-enable">
@@ -314,18 +318,14 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               {status?.polling ? t('settings.telegramSection.polling') : t('settings.telegramSection.stopped')}
             </span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              aria-label={t('settings.telegramSection.enable')}
-              checked={!!status?.enabled}
-              disabled={!hasToken}
-              onChange={(e) => {
-                run(window.api?.telegram?.setEnabled(e.target.checked))
-              }}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={!!status?.enabled}
+            disabled={!hasToken}
+            aria-label={t('settings.telegramSection.enable')}
+            onCheckedChange={(v) => {
+              run(window.api?.telegram?.setEnabled(v))
+            }}
+          />
         </div>
         {status?.error && <p className="telegram-error">{errorText(status.error)}</p>}
       </div>
@@ -345,27 +345,26 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               <span className="settings-row-desc">{p.userId}</span>
             </div>
             <div className="telegram-actions">
-              <button type="button" className="btn-cancel" onClick={() => void copyCode(p.code)}>
+              <Button type="button" variant="secondary" onClick={() => void copyCode(p.code)}>
                 {copied === p.code ? t('settings.telegramSection.copied') : t('settings.telegramSection.copyCode')}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn-primary"
                 onClick={() => {
                   run(window.api?.telegram?.approve(p.code))
                 }}
               >
                 {t('settings.telegramSection.approve')}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn-cancel"
+                variant="secondary"
                 onClick={() => {
                   run(window.api?.telegram?.deny(p.code))
                 }}
               >
                 {t('settings.telegramSection.deny')}
-              </button>
+              </Button>
             </div>
           </div>
         ))}
@@ -386,15 +385,15 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               <span className="settings-row-label">{personLabel(u)}</span>
               <span className="settings-row-desc">{u.userId}</span>
             </div>
-            <button
+            <Button
               type="button"
-              className="btn-cancel"
+              variant="secondary"
               onClick={() => {
                 run(window.api?.telegram?.revoke(u.userId))
               }}
             >
               {t('settings.telegramSection.revoke')}
-            </button>
+            </Button>
           </div>
         ))}
         <div className="settings-row settings-row-stack">
@@ -406,7 +405,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               void addUser()
             }}
           >
-            <input
+            <Input
               type="text"
               inputMode="numeric"
               autoComplete="off"
@@ -419,9 +418,9 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 setUserError(null)
               }}
             />
-            <button type="submit" className="btn-primary" disabled={busy || !userId.trim()}>
+            <Button type="submit" disabled={busy || !userId.trim()}>
               {t('settings.telegramSection.addUser')}
-            </button>
+            </Button>
           </form>
           {userError && <p className="telegram-error">{userError}</p>}
         </div>

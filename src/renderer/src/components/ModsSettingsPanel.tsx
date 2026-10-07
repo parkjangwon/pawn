@@ -5,6 +5,8 @@ import { useAppStore } from '../stores/app'
 import { useFocusTrap } from '../utils/focusTrap'
 import ConfirmDialog from './ConfirmDialog'
 import { IconFolder } from './icons'
+import Button from './Button'
+import Switch from './Switch'
 import './ModsSettingsPanel.css'
 
 interface ModRow {
@@ -264,39 +266,32 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
             <span className="settings-row-label">{t('settings.modsSection.enabled')}</span>
             <span className="settings-row-desc">{t('settings.modsSection.enabledDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={masterOn}
-              disabled={busy}
-              onChange={(e) => {
-                const on = e.target.checked
-                void patch(on ? { enabled: true, disableAllHooks: false } : { disableAllHooks: true })
-              }}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={masterOn}
+            onCheckedChange={(on) => {
+              void patch(on ? { enabled: true, disableAllHooks: false } : { disableAllHooks: true })
+            }}
+            disabled={busy}
+            aria-label={t('settings.modsSection.enabled')}
+          />
         </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.modsSection.readClaude')}</span>
             <span className="settings-row-desc">{t('settings.modsSection.readClaudeDesc')}</span>
           </div>
-          <label className="toggle-switch">
-            <input
-              type="checkbox"
-              checked={settings.readClaudePlugins}
-              disabled={busy}
-              onChange={(e) => {
-                if (e.target.checked) {
-                  setClaudeConfirm(true)
-                  return
-                }
-                void patch({ readClaudePlugins: false })
-              }}
-            />
-            <span className="toggle-slider" />
-          </label>
+          <Switch
+            checked={settings.readClaudePlugins}
+            onCheckedChange={(on) => {
+              if (on) {
+                setClaudeConfirm(true)
+                return
+              }
+              void patch({ readClaudePlugins: false })
+            }}
+            disabled={busy}
+            aria-label={t('settings.modsSection.readClaude')}
+          />
         </div>
         <div className="mods-session">
           <span className={`mods-session-dot ${activeMods.length > 0 && masterOn ? 'on' : ''}`} aria-hidden />
@@ -325,13 +320,13 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
             <p>{t('settings.modsSection.onboardingDesc')}</p>
           </div>
           <div className="mods-actions">
-            <button type="button" className="btn-primary" disabled={busy} onClick={() => void installExample()}>
+            <Button type="button" disabled={busy} onClick={() => void installExample()}>
               {t('settings.modsSection.installExample')}
-            </button>
-            <button type="button" className="btn-cancel mods-folder-btn" disabled={busy} onClick={() => void pickFolder()}>
+            </Button>
+            <Button type="button" variant="secondary" className="mods-folder-btn" disabled={busy} onClick={() => void pickFolder()}>
               <IconFolder size={14} />
               {t('settings.modsSection.browseDir')}
-            </button>
+            </Button>
           </div>
           <div className="mods-scan">
             <p>{t('settings.modsSection.scan.lead')}</p>
@@ -552,15 +547,12 @@ function ModRowView({
                 {t('settings.modsSection.revoke')}
               </button>
             )}
-            <label className="toggle-switch">
-              <input
-                type="checkbox"
-                checked={mod.enabled}
-                disabled={busy || !masterOn}
-                onChange={(e) => onToggle(e.target.checked)}
-              />
-              <span className="toggle-slider" />
-            </label>
+            <Switch
+              checked={mod.enabled}
+              onCheckedChange={onToggle}
+              disabled={busy || !masterOn}
+              aria-label={mod.name}
+            />
           </>
         )}
       </div>

@@ -20,6 +20,8 @@ import {
   type AgentModelPref
 } from '../agent/agentProfiles'
 import './AgentsSettingsPanel.css'
+import Input, { Textarea } from './Input'
+import Select from './Select'
 
 type EditorMode = 'closed' | 'create' | 'edit'
 
@@ -495,7 +497,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
       </div>
 
       <div className="agents-search-row">
-        <input
+        <Input
           className="agents-search"
           type="search"
           value={query}
@@ -539,7 +541,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <label className="agents-field">
             <span>{t('settings.agentsSection.fieldName')}</span>
-            <input
+            <Input
               value={draft.name}
               onChange={(e) => patchDraft('name', e.target.value)}
               placeholder="security-audit"
@@ -550,7 +552,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <label className="agents-field">
             <span>{t('settings.agentsSection.fieldDescription')}</span>
-            <input
+            <Input
               value={draft.description}
               onChange={(e) => patchDraft('description', e.target.value)}
               placeholder={t('settings.agentsSection.fieldDescriptionPh')}
@@ -559,7 +561,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <label className="agents-field">
             <span>{t('settings.agentsSection.fieldPrompt')}</span>
-            <textarea
+            <Textarea
               value={draft.systemPrompt}
               onChange={(e) => patchDraft('systemPrompt', e.target.value)}
               rows={8}
@@ -570,7 +572,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           <div className="agents-field-row">
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldModel')}</span>
-              <select
+              <Select
                 value={draft.model}
                 onChange={(e) => patchDraft('model', e.target.value as AgentModelPref)}
               >
@@ -578,11 +580,11 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
                 <option value="simple">{t('settings.agentsSection.modelSimple')}</option>
                 <option value="mid">{t('settings.agentsSection.modelMid')}</option>
                 <option value="complex">{t('settings.agentsSection.modelComplex')}</option>
-              </select>
+              </Select>
             </label>
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldMaxTurns')}</span>
-              <input
+              <Input
                 type="number"
                 min={1}
                 max={25}
@@ -597,7 +599,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           <div className="agents-field-row">
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldIsolation')}</span>
-              <select
+              <Select
                 value={draft.isolation}
                 onChange={(e) => {
                   const isolation = e.target.value as AgentIsolation
@@ -609,22 +611,22 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
               >
                 <option value="none">{t('settings.agentsSection.isolationNone')}</option>
                 <option value="worktree">{t('settings.agentsSection.isolationWorktree')}</option>
-              </select>
+              </Select>
             </label>
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldApply')}</span>
-              <select
+              <Select
                 value={draft.apply}
                 onChange={(e) => patchDraft('apply', e.target.value as AgentApplyMode)}
               >
                 <option value="none">{t('settings.agentsSection.applyNone')}</option>
                 <option value="auto">{t('settings.agentsSection.applyAuto')}</option>
                 <option value="review">{t('settings.agentsSection.applyReview')}</option>
-              </select>
+              </Select>
             </label>
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldThoroughness')}</span>
-              <select
+              <Select
                 value={draft.thoroughness || ''}
                 onChange={(e) =>
                   patchDraft(
@@ -637,13 +639,13 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
                 <option value="quick">{t('settings.agentsSection.thoroughnessQuick')}</option>
                 <option value="medium">{t('settings.agentsSection.thoroughnessMedium')}</option>
                 <option value="very_thorough">{t('settings.agentsSection.thoroughnessDeep')}</option>
-              </select>
+              </Select>
             </label>
           </div>
 
           <label className="agents-field">
             <span>{t('settings.agentsSection.fieldSkills')}</span>
-            <input
+            <Input
               value={skillsText}
               onChange={(e) => setSkillsText(e.target.value)}
               placeholder="pdf, git-helpers"
@@ -653,7 +655,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <label className="agents-field">
             <span>{t('settings.agentsSection.fieldPathAllow')}</span>
-            <input
+            <Input
               value={pathAllowText}
               onChange={(e) => setPathAllowText(e.target.value)}
               placeholder="src/**, package.json"
@@ -663,7 +665,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <label className="agents-field">
             <span>{t('settings.agentsSection.fieldPathDeny')}</span>
-            <input
+            <Input
               value={pathDenyText}
               onChange={(e) => setPathDenyText(e.target.value)}
               placeholder=".env, .env.*, **/secrets/**"
@@ -674,7 +676,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           <div className="agents-field-row">
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldMaxEdits')}</span>
-              <input
+              <Input
                 type="number"
                 min={1}
                 max={200}
@@ -690,7 +692,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
             </label>
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldMaxShell')}</span>
-              <input
+              <Input
                 type="number"
                 min={1}
                 max={100}
@@ -706,7 +708,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
             </label>
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldMaxToolCalls')}</span>
-              <input
+              <Input
                 type="number"
                 min={1}
                 max={300}
@@ -724,7 +726,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <label className="agents-field">
             <span>{t('settings.agentsSection.fieldTools')}</span>
-            <textarea
+            <Textarea
               value={toolsText}
               onChange={(e) => setToolsText(e.target.value)}
               rows={2}
@@ -735,7 +737,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
 
           <label className="agents-field">
             <span>{t('settings.agentsSection.fieldDeny')}</span>
-            <textarea
+            <Textarea
               value={denyText}
               onChange={(e) => setDenyText(e.target.value)}
               rows={2}
@@ -746,7 +748,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           {editorMode === 'create' && (
             <label className="agents-field">
               <span>{t('settings.agentsSection.fieldScope')}</span>
-              <select
+              <Select
                 value={scope}
                 onChange={(e) => setScope(e.target.value as 'project' | 'user')}
               >
@@ -755,7 +757,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
                   {!projectPath ? ` (${t('settings.agentsSection.scopeNoProject')})` : ''}
                 </option>
                 <option value="user">{t('settings.agentsSection.scopeUser')}</option>
-              </select>
+              </Select>
             </label>
           )}
 

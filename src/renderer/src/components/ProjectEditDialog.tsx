@@ -6,6 +6,7 @@ import { useAppStore } from '../stores/app'
 import { useEffectiveTheme } from '../stores/theme'
 import FileBrowser from './FileBrowser'
 import ConfirmDialog from './ConfirmDialog'
+import Input from './Input'
 import { useModalDialog } from '../utils/focusTrap'
 import './ProjectEditDialog.css'
 
@@ -85,7 +86,7 @@ export default function ProjectEditDialog({ projectId, onClose }: ProjectEditDia
 
           <div className="ped-body">
             <div className="ped-field">
-              <input
+              <Input
                 className="ped-name-input"
                 value={name}
                 onChange={(e) => setName(e.target.value)}

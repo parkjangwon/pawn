@@ -22,6 +22,7 @@ import {
 } from '../utils/browserFeedback'
 import type { ChatAttachment } from '../utils/attachments'
 import type { BrowserTabInfo } from '../agent/browser'
+import Input from './Input'
 
 /**
  * The panel showing the SAME embedded browser the agent tools drive (see
@@ -454,7 +455,7 @@ function IframeBrowserView(): React.JSX.Element {
         </div>
 
         <div className="rp-browser-urlbar">
-          <input className="rp-browser-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={handleKeyDown} placeholder={t('rightPanel.browser.enterUrl')} onFocus={(e) => e.target.select()} />
+          <Input className="rp-browser-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={handleKeyDown} placeholder={t('rightPanel.browser.enterUrl')} onFocus={(e) => e.target.select()} />
           <button className="rp-browser-go" onClick={handleGo} title={t('rightPanel.browser.go')}>
             <CornerUpLeft size={14} />
           </button>

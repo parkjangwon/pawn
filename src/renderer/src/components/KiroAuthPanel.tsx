@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import Button from './Button'
+import Input from './Input'
 
 type Form = null | 'idc' | 'apiKey'
 
@@ -118,9 +120,9 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
             </button>
           ) : (
             <>
-              <button type="button" className="btn-primary" disabled={busy} onClick={() => void startDevice('builder-id')}>
+              <Button type="button" disabled={busy} onClick={() => void startDevice('builder-id')}>
                 {t('settings.providerSection.kiro.builderId')}
-              </button>
+              </Button>
               <span
                 style={{ fontSize: 'var(--font-xs)', color: 'var(--success)', fontWeight: 600, alignSelf: 'center' }}
               >
@@ -142,20 +144,20 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
 
       {form === 'idc' && (
         <div className="add-form kiro-form">
-          <input placeholder="https://your-org.awsapps.com/start" value={startUrl} onChange={(e) => setStartUrl(e.target.value)} />
-          <input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={t('settings.providerSection.kiro.region')} />
-          <button type="button" className="btn-primary" disabled={busy || !startUrl.trim()} onClick={() => void startDevice('idc')}>
+          <Input placeholder="https://your-org.awsapps.com/start" value={startUrl} onChange={(e) => setStartUrl(e.target.value)} />
+          <Input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={t('settings.providerSection.kiro.region')} />
+          <Button type="button" disabled={busy || !startUrl.trim()} onClick={() => void startDevice('idc')}>
             {t('settings.providerSection.kiro.continue')}
-          </button>
+          </Button>
         </div>
       )}
       {form === 'apiKey' && (
         <div className="add-form kiro-form">
-          <input type="password" placeholder="ksk_…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus />
-          <input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={t('settings.providerSection.kiro.region')} />
-          <button type="button" className="btn-primary" disabled={busy || !apiKey.trim()} onClick={() => void run(() => api.setApiKey(apiKey.trim(), region.trim()), () => (setApiKey(''), onSignedIn?.()))}>
+          <Input type="password" placeholder="ksk_…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus />
+          <Input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={t('settings.providerSection.kiro.region')} />
+          <Button type="button" disabled={busy || !apiKey.trim()} onClick={() => void run(() => api.setApiKey(apiKey.trim(), region.trim()), () => (setApiKey(''), onSignedIn?.()))}>
             {t('common.save')}
-          </button>
+          </Button>
         </div>
       )}
       {error && (

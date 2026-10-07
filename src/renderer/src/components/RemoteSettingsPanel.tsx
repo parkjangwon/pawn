@@ -2,6 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useAppStore } from '../stores/app'
 import ConfirmDialog from './ConfirmDialog'
+import Button from './Button'
+import Input from './Input'
+import Select from './Select'
 import './RemoteSettingsPanel.css'
 
 interface HostRow {
@@ -165,12 +168,12 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                 {test.state === 'fail' && <span className="remote-test-fail">{t('settings.remoteSection.testFail', { error: test.detail || '' })}</span>}
               </div>
               <div className="remote-actions">
-                <button type="button" className="btn-cancel" disabled={test.state === 'testing'} onClick={() => void testHost(h.id)}>
+                <Button type="button" variant="secondary" disabled={test.state === 'testing'} onClick={() => void testHost(h.id)}>
                   {test.state === 'testing' ? t('settings.remoteSection.testing') : t('settings.remoteSection.test')}
-                </button>
-                <button type="button" className="btn-cancel" onClick={() => setPendingRemove(h)}>
+                </Button>
+                <Button type="button" variant="secondary" onClick={() => setPendingRemove(h)}>
                   {t('settings.remoteSection.remove')}
-                </button>
+                </Button>
               </div>
             </div>
           )
@@ -188,11 +191,11 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
             <div className="remote-grid">
               <label className="remote-field">
                 <span>{t('settings.remoteSection.label')}</span>
-                <input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="homelab" />
+                <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="homelab" />
               </label>
               <label className="remote-field">
                 <span>{t('settings.remoteSection.hostname')}</span>
-                <input
+                <Input
                   value={host}
                   onChange={(e) => setHost(e.target.value)}
                   placeholder="box.tailnet-ts.net"
@@ -201,23 +204,23 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
               </label>
               <label className="remote-field">
                 <span>{t('settings.remoteSection.user')}</span>
-                <input value={user} onChange={(e) => setUser(e.target.value)} placeholder="root" />
+                <Input value={user} onChange={(e) => setUser(e.target.value)} placeholder="root" />
               </label>
               <label className="remote-field">
                 <span>{t('settings.remoteSection.port')}</span>
-                <input value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric" placeholder="22" />
+                <Input value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric" placeholder="22" />
               </label>
               <label className="remote-field">
                 <span>{t('settings.remoteSection.auth')}</span>
-                <select value={auth} onChange={(e) => setAuth(e.target.value === 'password' ? 'password' : 'key')}>
+                <Select value={auth} onChange={(e) => setAuth(e.target.value === 'password' ? 'password' : 'key')}>
                   <option value="key">{t('settings.remoteSection.authKey')}</option>
                   <option value="password">{t('settings.remoteSection.authPassword')}</option>
-                </select>
+                </Select>
               </label>
               {auth === 'key' ? (
                 <label className="remote-field">
                   <span>{t('settings.remoteSection.identityFile')}</span>
-                  <input
+                  <Input
                     value={identityFile}
                     onChange={(e) => setIdentityFile(e.target.value)}
                     placeholder="~/.ssh/id_ed25519"
@@ -226,7 +229,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
               ) : (
                 <label className="remote-field">
                   <span>{t('settings.remoteSection.password')}</span>
-                  <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                  <Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                 </label>
               )}
             </div>
@@ -234,9 +237,9 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
               <p className="remote-note">{t('settings.remoteSection.sshpassMissing')}</p>
             )}
             {formError && <p className="remote-note remote-error">{formError}</p>}
-            <button type="submit" className="btn-primary" disabled={busy || !host.trim()}>
+            <Button type="submit" disabled={busy || !host.trim()}>
               {t('settings.remoteSection.add')}
-            </button>
+            </Button>
           </form>
         </div>
       </div>
@@ -255,7 +258,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
               <div className="remote-project-row">
                 <span className="settings-row-label">{p.name}</span>
                 <div className="remote-project-controls">
-                  <select
+                  <Select
                     value={p.executionHost || ''}
                     onChange={(e) => {
                       const nextHost = e.target.value
@@ -268,8 +271,8 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                         {h.label}
                       </option>
                     ))}
-                  </select>
-                  <input
+                  </Select>
+                  <Input
                     className="remote-path-input"
                     defaultValue={p.remotePath || ''}
                     key={p.id + ':' + (p.remotePath || '')}

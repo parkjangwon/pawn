@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import logoGitlab from '../assets/logos/gitlab.svg'
 import logoCodeCommit from '../assets/logos/codecommit.svg'
 import type { SettingsState } from './settingsState'
+import Button from './Button'
+import Input from './Input'
 
 export default function ConnectionsSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -177,7 +179,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                     <div className="conn-pat-fields">
                       <label className="conn-pat-field">
                         <span>{t('settings.connectionsSection.baseUrl')}</span>
-                        <input
+                        <Input
                           type="url"
                           autoComplete="off"
                           placeholder="https://gitlab.example.com"
@@ -187,7 +189,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       </label>
                       <label className="conn-pat-field">
                         <span>{t('settings.connectionsSection.personalToken')}</span>
-                        <input
+                        <Input
                           type="password"
                           autoComplete="off"
                           placeholder="glpat-…"
@@ -200,7 +202,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                     <div className="conn-pat-fields">
                       <label className="conn-pat-field">
                         <span>{t('settings.connectionsSection.awsRegion')}</span>
-                        <input
+                        <Input
                           type="text"
                           autoComplete="off"
                           placeholder="ap-northeast-2"
@@ -210,7 +212,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       </label>
                       <label className="conn-pat-field">
                         <span>{t('settings.connectionsSection.awsAccessKeyId')}</span>
-                        <input
+                        <Input
                           type="text"
                           autoComplete="off"
                           placeholder="AKIA…"
@@ -220,7 +222,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       </label>
                       <label className="conn-pat-field">
                         <span>{t('settings.connectionsSection.awsSecretAccessKey')}</span>
-                        <input
+                        <Input
                           type="password"
                           autoComplete="off"
                           value={patForm.secretAccessKey}
@@ -229,7 +231,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       </label>
                       <label className="conn-pat-field">
                         <span>{t('settings.connectionsSection.awsSessionToken')}</span>
-                        <input
+                        <Input
                           type="password"
                           autoComplete="off"
                           placeholder={t('settings.connectionsSection.optional')}
@@ -240,9 +242,8 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                     </div>
                   )}
                   <div className="conn-pat-actions">
-                    <button
+                    <Button
                       type="button"
-                      className="btn-primary"
                       disabled={
                         busy ||
                         (provider === 'gitlab'
@@ -256,7 +257,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                       {busy
                         ? t('settings.connectionsSection.connecting')
                         : t('settings.connectionsSection.saveConnect')}
-                    </button>
+                    </Button>
                   </div>
                 </div>
               )}

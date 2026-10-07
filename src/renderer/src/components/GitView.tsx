@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next'
 import { Check, ChevronDown, ChevronRight, GitBranch } from 'lucide-react'
 import { secretPreflight, validateCommitMessage } from '../agent/gitWrite'
 import { scanForSecrets, formatSecretScanBlock } from '../agent/secretScan'
+import Input from './Input'
 
 interface GitFile {
   path: string
@@ -414,7 +415,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
       )}
       {error && <div className="rp-git-error">{error}</div>}
       <div className="rp-git-actions">
-        <input
+        <Input
           className="rp-git-commit-input"
           placeholder={t('rightPanel.git.commitPlaceholder')}
           value={commitMessage}

@@ -10,6 +10,10 @@ import { activateOnKey, useFocusTrap } from '../utils/focusTrap'
 import ConfirmDialog from './ConfirmDialog'
 import NavControls from './NavControls'
 import Tooltip from './Tooltip'
+import Button from './Button'
+import Input, { Textarea } from './Input'
+import Select from './Select'
+import Switch from './Switch'
 // Cards reuse Settings controls (toggle, badges, buttons); Settings is lazy,
 // so without this they render unstyled until Settings is opened once.
 import './Settings.css'
@@ -361,9 +365,9 @@ export default function AutomationView({
         <span className="automation-import-msg">{importMsg}</span>
         <button className="automation-tool-btn" onClick={() => void importAutomations()} title={t('automation.import')}>{t('automation.import')}</button>
         <button className="automation-tool-btn" onClick={() => void exportAutomations()} title={t('automation.export')}>{t('automation.export')}</button>
-        <button className="btn-primary automation-header-btn" onClick={() => openCreate()}>
+        <Button className="automation-header-btn" onClick={() => openCreate()}>
           {t('automation.new')}
-        </button>
+        </Button>
       </div>
 
       <section className="automation-content">
@@ -380,7 +384,7 @@ export default function AutomationView({
               </div>
               <h3>{t('automation.emptyTitle')}</h3>
               <p>{t('automation.emptyDesc')}</p>
-              <button className="btn-primary automation-cta" onClick={() => openCreate()}>{t('automation.start')}</button>
+              <Button className="automation-cta" onClick={() => openCreate()}>{t('automation.start')}</Button>
             </div>
           )}
 
@@ -430,15 +434,12 @@ export default function AutomationView({
                   >
                     {t('automation.edit')}
                   </button>
-                  <label className="toggle-switch" title={t('automation.toggleHint')}>
-                    <input
-                      type="checkbox"
-                      aria-label={t('automation.toggleHint')}
-                      checked={routine.enabled}
-                      onChange={(e) => void toggle(routine.id, e.target.checked)}
-                    />
-                    <span className="toggle-slider" />
-                  </label>
+                  <Switch
+                    checked={routine.enabled}
+                    onCheckedChange={(v) => void toggle(routine.id, v)}
+                    title={t('automation.toggleHint')}
+                    aria-label={t('automation.toggleHint')}
+                  />
                   <button
                     className="delete-btn"
                     onClick={() => setConfirmDeleteRoutine({ id: routine.id, name: routine.name })}
@@ -504,55 +505,55 @@ export default function AutomationView({
             <div className="automation-form">
               <div className="automation-field">
                 <label>{t('automation.name')}</label>
-                <input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder={t('automation.namePlaceholder')} />
+                <Input value={draft.name} onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))} placeholder={t('automation.namePlaceholder')} />
               </div>
 
               <div className="automation-form-row">
                 <div className="automation-field">
                   <label>{t('automation.trigger')}</label>
-                  <select value={draft.trigger} onChange={(e) => setDraft((d) => ({ ...d, trigger: e.target.value as TriggerType }))}>
+                  <Select value={draft.trigger} onChange={(e) => setDraft((d) => ({ ...d, trigger: e.target.value as TriggerType }))}>
                     <option value="daily">{t('automation.daily')}</option>
                     <option value="weekdays">{t('automation.weekdays')}</option>
                     <option value="weekly">{t('automation.weekly')}</option>
                     <option value="interval">{t('automation.interval')}</option>
                     <option value="file_watch">{t('automation.fileWatch')}</option>
                     <option value="cron">{t('automation.cron')}</option>
-                  </select>
+                  </Select>
                 </div>
                 {draft.trigger === 'weekly' && (
                   <div className="automation-field">
                     <label>{t('automation.weekday')}</label>
-                    <select value={draft.weekday} onChange={(e) => setDraft((d) => ({ ...d, weekday: e.target.value }))}>
+                    <Select value={draft.weekday} onChange={(e) => setDraft((d) => ({ ...d, weekday: e.target.value }))}>
                       {[0, 1, 2, 3, 4, 5, 6].map((w) => <option key={w} value={w}>{t(`settings.automationSection.weekdays.${w}`)}</option>)}
-                    </select>
+                    </Select>
                   </div>
                 )}
                 {draft.trigger === 'interval' && (
                   <div className="automation-field">
                     <label>{t('automation.minutes')}</label>
-                    <input type="number" min={1} value={draft.intervalMin} onChange={(e) => setDraft((d) => ({ ...d, intervalMin: e.target.value }))} />
+                    <Input type="number" min={1} value={draft.intervalMin} onChange={(e) => setDraft((d) => ({ ...d, intervalMin: e.target.value }))} />
                   </div>
                 )}
                 {(draft.trigger === 'daily' || draft.trigger === 'weekdays' || draft.trigger === 'weekly') && (
                   <>
                     <div className="automation-field">
                       <label>{t('automation.hour')}</label>
-                      <select value={draft.hour} onChange={(e) => setDraft((d) => ({ ...d, hour: e.target.value }))}>
+                      <Select value={draft.hour} onChange={(e) => setDraft((d) => ({ ...d, hour: e.target.value }))}>
                         {Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0')).map((h) => <option key={h} value={h}>{h}:00</option>)}
-                      </select>
+                      </Select>
                     </div>
                     <div className="automation-field">
                       <label>{t('automation.minute')}</label>
-                      <select value={draft.minute} onChange={(e) => setDraft((d) => ({ ...d, minute: e.target.value }))}>
+                      <Select value={draft.minute} onChange={(e) => setDraft((d) => ({ ...d, minute: e.target.value }))}>
                         {['00', '15', '30', '45'].map((m) => <option key={m} value={m}>:{m}</option>)}
-                      </select>
+                      </Select>
                     </div>
                   </>
                 )}
                 {draft.trigger === 'cron' && (
                   <div className="automation-field">
                     <label>{t('automation.cronLabel')}</label>
-                    <input
+                    <Input
                       value={draft.cronExpr}
                       onChange={(e) => setDraft((d) => ({ ...d, cronExpr: e.target.value }))}
                       placeholder="0 9 * * 1-5"
@@ -563,7 +564,7 @@ export default function AutomationView({
                   <>
                     <div className="automation-field">
                       <label>{t('automation.watchPath')}</label>
-                      <input
+                      <Input
                         value={draft.watchPath}
                         onChange={(e) => setDraft((d) => ({ ...d, watchPath: e.target.value }))}
                         placeholder={t('automation.watchPathPlaceholder')}
@@ -571,7 +572,7 @@ export default function AutomationView({
                     </div>
                     <div className="automation-field">
                       <label>{t('automation.debounce')}</label>
-                      <input
+                      <Input
                         type="number"
                         min={1}
                         value={draft.debounceMin}
@@ -584,23 +585,23 @@ export default function AutomationView({
 
               <div className="automation-field">
                 <label>{t('automation.project')}</label>
-                <select value={draft.projectId} onChange={(e) => setDraft((d) => ({ ...d, projectId: e.target.value }))}>
+                <Select value={draft.projectId} onChange={(e) => setDraft((d) => ({ ...d, projectId: e.target.value }))}>
                   <option value="">{t('automation.noProject')}</option>
                   {userProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-                </select>
+                </Select>
                 <span className="automation-field-hint">{t('automation.projectHint')}</span>
               </div>
 
               <div className="automation-field">
                 <label>{t('automation.prompt')}</label>
-                <textarea value={draft.prompt} onChange={(e) => setDraft((d) => ({ ...d, prompt: e.target.value }))} rows={4} placeholder={t('automation.promptPlaceholder')} />
+                <Textarea value={draft.prompt} onChange={(e) => setDraft((d) => ({ ...d, prompt: e.target.value }))} rows={4} placeholder={t('automation.promptPlaceholder')} />
               </div>
 
               <details className="automation-advanced" open={draft.stepsText.trim().length > 0 || Number(draft.maxRetries) > 0}>
                 <summary>{t('automation.advanced')}</summary>
               <div className="automation-field">
                 <label>{t('automation.steps')}</label>
-                <textarea
+                <Textarea
                   value={draft.stepsText}
                   onChange={(e) => setDraft((d) => ({ ...d, stepsText: e.target.value }))}
                   rows={3}
@@ -610,7 +611,7 @@ export default function AutomationView({
               <div className="automation-form-row">
                 <div className="automation-field">
                   <label>{t('automation.maxRetries')}</label>
-                  <input
+                  <Input
                     type="number"
                     min={0}
                     max={5}
@@ -620,7 +621,7 @@ export default function AutomationView({
                 </div>
                 <div className="automation-field">
                   <label>{t('automation.retryDelay')}</label>
-                  <input
+                  <Input
                     type="number"
                     min={10}
                     value={draft.retryDelaySec}
@@ -643,17 +644,16 @@ export default function AutomationView({
                 {editingId ? t('automation.editFooterHint') : t('automation.footerHint')}
               </span>
               <div className="automation-modal-actions-buttons">
-                <button type="button" className="btn-cancel" onClick={closeEditor}>
+                <Button type="button" variant="secondary" onClick={closeEditor}>
                   {t('common.cancel')}
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn-primary"
                   onClick={() => void saveAutomation()}
                   disabled={!canSave}
                 >
                   {t('common.save')}
-                </button>
+                </Button>
               </div>
             </div>
           </div>

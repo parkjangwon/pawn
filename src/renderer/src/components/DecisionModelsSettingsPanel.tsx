@@ -3,6 +3,8 @@ import { useTranslation } from 'react-i18next'
 import { Trash2 } from 'lucide-react'
 import { useDecisionStore } from '../stores/decision'
 import ConfirmDialog from './ConfirmDialog'
+import Button from './Button'
+import Input from './Input'
 
 type Kind = DecisionProviderKindDto
 
@@ -319,7 +321,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
 
           <label className="decision-field" htmlFor={`${uid}-name`}>
             <span>{t('settings.decisionSection.fields.name')}</span>
-            <input
+            <Input
               id={`${uid}-name`}
               value={form.name}
               placeholder={preset.kind === 'custom' ? t('settings.decisionSection.fields.namePlaceholder') : preset.name}
@@ -329,7 +331,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
 
           <label className="decision-field" htmlFor={`${uid}-url`}>
             <span>{t('settings.decisionSection.fields.baseUrl')}</span>
-            <input
+            <Input
               id={`${uid}-url`}
               value={form.baseUrl}
               placeholder={preset.baseUrl || 'https://decisions.example.com'}
@@ -344,7 +346,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
               {t('settings.decisionSection.fields.apiKey')}
               {!keyRequired && <em className="decision-optional"> {t('settings.decisionSection.fields.optional')}</em>}
             </span>
-            <input
+            <Input
               id={`${uid}-key`}
               type="password"
               autoComplete="off"
@@ -370,7 +372,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
           <label className="decision-field" htmlFor={`${uid}-model`}>
             <span>{t('settings.decisionSection.fields.model')}</span>
             <span className="decision-model-row">
-              <input
+              <Input
                 id={`${uid}-model`}
                 value={form.model}
                 list={`${uid}-models`}
@@ -403,12 +405,12 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
           </div>
           {formError && <div className="decision-error" role="alert">{formError}</div>}
           <div className="form-actions">
-            <button type="submit" className="btn-primary" disabled={saving}>
+            <Button type="submit" disabled={saving}>
               {form.id ? t('common.save') : t('settings.decisionSection.addAndTest')}
-            </button>
-            <button type="button" className="btn-cancel" onClick={() => setForm(null)}>
+            </Button>
+            <Button type="button" variant="secondary" onClick={() => setForm(null)}>
               {t('common.cancel')}
-            </button>
+            </Button>
           </div>
         </form>
       )}

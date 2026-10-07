@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import Input from './Input'
 
 type Kind = 'chatgpt' | 'claude' | 'antigravity'
 
@@ -146,7 +147,7 @@ export default function SubscriptionAuthPanel({
           </button>
           {copy.mode === 'paste' && (
             <div className="form-actions kiro-actions">
-              <input
+              <Input
                 type="text"
                 value={paste}
                 placeholder={t(`${copy.ns}.pastePlaceholder`)}
