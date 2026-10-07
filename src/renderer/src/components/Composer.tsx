@@ -2,6 +2,21 @@ import { ultraWorkTriggerLength } from '../agent/ultraWork'
 import './UltraWork.css'
 import { useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  ArrowUp,
+  Check,
+  ChevronDown,
+  ClipboardCheck,
+  Clock,
+  Disc,
+  DollarSign,
+  Folder,
+  Info,
+  Paperclip,
+  Shield,
+  Square,
+  X
+} from 'lucide-react'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
 import GitSummaryChip from './GitSummaryChip'
 import { useProviderStore } from '../stores/provider'
@@ -224,9 +239,9 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                   onClick={() => { setShowProjectPicker(!showProjectPicker); setShowPermPicker(false); setShowModelPicker(false); setShowUsagePopover(false) }}
                   title={t('contextBar.switchProject')}
                 >
-                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                  <Folder size={12} />
                   <span>{activeProject && activeProject.id !== '__general__' ? activeProject.name : t('chatHeader.everyday')}</span>
-                  <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                  <ChevronDown size={8} />
                 </button>
                 {showProjectPicker && (
                   <div className="project-picker">
@@ -237,16 +252,16 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                           className={`picker-item ${p.id === activeProjectId ? 'active' : ''}`}
                           onClick={() => onSelectProject(p.id)}
                         >
-                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+                          <Folder size={12} />
                           <span>{p.name}</span>
                           {p.paths?.[0] && <span className="picker-path">{p.paths[0].split('/').pop()}</span>}
-                          {p.id === activeProjectId && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                          {p.id === activeProjectId && <Check size={12} />}
                         </button>
                       ))}
                     </div>
                     <div className="picker-footer">
                       <button className="picker-item" onClick={() => { onSelectProject('__general__') }}>
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                        <X size={12} />
                         <span>{t('contextBar.workWithoutProject')}</span>
                       </button>
                     </div>
@@ -277,7 +292,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
             )}
             {visionNote && (
               <div className="attachment-vision-note" role="status">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="12" cy="12" r="10" /><line x1="12" y1="8" x2="12" y2="12" /><line x1="12" y1="16" x2="12.01" y2="16" /></svg>
+                <Info size={12} aria-hidden />
                 <span>{visionNote}</span>
               </div>
             )}
@@ -313,9 +328,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
               {/* Left: permission mode */}
               <div className="input-actions-left">
                 <button className="attach-btn" onClick={() => fileInputRef.current?.click()} title={t('chat.attach')} aria-label={t('chat.attach')}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
-                  </svg>
+                  <Paperclip size={15} />
                 </button>
                 {recordSupported && (
                   <button
@@ -331,9 +344,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     aria-label={recording ? t('record.button.stop') : t('record.button.start')}
                     aria-pressed={recording || recordSetupOpen}
                   >
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      {recording ? <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" stroke="none" /> : <><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" fill="currentColor" stroke="none" /></>}
-                    </svg>
+                    {recording ? <Square size={15} /> : <Disc size={15} />}
                   </button>
                 )}
                 <input
@@ -356,13 +367,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     title={agentMode === 'plan' ? t('contextBar.agentPlanHint') : t('contextBar.agentBuildHint')}
                     aria-label={agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}
                   >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                      {agentMode === 'plan' ? (
-                        <path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9l2 2 4-4" />
-                      ) : (
-                        <path d="M12 19V5M5 12l7-7 7 7" />
-                      )}
-                    </svg>
+                    {agentMode === 'plan' ? <ClipboardCheck size={11} /> : <ArrowUp size={11} />}
                     <span className="agent-label">{agentMode === 'plan' ? t('contextBar.agentPlan') : t('contextBar.agentBuild')}</span>
                   </button>
                   <span className="mode-segment-sep" aria-hidden="true" />
@@ -375,7 +380,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     title={permLabels[permissionMode]}
                     aria-label={permLabels[permissionMode]}
                   >
-                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></svg>
+                    <Shield size={11} />
                     <span className="perm-label">{permLabels[permissionMode]}</span>
                   </button>
                   {showPermPicker && (
@@ -384,7 +389,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         <button key={mode} className={`picker-item ${permissionMode === mode ? 'active' : ''}`} onClick={() => { setPermissionMode(mode); setShowPermPicker(false) }}>
                           <span className="picker-item-label">{permLabels[mode]}</span>
                           <span className="picker-item-desc">{permDescs[mode]}</span>
-                          {permissionMode === mode && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                          {permissionMode === mode && <Check size={12} />}
                         </button>
                       ))}
                       {/* Checks after code edits: only meaningful in a code project. */}
@@ -404,7 +409,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                           >
                             <span className="picker-item-label">{g.label}</span>
                             <span className="picker-item-desc">{g.desc}</span>
-                            {doneGate === g.id && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                            {doneGate === g.id && <Check size={12} />}
                           </button>
                         ))}
                       </div>
@@ -427,7 +432,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       title={lastRoute ? `${lastRoute.label} — ${lastRoute.reason}` : t('contextBar.usageTitle')}
                       aria-label={t('contextBar.usageTitle')}
                     >
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 1v22M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" /></svg>
+                      <DollarSign size={12} />
                       {usageTotals && usageTotals.calls > 0 && (
                         <span>{formatCost(usageTotals.cost)}</span>
                       )}
@@ -546,18 +551,18 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                     title={routingMode === 'auto' ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel')) : currentModelLabel}
                     aria-label={`${t('modelPicker.title')}: ${routingMode === 'auto' ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel')) : currentModelLabel}`}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" /></svg>
+                    <Clock size={12} />
                     <span>{routingMode === 'auto'
                       ? (lastRoute ? `${t('modelPicker.autoLabel')} · ${lastRoute.label}` : t('modelPicker.autoLabel'))
                       : currentModelLabel}</span>
-                    <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+                    <ChevronDown size={8} />
                   </button>
                   {showModelPicker && (
                     <div className="project-picker model-picker">
                       <button className={`picker-item ${routingMode === 'auto' ? 'active' : ''}`} onClick={() => { setActiveModel(null); setRoutingMode('auto'); setShowModelPicker(false) }}>
                         <span className="picker-item-label">{t('modelPicker.autoLabel')}</span>
                         <span className="picker-item-desc">{t('modelPicker.autoDesc')}</span>
-                        {routingMode === 'auto' && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                        {routingMode === 'auto' && <Check size={12} />}
                       </button>
                       {providers.filter((p) => p.enabled).map((provider) => (
                         <div key={provider.id} className="picker-group">
@@ -565,7 +570,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                           {models.filter((m) => m.providerId === provider.id && m.enabled).map((m) => (
                             <button key={m.id} className={`picker-item ${m.id === activeModelId ? 'active' : ''}`} onClick={() => { setActiveModel(m.id); setShowModelPicker(false) }}>
                               <span>{m.label || m.modelId}</span>
-                              {m.id === activeModelId && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                              {m.id === activeModelId && <Check size={12} />}
                             </button>
                           ))}
                         </div>
@@ -579,7 +584,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                           <button key={e} className={`picker-item ${reasoningEffort === e ? 'active' : ''}`} onClick={() => { setReasoningEffort(e); setShowModelPicker(false) }}>
                             <span className="picker-item-label">{reasoningLabels[e]}</span>
                             <span className="picker-item-desc">{reasoningDescs[e]}</span>
-                            {reasoningEffort === e && <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>}
+                            {reasoningEffort === e && <Check size={12} />}
                           </button>
                         ))}
                       </div>
@@ -597,9 +602,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         title={t('contextBar.sendSteerHint')}
                         aria-label={t('contextBar.sendSteer')}
                       >
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M12 19V5M5 12l7-7 7 7" />
-                        </svg>
+                        <ArrowUp size={12} />
                         <span>{t('contextBar.sendSteer')}</span>
                       </button>
                     )}
@@ -610,7 +613,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       title={t('chat.stop')}
                       aria-label={t('chat.stop')}
                     >
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2" /></svg>
+                      <Square size={14} fill="currentColor" />
                     </button>
                   </>
                 ) : (
@@ -635,11 +638,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                       title={t('chat.send')}
                       aria-label={t('chat.send')}
                     >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="12" y1="19" x2="12" y2="5" /><polyline points="5 12 12 5 19 12" />
-                      </svg>
-                    </button>
-                  </>
+                      <ArrowUp size={16} />
                 )}
               </div>
             </div>

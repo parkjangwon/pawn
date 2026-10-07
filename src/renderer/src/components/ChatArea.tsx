@@ -1,5 +1,23 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  ArrowDown,
+  ArrowUp,
+  CirclePlus,
+  ClipboardCheck,
+  Crosshair,
+  Disc,
+  Download,
+  FileText,
+  Folder,
+  Plus,
+  Settings,
+  Sparkles,
+  Sun,
+  Trash2,
+  Upload,
+  Zap
+} from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { useProviderStore } from '../stores/provider'
@@ -605,7 +623,7 @@ export default function ChatArea({
       {
         id: 'new', label: t('chat.slash.new'), description: t('chat.slash.newDesc'),
         group: builtinGroup,
-        icon: ic(<><path d="M12 5v14" /><path d="M5 12h14" /></>),
+        icon: <Plus size={15} />,
         action: () => {
           // Same as sidebar "New chat": blank chat in the project on screen.
           openNewChat()
@@ -614,43 +632,43 @@ export default function ChatArea({
       {
         id: 'clear', label: t('chat.slash.clear'), description: t('chat.slash.clearDesc'),
         group: builtinGroup,
-        icon: ic(<><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /></>),
+        icon: <Trash2 size={15} />,
         action: () => { if (activeProjectId && activeSessionId) setShowClearConfirm(true) }
       },
       {
         id: 'model', label: t('chat.slash.model'), description: t('chat.slash.modelDesc'),
         group: builtinGroup,
-        icon: ic(<><circle cx="12" cy="12" r="3" /><path d="M12 2v3" /><path d="M12 19v3" /><path d="M2 12h3" /><path d="M19 12h3" /></>),
+        icon: <Crosshair size={15} />,
         action: () => { setShowModelPicker(true); setShowPermPicker(false) }
       },
       {
         id: 'theme', label: t('chat.slash.theme'), description: t('chat.slash.themeDesc'),
         group: builtinGroup,
-        icon: ic(<><circle cx="12" cy="12" r="4" /><path d="M12 2v2" /><path d="M12 20v2" /><path d="M4.9 4.9l1.4 1.4" /><path d="M17.7 17.7l1.4 1.4" /><path d="M2 12h2" /><path d="M20 12h2" /></>),
+        icon: <Sun size={15} />,
         action: () => toggleTheme()
       },
       {
         id: 'settings', label: t('chat.slash.settings'), description: t('chat.slash.settingsDesc'),
         group: builtinGroup,
-        icon: ic(<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>),
+        icon: <Settings size={15} />,
         action: () => onOpenSettings()
       },
       {
         id: 'export', label: t('chat.slash.export'), description: t('chat.slash.exportDesc'),
         group: builtinGroup,
-        icon: ic(<><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></>),
+        icon: <Download size={15} />,
         action: () => handleExport()
       },
       {
         id: 'plan', label: t('chat.slash.plan'), description: t('chat.slash.planDesc'),
         group: builtinGroup,
-        icon: ic(<><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2" /><path d="M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2" /></>),
+        icon: <ClipboardCheck size={15} />,
         action: () => setAgentMode('plan', activeSessionId)
       },
       {
         id: 'build', label: t('chat.slash.build'), description: t('chat.slash.buildDesc'),
         group: builtinGroup,
-        icon: ic(<><path d="M12 19V5M5 12l7-7 7 7" /></>),
+        icon: <ArrowUp size={15} />,
         action: () => setAgentMode('build', activeSessionId)
       },
       {
@@ -659,7 +677,7 @@ export default function ChatArea({
         description: t('ultraWork.slashDesc'),
         group: builtinGroup,
         hint: '$ulw',
-        icon: ic(<><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" /></>),
+        icon: <Zap size={15} />,
         insert: '/ultra-work '
       },
       ...(useRecordingStore.getState().supported
@@ -669,7 +687,7 @@ export default function ChatArea({
               label: t('record.slash.label'),
               description: t('record.slash.desc'),
               group: builtinGroup,
-              icon: ic(<><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="4" fill="currentColor" /></>),
+              icon: <Disc size={15} />,
               action: () => useRecordingStore.getState().openSetup({ projectId: activeProjectId ?? undefined, sessionId: activeSessionId ?? undefined })
             }
           ]
@@ -679,7 +697,7 @@ export default function ChatArea({
         label: t('chat.slash.issuePr'),
         description: t('chat.slash.issuePrDesc'),
         group: builtinGroup,
-        icon: ic(<><circle cx="12" cy="12" r="10" /><path d="M12 8v8M8 12h8" /></>),
+        icon: <CirclePlus size={15} />,
         insert: '/issue-pr '
       },
       ...getModRuntime().getCommands().map((cmd) => ({
@@ -703,24 +721,15 @@ export default function ChatArea({
           group: skillsGroup,
           hint: s.kind === 'command' || s.kind === 'plugin' || s.kind === 'agent' ? s.kind : 'skill',
           insert: `/${s.name} `,
-          icon: ic(<><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" /><path d="M19 14l.7 1.9L21.5 17l-1.8.7L19 19.5l-.7-1.8L16.5 17l1.8-.7z" /></>)
+          icon: <Sparkles size={15} />
         }
       })
     ]
   }
 
   const mentionItems = useMemo<TriggerItem[]>(() => {
-    const fileIcon = (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-        <polyline points="14 2 14 8 20 8" />
-      </svg>
-    )
-    const folderIcon = (
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />
-      </svg>
-    )
+    const fileIcon = (<FileText size={15} />)
+    const folderIcon = (<Folder size={15} />)
     const specials: TriggerItem[] = [
       {
         id: 'git',
@@ -774,11 +783,7 @@ export default function ChatArea({
     }
   }
 
-  const gambitIcon = (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-    </svg>
-  )
+  const gambitIcon = (<Zap size={15} />)
   const gambitItems = (query: string): TriggerItem[] =>
     matchGambits(query).map((g) => ({
       id: `gambit:${g.keyword}`,
@@ -1209,11 +1214,7 @@ export default function ChatArea({
       {isDraggingOver && (
         <div className="chat-drop-overlay">
           <div className="chat-drop-card">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
-              <polyline points="17 8 12 3 7 8" />
-              <line x1="12" y1="3" x2="12" y2="15" />
-            </svg>
+<Upload size={32} />
             <span className="chat-drop-title">{t('chat.dropFilesTitle')}</span>
             <span className="chat-drop-desc">{t('chat.dropFilesDesc')}</span>
           </div>
@@ -1333,9 +1334,7 @@ export default function ChatArea({
                 aria-label={t('chat.jumpToLatest')}
                 title={t('chat.jumpToLatest')}
               >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <line x1="12" y1="5" x2="12" y2="19" /><polyline points="19 12 12 19 5 12" />
-                </svg>
+<ArrowDown size={14} aria-hidden />
                 <span>{t('chat.jumpToLatest')}</span>
               </button>
             )}

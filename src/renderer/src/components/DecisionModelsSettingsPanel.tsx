@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Trash2 } from 'lucide-react'
 import { useDecisionStore } from '../stores/decision'
 import ConfirmDialog from './ConfirmDialog'
 
@@ -264,10 +265,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
                   title={t('settings.decisionSection.remove', { name: p.name })}
                   onClick={() => setConfirmRemove(p)}
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-                    <polyline points="3 6 5 6 21 6" />
-                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                  </svg>
+                  <Trash2 size={14} aria-hidden />
                 </button>
               </div>
             </div>

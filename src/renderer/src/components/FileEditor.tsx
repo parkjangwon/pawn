@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronLeft, WrapText } from 'lucide-react'
 import { languageForPath, highlightCode } from '../utils/syntaxHighlight'
 import ConfirmDialog from './ConfirmDialog'
 import MarkdownRenderer from './MarkdownRenderer'
@@ -197,9 +198,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
 
   const lineCount = content.split('\n').length
   const chevron = (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="15 18 9 12 15 6" />
-    </svg>
+    <ChevronLeft size={14} />
   )
 
   if (status === 'image' && imageSrc) {
@@ -282,14 +281,7 @@ export default function FileEditor({ filePath, fileName, onClose }: FileEditorPr
             title={t('fileEditor.wrap')}
             aria-pressed={wrap}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="4 7 4 4 20 4 20 7" />
-              <line x1="9" y1="20" x2="15" y2="20" />
-              <path d="M6 20H4a2 2 0 0 1-2-2V9" />
-              <path d="M18 20h2a2 2 0 0 0 2-2V9" />
-              <polyline points="12 13 9 16 12 19" />
-              <line x1="9" y1="16" x2="15" y2="16" />
-            </svg>
+            <WrapText size={14} />
           </button>
         )}
         <button className="rp-fe-save" onClick={save} disabled={!dirty || saving}>

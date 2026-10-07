@@ -1,5 +1,22 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  Clock,
+  Disc,
+  Folder,
+  MessageSquare,
+  Moon,
+  PanelLeft,
+  PanelRight,
+  Plus,
+  Search,
+  Settings,
+  Square,
+  Sun,
+  Terminal,
+  Users,
+  X
+} from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useChatStore } from '../stores/chat'
@@ -72,14 +89,6 @@ function HighlightedText({ text, query }: { text: string; query: string }): Reac
   })
   if (cursor < text.length) parts.push(text.slice(cursor))
   return <>{parts}</>
-}
-
-function Icon({ d }: { d: React.ReactNode }): React.JSX.Element {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      {d}
-    </svg>
-  )
 }
 
 /**
@@ -170,7 +179,7 @@ export default function CommandPalette({
         shortcut: formatCombo(keybindings['new-session']),
         group: 'actions',
         keywords: 'new chat session blank',
-        icon: <Icon d={<><path d="M12 5v14" /><path d="M5 12h14" /></>} />,
+        icon: <Plus size={16} />,
         action: () => run(() => {
           onMainViewChange?.('chat')
           openNewChat()
@@ -184,7 +193,7 @@ export default function CommandPalette({
             shortcut: formatCombo('Meta+F'),
             group: 'actions' as GroupId,
             keywords: 'find search conversation text ctrl+f',
-            icon: <Icon d={<><circle cx="11" cy="11" r="7" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>} />,
+            icon: <Search size={16} />,
             action: () => run(() => {
               onMainViewChange?.('chat')
               // After the palette's focus-restore frame, or it steals focus back.
@@ -199,7 +208,7 @@ export default function CommandPalette({
             description: t('record.palette.desc'),
             group: 'actions' as const,
             keywords: 'record replay skill demo macro workflow 녹화 스킬',
-            icon: <Icon d={<><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="3.5" /></>} />,
+            icon: <Disc size={16} />,
             action: () => run(() => {
               const rec = useRecordingStore.getState()
               if (rec.status.state === 'recording') void rec.stop()
@@ -213,7 +222,7 @@ export default function CommandPalette({
         description: t('commandPalette.commands.openAutomationsDesc'),
         group: 'actions',
         keywords: 'automation routine schedule',
-        icon: <Icon d={<><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></>} />,
+        icon: <Clock size={16} />,
         action: () => run(() => onMainViewChange?.('automations'))
       },
       {
@@ -223,7 +232,7 @@ export default function CommandPalette({
         shortcut: formatCombo(keybindings['open-settings']),
         group: 'actions',
         keywords: 'preferences config connections',
-        icon: <Icon d={<><circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" /></>} />,
+        icon: <Settings size={16} />,
         action: () => run(() => onOpenSettings())
       },
       {
@@ -274,7 +283,7 @@ export default function CommandPalette({
           : t('commandPalette.commands.stopStreamingIdle'),
         group: 'actions',
         keywords: 'stop cancel abort',
-        icon: <Icon d={<rect x="6" y="6" width="12" height="12" rx="1" />} />,
+        icon: <Square size={16} />,
         action: () => run(() => { if (isStreaming) stopStreaming(activeSessionId ?? undefined) })
       }
     ]
@@ -286,7 +295,7 @@ export default function CommandPalette({
         description: t('commandPalette.commands.toggleSidebarDesc'),
         shortcut: formatCombo(keybindings['toggle-sidebar']),
         group: 'navigation',
-        icon: <Icon d={<><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" /></>} />,
+        icon: <PanelLeft size={16} />,
         action: () => run(() => { (window as unknown as { __toggleSidebar?: () => void }).__toggleSidebar?.() })
       },
       {
@@ -295,7 +304,7 @@ export default function CommandPalette({
         description: t('commandPalette.commands.toggleRightPanelDesc'),
         shortcut: formatCombo(keybindings['toggle-right-panel']),
         group: 'navigation',
-        icon: <Icon d={<><rect x="3" y="3" width="18" height="18" rx="2" /><line x1="15" y1="3" x2="15" y2="21" /></>} />,
+        icon: <PanelRight size={16} />,
         action: () => run(() => { (window as unknown as { __toggleRightPanel?: () => void }).__toggleRightPanel?.() })
       },
       {
@@ -304,7 +313,7 @@ export default function CommandPalette({
         description: t('commandPalette.commands.openAgentsDesc'),
         group: 'navigation',
         keywords: 'subagent parallel worker explore agents',
-        icon: <Icon d={<><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /><path d="M16 3.13a4 4 0 010 7.75" /></>} />,
+        icon: <Users size={16} />,
         action: () =>
           run(() => {
             try {
@@ -320,7 +329,7 @@ export default function CommandPalette({
         description: t('commandPalette.commands.toggleTerminalDesc'),
         shortcut: formatCombo(keybindings['toggle-terminal']),
         group: 'navigation',
-        icon: <Icon d={<><polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" /></>} />,
+        icon: <Terminal size={16} />,
         action: () => run(() => { (window as unknown as { __toggleTerminal?: () => void }).__toggleTerminal?.() })
       },
       {
@@ -335,10 +344,7 @@ export default function CommandPalette({
         }),
         group: 'navigation',
         keywords: 'dark light appearance',
-        icon: <Icon d={theme === 'dark'
-          ? <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-          : <><circle cx="12" cy="12" r="5" /><line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" /><line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" /><line x1="1" y1="12" x2="3" y2="12" /><line x1="21" y1="12" x2="23" y2="12" /><line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" /></>
-        } />,
+        icon: theme === 'dark' ? <Moon size={16} /> : <Sun size={16} />,
         action: () => run(() => toggleTheme())
       },
       {
@@ -347,7 +353,7 @@ export default function CommandPalette({
         description: t('commandPalette.commands.themeLightDesc'),
         group: 'navigation',
         keywords: 'light appearance',
-        icon: <Icon d={<circle cx="12" cy="12" r="5" />} />,
+        icon: <Sun size={16} />,
         action: () => run(() => setTheme('light'))
       },
       {
@@ -356,7 +362,7 @@ export default function CommandPalette({
         description: t('commandPalette.commands.themeDarkDesc'),
         group: 'navigation',
         keywords: 'dark appearance',
-        icon: <Icon d={<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />} />,
+        icon: <Moon size={16} />,
         action: () => run(() => setTheme('dark'))
       }
     ]
@@ -374,7 +380,7 @@ export default function CommandPalette({
       shortcut: idx < 8 ? `${modSymbol}${idx + 1}` : undefined,
       group: 'sessions' as GroupId,
       keywords: `${session.title} ${projectName}`,
-      icon: <Icon d={<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />} />,
+      icon: <MessageSquare size={16} />,
       action: () => run(() => {
         onMainViewChange?.('chat')
         setActiveProject(projectId)
@@ -390,7 +396,7 @@ export default function CommandPalette({
         : t('commandPalette.projectNoPath'),
       group: 'projects' as GroupId,
       keywords: `${p.name} ${p.paths?.join(' ') || ''}`,
-      icon: <Icon d={<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" />} />,
+      icon: <Folder size={16} />,
       action: () => run(() => {
         onMainViewChange?.('chat')
         setActiveProject(p.id)
@@ -574,7 +580,7 @@ export default function CommandPalette({
         <div className="cp-header">
           <div className="cp-search-field">
             <span className="cp-search-icon" aria-hidden>
-              <Icon d={<><circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" /></>} />
+              <Search size={16} />
             </span>
             <input
               ref={inputRef}
@@ -598,7 +604,7 @@ export default function CommandPalette({
                 }}
                 aria-label={t('commandPalette.clear')}
               >
-                <Icon d={<><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></>} />
+                <X size={16} />
               </button>
             ) : (
               <span className="cp-esc-hint" title={t('commandPalette.close')}>

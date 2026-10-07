@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useLayoutEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Terminal, X } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import { useKeybinding, useKeybindingsStore, formatCombo } from '../stores/keybindings'
@@ -205,9 +206,7 @@ export default function BottomTerminal(): React.JSX.Element {
 
       <div className="bt-header">
         <div className="bt-title">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M4 17l6-6-6-6m8 14h8" />
-          </svg>
+          <Terminal size={14} aria-hidden />
           <span>{t('rightPanel.tools.terminal')}</span>
           {projectPath && (
             <span className="bt-path" title={projectPath}>{projectPath}</span>
@@ -220,9 +219,7 @@ export default function BottomTerminal(): React.JSX.Element {
             onClick={requestHide}
             aria-label={t('bottomTerminal.close')}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
+            <X size={12} />
           </button>
         </Tooltip>
       </div>

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { X, Zap } from 'lucide-react'
 import { useChatStore } from '../stores/chat'
 import { useUltraWorkStore, ultraWorkSpend } from '../stores/ultraWork'
 import { formatUltraDuration } from '../agent/ultraWork'
@@ -40,9 +41,7 @@ export default function UltraWorkBanner({ sessionId }: { sessionId: string | nul
       <div className="ulw-banner-inner">
         <div className="ulw-row">
           <span className="ulw-wordmark" aria-hidden>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="ulw-bolt">
-              <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
-            </svg>
+            <Zap size={12} className="ulw-bolt" />
             <span className="ulw-rainbow-text">{t('ultraWork.wordmark')}</span>
           </span>
           <span className={`ulw-status ulw-status-${run.status}`}>
@@ -81,9 +80,7 @@ export default function UltraWorkBanner({ sessionId }: { sessionId: string | nul
             </button>
           ) : (
             <button type="button" className="ulw-btn ghost" onClick={() => dismiss(sessionId)} aria-label={t('ultraWork.dismiss')}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden>
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
+              <X size={12} aria-hidden />
             </button>
           )}
         </div>

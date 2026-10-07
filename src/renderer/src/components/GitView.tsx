@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, ChevronDown, ChevronRight, GitBranch } from 'lucide-react'
 import { secretPreflight, validateCommitMessage } from '../agent/gitWrite'
 import { scanForSecrets, formatSecretScanBlock } from '../agent/secretScan'
 
@@ -317,16 +318,9 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
           onClick={() => setShowBranches(!showBranches)}
           style={{ cursor: 'pointer' }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <line x1="6" y1="3" x2="6" y2="15" />
-            <circle cx="18" cy="6" r="3" />
-            <circle cx="6" cy="18" r="3" />
-            <path d="M18 9a9 9 0 0 1-9 9" />
-          </svg>
+          <GitBranch size={12} />
           <span className="rp-git-branch">{branch}</span>
-          <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+          <ChevronDown size={8} />
         </div>
         {showBranches && (
           <div className="rp-git-branch-list">
@@ -338,9 +332,7 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
                 disabled={busy}
               >
                 {b === branch && (
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
+                  <Check size={10} />
                 )}
                 <span>{b}</span>
               </button>
@@ -459,20 +451,13 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
             onClick={() => setShowHistory(!showHistory)}
             style={{ cursor: 'pointer' }}
           >
-            <svg
-              width="10"
-              height="10"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
+            <ChevronRight
+              size={10}
               style={{
                 transform: showHistory ? 'rotate(90deg)' : 'rotate(0deg)',
                 transition: 'transform 0.15s'
               }}
-            >
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
+            />
             {t('rightPanel.git.history', { count: history.length })}
           </div>
           {showHistory && (

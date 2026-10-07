@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronRight } from 'lucide-react'
 import './ToolMessage.css'
 import DiffView from './DiffView'
 import { parseDiffMarker, stripDiffMarker } from '../utils/diffMarker'
@@ -111,17 +112,10 @@ export default function ToolMessage({ content, meta }: ToolMessageProps): React.
           }
         }}
       >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+        <ChevronRight
+          size={10}
           className={`tool-chevron ${collapsed ? '' : 'expanded'}`}
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
+        />
         {info.icon && (
           <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" className="tool-icon">
             <path d={info.icon} />

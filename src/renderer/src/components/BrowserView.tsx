@@ -1,5 +1,18 @@
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useTranslation } from 'react-i18next'
+import {
+  AppWindow,
+  ChevronLeft,
+  ChevronRight,
+  CircleX,
+  CodeXml,
+  CornerUpLeft,
+  Crosshair,
+  Globe,
+  RefreshCw,
+  Sun,
+  Trash2
+} from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { useChatStore } from '../stores/chat'
 import { uid } from '../utils/uid'
@@ -282,10 +295,10 @@ function NativeBrowserView(): React.JSX.Element {
       <div className="rp-browser-toolbar">
         <div className="rp-browser-nav">
           <button className="rp-browser-navbtn" onClick={() => window.api.browser.back()} disabled={!state.canGoBack} title={t('rightPanel.browser.back')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+            <ChevronLeft size={14} />
           </button>
           <button className="rp-browser-navbtn" onClick={() => window.api.browser.reload()} title={t('rightPanel.browser.reload')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+            <RefreshCw size={14} />
           </button>
         </div>
 
@@ -300,7 +313,7 @@ function NativeBrowserView(): React.JSX.Element {
             ref={urlInputRef}
           />
           <button className="rp-browser-go" onClick={() => navigate(url)} title={t('rightPanel.browser.go')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 10 4 15 9 20" /><path d="M20 4v7a4 4 0 0 1-4 4H4" /></svg>
+            <CornerUpLeft size={14} />
           </button>
         </div>
 
@@ -311,17 +324,13 @@ function NativeBrowserView(): React.JSX.Element {
             disabled={!state.url || sending}
             title={t('rightPanel.browser.pick')}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <circle cx="12" cy="12" r="6" />
-              <line x1="12" y1="2" x2="12" y2="5" /><line x1="12" y1="19" x2="12" y2="22" />
-              <line x1="2" y1="12" x2="5" y2="12" /><line x1="19" y1="12" x2="22" y2="12" />
-            </svg>
+            <Crosshair size={14} />
           </button>
           <button className={`rp-browser-modebtn ${showConsole ? 'active' : ''}`} onClick={() => setShowConsole(!showConsole)} title={t('rightPanel.browser.console')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" /></svg>
+            <CodeXml size={14} />
           </button>
           <button className="rp-browser-modebtn" onClick={() => window.api.browser.devtools()} title={t('rightPanel.browser.devtools')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="16" rx="2" /><line x1="3" y1="9" x2="21" y2="9" /></svg>
+            <AppWindow size={14} />
           </button>
         </div>
       </div>
@@ -333,14 +342,14 @@ function NativeBrowserView(): React.JSX.Element {
         {state.loading && <div className="rp-browser-loading"><div className="rp-browser-spinner" /></div>}
         {!state.url && !error && (
           <div className="rp-browser-content">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+            <Globe size={32} opacity={0.3} />
             <span>{t('rightPanel.browser.emptyHint')}</span>
           </div>
         )}
         {error && (
           <div className="rp-browser-error-overlay">
             <div className="rp-browser-error">
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+              <CircleX size={32} />
               <div className="rp-browser-error-text">{error}</div>
               <button className="rp-browser-error-btn secondary" onClick={() => window.api.browser.reload()}>{t('rightPanel.browser.retry')}</button>
             </div>
@@ -360,7 +369,7 @@ function NativeBrowserView(): React.JSX.Element {
           <div className="rp-browser-devtools-header">
             <span>{t('rightPanel.browser.console')}</span>
             <button onClick={() => setLogs([])} title={t('rightPanel.browser.clear')}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" /></svg>
+              <Trash2 size={12} />
             </button>
           </div>
           <div className="rp-browser-devtools-body">
@@ -434,26 +443,26 @@ function IframeBrowserView(): React.JSX.Element {
       <div className="rp-browser-toolbar">
         <div className="rp-browser-nav">
           <button className="rp-browser-navbtn" onClick={goBack} disabled={historyIndex <= 0} title={t('rightPanel.browser.back')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="15 18 9 12 15 6" /></svg>
+            <ChevronLeft size={14} />
           </button>
           <button className="rp-browser-navbtn" onClick={goForward} disabled={historyIndex >= history.length - 1} title={t('rightPanel.browser.forward')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+            <ChevronRight size={14} />
           </button>
           <button className="rp-browser-navbtn" onClick={refresh} title={t('rightPanel.browser.refresh')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="23 4 23 10 17 10" /><polyline points="1 20 1 14 7 14" /><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" /></svg>
+            <RefreshCw size={14} />
           </button>
         </div>
 
         <div className="rp-browser-urlbar">
           <input className="rp-browser-input" value={url} onChange={(e) => setUrl(e.target.value)} onKeyDown={handleKeyDown} placeholder={t('rightPanel.browser.enterUrl')} onFocus={(e) => e.target.select()} />
           <button className="rp-browser-go" onClick={handleGo} title={t('rightPanel.browser.go')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 10 4 15 9 20" /><path d="M20 4v7a4 4 0 0 1-4 4H4" /></svg>
+            <CornerUpLeft size={14} />
           </button>
         </div>
 
         <div className="rp-browser-modes">
           <button className={`rp-browser-modebtn ${useProxy ? 'active' : ''}`} onClick={() => setUseProxy(!useProxy)} title={t('rightPanel.browser.proxyMode')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3" /><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" /></svg>
+            <Sun size={14} />
           </button>
         </div>
       </div>
@@ -465,7 +474,7 @@ function IframeBrowserView(): React.JSX.Element {
             {loadError && (
               <div className="rp-browser-error-overlay">
                 <div className="rp-browser-error">
-                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="12" cy="12" r="10" /><line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" /></svg>
+                  <CircleX size={32} />
                   <div className="rp-browser-error-text">{loadError}</div>
                   <button className="rp-browser-error-btn" onClick={() => setUseProxy(true)}>{t('rightPanel.browser.enableProxy')}</button>
                 </div>
@@ -475,7 +484,7 @@ function IframeBrowserView(): React.JSX.Element {
           </>
         ) : (
           <div className="rp-browser-content">
-            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" opacity="0.3"><circle cx="12" cy="12" r="10" /><line x1="2" y1="12" x2="22" y2="12" /><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" /></svg>
+            <Globe size={32} opacity={0.3} />
             <span>{t('rightPanel.browser.emptyHintWeb')}</span>
           </div>
         )}

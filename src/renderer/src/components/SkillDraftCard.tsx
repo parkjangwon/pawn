@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Sparkles } from 'lucide-react'
 import { buildAutomationPrompt, buildRunPrompt, sameSkill, type SkillDraft } from '../agent/recordReplay'
 import { clearProjectContextCache } from '../agent/skills'
 import { openAutomationDraft } from '../stores/automationDraft'
@@ -113,9 +114,7 @@ export default function SkillDraftCard({ draft, projectId }: { draft: SkillDraft
   return (
     <div className="skill-card" role="group" aria-label={t('record.card.label', { name: draft.name })}>
       <div className="skill-card-head">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z" />
-        </svg>
+        <Sparkles size={15} aria-hidden />
         <code>{draft.name}</code>
         {badge}
       </div>

@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
 import ConfirmDialog from './ConfirmDialog'
 import { useTranslation } from 'react-i18next'
+import { ChevronRight, GitCompare } from 'lucide-react'
 import { computeDiff } from '../utils/diff'
 import { useChangeLedger } from '../stores/changeLedger'
 import { openFileInPanel } from '../stores/filesPanel'
@@ -98,21 +99,11 @@ export default function DiffView({
         }}
       >
         <div className="diff-header-left">
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
+          <ChevronRight
+            size={12}
             className={`diff-chevron ${collapsed ? '' : 'expanded'}`}
-          >
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="16 18 22 12 16 6" />
-            <polyline points="8 6 2 12 8 18" />
-          </svg>
+          />
+          <GitCompare size={14} />
           <span className="diff-filename">{filename || 'file'}</span>
         </div>
         <div className="diff-stats">

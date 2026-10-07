@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { GitCompare } from 'lucide-react'
 import { useAppStore } from '../stores/app'
 import { getEffectiveProjectPath } from '../utils/projectPath'
 import DiffView from './DiffView'
@@ -103,9 +104,7 @@ export default function DiffListView(): React.JSX.Element {
                 className="rp-diff-item"
                 onClick={() => setExpandedId(isExpanded ? null : msg.id)}
               >
-                <svg className="rp-diff-item-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="16 18 22 12 16 6" /><polyline points="8 6 2 12 8 18" />
-                </svg>
+                <GitCompare size={14} className="rp-diff-item-icon" />
                 <div className="rp-diff-item-info">
                   <div className="rp-diff-item-name">{diff.filename || 'file'}</div>
                   <div className="rp-diff-item-desc">

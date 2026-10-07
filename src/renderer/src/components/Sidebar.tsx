@@ -1,7 +1,8 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { ChevronRight, Folder, History, MessageSquare, Pencil, Plus, Search, Settings, Star, X } from 'lucide-react'
 import { useAppStore } from '../stores/app'
-import { IconChevronRight, IconFolder, IconPlus, IconX } from './icons'
+import { IconChevronRight } from './icons'
 import { useChatStore } from '../stores/chat'
 import { useRoutineStore } from '../stores/routine'
 import { useQuestionStore } from '../stores/userQuestions'
@@ -321,10 +322,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                 onClick={onOpenCommandPalette}
                 aria-label={t('commandPalette.title')}
               >
-                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <circle cx="11" cy="11" r="8" />
-                  <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                </svg>
+                <Search size={15} aria-hidden />
               </button>
             </Tooltip>
           )}
@@ -339,7 +337,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
           onClick={handleNewSession}
           title={`${t('sidebar.newChat')} (${formatCombo(keybindings['new-session'])})`}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" /><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" /></svg>
+          <Pencil size={16} aria-hidden />
           <span>{t('sidebar.newChat')}</span>
         </button>
         <button
@@ -348,10 +346,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
           onClick={() => onMainViewChange('automations')}
           aria-current={mainView === 'automations' ? 'page' : undefined}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
+          <History size={16} aria-hidden />
           <span>{t('sidebar.automations')}</span>
         </button>
       </div>
@@ -385,14 +380,14 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                     title={t('sidebar.unpin')}
                     aria-label={t('sidebar.unpin')}
                   >
-                    <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="1" aria-hidden><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
+                    <Star size={12} fill="currentColor" aria-hidden />
                   </button>
                   <span className="item-title">{session.title}</span>
                   {renderSessionMeta(sessionMeta(session), true)}
                   <div className="sidebar-item-actions">
                     {renderArchiveButton(session.projectId, session.id)}
                     <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
-                      <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                              <X size={9} aria-hidden />
                     </button>
                   </div>
                 </div>
@@ -406,7 +401,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
           <div className="section-header">
             <span className="section-label">{t('sidebar.projects')}</span>
             <button className="section-add-btn" onClick={handleAddProject} title={t('sidebar.addProject')} aria-label={t('sidebar.addProject')}>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+              <Plus size={12} aria-hidden />
             </button>
           </div>
           {userProjects.map((project) => {
@@ -424,15 +419,15 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                   onClick={() => toggleProject(project.id)}
                   onKeyDown={(e) => activateOnKey(e, () => toggleProject(project.id))}
                 >
-                  <IconChevronRight size={10} className={`tree-chevron ${isExpanded ? 'expanded' : ''}`} />
-                  <IconFolder size={13} className="tree-folder-icon" />
+                  <ChevronRight size={10} className={`tree-chevron ${isExpanded ? 'expanded' : ''}`} aria-hidden />
+                  <Folder size={13} className="tree-folder-icon" aria-hidden />
                   <span className="tree-project-name">{project.name}</span>
                   <div className="tree-project-actions">
                     <button type="button" className="tree-action-btn" onClick={(e) => { e.stopPropagation(); addSession(project.id); if (!isExpanded) toggleProject(project.id) }} title={t('sidebar.newSession')} aria-label={t('sidebar.newSession')}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
+                      <Plus size={10} aria-hidden />
                     </button>
                     <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteProject(e, project.id)} title={t('common.delete')} aria-label={t('common.delete')}>
-                      <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      <X size={10} aria-hidden />
                     </button>
                   </div>
                 </div>
@@ -462,7 +457,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                             })
                           }}
                         >
-                          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+                          <MessageSquare size={11} aria-hidden />
                           {renamingSession?.sessionId === session.id ? (
                             <input
                               className="tree-session-rename"
@@ -491,11 +486,11 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                           {renderSessionMeta(sessionMeta(session), false)}
                           <div className="tree-session-actions">
                             <button type="button" className="tree-action-btn pin" onClick={(e) => togglePin(e, session.id)} title={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')} aria-label={pinnedSessions.has(session.id) ? t('sidebar.unpin') : t('sidebar.pin')}>
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill={pinnedSessions.has(session.id) ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" aria-hidden><path d="M12 2l3 7h7l-5.5 4 2 7L12 16l-6.5 4 2-7L2 9h7z" /></svg>
+                              <Star size={9} fill={pinnedSessions.has(session.id) ? 'currentColor' : 'none'} aria-hidden />
                             </button>
                             {renderArchiveButton(project.id, session.id)}
                             <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, project.id, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
-                              <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                      <X size={9} aria-hidden />
                             </button>
                           </div>
                         </div>
@@ -518,7 +513,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
         {recentSessions.length > 0 && (
           <div className="sidebar-section">
             <button className="section-header recent-header" onClick={() => setRecentExpanded((v) => !v)}>
-              <IconChevronRight size={10} className={`tree-chevron ${recentExpanded ? 'expanded' : ''}`} />
+              <ChevronRight size={10} className={`tree-chevron ${recentExpanded ? 'expanded' : ''}`} />
               <span className="section-label">{t('sidebar.recent')}</span>
             </button>
             {recentExpanded && recentSessions.map((session) => {
@@ -537,13 +532,13 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
                 onClick={select}
                 onKeyDown={(e) => activateOnKey(e, select)}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" /></svg>
+                <History size={12} aria-hidden />
                 <span className="item-title">{session.title}</span>
                 {renderSessionMeta(sessionMeta(session), true)}
                 <div className="sidebar-item-actions">
                   {renderArchiveButton(session.projectId, session.id)}
                   <button type="button" className="tree-action-btn delete" onClick={(e) => handleDeleteSession(e, session.projectId, session.id)} title={t('common.delete')} aria-label={t('common.delete')}>
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+                    <X size={9} aria-hidden />
                   </button>
                 </div>
               </div>
@@ -606,9 +601,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
       <div className="sidebar-footer">
         <Tooltip label={t('sidebar.settings')} shortcut={formatCombo(keybindings['open-settings'])} placement="top">
           <button type="button" className="footer-btn" onClick={onOpenSettings} aria-label={t('sidebar.settings')}>
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-            </svg>
+            <Settings size={14} />
             <span>{t('sidebar.settings')}</span>
           </button>
         </Tooltip>

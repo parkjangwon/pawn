@@ -1,5 +1,6 @@
 import React, { memo, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, ChevronRight, Copy, History } from 'lucide-react'
 import MarkdownRenderer from './MarkdownRenderer'
 import SkillDraftCard from './SkillDraftCard'
 import { splitSkillAnswer } from '../agent/recordReplay'
@@ -136,17 +137,10 @@ function ThinkingBlock({
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <svg
-          width="10"
-          height="10"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
+        <ChevronRight
+          size={10}
           style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.12s' }}
-        >
-          <polyline points="9 18 15 12 9 6" />
-        </svg>
+        />
         <span>{t('chat.thinking')}</span>
       </button>
       {open && <pre className="message-thinking-body">{text}</pre>}
@@ -184,9 +178,7 @@ export function WorkedFor({ durationMs }: { durationMs?: number }): React.JSX.El
   if (!text) return null
   return (
     <span className="message-worked">
-      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-        <circle cx="12" cy="12" r="9" /><polyline points="12 7 12 12 15 14" />
-      </svg>
+      <History size={11} aria-hidden />
       {t('chat.duration.worked', { duration: text })}
     </span>
   )
@@ -340,32 +332,9 @@ const MessageRow = memo(function MessageRow({
             aria-label={t('chat.copy')}
           >
             {copied ? (
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
+              <Check size={12} />
             ) : (
-              <svg
-                width="12"
-                height="12"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <rect x="9" y="9" width="13" height="13" rx="2" />
-                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
-              </svg>
+              <Copy size={12} />
             )}
             {copied ? t('chat.copied') : t('chat.copy')}
           </button>

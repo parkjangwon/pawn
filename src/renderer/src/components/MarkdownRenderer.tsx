@@ -1,6 +1,7 @@
 import React, { memo, useCallback, useContext, useEffect, useRef, useState, useMemo } from 'react'
 import { createPortal } from 'react-dom'
 import { useTranslation } from 'react-i18next'
+import { Check, ChevronDown, X } from 'lucide-react'
 import ReactMarkdown, { defaultUrlTransform } from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import rehypeHighlight from 'rehype-highlight'
@@ -161,9 +162,7 @@ function ImageLightbox({ src, alt, onClose }: {
         aria-label={t('common.close')}
         title={t('common.close')}
       >
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-          <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-        </svg>
+        <X size={18} />
       </button>
       <img
         className="md-image-lightbox-img"
@@ -250,9 +249,7 @@ function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Elem
         >
           {copied ? (
             <>
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="20 6 9 17 4 12" />
-              </svg>
+              <Check size={12} />
               <span>{t('chat.copied')}</span>
             </>
           ) : (
@@ -282,9 +279,7 @@ function CodeBlock({ children }: { children?: React.ReactNode }): React.JSX.Elem
             }
           }}
         >
-          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden style={{ transform: folded ? 'none' : 'rotate(180deg)' }}>
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
+          <ChevronDown size={12} aria-hidden style={{ transform: folded ? 'none' : 'rotate(180deg)' }} />
           {folded ? t('markdown.expandCode', { count: lineCount }) : t('markdown.collapseCode')}
         </button>
       )}

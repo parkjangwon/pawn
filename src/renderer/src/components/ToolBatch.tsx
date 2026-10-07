@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, ChevronDown, CircleAlert } from 'lucide-react'
 import ToolMessage from './ToolMessage'
 import type { Message } from '../stores/app'
 import { aggregateToolMeta, formatToolDuration } from '../agent/toolMeta'
@@ -81,15 +82,9 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
               {hasRunning ? (
                 <span className="tool-batch-spinner" aria-hidden="true" />
               ) : hasError ? (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <circle cx="12" cy="12" r="10" />
-                  <line x1="12" y1="8" x2="12" y2="12" />
-                  <line x1="12" y1="16" x2="12.01" y2="16" />
-                </svg>
+                <CircleAlert size={13} />
               ) : (
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+                <Check size={13} />
               )}
             </span>
             <span className="tool-batch-title">
@@ -126,17 +121,10 @@ export default function ToolBatch({ messages, animateIn }: ToolBatchProps): Reac
                 {t('toolMessage.diffBadge')}
               </span>
             )}
-            <svg
+            <ChevronDown
+              size={12}
               className={`tool-batch-chevron ${expanded ? 'expanded' : ''}`}
-              width="12"
-              height="12"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            />
           </div>
         </button>
 

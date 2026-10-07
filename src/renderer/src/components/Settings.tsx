@@ -26,6 +26,8 @@ import './Settings.css'
 
 import { useState, useMemo, useRef, useEffect } from 'react'
 import { useFocusTrap } from '../utils/focusTrap'
+import { PanelLeft, Search } from 'lucide-react'
+import { useState, useMemo } from 'react'
 
 export default function Settings({
   onSidebarWidthChange,
@@ -103,9 +105,7 @@ export default function Settings({
               onClick={() => setNavOpen((v) => !v)}
               aria-label={t('settings.toggleNav')}
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="3" x2="9" y2="21" />
-              </svg>
+              <PanelLeft size={18} />
             </button>
           </Tooltip>
           <NavControls canGoBack={canGoBack} canGoForward={canGoForward} onBack={onGoBack} onForward={onGoForward} />
@@ -117,10 +117,7 @@ export default function Settings({
         </div>
         <div className="sidebar-search">
           <div className="sidebar-search-box">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden>
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
+            <Search size={13} aria-hidden />
             <input
               type="search"
               value={searchQuery}

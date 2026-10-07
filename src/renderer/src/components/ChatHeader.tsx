@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { AppWindow, ChevronDown, PanelLeft, PanelRight, Terminal } from 'lucide-react'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import NavControls from './NavControls'
 import Tooltip from './Tooltip'
@@ -223,10 +224,7 @@ export default function ChatHeader({
       <div className="chat-header-left">
         <Tooltip label={t('contextBar.toggleSidebar')} shortcut={sidebarShortcut} placement="bottom">
           <button className="sidebar-toggle-btn close-sidebar-btn" onClick={onToggleSidebar} aria-label={t('contextBar.toggleSidebar')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="9" y1="3" x2="9" y2="21" />
-            </svg>
+            <PanelLeft size={18} />
           </button>
         </Tooltip>
         <NavControls canGoBack={canGoBack} canGoForward={canGoForward} onBack={onGoBack} onForward={onGoForward} />
@@ -241,7 +239,7 @@ export default function ChatHeader({
         <div className="chat-header-action-group">
           <button className="chat-header-btn" disabled={!!runningScript} onClick={() => { setShowScriptMenu((v) => !v); setShowOpenMenu(false) }}>
             <span>{runningScript ? `${t('chatHeader.running')} ${runningScript}` : t('chatHeader.run')}</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+            <ChevronDown size={12} />
           </button>
           {showScriptMenu && (
             <div className="chat-header-menu">
@@ -259,7 +257,7 @@ export default function ChatHeader({
         <div className="chat-header-action-group">
           <button className="chat-header-btn" onClick={() => { setShowOpenMenu((v) => !v); setShowScriptMenu(false) }} aria-label={openButtonLabel}>
             <span>{openButtonLabel}</span>
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="6 9 12 15 18 9" /></svg>
+            <ChevronDown size={12} />
           </button>
           {showOpenMenu && (
             <div className="chat-header-menu">
@@ -268,9 +266,7 @@ export default function ChatHeader({
                   {appIcons[app.id] ? (
                     <img className="chat-header-menu-item-icon" src={appIcons[app.id]} alt="" />
                   ) : (
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="chat-header-menu-item-icon">
-                      <rect x="3" y="3" width="18" height="18" rx="4" />
-                    </svg>
+                    <AppWindow size={16} className="chat-header-menu-item-icon" />
                   )}
                   {app.label}
                 </button>
@@ -283,17 +279,12 @@ export default function ChatHeader({
 
         <Tooltip label={t('contextBar.toggleTerminal')} shortcut={terminalShortcut} placement="bottom">
           <button className="sidebar-toggle-btn terminal-toggle" onClick={() => (window as any).__toggleTerminal?.()} aria-label={t('contextBar.toggleTerminal')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M4 17l6-6-6-6m8 14h8" />
-            </svg>
+            <Terminal size={18} />
           </button>
         </Tooltip>
         <Tooltip label={t('contextBar.toggleRightPanel')} shortcut={panelShortcut} placement="bottom">
           <button className="sidebar-toggle-btn right-panel-toggle" onClick={() => (window as any).__toggleRightPanel?.()} aria-label={t('contextBar.toggleRightPanel')}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="15" y1="3" x2="15" y2="21" />
-            </svg>
+            <PanelRight size={18} />
           </button>
         </Tooltip>
       </div>

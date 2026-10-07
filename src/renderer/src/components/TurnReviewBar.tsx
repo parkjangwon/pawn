@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Terminal } from 'lucide-react'
 import { useChangeLedger, type RevertConflict } from '../stores/changeLedger'
 import { focusDiffInPanel } from '../stores/filesPanel'
 import ConfirmDialog from './ConfirmDialog'
@@ -119,9 +120,7 @@ export default function TurnReviewBar({ sessionId }: { sessionId: string | null 
                 </span>
                 <span className="turn-review-fname">{(c.rel || c.path).split('/').pop()}</span>
                 {c.byCommand && (
-                  <svg className="turn-review-by-cmd" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" role="img" aria-label={t('turnReview.byCommand')}>
-                    <polyline points="4 17 10 11 4 5" /><line x1="12" y1="19" x2="20" y2="19" />
-                  </svg>
+                  <Terminal size={10} className="turn-review-by-cmd" role="img" aria-label={t('turnReview.byCommand')} />
                 )}
                 {stats && (
                   <span className={`turn-review-stat stat-${stats.kind}`}>

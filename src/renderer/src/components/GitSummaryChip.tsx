@@ -1,19 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
+import { Check, ChevronDown, ChevronRight, Folder, GitBranch, Zap } from 'lucide-react'
 import { useGitSummary } from '../hooks/useGitSummary'
 
 interface GitSummaryChipProps {
   projectPath: string
 }
-
-const BRANCH_ICON_PATH = (
-  <>
-    <line x1="6" y1="3" x2="6" y2="15" />
-    <circle cx="18" cy="6" r="3" />
-    <circle cx="6" cy="18" r="3" />
-    <path d="M18 9a9 9 0 0 1-9 9" />
-  </>
-)
 
 /**
  * Live git status chip for the composer bar: branch name + working-tree
@@ -92,7 +84,7 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
         onClick={() => setOpen((v) => !v)}
         title={t('rightPanel.branch')}
       >
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{BRANCH_ICON_PATH}</svg>
+        <GitBranch size={12} />
         <span>{summary.branch}</span>
         {!inSync && (
           <span className="git-chip-sync">
@@ -126,11 +118,9 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
             aria-expanded={showBranches}
             aria-label={`${t('rightPanel.git.branch')}: ${summary.branch}`}
           >
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">{BRANCH_ICON_PATH}</svg>
+            <GitBranch size={12} />
             <span className="git-popover-branch-name">{summary.branch}</span>
-            <svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`git-popover-chevron ${showBranches ? 'expanded' : ''}`}>
-              <polyline points="6 9 12 15 18 9" />
-            </svg>
+            <ChevronDown size={8} className={`git-popover-chevron ${showBranches ? 'expanded' : ''}`} />
           </button>
 
           {showBranches && (
@@ -139,7 +129,7 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
               {branches.map((b) => (
                 <button key={b} className={`git-branch-item ${b === summary.branch ? 'active' : ''}`} onClick={() => checkout(b)} disabled={busy}>
                   {b === summary.branch && (
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12" /></svg>
+                    <Check size={10} />
                   )}
                   <span>{b}</span>
                 </button>
@@ -152,7 +142,7 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
           <div className="git-popover-divider" />
 
           <button className="git-popover-row" onClick={() => openPanelTab('diff')}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" /></svg>
+            <Folder size={13} />
             <span>{t('rightPanel.changes')}</span>
             <span className="git-popover-spacer" />
             {dirty ? (
@@ -166,10 +156,10 @@ export default function GitSummaryChip({ projectPath }: GitSummaryChipProps): Re
           </button>
 
           <button className="git-popover-row" onClick={() => openPanelTab('git')}>
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
+            <Zap size={13} />
             <span>{t('rightPanel.tools.git')}</span>
             <span className="git-popover-spacer" />
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="9 18 15 12 9 6" /></svg>
+            <ChevronRight size={10} />
           </button>
         </div>
       )}
