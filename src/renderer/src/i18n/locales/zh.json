@@ -133,6 +133,24 @@
       "setupAutomationEveryday": "每个工作日早上 9 点给我发送某个主题的新闻摘要"
     },
     "welcomeProject": "在{{name}}中构建什么？",
+    "greeting": {
+      "dawn": "起得很早 — 享受这段安静时光。",
+      "morning": "早上好 — 开始动手吧。",
+      "midday": "中午了 — 进展如何？",
+      "afternoon": "下午好 — 继续加油。",
+      "evening": "晚上好 — 今天辛苦了。",
+      "night": "夜深了 — 再做一件事吧。"
+    },
+    "home": {
+      "codeTitle": "修复失败的测试",
+      "codeDesc": "运行测试套件并修复出问题的地方。",
+      "browseTitle": "调研任何主题",
+      "browseDesc": "搜索网页并用表格对比选项。",
+      "computerTitle": "直接操作电脑",
+      "computerDesc": "查看屏幕并代为操作应用。",
+      "autoTitle": "自动化例行任务",
+      "autoDesc": "把重复任务放进日程定时执行。"
+    },
     "slash": {
       "title": "命令",
       "noResults": "没有匹配的命令",

@@ -133,6 +133,24 @@
       "setupAutomationEveryday": "Every weekday at 9am, send me a summary of news on a topic"
     },
     "welcomeProject": "What should we build in {{name}}?",
+    "greeting": {
+      "dawn": "Up early — quiet hours.",
+      "morning": "Good morning — let's build.",
+      "midday": "Midday — how's it going?",
+      "afternoon": "Good afternoon — keep going.",
+      "evening": "Good evening — nice work today.",
+      "night": "Late night — one more thing?"
+    },
+    "home": {
+      "codeTitle": "Fix failing tests",
+      "codeDesc": "Run the test suite and patch what breaks.",
+      "browseTitle": "Research any topic",
+      "browseDesc": "Search the web and compare options in a table.",
+      "computerTitle": "Use the computer",
+      "computerDesc": "Screenshot the screen and drive apps for you.",
+      "autoTitle": "Automate a routine",
+      "autoDesc": "Put a recurring task on a schedule."
+    },
     "slash": {
       "title": "Commands",
       "noResults": "No matching commands",

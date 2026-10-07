@@ -133,6 +133,24 @@
       "setupAutomationEveryday": "평일 오전 9시마다 특정 주제 뉴스를 요약해 줘"
     },
     "welcomeProject": "{{name}}에서 무엇을 만들까요?",
+    "greeting": {
+      "dawn": "이른 아침이네요 — 조용한 시간이에요.",
+      "morning": "좋은 아침이에요 — 만들어 봐요.",
+      "midday": "점심시간이네요 — 잘 되고 있어요?",
+      "afternoon": "좋은 오후예요 — 계속해 봐요.",
+      "evening": "좋은 저녁이에요 — 오늘 수고했어요.",
+      "night": "늦은 밤이네요 — 한 가지만 더 해요."
+    },
+    "home": {
+      "codeTitle": "실패한 테스트 고치기",
+      "codeDesc": "테스트를 돌리고 깨진 부분을 고쳐요.",
+      "browseTitle": "주제 조사하기",
+      "browseDesc": "웹에서 검색해 표로 비교해요.",
+      "computerTitle": "컴퓨터 직접 쓰기",
+      "computerDesc": "화면을 보고 앱을 대신 조작해요.",
+      "autoTitle": "반복 작업 자동화",
+      "autoDesc": "정기 작업을 일정에 등록해요."
+    },
     "slash": {
       "title": "명령어",
       "noResults": "일치하는 명령어가 없어요",

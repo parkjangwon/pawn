@@ -133,6 +133,24 @@
       "setupAutomationEveryday": "平日の朝 9 時に、あるテーマのニュースを要約して"
     },
     "welcomeProject": "{{name}}で何を作りましょうか？",
+    "greeting": {
+      "dawn": "早朝ですね — 静かな時間です。",
+      "morning": "おはようございます — 作りましょう。",
+      "midday": "お昼ですね — 進んでいますか？",
+      "afternoon": "こんにちは — 続けましょう。",
+      "evening": "こんばんは — 今日もお疲れさまです。",
+      "night": "夜更かしですね — もうひとつだけ。"
+    },
+    "home": {
+      "codeTitle": "失敗テストを直す",
+      "codeDesc": "テストを実行して壊れた箇所を修正します。",
+      "browseTitle": "トピックを調べる",
+      "browseDesc": "ウェブで検索して表で比較します。",
+      "computerTitle": "パソコンを操作する",
+      "computerDesc": "画面を見てアプリを代わりに操作します。",
+      "autoTitle": "定型作業を自動化",
+      "autoDesc": "繰り返しの作業をスケジュールに登録します。"
+    },
     "slash": {
       "title": "コマンド",
       "noResults": "一致するコマンドがありません",

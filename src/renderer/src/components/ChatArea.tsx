@@ -1192,27 +1192,6 @@ export default function ChatArea({
     }
   }
 
-  // What people actually start with: code work inside a project, everyday
-  // office work (documents, spreadsheets, research, email) without one.
-  const inCodeProject = !!activeProject && activeProject.id !== '__general__' && !!effectivePath
-  const suggestions = inCodeProject
-    ? [
-        { icon: 'code', text: t('chat.suggestions.summarize') },
-        { icon: 'bug', text: t('chat.suggestions.fixFailingTests') },
-        { icon: 'edit', text: t('chat.suggestions.reviewChanges') },
-        { icon: 'file', text: t('chat.suggestions.writeReadme') },
-        { icon: 'globe', text: t('chat.suggestions.upgradeDeps') },
-        { icon: 'calendar', text: t('chat.suggestions.setupAutomation') }
-      ]
-    : [
-        { icon: 'table', text: t('chat.suggestions.spreadsheet') },
-        { icon: 'globe', text: t('chat.suggestions.researchCompare') },
-        { icon: 'file', text: t('chat.suggestions.draftEmail') },
-        { icon: 'folder', text: t('chat.suggestions.organizeFiles') },
-        { icon: 'edit', text: t('chat.suggestions.writeReport') },
-        { icon: 'calendar', text: t('chat.suggestions.setupAutomationEveryday') }
-      ]
-
   const triggerItems = getItems()
   const triggerOpen = trigger !== null
   const sessionLoading =
@@ -1305,8 +1284,8 @@ export default function ChatArea({
             // General is "no project" to the user: generic welcome, and it
             // doesn't tick "Open or create a project folder".
             activeProject={activeProject?.id === '__general__' ? undefined : activeProject}
-            suggestions={suggestions}
             onPick={(text) => { setInput(text); setTrigger(null) }}
+            onOpenSettings={onOpenSettings}
           />
         ) : (
           <>
