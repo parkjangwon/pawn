@@ -6,6 +6,8 @@ This document is written for the coding agent. If a rule here conflicts with you
 
 Tokens live in `src/renderer/src/styles/global.css` (`:root`, `.app.light`, `.app.dark`). Component CSS uses tokens, never raw values.
 
+Design reference: [ZCode](https://github.com/zai-org/ZCode) by Z.ai (Apache 2.0). The token values, type scale, motion rules, home layout, and component specs (see `design/v3-component-specs.md`) are modeled on ZCode's design system; all code is reimplemented natively for pawn, not copied.
+
 ## Color
 
 The palette is a near-monochrome homage to high-density agent UIs. Color is information, not decoration.
