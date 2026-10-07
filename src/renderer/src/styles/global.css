@@ -60,7 +60,7 @@
   --dur-stream: 900ms;
   --press-scale: 0.97;
   /* Shared chat column width: welcome, messages, composer stay aligned */
-  --chat-content-max: 720px;
+  --chat-content-max: 860px;
   /* Message text size — Settings → Appearance overrides at runtime */
   --chat-font-size: var(--text-ui-base);
 }

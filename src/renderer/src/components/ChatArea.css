@@ -233,7 +233,7 @@
   overflow-y: auto;
   padding: 0 var(--space-xl);
   width: 100%;
-  max-width: 42rem;
+  max-width: 52rem;
   margin: 0 auto;
   box-sizing: border-box;
   animation: riseIn var(--dur-med) var(--ease-spring);
