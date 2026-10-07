@@ -15,7 +15,7 @@
   border-top-color: transparent;
 }
 
-/* Top edge resize handle */
+/* Top edge resize handle (ZCode AnimatedTerminalPanel pattern: hover pill) */
 .bt-resizer {
   position: absolute;
   left: 0;
@@ -31,17 +31,20 @@
 .bt-resizer::after {
   content: '';
   position: absolute;
-  left: 0;
-  right: 0;
-  top: 2px;
-  height: 1px;
-  background: transparent;
-  transition: background 0.15s;
+  left: 50%;
+  top: 50%;
+  width: 48px;
+  height: 4px;
+  transform: translate(-50%, -50%);
+  border-radius: 2px;
+  background: var(--text-muted);
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .bt-resizer:hover::after,
 body.resizing-bottom-terminal .bt-resizer::after {
-  background: var(--text-muted);
+  opacity: 1;
 }
 
 .bt-header {
@@ -107,7 +110,7 @@ body.resizing-bottom-terminal .bt-resizer::after {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  background: #1e1e1e;
+  background: var(--bg-primary);
 }
 
 /* Restart button lives inside TerminalView; show it on panel hover too */

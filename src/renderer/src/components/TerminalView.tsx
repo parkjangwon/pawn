@@ -3,14 +3,29 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { RefreshCw } from 'lucide-react'
 import { Terminal } from '@xterm/xterm'
+import type { ILink } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
+import { readPawnTerminalTheme } from './terminalTheme'
+import { getHttpLinksForTerminalBufferLine, isHttpTerminalUrl } from './terminalLinks'
 
 interface TerminalViewProps {
   projectPath?: string
 }
 
 const TERMINAL_ID = 'main-terminal'
+
+/** Open http(s) URLs via pawn's existing external-browser channel. */
+function openTerminalUrl(url: string): void {
+  if (!isHttpTerminalUrl(url)) return
+  const open = window.api?.browser?.open
+  if (open) {
+    open(url)?.catch?.(() => {})
+  } else {
+    window.open(url, '_blank', 'noopener')
+  }
+}
+
 
 export default function TerminalView({ projectPath }: TerminalViewProps): React.JSX.Element {
   const { t } = useTranslation()
@@ -37,22 +52,45 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
         fontSize: 13,
         fontFamily: '"JetBrainsMonoNL NF", "JetBrainsMono Nerd Font", "MesloLGS NF", "SF Mono", "Menlo", monospace',
         lineHeight: 1.35,
-        theme: {
-          background: '#1e1e1e', foreground: '#d4d4d4', cursor: '#d4d4d4',
-          selectionBackground: '#444',
-          black: '#1e1e1e', red: '#e34c4c', green: '#4caf50', yellow: '#ffc107',
-          blue: '#2196f3', magenta: '#9c27b0', cyan: '#00bcd4', white: '#d4d4d4',
-          brightBlack: '#666', brightRed: '#e34c4c', brightGreen: '#4caf50',
-          brightYellow: '#ffc107', brightBlue: '#2196f3', brightMagenta: '#9c27b0',
-          brightCyan: '#00bcd4', brightWhite: '#fff'
-        },
-        convertEol: true
+        theme: readPawnTerminalTheme(),
+        convertEol: true,
+        linkHandler: {
+          allowNonHttpProtocols: false,
+          activate: (event, text) => {
+            event.preventDefault()
+            openTerminalUrl(text)
+          }
+        }
       })
 
       const fit = new FitAddon()
       term.loadAddon(fit)
       term.open(el)
       termRef.current = term
+
+      // xterm theme follows pawn light/dark; plain http(s) URLs open externally.
+      const themeObserver = new MutationObserver(() => {
+        if (termRef.current) termRef.current.options.theme = readPawnTerminalTheme()
+      })
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+      const linkProvider = term.registerLinkProvider({
+        provideLinks(bufferLineNumber, callback) {
+          const links = getHttpLinksForTerminalBufferLine(
+            term.buffer.active,
+            bufferLineNumber,
+            term.cols
+          )?.map(
+            (link): ILink => ({
+              ...link,
+              activate: (event, text) => {
+                event.preventDefault()
+                openTerminalUrl(text)
+              }
+            })
+          )
+          callback(links)
+        }
+      })
 
       const wsRef: { current: WebSocket | null } = { current: null }
 
@@ -111,6 +149,8 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
       cleanupRef.current = () => {
         ro.disconnect()
         ro2?.disconnect()
+        themeObserver.disconnect()
+        linkProvider.dispose()
         eDispose?.()
         eApi?.terminal.dispose(TERMINAL_ID)
         wsRef.current?.close()
@@ -139,7 +179,7 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
 
   return (
     <div style={{ position: 'relative', flex: 1, minHeight: 0 }}>
-      <div ref={elRef} style={{ position: 'absolute', inset: 0, background: '#1e1e1e' }} />
+      <div ref={elRef} style={{ position: 'absolute', inset: 0, background: 'transparent' }} />
       <button
         className="terminal-restart-btn"
         onClick={() => setGeneration((g) => g + 1)}
