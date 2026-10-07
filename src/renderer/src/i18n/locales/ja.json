@@ -989,7 +989,12 @@
       "empty": "フックがありません。.claude/settings.json または ~/.pawn/hooks.json に追加してください。",
       "saved": "保存しました",
       "desktopOnly": "フックはデスクトップアプリで動作します。",
-      "search": "フック 前後 ツール 権限 スクリプト"
+      "search": "フック 前後 ツール 権限 スクリプト",
+      "filterPlaceholder": "イベントやコマンドを絞り込み…",
+      "copy": "コマンドをコピー",
+      "copyFailed": "クリップボードにコピーできませんでした",
+      "fullCommand": "コマンド全体を表示切り替え",
+      "noMatch": "フィルタに一致するフックはありません。"
     },
     "modsSection": {
       "title": "mods",

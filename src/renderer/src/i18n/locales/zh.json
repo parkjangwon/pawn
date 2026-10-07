@@ -989,7 +989,12 @@
       "empty": "未找到钩子。请添加到 ~/.claude/settings.json 或 ~/.pawn/hooks.json。",
       "saved": "已保存",
       "desktopOnly": "钩子仅在桌面应用中运行。",
-      "search": "钩子 前置 后置 工具 权限 脚本"
+      "search": "钩子 前置 后置 工具 权限 脚本",
+      "filterPlaceholder": "筛选事件或命令…",
+      "copy": "复制命令",
+      "copyFailed": "未能复制到剪贴板",
+      "fullCommand": "切换完整命令",
+      "noMatch": "没有符合筛选条件的钩子。"
     },
     "modsSection": {
       "title": "mods",

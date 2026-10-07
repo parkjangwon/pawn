@@ -989,7 +989,12 @@
       "empty": "No hooks found. Add them under ~/.claude/settings.json or ~/.pawn/hooks.json.",
       "saved": "Saved",
       "desktopOnly": "Hooks run in the desktop app.",
-      "search": "hooks pre post tool permission script"
+      "search": "hooks pre post tool permission script",
+      "filterPlaceholder": "Filter events or commands…",
+      "copy": "Copy command",
+      "copyFailed": "Could not copy to the clipboard",
+      "fullCommand": "Toggle full command",
+      "noMatch": "No hooks match the filter."
     },
     "modsSection": {
       "title": "Mods",

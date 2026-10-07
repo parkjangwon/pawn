@@ -989,7 +989,12 @@
       "empty": "훅이 없어요. ~/.claude/settings.json 또는 ~/.pawn/hooks.json 에 추가하세요.",
       "saved": "저장됨",
       "desktopOnly": "훅은 데스크톱 앱에서만 동작해요.",
-      "search": "훅 사전 사후 도구 권한 스크립트"
+      "search": "훅 사전 사후 도구 권한 스크립트",
+      "filterPlaceholder": "이벤트나 명령 필터…",
+      "copy": "명령 복사",
+      "copyFailed": "클립보드에 복사하지 못했어요",
+      "fullCommand": "전체 명령 보기 전환",
+      "noMatch": "필터와 일치하는 훅이 없어요."
     },
     "modsSection": {
       "title": "mods",
