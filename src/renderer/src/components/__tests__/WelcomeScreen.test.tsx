@@ -7,14 +7,6 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string, vars?: Record<string, string>) => (vars?.name ? `${key}:${vars.name}` : key) })
 }))
 
-vi.mock('../../stores/provider', () => ({
-  useProviderStore: () => []
-}))
-
-vi.mock('../../stores/app', () => ({
-  useAppStore: () => []
-}))
-
 describe('getGreetingKey', () => {
   it('maps all 24 hours onto the six segments', () => {
     const expected: Record<number, string> = {
@@ -33,20 +25,26 @@ describe('getGreetingKey', () => {
 })
 
 describe('WelcomeScreen', () => {
-  it('renders the pawn logo, a time-aware greeting and four home cards', () => {
+  it('renders greeting, then composer, then four home cards, with no onboarding', () => {
     render(
       <WelcomeScreen
         activeProject={undefined}
         onPick={() => {}}
-        onOpenSettings={() => {}}
+        composer={<div data-testid="home-composer" />}
       />
     )
     expect(document.querySelector('.welcome-logo svg')).toBeTruthy()
     expect(document.querySelector('.welcome-greeting')?.textContent).toMatch(/^chat\.greeting\./)
+    // ZCode order: greeting -> composer -> suggestion cards.
+    const order = Array.from(document.querySelectorAll('.welcome-greeting, .welcome-composer, .welcome-actions'))
+      .map((el) => el.className)
+    expect(order).toEqual(['welcome-greeting', 'welcome-composer', 'welcome-actions'])
+    expect(screen.getByTestId('home-composer')).toBeTruthy()
     expect(screen.getByText('chat.home.codeTitle')).toBeTruthy()
     expect(screen.getByText('chat.home.browseTitle')).toBeTruthy()
     expect(screen.getByText('chat.home.computerTitle')).toBeTruthy()
     expect(screen.getByText('chat.home.autoTitle')).toBeTruthy()
     expect(screen.getByText('chat.home.codeDesc')).toBeTruthy()
+    expect(document.querySelector('.welcome-checklist')).toBeNull()
   })
 })

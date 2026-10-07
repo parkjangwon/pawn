@@ -1203,6 +1203,50 @@ export default function ChatArea({
     !!activeSessionId &&
     (loadingSessions.has(activeSessionId) || !loadedSessions.has(activeSessionId))
 
+  const isHome = !sessionLoading && (!activeSession || messages.length === 0)
+  const composerEl = (
+    <Composer
+      activeSession={!!activeSession}
+      activeSessionId={activeSessionId}
+      input={input}
+      onChange={handleChange}
+      onKeyDown={handleKeyDown}
+      onSend={handleSend}
+      textareaRef={textareaRef}
+      trigger={trigger}
+      triggerItems={triggerItems}
+      menuIndex={menuIndex}
+      onMenuIndexChange={setMenuIndex}
+      filesLoading={filesLoading}
+      onSelect={handleSelect}
+      projects={projects}
+      activeProject={activeProject}
+      activeProjectId={activeProjectId}
+      onSelectProject={handleSelectProject}
+      showProjectPicker={showProjectPicker}
+      setShowProjectPicker={setShowProjectPicker}
+      showPermPicker={showPermPicker}
+      setShowPermPicker={setShowPermPicker}
+      showModelPicker={showModelPicker}
+      setShowModelPicker={setShowModelPicker}
+      showUsagePopover={showUsagePopover}
+      setShowUsagePopover={setShowUsagePopover}
+      projectPickerRef={projectPickerRef}
+      permPickerRef={permPickerRef}
+      modelPickerRef={modelPickerRef}
+      usageRef={usageRef}
+      isStreaming={sessionStreaming}
+      onStop={() => {
+        if (activeSessionId) stopStreaming(activeSessionId)
+        else stopStreaming()
+      }}
+      attachments={attachments}
+      onSteer={defaultSendMode === 'queue' ? () => { void handleSend('steer') } : undefined}
+      onAddAttachment={addAttachment}
+      onRemoveAttachment={removeAttachment}
+    />
+  )
+
   return (
     <main
       className="chat-area"
@@ -1286,7 +1330,7 @@ export default function ChatArea({
             // doesn't tick "Open or create a project folder".
             activeProject={activeProject?.id === '__general__' ? undefined : activeProject}
             onPick={(text) => { setInput(text); setTrigger(null) }}
-            onOpenSettings={onOpenSettings}
+            composer={composerEl}
           />
         ) : (
           <>
@@ -1349,46 +1393,9 @@ export default function ChatArea({
         <QuestionCard sessionId={activeSessionId} />
       </div>
       <TurnReviewBar sessionId={activeSessionId} />
-      <Composer
-        activeSession={!!activeSession}
-        activeSessionId={activeSessionId}
-        input={input}
-        onChange={handleChange}
-        onKeyDown={handleKeyDown}
-        onSend={handleSend}
-        textareaRef={textareaRef}
-        trigger={trigger}
-        triggerItems={triggerItems}
-        menuIndex={menuIndex}
-        onMenuIndexChange={setMenuIndex}
-        filesLoading={filesLoading}
-        onSelect={handleSelect}
-        projects={projects}
-        activeProject={activeProject}
-        activeProjectId={activeProjectId}
-        onSelectProject={handleSelectProject}
-        showProjectPicker={showProjectPicker}
-        setShowProjectPicker={setShowProjectPicker}
-        showPermPicker={showPermPicker}
-        setShowPermPicker={setShowPermPicker}
-        showModelPicker={showModelPicker}
-        setShowModelPicker={setShowModelPicker}
-        showUsagePopover={showUsagePopover}
-        setShowUsagePopover={setShowUsagePopover}
-        projectPickerRef={projectPickerRef}
-        permPickerRef={permPickerRef}
-        modelPickerRef={modelPickerRef}
-        usageRef={usageRef}
-        isStreaming={sessionStreaming}
-        onStop={() => {
-          if (activeSessionId) stopStreaming(activeSessionId)
-          else stopStreaming()
-        }}
-        attachments={attachments}
-        onSteer={defaultSendMode === 'queue' ? () => { void handleSend('steer') } : undefined}
-        onAddAttachment={addAttachment}
-        onRemoveAttachment={removeAttachment}
-      />
+      {/* On the home screen the composer lives inside WelcomeScreen (under the
+          greeting); everywhere else it stays docked at the bottom. */}
+      {isHome ? null : composerEl}
       {showProjectEdit && activeProjectId && (
         <ProjectEditDialog projectId={activeProjectId} onClose={() => setShowProjectEdit(false)} />
       )}

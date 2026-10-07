@@ -78,9 +78,9 @@
     "copied": "복사됨",
     "thinking": "사고 과정",
     "noProvider": "설정된 프로바이더가 없어요",
+    "noProviderPlaceholder": "설정에서 프로바이더를 추가해 주세요",
     "taskComplete": "작업 완료",
     "modelSelected": "모델 선택됨",
-    "configureProviders": "프로바이더 설정",
     "diagnostics": {
       "coldStart": "콜드 스타트 — 캐시가 만료되어 다시 기록해야 해요.",
       "compacted": "컨텍스트를 압축했어요 — 캐시를 다시 기록해요.",
@@ -181,17 +181,6 @@
       "noResults": "일치하는 파일이 없어요",
       "gitDesc": "git 상태·브랜치 삽입",
       "diffDesc": "git diff HEAD 삽입"
-    },
-    "checklist": {
-      "title": "시작하기",
-      "desc": "한 단계만 하면 바로 쓸 수 있어요. 나머지는 선택이에요.",
-      "provider": "AI 프로바이더 API 키 추가",
-      "project": "프로젝트 폴더 추가 (코딩 작업용)",
-      "github": "GitHub 연결 (이슈·PR용, 선택)",
-      "dismiss": "닫기",
-      "openProject": "폴더 추가",
-      "connectGithub": "연결",
-      "projectHint": "사이드바에서 프로젝트를 열거나 추가하세요. 그러면 코드를 읽고 수정할 수 있어요."
     },
     "thinkingLive": "생각 중…",
     "edit": "편집",
@@ -333,7 +322,19 @@
         "uiInput": "입력",
         "uiSelect": "선택"
       }
-    }
+    },
+    "checklist": {
+      "title": "시작하기",
+      "desc": "한 단계만 하면 바로 쓸 수 있어요. 나머지는 선택이에요.",
+      "provider": "AI 프로바이더 API 키 추가",
+      "project": "프로젝트 폴더 추가 (코딩 작업용)",
+      "github": "GitHub 연결 (이슈·PR용, 선택)",
+      "dismiss": "닫기",
+      "openProject": "폴더 추가",
+      "connectGithub": "연결",
+      "projectHint": "사이드바에서 프로젝트를 열거나 추가하세요. 그러면 코드를 읽고 수정할 수 있어요."
+    },
+    "configureProviders": "프로바이더 설정"
   },
   "automation": {
     "title": "자동화",

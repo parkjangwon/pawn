@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Calendar, Check, Code, Globe, Monitor, Settings } from 'lucide-react'
 import { useProviderStore } from '../stores/provider'
@@ -8,17 +8,8 @@ import { openSettingsSection, openPluginsExtensions, __providerTestOutcome } fro
 interface WelcomeScreenProps {
   activeProject: { name: string; path?: string } | undefined
   onPick: (text: string) => void
-  onOpenSettings: () => void
-}
-
-const CHECKLIST_DISMISS_KEY = 'pawn-welcome-checklist-dismissed'
-
-type ChecklistItem = {
-  id: string
-  label: string
-  done: boolean
-  action?: () => void
-  actionLabel?: string
+  /** The chat composer, rendered prominent directly under the greeting. */
+  composer: ReactNode
 }
 
 /** Local hour -> one of the six greeting segments. */
@@ -56,7 +47,7 @@ function CardIcon({ icon }: { icon: HomeCard['icon'] }): React.JSX.Element {
 export default function WelcomeScreen({
   activeProject,
   onPick,
-  onOpenSettings
+  composer
 }: WelcomeScreenProps): React.JSX.Element {
   const { t } = useTranslation()
   const providers = useProviderStore((s) => s.providers)
@@ -77,13 +68,6 @@ export default function WelcomeScreen({
 
   const [githubConnected, setGithubConnected] = useState<boolean | null>(null)
   const [hour, setHour] = useState(() => new Date().getHours())
-  const [dismissed, setDismissed] = useState(() => {
-    try {
-      return localStorage.getItem(CHECKLIST_DISMISS_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
 
   useEffect(() => {
     const timer = setInterval(() => { setHour(new Date().getHours()) }, 60000)
@@ -264,16 +248,6 @@ export default function WelcomeScreen({
             </span>
           </button>
         ))}
-        {needsSetup && (
-          <button type="button" className="welcome-btn primary" onClick={onOpenSettings}>
-            <span className="welcome-btn-icon" aria-hidden="true">
-              <Settings size={18} />
-            </span>
-            <span className="welcome-btn-text">
-              <span className="welcome-btn-title">{t('chat.configureProviders')}</span>
-            </span>
-          </button>
-        )}
       </div>
     </div>
   )

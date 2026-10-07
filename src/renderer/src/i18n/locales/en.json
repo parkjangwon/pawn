@@ -78,9 +78,9 @@
     "copied": "Copied",
     "thinking": "Thinking",
     "noProvider": "No provider configured",
+    "noProviderPlaceholder": "Add a provider in Settings to get started",
     "taskComplete": "Task complete",
     "modelSelected": "Model selected",
-    "configureProviders": "Configure providers",
     "diagnostics": {
       "coldStart": "Cold start — the cache expired and needs to be re-primed.",
       "compacted": "Context compaction ran — the cache prefix is being re-primed.",
@@ -181,17 +181,6 @@
       "noResults": "No matching files",
       "gitDesc": "Inject git status & branch",
       "diffDesc": "Inject git diff HEAD"
-    },
-    "checklist": {
-      "title": "Get started",
-      "desc": "One step and you're ready — the rest is optional.",
-      "provider": "Add an AI provider API key",
-      "project": "Add a project folder (for coding work)",
-      "github": "Connect GitHub (optional, for issues & PRs)",
-      "dismiss": "Dismiss",
-      "openProject": "Add folder",
-      "connectGithub": "Connect",
-      "projectHint": "Open a project from the sidebar (folder icon) or use Add Project so I can read and edit your code."
     },
     "thinkingLive": "Thinking…",
     "edit": "Edit",
@@ -333,7 +322,19 @@
         "uiInput": "Input",
         "uiSelect": "Choice"
       }
-    }
+    },
+    "checklist": {
+      "title": "Get started",
+      "desc": "One step and you're ready — the rest is optional.",
+      "provider": "Add an AI provider API key",
+      "project": "Add a project folder (for coding work)",
+      "github": "Connect GitHub (optional, for issues & PRs)",
+      "dismiss": "Dismiss",
+      "openProject": "Add folder",
+      "connectGithub": "Connect",
+      "projectHint": "Open a project from the sidebar (folder icon) or use Add Project so I can read and edit your code."
+    },
+    "configureProviders": "Configure providers"
   },
   "automation": {
     "title": "Automations",

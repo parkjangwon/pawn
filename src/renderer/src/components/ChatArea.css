@@ -264,10 +264,26 @@
 .welcome-actions {
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  margin-top: var(--space-xl);
+  gap: 6px;
+  margin-top: var(--space-md);
   width: 100%;
   max-width: 100%;
+}
+
+/* Home composer: the visual center, directly under the greeting */
+.welcome-composer {
+  width: 100%;
+  max-width: 100%;
+  margin-top: var(--space-md);
+}
+
+.welcome-composer .chat-input-wrapper {
+  padding: 0;
+  background: none;
+}
+
+.welcome-composer .chat-input-container {
+  max-width: none;
 }
 
 .welcome-btn {
@@ -275,7 +291,7 @@
   flex-direction: row;
   align-items: center;
   gap: 12px;
-  padding: 12px;
+  padding: 10px 12px;
   border: 1px solid var(--border-color);
   border-radius: 12px;
   background: transparent;
@@ -340,6 +356,9 @@
   font-size: var(--text-ui-sm);
   color: var(--text-muted);
   line-height: 1.35;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .welcome-btn.primary {

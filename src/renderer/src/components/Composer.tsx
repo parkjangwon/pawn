@@ -95,6 +95,9 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
   const [compacting, setCompacting] = useState(false)
   const currentModel = models.find((m) => m.id === activeModelId) || models.find((m) => m.enabled)
   const currentModelLabel = currentModel?.label || currentModel?.modelId || t('modelPicker.noModel')
+  // No provider configured: hint at Settings in the placeholder instead of a banner.
+  const hasProvider = providers.some((p) => p.enabled)
+  const composerPlaceholder = hasProvider ? t('chat.placeholder') : t('chat.noProviderPlaceholder')
 
   // Images attached for a model that cannot see them: say where they go.
   const visionNote = useMemo(() => {
@@ -214,7 +217,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
 
   return (
       <div className="chat-input-wrapper">
-       <div className={`chat-input-container${ulwArmed ? ' ulw-armed' : ''}`} role="group" aria-label={t('chat.placeholder')}>
+       <div className={`chat-input-container${ulwArmed ? ' ulw-armed' : ''}`} role="group" aria-label={composerPlaceholder}>
           <TriggerMenu
             open={triggerOpen}
             trigger={trigger?.type ?? null}
@@ -320,9 +323,9 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
               onChange={onChange}
               onKeyDown={onKeyDown}
               onPaste={handlePaste}
-              placeholder={t('chat.placeholder')}
+              placeholder={composerPlaceholder}
               rows={1}
-              aria-label={t('chat.placeholder')}
+              aria-label={composerPlaceholder}
             />
             <div className="input-actions">
               {/* Left: permission mode */}

@@ -78,9 +78,9 @@
     "copied": "コピーしました",
     "thinking": "思考",
     "noProvider": "プロバイダーが設定されていません",
+    "noProviderPlaceholder": "設定でプロバイダーを追加してください",
     "taskComplete": "タスク完了",
     "modelSelected": "モデルが選択されました",
-    "configureProviders": "プロバイダーを設定",
     "diagnostics": {
       "coldStart": "コールドスタート — キャッシュが期限切れのため再記録が必要です。",
       "compacted": "コンテキスト圧縮を実行 — キャッシュを再記録します。",
@@ -181,17 +181,6 @@
       "noResults": "一致するファイルがありません",
       "gitDesc": "git ステータスを挿入",
       "diffDesc": "git diff HEAD を挿入"
-    },
-    "checklist": {
-      "title": "はじめの設定",
-      "desc": "1 ステップで使えます。残りは任意です。",
-      "provider": "AI プロバイダーの API キーを追加",
-      "project": "プロジェクトフォルダを追加（コーディング用）",
-      "github": "GitHub を接続（Issue / PR 用・任意）",
-      "dismiss": "閉じる",
-      "openProject": "フォルダを追加",
-      "connectGithub": "接続",
-      "projectHint": "サイドバーからプロジェクトを開くか追加してください。コードの読み書きができるようになります。"
     },
     "thinkingLive": "思考中…",
     "edit": "編集",
@@ -333,7 +322,19 @@
         "uiInput": "入力",
         "uiSelect": "選択"
       }
-    }
+    },
+    "checklist": {
+      "title": "はじめの設定",
+      "desc": "1 ステップで使えます。残りは任意です。",
+      "provider": "AI プロバイダーの API キーを追加",
+      "project": "プロジェクトフォルダを追加（コーディング用）",
+      "github": "GitHub を接続（Issue / PR 用・任意）",
+      "dismiss": "閉じる",
+      "openProject": "フォルダを追加",
+      "connectGithub": "接続",
+      "projectHint": "サイドバーからプロジェクトを開くか追加してください。コードの読み書きができるようになります。"
+    },
+    "configureProviders": "プロバイダーを設定"
   },
   "automation": {
     "title": "自動化",
