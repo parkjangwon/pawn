@@ -1,25 +1,14 @@
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Calendar, Check, Code, Globe, Monitor, Settings } from 'lucide-react'
+import { Calendar, Code, Globe, Monitor } from 'lucide-react'
 import { useProviderStore } from '../stores/provider'
-import { useAppStore } from '../stores/app'
-import { openSettingsSection, openPluginsExtensions, __providerTestOutcome } from './settingsState'
+import { openPluginsExtensions, __providerTestOutcome } from './settingsState'
 
 interface WelcomeScreenProps {
   activeProject: { name: string; path?: string } | undefined
   onPick: (text: string) => void
   /** The chat composer, rendered prominent directly under the greeting. */
   composer: ReactNode
-}
-
-const CHECKLIST_DISMISS_KEY = 'pawn-welcome-checklist-dismissed'
-
-type ChecklistItem = {
-  id: string
-  label: string
-  done: boolean
-  action?: () => void
-  actionLabel?: string
 }
 
 /** Local hour -> one of the six greeting segments. */
@@ -61,8 +50,6 @@ export default function WelcomeScreen({
 }: WelcomeScreenProps): React.JSX.Element {
   const { t } = useTranslation()
   const providers = useProviderStore((s) => s.providers)
-  const projects = useAppStore((s) => s.projects)
-  const needsSetup = providers.filter((p) => p.enabled).length === 0
   // "Add a key" is only done when a working provider exists: enabled, with a
   // credential (or a sign-in format that needs none), and not failed by the
   // auto-test that runs right after a preset is added.
@@ -72,44 +59,12 @@ export default function WelcomeScreen({
       __providerTestOutcome[p.id] !== 'fail' &&
       (p.apiKey || p.apiFormat === 'kiro')
   )
-  const hasProject =
-    Boolean(activeProject && activeProject.name && !String(activeProject.name).startsWith('__')) ||
-    projects.some((p) => p.id !== '__general__' && Array.isArray(p.paths) && p.paths.length > 0)
 
-  const [githubConnected, setGithubConnected] = useState<boolean | null>(null)
-  const [dismissed, setDismissed] = useState(() => {
-    try {
-      return localStorage.getItem(CHECKLIST_DISMISS_KEY) === '1'
-    } catch {
-      return false
-    }
-  })
   const [hour, setHour] = useState(() => new Date().getHours())
 
   useEffect(() => {
     const timer = setInterval(() => { setHour(new Date().getHours()) }, 60000)
     return () => { clearInterval(timer) }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    const status = window.api?.connections?.status
-    if (typeof status !== 'function') {
-      setGithubConnected(null)
-      return
-    }
-    void status('github')
-      .then((res) => {
-        if (cancelled) return
-        const r = res as { connected?: boolean; ok?: boolean; status?: string } | undefined
-        setGithubConnected(Boolean(r?.connected || r?.ok || r?.status === 'connected'))
-      })
-      .catch(() => {
-        if (!cancelled) setGithubConnected(false)
-      })
-    return () => {
-      cancelled = true
-    }
   }, [])
 
   const [hasExtension, setHasExtension] = useState(false)
@@ -128,60 +83,6 @@ export default function WelcomeScreen({
       cancelled = true
     }
   }, [])
-
-  const checklist: ChecklistItem[] = useMemo(() => {
-    const items: ChecklistItem[] = [
-      {
-        id: 'provider',
-        label: t('chat.checklist.provider'),
-        done: providerReady,
-        action: providerReady ? undefined : () => openSettingsSection('providers'),
-        actionLabel: t('chat.configureProviders')
-      },
-      {
-        id: 'project',
-        label: t('chat.checklist.project'),
-        done: hasProject,
-        action: !hasProject
-          ? () => {
-              window.dispatchEvent(new CustomEvent('pawn:add-project'))
-            }
-          : undefined,
-        actionLabel: t('chat.checklist.openProject')
-      },
-      {
-        id: 'github',
-        label: t('chat.checklist.github'),
-        done: githubConnected === true,
-        action:
-          githubConnected !== true
-            ? () => {
-                openSettingsSection('connections')
-              }
-            : undefined,
-        actionLabel: t('chat.checklist.connectGithub')
-      }
-    ]
-    return items
-  }, [t, needsSetup, providerReady, hasProject, githubConnected])
-
-  // Only the provider is required. Project and GitHub are optional, so once
-  // a provider works the list only stays while it's still useful: on a
-  // project chat before GitHub is connected. Everyday work (no project)
-  // never nags about folders or GitHub after setup.
-  const inProject = Boolean(activeProject && activeProject.name && !String(activeProject.name).startsWith('__'))
-  const visibleChecklist = needsSetup ? checklist : inProject ? checklist.filter((c) => c.id !== 'project') : []
-  const allDone = visibleChecklist.every((c) => c.done)
-  const showChecklist = !dismissed && visibleChecklist.length > 0 && !allDone
-
-  const dismissChecklist = (): void => {
-    setDismissed(true)
-    try {
-      localStorage.setItem(CHECKLIST_DISMISS_KEY, '1')
-    } catch {
-      /* ignore */
-    }
-  }
 
   return (
     <div className="chat-welcome">
@@ -212,40 +113,6 @@ export default function WelcomeScreen({
           >
             {t('chat.mods.welcomeCta')}
           </button>
-        </div>
-      )}
-
-      {showChecklist && (
-        <div className="welcome-checklist" role="region" aria-label={t('chat.checklist.title')}>
-          <div className="welcome-checklist-head">
-            <span className="welcome-checklist-title">{t('chat.checklist.title')}</span>
-            <button type="button" className="welcome-checklist-dismiss" onClick={dismissChecklist}>
-              {t('chat.checklist.dismiss')}
-            </button>
-          </div>
-          <p className="welcome-checklist-desc">{t('chat.checklist.desc')}</p>
-          <ul className="welcome-checklist-list">
-            {visibleChecklist.map((item) => (
-              <li
-                key={item.id}
-                className={`welcome-checklist-item ${item.done ? 'done' : 'pending'}`}
-              >
-                <span className="welcome-checklist-mark" aria-hidden="true">
-                  {item.done ? (
-                    <Check size={14} />
-                  ) : (
-                    <span className="welcome-checklist-dot" />
-                  )}
-                </span>
-                <span className="welcome-checklist-label">{item.label}</span>
-                {!item.done && item.action && item.actionLabel && (
-                  <button type="button" className="welcome-checklist-action" onClick={item.action}>
-                    {item.actionLabel}
-                  </button>
-                )}
-              </li>
-            ))}
-          </ul>
         </div>
       )}
 

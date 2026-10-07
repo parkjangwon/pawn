@@ -26,7 +26,7 @@ describe('getGreetingKey', () => {
 })
 
 describe('WelcomeScreen', () => {
-  it('renders greeting, then composer, then four home cards, keeping the setup checklist', () => {
+  it('renders greeting, then composer, then four home cards, with no onboarding', () => {
     render(
       <WelcomeScreen
         activeProject={undefined}
@@ -46,6 +46,6 @@ describe('WelcomeScreen', () => {
     expect(screen.getByText('chat.home.computerTitle')).toBeTruthy()
     expect(screen.getByText('chat.home.autoTitle')).toBeTruthy()
     expect(screen.getByText('chat.home.codeDesc')).toBeTruthy()
-    expect(document.querySelector('.welcome-checklist')).toBeTruthy()
+    expect(document.querySelector('.welcome-checklist')).toBeNull()
   })
 })

@@ -322,19 +322,7 @@
         "uiInput": "입력",
         "uiSelect": "선택"
       }
-    },
-    "checklist": {
-      "title": "시작하기",
-      "desc": "한 단계만 하면 바로 쓸 수 있어요. 나머지는 선택이에요.",
-      "provider": "AI 프로바이더 API 키 추가",
-      "project": "프로젝트 폴더 추가 (코딩 작업용)",
-      "github": "GitHub 연결 (이슈·PR용, 선택)",
-      "dismiss": "닫기",
-      "openProject": "폴더 추가",
-      "connectGithub": "연결",
-      "projectHint": "사이드바에서 프로젝트를 열거나 추가하세요. 그러면 코드를 읽고 수정할 수 있어요."
-    },
-    "configureProviders": "프로바이더 설정"
+    }
   },
   "automation": {
     "title": "자동화",

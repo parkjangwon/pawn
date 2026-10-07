@@ -322,19 +322,7 @@
         "uiInput": "输入",
         "uiSelect": "选择"
       }
-    },
-    "checklist": {
-      "title": "开始使用",
-      "desc": "一步即可开始使用，其余为可选。",
-      "provider": "添加 AI 提供商 API 密钥",
-      "project": "添加项目文件夹（用于编程）",
-      "github": "连接 GitHub（可选，用于 issue 与 PR）",
-      "dismiss": "关闭",
-      "openProject": "添加文件夹",
-      "connectGithub": "连接",
-      "projectHint": "从侧边栏打开或添加项目，以便我能读写你的代码。"
-    },
-    "configureProviders": "配置提供商"
+    }
   },
   "automation": {
     "title": "自动化",

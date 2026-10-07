@@ -322,19 +322,7 @@
         "uiInput": "Input",
         "uiSelect": "Choice"
       }
-    },
-    "checklist": {
-      "title": "Get started",
-      "desc": "One step and you're ready — the rest is optional.",
-      "provider": "Add an AI provider API key",
-      "project": "Add a project folder (for coding work)",
-      "github": "Connect GitHub (optional, for issues & PRs)",
-      "dismiss": "Dismiss",
-      "openProject": "Add folder",
-      "connectGithub": "Connect",
-      "projectHint": "Open a project from the sidebar (folder icon) or use Add Project so I can read and edit your code."
-    },
-    "configureProviders": "Configure providers"
+    }
   },
   "automation": {
     "title": "Automations",
