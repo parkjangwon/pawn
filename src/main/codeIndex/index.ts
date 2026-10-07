@@ -12,7 +12,7 @@ import { createHash } from 'node:crypto'
 import { promises as fs } from 'node:fs'
 import * as path from 'node:path'
 
-import { cosine, embedText, EMBED_DIM } from '../memory/embed'
+import { cosine, embedText, EMBED_DIM } from './embed'
 import { buildBm25Index, buildDocTokens, bm25Scores, type Bm25Index } from './bm25'
 import { chunkFile, languageForPath, type Chunk, type ChunkKind, type Language } from './chunker'
 import { tokenize } from './tokenize'

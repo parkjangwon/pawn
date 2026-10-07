@@ -6,7 +6,7 @@ import { computerHandlers } from './computer'
 import { connectionsHandlers } from './connections'
 import { fsHandlers } from './fs'
 import { gitHandlers } from './git'
-import { memoryHandlers } from './memory'
+import { wikiHandlers } from './wiki'
 import { shellHandlers } from './shell'
 import { webHandlers } from './web'
 import { lspHandlers } from './lsp'
@@ -26,7 +26,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   ...connectionsHandlers,
   ...fsHandlers,
   ...gitHandlers,
-  ...memoryHandlers,
+  ...wikiHandlers,
   ...shellHandlers,
   ...webHandlers,
   ...lspHandlers,

@@ -12,7 +12,7 @@ describe('tool labels', () => {
     expect(toolLabel(t, 'read_spreadsheet').label).toBe('toolMessage.family.spreadsheet')
     expect(toolLabel(t, 'google_gmail_search').label).toBe('toolMessage.family.email')
     expect(toolLabel(t, 'web_search').label).toBe('toolMessage.family.webSearch')
-    expect(toolLabel(t, 'memory_save').label).toBe('toolMessage.family.memory')
+    expect(toolLabel(t, 'wiki_write').label).toBe('toolMessage.family.wiki')
     expect(toolLabel(t, 'github_create_pull').label).toBe('toolMessage.family.repoHost')
     // Unknown / MCP tools: readable words.
     expect(toolLabel(t, 'some_new_tool').label).toBe('Some new tool')

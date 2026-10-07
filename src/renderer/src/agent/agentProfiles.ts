@@ -96,8 +96,9 @@ const EXPLORE_TOOLS = [
   'browser_tab_list',
   'browser_tab_switch',
   'browser_tab_close',
-  'memory_search',
-  'memory_list',
+  'wiki_search',
+  'wiki_read',
+  'wiki_list',
   'decide',
   'load_skill',
   'run_checks',
@@ -206,8 +207,9 @@ const SYNTHESIZER_TOOLS = [
   'list_artifacts',
   'write_artifact',
   'update_plan',
-  'memory_search',
-  'memory_list'
+  'wiki_search',
+  'wiki_read',
+  'wiki_list'
 ]
 
 export const BUILTIN_AGENT_PROFILES: AgentProfile[] = [

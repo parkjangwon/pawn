@@ -19,7 +19,6 @@ import { initKeybindings, registerShortcutForwarding } from './ipc/keybindings'
 import { closeDb } from './db'
 import { createTray, destroyTray, trayEnabled } from './tray'
 import { forceAllowQuit, registerQuitConfirm } from './quit'
-import { closeMemoryDb } from './memory'
 import { installAppMenu } from './appMenu'
 import { setAppLanguage } from './appLanguage'
 import { loadConfig } from './config'
@@ -117,7 +116,6 @@ const boot = (): void => {
     void disposeTelegram()
     stopRoutineServices()
     destroyTray()
-    closeMemoryDb()
     closeDb()
   })
 

@@ -39,7 +39,7 @@ npm install -g @parkjangwon/pawn && pawn
 | パス | 内容 |
 |------|------|
 | `pawn.db` | プロジェクト、セッション、メッセージ、トランスクリプト、使用量、ルーティン。WAL。トランスクリプトは UI メッセージと分け、プロンプトキャッシュの接頭辞を保ちます。 |
-| `memory.db` | 長期記憶。FTS5 + ローカルハッシュ埋め込み。 |
+| `wiki/` | LLMウィキ: エージェントが自ら管理するリンク付きマークダウンページ（`global/`、`projects/<id>/` ごとに `pages/`、`index.md`、`log.md`）。通常のファイルなのでObsidianヴォールトとして開けます。 |
 | `hooks.json` / `hooks-settings.json` | ユーザーフックとマスタースイッチ。 |
 | `config.toml` | アプリ設定。 |
 | `mcp.json` | Pawn が管理する MCP サーバー。 |
@@ -91,7 +91,7 @@ npm install -g @parkjangwon/pawn && pawn
 
 **デバッグ**（群 `debug`）: `debug_start` `debug_breakpoints` `debug_control` `debug_eval` `debug_stop`。Node inspector、debugpy、delve、lldb-dap。
 
-**記憶**（コア）: `memory_search` `memory_save` `memory_list` `memory_update` `memory_forget` `memory_consolidate`。ターン後に自動収集します。注入された一致は信頼しないデータです。範囲: user / project。秘密は保存を拒否します。UI: 設定 → エージェント → 記憶。
+**ウィキ**（コア）: `wiki_search` `wiki_read` `wiki_list` `wiki_write` `wiki_rename` `wiki_delete` `wiki_lint`。エージェントが `[[ページタイトル]]` リンクで知識ページを作り、ターンプレランブルにはウィキの索引と最近の活動が入ります — 信頼しないデータです。範囲: `~/.pawn/wiki` 下の project / global。秘密は保存を拒否します。UI: 設定 → ウィキ — グラフビュー（ホイール/ピンチズーム、ドラッグパン、ノードドラッグ、近傍ハイライト）、並べ替え・全選択・一括削除ができるページグリッド（削除はログに記録）、活動ログ。リンク自動接続は本文中のタイトル言及に[[リンク]]を差し込み、孤立ページに See also を追加します。
 
 **決定**（コア、プロバイダがなければ隠す）: `decide`。呼び出しあたり型付きの質問は最大 32。
 
@@ -229,9 +229,9 @@ pawn-headless tasks
 ## 14. セキュリティの不変条件
 
 - レンダラ: `nodeIntegration: false`、`contextIsolation: true`。システム呼び出しは `src/main/ipc/*` と `src/preload/index.ts`（`contextBridge`）を通ります。
-- 記憶と取得したウェブテキストは信頼しないデータであり、指示ではありません。
+- ウィキと取得したウェブテキストは信頼しないデータであり、指示ではありません。
 - `PreToolUse` / `PermissionRequest` の拒否は `yolo` でも適用されます。
-- リサーチの SSRF ガードはオンのままです。秘密は記憶にも録画にも書きません。
+- リサーチの SSRF ガードはオンのままです。ウィキ書き込みの秘密は `[REDACTED:*]` でマスクするか拒否し、録画には決して書きません。
 - Telegram ボットトークンがレンダラーに届くことはありません。DM はこのコンピュータでペアリングコードを承認するまで拒否されます。
 
 ## 15. 開発
@@ -253,7 +253,7 @@ npm run pack
 ```
 src/main/            Electron メイン、IPC、DB、ウィンドウ
   connections/       OAuth + PAT ツール
-  memory/  hooks/  computer/  research/  recorder/  kiro/  decision/
+  wiki/  hooks/  computer/  research/  recorder/  kiro/  decision/
   codeIndex/  debug/  lsp/
 src/preload/         contextBridge
 src/renderer/src/agent/    ループ、toolDefs、toolHandlers、router
@@ -275,7 +275,7 @@ native/macos/pawn-cua/
 | Mac のコンピュータ使用 | 同梱の `pawn-cua`。アクセシビリティ + 画面収録を許可。cliclick は入れない。 |
 | MCP | 設定 → MCP、または `~/.pawn/mcp.json`、またはプロジェクトの `.mcp.json`。 |
 | フック | `~/.pawn/hooks.json` または Claude `settings.json`。マージ + 重複除去。拒否が勝つ。 |
-| 記憶 | 設定 → エージェント → 記憶。DB: `~/.pawn/memory.db`。 |
+| ウィキ | 設定 → ウィキ。ファイル: `~/.pawn/wiki/`（Obsidianで開ける）。 |
 | 接続 | 設定 → 接続。Google の書き込みツールは、書き込みスコープを与える再接続が必要。 |
 | ワークフロー録画 | macOS。録画ボタンまたは `/record` → 実行 → 停止 → 保存。あとで `/<skill-name>`。 |
 | 決定モデル | 設定 → 決定モデル。TypeSafe のキー、または `ollaya serve` + `ollaya pull laya`。 |

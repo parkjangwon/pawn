@@ -61,7 +61,7 @@ import { buildToolMeta } from '../agent/toolMeta'
 import { callLLM, type LlmResult } from '../agent/llm'
 import { SYSTEM_PROMPT } from '../agent/prompts'
 import {
-  effectiveAutoMemoryConsolidate, effectiveDoneGate, harnessPreamble, harnessProfile
+  effectiveDoneGate, harnessPreamble, harnessProfile
 } from '../agent/harnessMode'
 import { fireHook } from '../agent/hooksClient'
 import { ensureModsLoaded, getModRuntime } from '../agent/mods'
@@ -94,6 +94,9 @@ const STATIC_TOOL_NAMES = TOOLS.map((t) => t.name)
 
 /** Frozen per session so the preamble (and the prompt cache) stays stable. */
 const profileBlockBySession = new Map<string, string>()
+// Wiki digest frozen per session+project so the preamble cache prefix holds;
+// the agent sees its own in-session writes through conversation context.
+const wikiDigestBySession = new Map<string, string>()
 
 export async function agentLoop(
   projectId: string,
@@ -256,19 +259,25 @@ export async function agentLoop(
     if (ultraRun?.status === 'active') {
       projectPreamble += (projectPreamble ? '\n\n' : '') + ultraWorkPreamble(ultraRun)
     }
-    // Long-term Memory injection (local, optional)
+    // LLM-Wiki digest injection (index + recent activity; local, optional).
+    // Frozen per session like the repo profile so the prompt cache prefix
+    // stays stable within a turn batch.
     try {
-      if (window.api?.memory?.injectBlock) {
-        const mem = await window.api?.memory.injectBlock({
-          query: userContent.slice(0, 500),
-          projectId: projectId && projectId !== '__general__' ? projectId : null
-        })
-        if (mem && String(mem).trim()) {
-          projectPreamble += (projectPreamble ? '\n\n' : '') + String(mem)
-        }
+      const wikiKey = sessionId + ':' + (projectId && projectId !== '__general__' ? projectId : '')
+      let digest = wikiDigestBySession.get(wikiKey)
+      if (digest === undefined) {
+        digest = window.api?.wiki?.digest
+          ? await window.api?.wiki.digest({
+              projectId: projectId && projectId !== '__general__' ? projectId : null
+            })
+          : ''
+        wikiDigestBySession.set(wikiKey, digest)
+      }
+      if (digest && String(digest).trim()) {
+        projectPreamble += (projectPreamble ? '\n\n' : '') + String(digest)
       }
     } catch {
-      // Memory optional
+      // Wiki optional
     }
     // Repo onboarding profile (learned commands, conventions, gotchas). Frozen
     // for the session so the preamble — and the prompt cache — stays stable.
@@ -306,8 +315,8 @@ export async function agentLoop(
     hydrateNotes(sessionId, entries)
 
     // Correction learning: the user correcting the previous turn becomes a
-    // durable lesson (project Memory + repo profile). Fire-and-forget.
-    if (!resumeFrom && window.api?.memory?.save) {
+    // durable wiki page + repo-profile note. Fire-and-forget.
+    if (!resumeFrom && window.api?.wiki?.write) {
       const prevAssistant = [...entries].reverse().find((e) => e.role === 'assistant' && !!e.content?.trim())
       const prevUser = [...entries].reverse().find((e) => e.role === 'user')
       const reverted = takeRecentRevert(sessionId)
@@ -1392,41 +1401,6 @@ export async function agentLoop(
           cwd: cwd || undefined,
           payload: {}
         })
-      }
-      // Auto-capture durable Memory cards from this turn (local heuristic).
-      if (!aborted && window.api?.memory?.ingestTurn && entries.length > 0) {
-        try {
-          const recent = entries
-            .filter((e): e is Extract<TranscriptEntry, { role: 'user' | 'assistant' }> =>
-              e.role === 'user' || e.role === 'assistant'
-            )
-            .slice(-12)
-            .map((e) => ({
-              role: e.role,
-              content: typeof e.content === 'string' ? e.content : ''
-            }))
-          void window.api?.memory.ingestTurn({
-            projectId: projectId && projectId !== '__general__' ? projectId : null,
-            sessionId,
-            messages: recent
-          }).catch(() => {})
-          // Quiet merge of near-duplicate cards (threshold 0.92) so memory deepens over time.
-          if (
-            effectiveAutoMemoryConsolidate(
-              useProviderStore.getState().autoMemoryConsolidate,
-              useProviderStore.getState().harnessModeFor(sessionId)
-            ) &&
-            window.api.memory?.consolidate
-          ) {
-            void window.api?.memory.consolidate({
-              projectId: projectId && projectId !== '__general__' ? projectId : null,
-              threshold: 0.92,
-              dryRun: false
-            }).catch(() => {})
-          }
-        } catch {
-          /* non-fatal */
-        }
       }
       // One notification per completed turn (chat reply or coding work), only
       // when the user isn't watching the app. Routine runs are skipped here —

@@ -117,7 +117,7 @@ function familyLabel(t: TFunction, name: string): ToolLabel | undefined {
   if (name.startsWith('google_calendar') || name.startsWith('google_tasks')) return f('calendar', ICON.calendar)
   if (name.startsWith('google_')) return f('google', ICON.doc)
   if (name.startsWith('github_') || name.startsWith('gitlab_') || name.startsWith('codecommit_') || name === 'git_pr_ready' || name === 'issue_to_pr') return f('repoHost', ICON.branch)
-  if (name.startsWith('memory_')) return f('memory', ICON.brain)
+  if (name.startsWith('wiki_')) return f('wiki', ICON.brain)
   if (name === 'write_artifact' || name === 'list_artifacts') return f('document', ICON.doc)
   if (name.startsWith('lsp_') || name === 'repo_map' || name === 'codebase_search') return f('codeIntel', ICON.code)
   if (name === 'grep_search' || name === 'search_files') return f('findFiles', ICON.search)

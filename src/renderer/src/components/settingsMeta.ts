@@ -10,7 +10,7 @@ export type SettingsSection =
   | 'models'
   | 'decisionModels'
   | 'agent'
-  | 'memory'
+  | 'wiki'
   | 'hooks'
   | 'subagents'
   | 'plugins'
@@ -63,7 +63,7 @@ export const SECTIONS: { id: SettingsSection; labelKey: string; groupKey: string
   { id: 'decisionModels', labelKey: 'settings.decisionModels', groupKey: 'settings.groups.general', searchKey: 'settings.decisionModelsSection.search', icon: 'M6 3v12M18 9a3 3 0 100-6 3 3 0 000 6zM6 21a3 3 0 100-6 3 3 0 000 6zM18 9a9 9 0 01-9 9' },
   // Coding: split former mega “Agent” page into focused sections
   { id: 'agent', labelKey: 'settings.agent', groupKey: 'settings.groups.coding', searchKey: 'settings.agentSection.search', icon: 'M13 10V3L4 14h7v7l9-11h-7z' },
-  { id: 'memory', labelKey: 'settings.memory', groupKey: 'settings.groups.coding', searchKey: 'settings.memorySection.search', icon: 'M12 2a7 7 0 017 7c0 2.38-1.19 4.47-3 5.74V17a2 2 0 01-2 2h-4a2 2 0 01-2-2v-2.26C6.19 13.47 5 11.38 5 9a7 7 0 017-7zm-1 18h2v2h-2v-2z' },
+  { id: 'wiki', labelKey: 'settings.wiki', groupKey: 'settings.groups.coding', searchKey: 'settings.wikiSection.search', icon: 'M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2zM22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z' },
   { id: 'hooks', labelKey: 'settings.hooks', groupKey: 'settings.groups.coding', searchKey: 'settings.hooksSection.search', icon: 'M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71' },
   { id: 'subagents', labelKey: 'settings.subagents', groupKey: 'settings.groups.coding', searchKey: 'settings.subagentsSection.search', icon: 'M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75' },
   { id: 'plugins', labelKey: 'settings.plugins', groupKey: 'settings.groups.integration', searchKey: 'settings.pluginsSection.search', icon: 'M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z' },

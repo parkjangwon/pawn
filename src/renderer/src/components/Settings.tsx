@@ -5,7 +5,7 @@ import ProvidersSettingsPanel from './ProvidersSettingsPanel'
 import ModelsSettingsPanel from './ModelsSettingsPanel'
 import DecisionModelsSettingsPanel from './DecisionModelsSettingsPanel'
 import AgentSettingsPanel from './AgentSettingsPanel'
-import MemorySettingsPanel from './MemorySettingsPanel'
+import WikiPanel from './WikiPanel'
 import HooksSettingsPanel from './HooksSettingsPanel'
 import AgentsSettingsPanel from './AgentsSettingsPanel'
 import UsageSettingsPanel from './UsageSettingsPanel'
@@ -194,11 +194,11 @@ export default function Settings({
         {activeSection === 'models' && <ModelsSettingsPanel state={state} />}
         {activeSection === 'decisionModels' && <DecisionModelsSettingsPanel />}
         {activeSection === 'agent' && <AgentSettingsPanel state={state} />}
-        {activeSection === 'memory' && (
+        {activeSection === 'wiki' && (
           <div className="settings-section">
-            <h2>{t('settings.memorySection.title')}</h2>
-            <p className="settings-desc">{t('settings.memorySection.desc')}</p>
-            <MemorySettingsPanel />
+            <h2>{t('settings.wikiSection.title')}</h2>
+            <p className="settings-desc">{t('settings.wikiSection.desc')}</p>
+            <WikiPanel />
           </div>
         )}
         {activeSection === 'hooks' && (

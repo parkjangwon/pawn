@@ -19,9 +19,9 @@ const MUTATING_PREFIXES = [
   'debug_',
   'install_',
   'app_create_',
-  'memory_save',
-  'memory_forget',
-  'memory_update',
+  'wiki_write',
+  'wiki_rename',
+  'wiki_delete',
   'github_create_',
   'github_comment',
   'github_draft_',
@@ -54,7 +54,6 @@ const MUTATING_EXACT = new Set([
   'google_gmail_send',
   'google_sheets_write',
   'google_calendar_create',
-  'memory_consolidate',
   'save_skill'
 ])
 

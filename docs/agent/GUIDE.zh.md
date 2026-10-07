@@ -39,7 +39,7 @@ npm install -g @parkjangwon/pawn && pawn
 | 路径 | 内容 |
 |------|------|
 | `pawn.db` | 项目、会话、消息、记录稿、用量、例程。WAL。记录稿与界面消息分开，以保住提示缓存前缀。 |
-| `memory.db` | 长期记忆。FTS5 + 本地哈希嵌入。 |
+| `wiki/` | LLM 维基：智能体自行维护的互链 Markdown 页面（`global/`、`projects/<id>/`，各有 `pages/`、`index.md`、`log.md`）。纯文本文件，可作为 Obsidian 仓库打开。 |
 | `hooks.json` / `hooks-settings.json` | 用户钩子，以及总开关。 |
 | `config.toml` | 应用设置。 |
 | `mcp.json` | Pawn 管理的 MCP 服务器。 |
@@ -91,7 +91,7 @@ npm install -g @parkjangwon/pawn && pawn
 
 **调试**（组 `debug`）：`debug_start` `debug_breakpoints` `debug_control` `debug_eval` `debug_stop`。Node inspector、debugpy、delve、lldb-dap。
 
-**记忆**（核心）：`memory_search` `memory_save` `memory_list` `memory_update` `memory_forget` `memory_consolidate`。回合后自动采集。注入的匹配是不可信数据。范围：user / project。秘密在保存时被拒绝。界面：设置 → 代理 → 记忆。
+**维基**（核心）：`wiki_search` `wiki_read` `wiki_list` `wiki_write` `wiki_rename` `wiki_delete` `wiki_lint`。智能体用 `[[页面标题]]` 链接组织知识页面，回合前导语包含维基索引与最近活动 — 不可信数据。范围：`~/.pawn/wiki` 下的 project / global。秘密在写入时被拒绝。界面：设置 → 维基 — 图谱视图（滚轮/捏合缩放、拖拽平移、节点拖动、邻接高亮），支持排序、全选与批量删除的页面表格（删除会记录日志），活动日志。自动添加链接会在正文中的标题提及处插入[[链接]]，并为孤立页面添加 See also。
 
 **决策**（核心，没有提供商时隐藏）：`decide`。每次调用最多 32 个带类型的问题。
 
@@ -229,9 +229,9 @@ pawn-headless tasks
 ## 14. 安全不变量
 
 - 渲染进程：`nodeIntegration: false`，`contextIsolation: true`。系统调用走 `src/main/ipc/*` 和 `src/preload/index.ts`（`contextBridge`）。
-- 记忆和抓取的网页文本是不可信数据，不是指令。
+- 维基和抓取的网页文本是不可信数据，不是指令。
 - `PreToolUse` / `PermissionRequest` 的拒绝在 `yolo` 中仍然执行。
-- 研究的 SSRF 防护保持开启。秘密不写入记忆或录制。
+- 研究的 SSRF 防护保持开启。维基写入中的秘密会被 `[REDACTED:*]` 掩码或拒绝，且绝不写入录制。
 - Telegram 机器人令牌不会进入渲染进程。DM 在这台电脑上批准配对码之前一律拒绝。
 
 ## 15. 开发
@@ -253,7 +253,7 @@ npm run pack
 ```
 src/main/            Electron 主进程、IPC、数据库、窗口
   connections/       OAuth + PAT 工具
-  memory/  hooks/  computer/  research/  recorder/  kiro/  decision/
+  wiki/  hooks/  computer/  research/  recorder/  kiro/  decision/
   codeIndex/  debug/  lsp/
 src/preload/         contextBridge
 src/renderer/src/agent/    循环、toolDefs、toolHandlers、router
@@ -275,7 +275,7 @@ native/macos/pawn-cua/
 | 在 Mac 上使用电脑 | 捆绑的 `pawn-cua`。授予辅助功能 + 屏幕录制。不要安装 cliclick。 |
 | MCP | 设置 → MCP，或 `~/.pawn/mcp.json`，或项目的 `.mcp.json`。 |
 | 钩子 | `~/.pawn/hooks.json` 或 Claude `settings.json`。合并 + 去重。拒绝优先。 |
-| 记忆 | 设置 → 代理 → 记忆。数据库：`~/.pawn/memory.db`。 |
+| 维基 | 设置 → 维基。文件：`~/.pawn/wiki/`（可用 Obsidian 打开）。 |
 | 连接 | 设置 → 连接。Google 写入工具需要一次授予写范围的重新连接。 |
 | 录制工作流 | macOS。录制按钮或 `/record` → 做一遍 → 停止 → 保存。之后 `/<skill-name>`。 |
 | 决策模型 | 设置 → 决策模型。TypeSafe 密钥，或 `ollaya serve` + `ollaya pull laya`。 |

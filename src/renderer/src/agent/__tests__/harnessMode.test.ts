@@ -6,7 +6,6 @@ import {
   claudeThinkingBudget,
   contextFitRatio,
   deepSeekEffort,
-  effectiveAutoMemoryConsolidate,
   effectiveCostMode,
   effectiveDoneGate,
   effectivePoolLimit,
@@ -133,8 +132,6 @@ describe('explicit user settings win over modes', () => {
     expect(effectiveDoneGate('off', 'maxing')).toBe('off')
     expect(effectiveDoneGate('typecheck', 'maxing')).toBe('test')
     expect(effectiveDoneGate('test', 'eco')).toBe('typecheck')
-    expect(effectiveAutoMemoryConsolidate(true, 'eco')).toBe(false)
-    expect(effectiveAutoMemoryConsolidate(true, 'maxing')).toBe(true)
   })
 })
 

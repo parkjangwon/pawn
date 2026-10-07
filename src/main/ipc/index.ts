@@ -12,7 +12,7 @@ import { registerKeybindingsIpc } from './keybindings'
 import { registerMcpIpc } from './mcp'
 import { registerConnectionsIpc } from './connections'
 import { registerResearchIpc } from './research'
-import { registerMemoryIpc } from './memory'
+import { registerWikiIpc } from './wiki'
 import { registerHooksIpc } from './hooks'
 import { registerModsIpc } from './mods'
 import { registerWorktreeIpc } from './worktree'
@@ -45,7 +45,7 @@ export function registerAllIpc(): void {
   registerMcpIpc()
   registerConnectionsIpc()
   registerResearchIpc()
-  registerMemoryIpc()
+  registerWikiIpc()
   registerHooksIpc()
   registerModsIpc()
   registerWorktreeIpc()

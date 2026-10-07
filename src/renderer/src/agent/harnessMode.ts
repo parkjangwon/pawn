@@ -165,13 +165,6 @@ export function effectiveDoneGate(user: DoneGate, mode: HarnessMode | null | und
   return user
 }
 
-export function effectiveAutoMemoryConsolidate(
-  user: boolean,
-  mode: HarnessMode | null | undefined
-): boolean {
-  return parseHarnessMode(mode) === 'eco' ? false : user
-}
-
 /** Preamble block for non-default modes; default adds nothing (cache-stable). */
 export function harnessPreamble(mode: HarnessMode | null | undefined): string {
   const p = harnessProfile(mode)

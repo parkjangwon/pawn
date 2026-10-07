@@ -39,7 +39,7 @@ Installer cache: `~/.pawn/installers/`. In-app check: Settings → System. Node 
 | Path | Contents |
 |------|----------|
 | `pawn.db` | Projects, sessions, messages, transcripts, usage, routines. WAL. Transcripts stay separate from UI messages so prompt-cache prefixes hold. |
-| `memory.db` | Long-term memory. FTS5 + local hash embeddings. |
+| `wiki/` | LLM-Wiki: interlinked markdown pages the agent maintains (`global/`, `projects/<id>/`, each with `pages/`, `index.md`, `log.md`). Plain files — open the folder as an Obsidian vault. |
 | `hooks.json` / `hooks-settings.json` | User hooks, and the master switch. |
 | `mods-settings.json` | Mods master switch, versioned consent, disabled plugins, plugin directories, run order (`pluginOrder`). See [MODS.md](./MODS.md). |
 | `mods/` | User-installed Claude Code–compatible mods. |
@@ -93,7 +93,7 @@ Names are the contract. Schemas live in `src/renderer/src/agent/toolDefs/`.
 
 **Debug** (group `debug`): `debug_start` `debug_breakpoints` `debug_control` `debug_eval` `debug_stop`. Node inspector, debugpy, delve, lldb-dap.
 
-**Memory** (core): `memory_search` `memory_save` `memory_list` `memory_update` `memory_forget` `memory_consolidate`. Auto-capture after turns. Injected matches are untrusted data. Scopes: user / project. Secrets are rejected on save. UI: Settings → Agent → Memory.
+**Wiki** (core): `wiki_search` `wiki_read` `wiki_list` `wiki_write` `wiki_rename` `wiki_delete` `wiki_lint`. The agent files durable knowledge as interlinked pages (`[[Page Title]]` links) and the turn preamble carries the wiki index + recent activity — untrusted data. Scopes: project / global under `~/.pawn/wiki`. Secrets are rejected on write. UI: Settings → Wiki — graph view (wheel/pinch zoom, drag to pan, node drag, neighbor highlight), a sortable page grid with select-all and bulk delete (logged), and the activity log. The auto-link pass inserts [[links]] for title mentions and gives isolated pages a See also.
 
 **Decision** (core, hidden while no provider is active): `decide`. Up to 32 typed questions per call.
 
@@ -253,9 +253,9 @@ pawn-headless tasks
 ## 15. Security invariants
 
 - Renderer: `nodeIntegration: false`, `contextIsolation: true`. System calls go through `src/main/ipc/*` and `src/preload/index.ts` (`contextBridge`).
-- Memory and fetched web text are untrusted data, not instructions.
+- The wiki and fetched web text are untrusted data, not instructions.
 - `PreToolUse` / `PermissionRequest` deny is enforced in `yolo`.
-- Research SSRF guards stay on. Secrets are not written to memory or recordings.
+- Research SSRF guards stay on. Secrets are masked (`[REDACTED:*]`) or rejected on wiki writes and never written to recordings.
 - The Telegram bot token never reaches the renderer. DMs stay denied until a pairing code is approved on this computer.
 
 ## 16. Develop
@@ -277,7 +277,7 @@ Release builds are unsigned unless `CSC_LINK` / `CSC_KEY_PASSWORD` and `APPLE_ID
 ```
 src/main/            Electron main, IPC, DB, window
   connections/       OAuth + PAT tools
-  memory/  hooks/  computer/  research/  recorder/  kiro/  decision/
+  wiki/  hooks/  computer/  research/  recorder/  kiro/  decision/
   codeIndex/  debug/  lsp/
 src/preload/         contextBridge
 src/renderer/src/agent/    loop, toolDefs, toolHandlers, router
@@ -299,7 +299,7 @@ Right panel: Terminal, Files, Git, Diff, Artifacts, Browser. `.md` files in the 
 | Computer use on a Mac | Bundled `pawn-cua`. Grant Accessibility + Screen Recording. Do not install cliclick. |
 | MCP | Settings → MCP, or `~/.pawn/mcp.json`, or the project's `.mcp.json`. |
 | Hooks | `~/.pawn/hooks.json` or Claude `settings.json`. Merge + dedupe. Deny wins. |
-| Memory | Settings → Agent → Memory. DB: `~/.pawn/memory.db`. |
+| Wiki | Settings → Wiki. Files: `~/.pawn/wiki/` (Obsidian-openable). |
 | Connections | Settings → Connections. Google write tools need a reconnect that grants write scopes. |
 | Record a workflow | macOS. Record button or `/record` → perform it → Stop → Save. Later `/<skill-name>`. |
 | Decision model | Settings → Decision models. TypeSafe key, or `ollaya serve` + `ollaya pull laya`. |

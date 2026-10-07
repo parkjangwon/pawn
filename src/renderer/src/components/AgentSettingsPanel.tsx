@@ -22,9 +22,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
     shellNetwork,
     setShellNetwork,
     shellCwdJail,
-    setShellCwdJail,
-    autoMemoryConsolidate,
-    setAutoMemoryConsolidate
+    setShellCwdJail
   } = state
   const harnessMode = useProviderStore((s) => s.harnessMode)
   const setHarnessMode = useProviderStore((s) => s.setHarnessMode)
@@ -171,16 +169,6 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           </label>
         </div>
         <div className="settings-subheader">{t('settings.agentSection.groupContext')}</div>
-        <div className="settings-row">
-          <div className="settings-row-info">
-            <span className="settings-row-label">{t('settings.agentSection.autoMemoryConsolidate')}</span>
-            <span className="settings-row-desc">{t('settings.agentSection.autoMemoryConsolidateDesc')}</span>
-          </div>
-          <label className="toggle-switch">
-            <input type="checkbox" checked={autoMemoryConsolidate} onChange={(e) => setAutoMemoryConsolidate(e.target.checked)} />
-            <span className="toggle-slider" />
-          </label>
-        </div>
         <div className="settings-row">
           <div className="settings-row-info">
             <span className="settings-row-label">{t('settings.agentSection.toolLoading')}</span>

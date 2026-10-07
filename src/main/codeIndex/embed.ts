@@ -1,8 +1,8 @@
 /**
- * Local lightweight embeddings (no model download).
+ * Local lightweight embeddings (no model download) for the code index.
  * Improved hashed bag-of-features: words + CJK bigrams + char 3-grams +
- * position-weighted terms. Still not a neural embedder, but far better than
- * pure random hashing for hybrid FTS ranking. Dim 384.
+ * position-weighted terms. Not a neural embedder, but far better than pure
+ * random hashing for hybrid BM25 ranking. Dim 384.
  */
 
 const DIM = 384
@@ -75,17 +75,6 @@ export function cosine(a: Float32Array, b: Float32Array): number {
   for (let i = 0; i < n; i++) s += a[i] * b[i]
   // embeddings are unit-norm → s in [-1,1]; map to [0,1]
   return Math.max(0, Math.min(1, (s + 1) / 2))
-}
-
-export function packEmbedding(v: Float32Array): Buffer {
-  return Buffer.from(v.buffer, v.byteOffset, v.byteLength)
-}
-
-export function unpackEmbedding(buf: Buffer | Uint8Array | null): Float32Array | null {
-  if (!buf || buf.byteLength < 4) return null
-  const copy = Buffer.isBuffer(buf) ? buf : Buffer.from(buf)
-  if (copy.byteLength % 4 !== 0) return null
-  return new Float32Array(copy.buffer, copy.byteOffset, copy.byteLength / 4)
 }
 
 export const EMBED_DIM = DIM

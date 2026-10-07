@@ -61,7 +61,7 @@ describe('checkPermission', () => {
   })
 
   it('autoApproves excludes egress tools outside yolo', () => {
-    for (const name of ['web_fetch', 'web_research', 'browser_navigate', 'memory_save']) {
+    for (const name of ['web_fetch', 'web_research', 'browser_navigate', 'wiki_write']) {
       expect(autoApproves(name, 'auto', false)).toBe(false)
       expect(autoApproves(name, 'ask', true)).toBe(false)
       expect(autoApproves(name, 'yolo', false)).toBe(true)

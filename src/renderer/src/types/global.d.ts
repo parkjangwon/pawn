@@ -1506,126 +1506,79 @@ declare global {
         listen: () => Promise<{ ok: boolean; events: TelegramEventDto[] }>
         onEvent: (callback: (event: TelegramEventDto) => void) => () => void
       }
-      /** Long-term local Memory (self-learning knowledge cards). */
-      memory?: {
-        settings: () => Promise<{
-          enabled: boolean
-          autoCapture: boolean
-          injectOnTurn: boolean
-          injectLimit: number
-          injectMaxChars: number
-          requireMinConfidence: number
-        }>
+      /** LLM-Wiki: interlinked markdown pages the agent maintains itself. */
+      wiki?: {
+        settings: () => Promise<WikiSettingsDto>
         setSettings: (partial: {
           enabled?: boolean
-          autoCapture?: boolean
-          injectOnTurn?: boolean
-          injectLimit?: number
+          injectIndex?: boolean
           injectMaxChars?: number
-          requireMinConfidence?: number
-        }) => Promise<{
-          enabled: boolean
-          autoCapture: boolean
-          injectOnTurn: boolean
-          injectLimit: number
-          injectMaxChars: number
-          requireMinConfidence: number
-        }>
-        save: (input: {
-          content: string
-          title?: string
-          kind?: string
+          logTail?: number
+        }) => Promise<WikiSettingsDto>
+        list: (input: {
           scope?: string
           projectId?: string | null
-          tags?: string[]
-          source?: 'user' | 'agent' | 'auto' | 'import'
-          confidence?: number
-          pinned?: boolean
-        }) => Promise<{
-          ok: boolean
-          memory?: MemoryRecordDto
-          error?: string
-          deduped?: boolean
-        }>
-        update: (
-          id: string,
-          patch: {
-            content?: string
-            title?: string
-            kind?: string
-            scope?: string
-            projectId?: string | null
-            tags?: string[]
-            confidence?: number
-            pinned?: boolean
-            enabled?: boolean
-          }
-        ) => Promise<{ ok: boolean; memory?: MemoryRecordDto; error?: string }>
-        forget: (id: string) => Promise<{ ok: boolean; error?: string }>
-        forgetMany: (ids: string[]) => Promise<{ ok: boolean; deleted: number }>
-        clear: (opts?: {
-          projectId?: string | null
-          scope?: string
-        }) => Promise<{ ok: boolean; deleted: number }>
-        search: (input: {
-          query: string
-          projectId?: string | null
-          kind?: string
-          scope?: string
-          limit?: number
-          includeDisabled?: boolean
-        }) => Promise<
-          Array<
-            MemoryRecordDto & {
-              score: number
-              why: string
-            }
-          >
-        >
-        list: (input?: {
-          projectId?: string | null
-          kind?: string
-          scope?: string
+          query?: string
           limit?: number
           offset?: number
-          query?: string
-        }) => Promise<{ items: MemoryRecordDto[]; total: number }>
-        get: (id: string) => Promise<MemoryRecordDto | null>
-        stats: () => Promise<{
-          total: number
-          pinned: number
-          byKind: Record<string, number>
-          byScope: Record<string, number>
-        }>
-        consolidate: (opts?: {
+        }) => Promise<{ items: WikiPageDto[]; total: number }>
+        read: (input: {
+          ref: string
+          scope?: string
           projectId?: string | null
-          threshold?: number
-          dryRun?: boolean
+        }) => Promise<{ ok: boolean; page?: WikiPageDto; error?: string }>
+        write: (input: {
+          title: string
+          body: string
+          summary?: string
+          tags?: string[]
+          scope?: string
+          projectId?: string | null
+        }) => Promise<{ ok: boolean; page?: WikiPageDto; created?: boolean; error?: string }>
+        delete: (input: {
+          slug: string
+          scope?: string
+          projectId?: string | null
+        }) => Promise<{ ok: boolean; error?: string }>
+        rename: (input: {
+          from: string
+          to: string
+          scope?: string
+          projectId?: string | null
+        }) => Promise<{ ok: boolean; page?: WikiPageDto; rewritten?: number; error?: string }>
+        search: (input: {
+          query: string
+          scope?: string
+          projectId?: string | null
+          limit?: number
+        }) => Promise<Array<WikiPageDto & { scope: string; score: number; snippet: string }>>
+        graph: (input: {
+          scope?: string
+          projectId?: string | null
+        }) => Promise<WikiGraphDto>
+        lint: (input: {
+          scope?: string
+          projectId?: string | null
+          fix?: boolean
         }) => Promise<{
           ok: boolean
-          merged: number
-          examined: number
-          pairs: Array<{ kept: string; dropped: string; score: number }>
+          issues: Array<{ type: string; slug: string; detail: string }>
+          pages: number
         }>
-        injectBlock: (opts?: {
-          query?: string
+        autolink: (input?: {
+          scope?: string
           projectId?: string | null
-        }) => Promise<string>
-        ingestTurn: (input: {
+        }) => Promise<{ ok: boolean; pagesTouched: number; linksAdded: number; seeAlsoAdded: number }>
+        log: (input: {
+          scope?: string
           projectId?: string | null
-          sessionId?: string
-          messages?: Array<{ role: string; content: string }>
-        }) => Promise<{
-          ok: boolean
-          saved: MemoryRecordDto[]
-          skipped: number
-          error?: string
-        }>
-        export: () => Promise<MemoryRecordDto[]>
-        import: (
-          items: unknown[],
+          limit?: number
+        }) => Promise<Array<{ at: string; op: string; title: string; detail: string }>>
+        digest: (opts?: { projectId?: string | null }) => Promise<string>
+        stats: (input?: {
+          scope?: string
           projectId?: string | null
-        ) => Promise<{ ok: boolean; imported: number; skipped: number }>
+        }) => Promise<{ pages: number; links: number; dir: string }>
       }
     }
   }
@@ -1666,21 +1619,28 @@ declare global {
     error?: string
   }
 
-  interface MemoryRecordDto {
-    id: string
-    scope: string
-    projectId: string | null
-    kind: string
+  interface WikiPageDto {
+    slug: string
     title: string
-    content: string
+    summary: string
     tags: string[]
-    source: string
-    confidence: number
-    pinned: boolean
+    created: string
+    updated: string
+    links: string[]
+    backlinks: number
+    chars: number
+    body?: string
+  }
+
+  interface WikiSettingsDto {
     enabled: boolean
-    hitCount: number
-    createdAt: number
-    updatedAt: number
-    lastUsedAt: number | null
+    injectIndex: boolean
+    injectMaxChars: number
+    logTail: number
+  }
+
+  interface WikiGraphDto {
+    nodes: Array<{ id: string; title: string; degree: number; tags: string[]; updated: string }>
+    edges: Array<{ source: string; target: string }>
   }
 }

@@ -7,7 +7,7 @@ import { GIT_TOOLS } from './toolDefs/git'
 import { COMPUTER_TOOLS } from './toolDefs/computer'
 import { BROWSER_TOOLS } from './toolDefs/browser'
 import { WEB_TOOLS } from './toolDefs/web'
-import { MEMORY_TOOLS } from './toolDefs/memory'
+import { WIKI_TOOLS } from './toolDefs/wiki'
 import { APP_TOOLS } from './toolDefs/app'
 import { CONNECTIONS_TOOLS } from './toolDefs/connections'
 import { AGENT_TOOLS } from './toolDefs/agent'
@@ -30,7 +30,7 @@ export const TOOLS: ToolDefinition[] = [
   ...BROWSER_TOOLS,
   ...BROWSER_RUNTIME_TOOLS,
   ...WEB_TOOLS,
-  ...MEMORY_TOOLS,
+  ...WIKI_TOOLS,
   ...APP_TOOLS,
   ...CONNECTIONS_TOOLS,
   ...AGENT_TOOLS,

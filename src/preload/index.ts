@@ -670,32 +670,31 @@ const api = {
     }) => ipcRenderer.invoke('research:search', input || {})
   },
 
-  /** Long-term local Memory (self-learning knowledge cards). */
-  memory: {
-    settings: () => ipcRenderer.invoke('memory:settings'),
-    setSettings: (partial: Record<string, unknown>) => ipcRenderer.invoke('memory:setSettings', partial),
-    save: (input: Record<string, unknown>) => ipcRenderer.invoke('memory:save', input),
-    update: (id: string, patch: Record<string, unknown>) => ipcRenderer.invoke('memory:update', id, patch),
-    forget: (id: string) => ipcRenderer.invoke('memory:forget', id),
-    forgetMany: (ids: string[]) => ipcRenderer.invoke('memory:forgetMany', ids),
-    clear: (opts?: { projectId?: string | null; scope?: string }) =>
-      ipcRenderer.invoke('memory:clear', opts || {}),
-    search: (input: Record<string, unknown>) => ipcRenderer.invoke('memory:search', input),
-    list: (input?: Record<string, unknown>) => ipcRenderer.invoke('memory:list', input || {}),
-    get: (id: string) => ipcRenderer.invoke('memory:get', id),
-    stats: () => ipcRenderer.invoke('memory:stats'),
-    injectBlock: (opts: { query?: string; projectId?: string | null }) =>
-      ipcRenderer.invoke('memory:injectBlock', opts || {}),
-    ingestTurn: (input: {
-      projectId?: string | null
-      sessionId?: string
-      messages?: Array<{ role: string; content: string }>
-    }) => ipcRenderer.invoke('memory:ingestTurn', input || {}),
-    export: () => ipcRenderer.invoke('memory:export'),
-    consolidate: (opts?: { projectId?: string | null; threshold?: number; dryRun?: boolean }) =>
-      ipcRenderer.invoke('memory:consolidate', opts || {}),
-    import: (items: unknown[], projectId?: string | null) =>
-      ipcRenderer.invoke('memory:import', items, projectId)
+  /** LLM-Wiki: interlinked markdown pages the agent maintains itself. */
+  wiki: {
+    settings: () => ipcRenderer.invoke('wiki:settings'),
+    setSettings: (partial: Record<string, unknown>) => ipcRenderer.invoke('wiki:setSettings', partial),
+    list: (input: Record<string, unknown>) => ipcRenderer.invoke('wiki:list', input || {}),
+    read: (input: { ref: string; scope?: string; projectId?: string | null }) =>
+      ipcRenderer.invoke('wiki:read', input || {}),
+    write: (input: Record<string, unknown>) => ipcRenderer.invoke('wiki:write', input || {}),
+    delete: (input: { slug: string; scope?: string; projectId?: string | null }) =>
+      ipcRenderer.invoke('wiki:delete', input || {}),
+    rename: (input: { from: string; to: string; scope?: string; projectId?: string | null }) =>
+      ipcRenderer.invoke('wiki:rename', input || {}),
+    search: (input: { query: string; scope?: string; projectId?: string | null; limit?: number }) =>
+      ipcRenderer.invoke('wiki:search', input || {}),
+    graph: (input: { scope?: string; projectId?: string | null }) =>
+      ipcRenderer.invoke('wiki:graph', input || {}),
+    lint: (input: { scope?: string; projectId?: string | null; fix?: boolean }) =>
+      ipcRenderer.invoke('wiki:lint', input || {}),
+    autolink: (input: { scope?: string; projectId?: string | null }) =>
+      ipcRenderer.invoke('wiki:autolink', input || {}),
+    log: (input: { scope?: string; projectId?: string | null; limit?: number }) =>
+      ipcRenderer.invoke('wiki:log', input || {}),
+    digest: (opts: { projectId?: string | null }) => ipcRenderer.invoke('wiki:digest', opts || {}),
+    stats: (input: { scope?: string; projectId?: string | null }) =>
+      ipcRenderer.invoke('wiki:stats', input || {})
   },
 
   /**

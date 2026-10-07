@@ -28,7 +28,7 @@ describe('hermetic agent ecosystem', () => {
       'git_commit',
       'git_push',
       'google_gmail_send',
-      'memory_consolidate'
+      'wiki_delete'
     ]) {
       expect(TOOLS.some((t) => t.name === n), n).toBe(true)
       expect(TOOL_SAFETY[n], n).toBeDefined()

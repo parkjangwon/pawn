@@ -31,8 +31,6 @@ interface ProviderState {
   shellSandbox: boolean
   shellNetwork: boolean
   shellCwdJail: boolean
-  /** Merge near-duplicate memories after each agent turn. */
-  autoMemoryConsolidate: boolean
   /** Compaction writes a model summary (cheapest model) instead of a heuristic digest. */
   smartCompaction: boolean
   /** Run language servers (tsserver, pyright, …) for diagnostics after edits. */
@@ -87,7 +85,6 @@ interface ProviderState {
   setShellSandbox: (v: boolean) => void
   setShellNetwork: (v: boolean) => void
   setShellCwdJail: (v: boolean) => void
-  setAutoMemoryConsolidate: (v: boolean) => void
   setSmartCompaction: (v: boolean) => void
   setLspDiagnostics: (v: boolean) => void
   setToolLoading: (mode: ToolLoadingMode) => void
@@ -149,7 +146,6 @@ function saveToBackend(state: ProviderState): void {
       shellSandbox: state.shellSandbox,
       shellNetwork: state.shellNetwork,
       shellCwdJail: state.shellCwdJail,
-      autoMemoryConsolidate: state.autoMemoryConsolidate,
       smartCompaction: state.smartCompaction,
       lspDiagnostics: state.lspDiagnostics,
       toolLoading: state.toolLoading,
@@ -178,7 +174,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   shellSandbox: true,
   shellNetwork: true,
   shellCwdJail: true,
-  autoMemoryConsolidate: true,
   smartCompaction: true,
   lspDiagnostics: true,
   toolLoading: 'smart',
@@ -225,7 +220,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
         shellSandbox: settings.shellSandbox !== false,
         shellNetwork: settings.shellNetwork !== false,
         shellCwdJail: settings.shellCwdJail !== false,
-        autoMemoryConsolidate: settings.autoMemoryConsolidate !== false,
         smartCompaction: settings.smartCompaction !== false,
         lspDiagnostics: settings.lspDiagnostics !== false,
         toolLoading: parseToolLoadingMode(settings.toolLoading),
@@ -439,13 +433,6 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
       const next = { ...s, shellCwdJail: v }
       saveToBackend(next)
       return { shellCwdJail: v }
-    })
-  },
-  setAutoMemoryConsolidate: (v) => {
-    set((s) => {
-      const next = { ...s, autoMemoryConsolidate: v }
-      saveToBackend(next)
-      return { autoMemoryConsolidate: v }
     })
   },
   setSmartCompaction: (v) => {

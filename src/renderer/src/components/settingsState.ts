@@ -117,7 +117,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     addModel, removeModel, updateModel, syncModelsFromProvider,
     setRoutingMode, setDefaultSendMode, setPermissionMode,
     shellSandbox, setShellSandbox, shellNetwork, setShellNetwork,
-    shellCwdJail, setShellCwdJail, autoMemoryConsolidate, setAutoMemoryConsolidate,
+    shellCwdJail, setShellCwdJail,
     setVisionModel
   } = useProviderStore()
 
@@ -851,7 +851,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     addModel, removeModel, updateModel, syncModelsFromProvider,
     setRoutingMode, setDefaultSendMode, setPermissionMode,
     shellSandbox, setShellSandbox, shellNetwork, setShellNetwork,
-    shellCwdJail, setShellCwdJail, autoMemoryConsolidate, setAutoMemoryConsolidate,
+    shellCwdJail, setShellCwdJail,
     setVisionModel,
     activeSection, setActiveSection, showAddProvider, setShowAddProvider, presetPicking, setPresetPicking,
     presetKey, setPresetKey, presetKeyError, setPresetKeyError, formError, setFormError,

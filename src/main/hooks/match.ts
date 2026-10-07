@@ -14,9 +14,9 @@ const TOOL_ALIASES: Record<string, string[]> = {
   search_files: ['search_files', 'Glob'],
   grep_search: ['grep_search', 'Grep'],
   write_artifact: ['write_artifact', 'Write'],
-  memory_save: ['memory_save', 'Write'],
-  memory_forget: ['memory_forget', 'Write'],
-  memory_update: ['memory_update', 'Write']
+  wiki_write: ['wiki_write', 'Write'],
+  wiki_rename: ['wiki_rename', 'Write'],
+  wiki_delete: ['wiki_delete', 'Write']
 }
 
 export function expandToolNames(toolName: string): string[] {

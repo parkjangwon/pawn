@@ -39,7 +39,7 @@ npm install -g @parkjangwon/pawn && pawn
 | 경로 | 내용 |
 |------|------|
 | `pawn.db` | 프로젝트, 세션, 메시지, 트랜스크립트, 사용량, 루틴. WAL. 트랜스크립트는 UI 메시지와 분리해 프롬프트 캐시 접두를 유지합니다. |
-| `memory.db` | 장기 기억. FTS5 + 로컬 해시 임베딩. |
+| `wiki/` | LLM 위키: 에이전트가 스스로 관리하는 연결 마크다운 페이지(`global/`, `projects/<id>/` 각각 `pages/`, `index.md`, `log.md`). 일반 파일이라 옵시디언 볼트로 열어도 됩니다. |
 | `hooks.json` / `hooks-settings.json` | 사용자 훅과 마스터 스위치. |
 | `mods-settings.json` | mods 전체 스위치, 버전에 묶인 동의, 끈 플러그인, 추가 폴더, 실행 순서(`pluginOrder`). [MODS.ko.md](./MODS.ko.md). |
 | `mods/` | 사용자가 설치한 mods. |
@@ -93,7 +93,7 @@ npm install -g @parkjangwon/pawn && pawn
 
 **디버그** (그룹 `debug`): `debug_start` `debug_breakpoints` `debug_control` `debug_eval` `debug_stop`. Node inspector, debugpy, delve, lldb-dap.
 
-**기억** (코어): `memory_search` `memory_save` `memory_list` `memory_update` `memory_forget` `memory_consolidate`. 턴 뒤에 자동 수집합니다. 주입된 일치는 신뢰하지 않는 데이터입니다. 범위: user / project. 비밀은 저장을 거부합니다. UI: 설정 → 에이전트 → 기억.
+**위키** (코어): `wiki_search` `wiki_read` `wiki_list` `wiki_write` `wiki_rename` `wiki_delete` `wiki_lint`. 에이전트가 `[[페이지 제목]]` 링크로 이어진 지식 페이지를 직접 만들고, 턴 프리앰블에는 위키 색인과 최근 활동이 들어갑니다 — 신뢰하지 않는 데이터입니다. 범위: `~/.pawn/wiki` 아래 project / global. 비밀은 저장을 거부합니다. UI: 설정 → 위키 — 그래프 뷰(휠/핀치 줌, 드래그 팬, 노드 드래그, 이웃 하이라이트), 정렬·전체 선택·선택 삭제가 되는 페이지 그리드(삭제는 로그에 기록), 활동 로그. 링크 자동 연결은 본문의 제목 언급에 [[링크]]를 심고 고아 페이지에 See also를 추가합니다.
 
 **결정** (코어, 프로바이더가 없으면 숨김): `decide`. 호출당 형식 있는 질문 최대 32개.
 
@@ -241,9 +241,9 @@ pawn-headless tasks
 ## 14. 보안 불변 조건
 
 - 렌더러: `nodeIntegration: false`, `contextIsolation: true`. 시스템 호출은 `src/main/ipc/*`와 `src/preload/index.ts` (`contextBridge`)를 통합니다.
-- 기억과 가져온 웹 텍스트는 신뢰하지 않는 데이터이고, 지시가 아닙니다.
+- 위키와 가져온 웹 텍스트는 신뢰하지 않는 데이터이고, 지시가 아닙니다.
 - `PreToolUse` / `PermissionRequest` 거부는 `yolo`에서도 적용됩니다.
-- 리서치 SSRF 가드는 켜 둡니다. 비밀은 기억이나 녹화에 쓰지 않습니다.
+- 리서치 SSRF 가드는 켜 둡니다. 위키 쓰기의 비밀은 `[REDACTED:*]`로 마스킹하거나 거부하고, 녹화에는 절대 쓰지 않습니다.
 - 텔레그램 봇 토큰은 렌더러에 닿지 않습니다. DM은 이 컴퓨터에서 페어링 코드를 승인할 때까지 거부됩니다.
 
 ## 15. 개발
@@ -265,7 +265,7 @@ npm run pack
 ```
 src/main/            Electron 메인, IPC, DB, 창
   connections/       OAuth + PAT 도구
-  memory/  hooks/  computer/  research/  recorder/  kiro/  decision/
+  wiki/  hooks/  computer/  research/  recorder/  kiro/  decision/
   codeIndex/  debug/  lsp/
 src/preload/         contextBridge
 src/renderer/src/agent/    루프, toolDefs, toolHandlers, router
@@ -287,7 +287,7 @@ native/macos/pawn-cua/
 | Mac에서 컴퓨터 사용 | 번들 `pawn-cua`. 손쉬운 사용 + 화면 기록 허용. cliclick은 설치하지 않습니다. |
 | MCP | 설정 → MCP, 또는 `~/.pawn/mcp.json`, 또는 프로젝트 `.mcp.json`. |
 | 훅 | `~/.pawn/hooks.json` 또는 Claude `settings.json`. 병합 + 중복 제거. 거부가 이깁니다. |
-| 기억 | 설정 → 에이전트 → 기억. DB: `~/.pawn/memory.db`. |
+| 위키 | 설정 → 위키. 파일: `~/.pawn/wiki/` (옵시디언으로 열기 가능). |
 | 연동 | 설정 → 서비스 연동. Google 쓰기 도구는 쓰기 스코프를 주는 재연결이 필요합니다. |
 | 워크플로 녹화 | macOS. 녹화 버튼 또는 `/record` → 수행 → 정지 → 저장. 이후 `/<skill-name>`. |
 | 결정 모델 | 설정 → 결정 모델. TypeSafe 키, 또는 `ollaya serve` + `ollaya pull laya`. |

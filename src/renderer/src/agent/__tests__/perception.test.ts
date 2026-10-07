@@ -206,11 +206,11 @@ describe('correction learning', () => {
     noteRevert('s9', ['/p/a.ts'])
     expect(takeRecentRevert('s9')).toEqual({ files: ['/p/a.ts'] })
     expect(takeRecentRevert('s9')).toBeNull()
-    const save = vi.fn(async () => ({ ok: true }))
-    ;(window as any).api = { memory: { save } }
+    const write = vi.fn(async () => ({ ok: true }))
+    ;(window as any).api = { wiki: { write } }
     const r = await learnFromCorrection({ sessionId: 's', projectId: 'p1', correction: 'Never edit dist/ — change src/ and rebuild', previousRequest: 'fix the button', useModel: false })
     expect(r?.saved).toBe(true)
-    expect(save).toHaveBeenCalledWith(expect.objectContaining({ kind: 'procedure', scope: 'project', projectId: 'p1', tags: ['correction', 'lesson'], source: 'auto' }))
+    expect(write).toHaveBeenCalledWith(expect.objectContaining({ scope: 'project', projectId: 'p1', tags: ['correction', 'lesson'] }))
     expect(heuristicLesson({ correction: 'use pnpm', reverted: true, files: ['a.ts'] })).toContain("reverted the agent's changes to a.ts")
   })
 })

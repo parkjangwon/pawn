@@ -35,7 +35,7 @@ describe('new tools registration', () => {
       'google_gmail_send',
       'google_sheets_write',
       'google_calendar_create',
-      'memory_consolidate'
+      'wiki_delete'
     ]
     for (const n of names) {
       expect(TOOLS.some((t) => t.name === n), n).toBe(true)
