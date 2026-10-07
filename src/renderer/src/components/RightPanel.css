@@ -67,7 +67,7 @@ body.resizing-right-panel .rp-resizer::after {
   color: var(--text-muted);
   cursor: pointer;
   font-size: var(--text-ui-sm);
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   white-space: nowrap;
   position: relative;
 }
@@ -110,7 +110,7 @@ body.resizing-right-panel .rp-resizer::after {
   color: var(--text-muted);
   cursor: pointer;
   margin-right: var(--space-6);
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .rp-tab-close-panel:hover {
@@ -218,7 +218,7 @@ body.resizing-right-panel .rp-resizer::after {
   background: var(--bg-primary);
   color: var(--text-primary);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
 }
 
 .rp-tool-item:hover {

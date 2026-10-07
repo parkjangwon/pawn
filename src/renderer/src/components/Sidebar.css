@@ -298,7 +298,7 @@ body.resizing-sidebar .settings-sidebar {
   cursor: pointer;
   font-size: var(--text-ui-caption);
   color: var(--text-secondary);
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
 }
 
 .tree-project-header:hover {
@@ -478,7 +478,7 @@ body.resizing-sidebar .settings-sidebar {
   color: var(--text-secondary);
   font-size: var(--text-ui-caption);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
 }
 
 .footer-btn:hover {
@@ -519,7 +519,7 @@ body.resizing-sidebar .settings-sidebar {
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
   -webkit-app-region: no-drag;
 }
 

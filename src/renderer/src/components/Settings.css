@@ -1304,7 +1304,7 @@ body.resizing-sidebar .settings-resizer::after {
   font-size: var(--text-ui-xs);
   font-weight: 500;
   cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .test-btn:hover:not(:disabled) {
@@ -1342,7 +1342,7 @@ body.resizing-sidebar .settings-resizer::after {
   background: none;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .delete-btn:hover {
@@ -1399,7 +1399,7 @@ body.resizing-sidebar .settings-resizer::after {
   align-items: center;
   justify-content: center;
   gap: var(--space-6);
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .add-btn-full:hover {
@@ -1438,7 +1438,7 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-primary);
   font-size: var(--text-ui-sm);
   cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .btn-cancel:hover {
@@ -1608,7 +1608,7 @@ body.resizing-sidebar .settings-resizer::after {
   font-weight: 500;
   cursor: pointer;
   box-sizing: border-box;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .conn-btn-connect {
@@ -1779,7 +1779,7 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-secondary);
   font-size: var(--text-ui-sm);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .btn-action:hover {
@@ -1796,7 +1796,7 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-muted);
   font-size: var(--text-ui-caption);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .add-btn-full:hover {

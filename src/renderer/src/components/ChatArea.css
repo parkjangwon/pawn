@@ -101,7 +101,7 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   flex-shrink: 0;
   -webkit-app-region: no-drag;
 }
@@ -174,7 +174,7 @@
   background: transparent;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, color 0.12s ease, opacity 0.12s ease;
   -webkit-app-region: no-drag;
 }
 
@@ -962,7 +962,7 @@
   background: var(--bg-secondary);
   border: 1px solid transparent;
   cursor: default;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
   white-space: nowrap;
 }
 
@@ -1483,7 +1483,7 @@
   font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .mode-segment-btn:hover {
@@ -1543,7 +1543,7 @@
   line-height: 1;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
   background: var(--bg-secondary);
   color: var(--text-muted);
   flex-shrink: 0;
@@ -1751,7 +1751,7 @@
   background: none;
   color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
   flex-shrink: 0;
 }
 

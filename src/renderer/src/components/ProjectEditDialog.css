@@ -156,7 +156,7 @@
   color: var(--text-muted);
   font-size: var(--text-ui-caption);
   cursor: pointer;
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .ped-add-folder:hover {
@@ -186,7 +186,7 @@
   border: 1px solid var(--border-color);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  transition: all 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
 }
 
 .ped-btn:hover:not(:disabled) {

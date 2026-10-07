@@ -152,7 +152,7 @@
   font-weight: 500;
   padding: 5px 12px;
   cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .agents-settings-refresh:hover {
@@ -226,7 +226,7 @@
   font-weight: 500;
   padding: 4px var(--space-10);
   cursor: pointer;
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .agents-template-chip:hover {
@@ -372,7 +372,7 @@
   padding: 14px 16px;
   background: var(--bg-elevated, var(--bg-primary));
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
-  transition: all var(--dur-fast) var(--ease-out-soft);
+  transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
 .agents-card:hover {
