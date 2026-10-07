@@ -1,0 +1,66 @@
+/* Pawn-native Badge — visual spec: design/v3-component-specs.md §7. */
+
+.pawn-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  height: 20px;
+  width: fit-content;
+  padding: 2px var(--space-sm);
+  overflow: hidden;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: var(--text-ui-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  transition:
+    background-color var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast);
+}
+
+.pawn-badge svg {
+  width: 10px;
+  height: 10px;
+  pointer-events: none;
+}
+
+.pawn-badge-default {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.pawn-badge-secondary {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.pawn-badge-destructive {
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+  color: var(--danger);
+}
+
+.pawn-badge-outline {
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+.pawn-badge-ghost {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.pawn-badge-ghost:hover {
+  background: var(--bg-hover);
+}
+
+.pawn-badge-link {
+  background: transparent;
+  color: var(--primary);
+  text-underline-offset: 4px;
+}
+
+.pawn-badge-link:hover {
+  text-decoration: underline;
+}

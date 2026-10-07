@@ -1,0 +1,120 @@
+/* Pawn-native Dropdown — visual spec: design/v3-component-specs.md §6. */
+
+.pawn-dropdown {
+  position: relative;
+  display: inline-flex;
+}
+
+.pawn-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 2px);
+  z-index: 60;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 128px;
+  max-height: min(320px, calc(100vh - 32px));
+  overflow-y: auto;
+  padding: var(--space-xs);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  animation: pawn-dropdown-fade var(--dur-instant) var(--ease-out-soft);
+}
+
+.pawn-dropdown-start {
+  left: 0;
+}
+
+.pawn-dropdown-end {
+  right: 0;
+}
+
+.pawn-dropdown-label {
+  padding: 6px var(--space-sm);
+  font-size: var(--text-ui-base);
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.pawn-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-height: 28px;
+  padding: 4px var(--space-sm);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-ui-base);
+  text-align: left;
+  cursor: pointer;
+  user-select: none;
+  transition:
+    background-color var(--dur-fast),
+    color var(--dur-fast);
+}
+
+.pawn-dropdown-item:hover,
+.pawn-dropdown-item.pawn-dropdown-active {
+  background: var(--bg-hover);
+}
+
+.pawn-dropdown-item:disabled {
+  pointer-events: none;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+.pawn-dropdown-destructive {
+  color: var(--danger);
+}
+
+.pawn-dropdown-destructive:hover,
+.pawn-dropdown-destructive.pawn-dropdown-active {
+  background: var(--danger);
+  color: #ffffff;
+}
+
+.pawn-dropdown-icon {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.pawn-dropdown-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.pawn-dropdown-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pawn-dropdown-shortcut {
+  margin-left: auto;
+  font-size: var(--text-ui-xs);
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+@keyframes pawn-dropdown-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pawn-dropdown-menu {
+    animation: none;
+  }
+}

@@ -42,42 +42,6 @@
   gap: var(--space-sm);
 }
 
-.confirm-btn {
-  padding: 7px 16px;
-  border-radius: var(--radius-md);
-  font-size: var(--text-ui-caption);
-  font-weight: 500;
-  cursor: pointer;
-  border: 1px solid var(--border-color);
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
-}
-
-.confirm-btn:hover {
-  background: var(--bg-hover);
-}
-
-.confirm-btn.danger {
-  background: var(--danger);
-  color: var(--on-primary);
-  border-color: var(--danger);
-}
-
-.confirm-btn.danger:hover {
-  opacity: 0.9;
-}
-
-.confirm-btn.primary {
-  background: var(--accent);
-  color: var(--on-accent);
-  border-color: var(--accent);
-}
-
-.app.dark .confirm-btn.primary {
-  color: var(--on-accent);
-}
-
 .confirm-details {
   max-height: 180px;
   overflow: auto;
@@ -113,8 +77,4 @@
 .confirm-details .confirm-reason {
   flex-shrink: 0;
   color: var(--warning);
-}
-
-.confirm-btn.secondary {
-  color: var(--text-primary);
 }

@@ -2,6 +2,7 @@ import { useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { useEffectiveTheme } from '../stores/theme'
 import { useFocusTrap } from '../utils/focusTrap'
+import Button from './Button'
 import './ConfirmDialog.css'
 
 interface ConfirmDialogProps {
@@ -34,7 +35,7 @@ export default function ConfirmDialog({
   const theme = useEffectiveTheme()
   const dialogRef = useRef<HTMLDivElement>(null)
   useFocusTrap(true, dialogRef, {
-    initialFocus: danger ? '.confirm-btn.cancel' : '.confirm-btn.primary, .confirm-btn.danger'
+    initialFocus: danger ? '.confirm-actions .pawn-btn-outline' : '.confirm-actions .pawn-btn-destructive, .confirm-actions .pawn-btn-default'
   })
 
   // Same portal trick as ProjectEditDialog: the sidebar caps child z-indexes at
@@ -66,21 +67,21 @@ export default function ConfirmDialog({
           <p id="confirm-dialog-desc">{message}</p>
           {details ? <div className="confirm-details">{details}</div> : null}
           <div className="confirm-actions">
-            <button type="button" className="confirm-btn cancel" onClick={onCancel}>
+            <Button type="button" variant="outline" onClick={onCancel}>
               {cancelLabel}
-            </button>
+            </Button>
             {secondaryLabel && onSecondary ? (
-              <button type="button" className="confirm-btn secondary" onClick={onSecondary}>
+              <Button type="button" variant="secondary" onClick={onSecondary}>
                 {secondaryLabel}
-              </button>
+              </Button>
             ) : null}
-            <button
+            <Button
               type="button"
-              className={`confirm-btn ${danger ? 'danger' : 'primary'}`}
+              variant={danger ? 'destructive' : 'default'}
               onClick={onConfirm}
             >
               {confirmLabel}
-            </button>
+            </Button>
           </div>
         </div>
       </div>

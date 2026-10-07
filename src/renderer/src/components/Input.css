@@ -1,0 +1,76 @@
+/* Pawn-native Input + Textarea — visual spec: design/v3-component-specs.md §2–§3. */
+
+.pawn-input,
+.pawn-textarea {
+  width: 100%;
+  min-width: 0;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: var(--text-ui-base);
+  outline: none;
+  transition:
+    background-color var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast);
+}
+
+.pawn-input::placeholder,
+.pawn-textarea::placeholder {
+  color: var(--text-muted);
+}
+
+.pawn-input:hover,
+.pawn-textarea:hover {
+  border-color: var(--border-strong);
+}
+
+.pawn-input:focus-visible,
+.pawn-textarea:focus-visible {
+  border-color: var(--border-strong);
+}
+
+.pawn-input:disabled,
+.pawn-textarea:disabled {
+  pointer-events: none;
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pawn-input[aria-invalid='true'],
+.pawn-textarea[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.pawn-input-xs {
+  height: 20px;
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-xs);
+}
+
+.pawn-input-sm {
+  height: 24px;
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.pawn-input-default {
+  height: 28px;
+  padding: 2px var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.pawn-input-lg {
+  height: 32px;
+  padding: 6px var(--space-md);
+  border-radius: var(--radius-md);
+}
+
+.pawn-textarea {
+  min-height: 64px;
+  padding: var(--space-sm);
+  border-radius: var(--radius-sm);
+  line-height: 1.5;
+  resize: none;
+}

@@ -1,0 +1,80 @@
+/* Pawn-native Checkbox (native input + SVG box) — visual spec: design/v3-component-specs.md §11. */
+
+.pawn-checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  cursor: pointer;
+  user-select: none;
+}
+
+.pawn-checkbox-native {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pawn-checkbox-box {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xs);
+  background: var(--bg-input);
+  color: var(--on-primary);
+  transition:
+    background-color var(--dur-fast),
+    border-color var(--dur-fast);
+}
+
+.pawn-checkbox-label:hover .pawn-checkbox-box {
+  border-color: var(--border-strong);
+}
+
+.pawn-checkbox-native:checked + .pawn-checkbox-box {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.pawn-checkbox-native:focus-visible + .pawn-checkbox-box {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.pawn-checkbox-native:disabled ~ .pawn-checkbox-box,
+.pawn-checkbox-native:disabled ~ .pawn-checkbox-text {
+  opacity: 0.5;
+}
+
+.pawn-checkbox-native:disabled ~ .pawn-checkbox-label,
+.pawn-checkbox-label:has(.pawn-checkbox-native:disabled) {
+  cursor: not-allowed;
+}
+
+.pawn-checkbox-check,
+.pawn-checkbox-minus {
+  display: none;
+}
+
+.pawn-checkbox-native:checked + .pawn-checkbox-box .pawn-checkbox-check {
+  display: block;
+}
+
+.pawn-checkbox-native:indeterminate + .pawn-checkbox-box {
+  border-color: var(--primary);
+  background: var(--primary);
+}
+
+.pawn-checkbox-native:indeterminate + .pawn-checkbox-box .pawn-checkbox-minus {
+  display: block;
+}
+
+.pawn-checkbox-text {
+  font-size: var(--text-ui-base);
+  color: var(--text-primary);
+}

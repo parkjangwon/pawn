@@ -1,0 +1,17 @@
+/* Pawn-native Separator — visual spec: design/v3-component-specs.md §12. */
+
+.pawn-separator {
+  flex-shrink: 0;
+  border: none;
+  background: var(--border-color);
+}
+
+.pawn-separator-horizontal {
+  height: 1px;
+  width: 100%;
+}
+
+.pawn-separator-vertical {
+  width: 1px;
+  align-self: stretch;
+}

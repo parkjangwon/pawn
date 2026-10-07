@@ -1,0 +1,91 @@
+/* Pawn-native Dialog — visual spec: design/v3-component-specs.md §5. */
+
+.pawn-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: pawn-dialog-fade var(--dur-instant) var(--ease-out-soft);
+}
+
+.pawn-dialog {
+  position: relative;
+  display: grid;
+  gap: var(--space-lg);
+  width: calc(100% - 2rem);
+  max-width: 512px;
+  max-height: calc(100% - 2rem);
+  overflow-y: auto;
+  padding: var(--space-lg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-xl);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: var(--text-ui-base);
+  animation: pawn-dialog-fade var(--dur-instant) var(--ease-out-soft);
+}
+
+.pawn-dialog-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding-right: var(--space-xl);
+}
+
+.pawn-dialog-title {
+  font-size: var(--text-ui-base);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pawn-dialog-desc {
+  font-size: var(--text-ui-base);
+  color: var(--text-secondary);
+}
+
+.pawn-dialog-desc a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.pawn-dialog-footer {
+  display: flex;
+  flex-direction: row;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+}
+
+.pawn-dialog-close {
+  position: absolute;
+  top: var(--space-lg);
+  right: var(--space-lg);
+}
+
+@keyframes pawn-dialog-fade {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .pawn-dialog-footer {
+    flex-direction: column-reverse;
+    align-items: stretch;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pawn-dialog-overlay,
+  .pawn-dialog {
+    animation: none;
+  }
+}

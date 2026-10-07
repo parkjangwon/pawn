@@ -1,0 +1,61 @@
+/* Pawn-native Card — visual spec: design/v3-component-specs.md §4. */
+
+.pawn-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-lg);
+  overflow: hidden;
+  padding: var(--space-lg) 0;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  background: var(--bg-elevated);
+  color: var(--text-primary);
+  font-size: var(--text-ui-base);
+}
+
+.pawn-card-sm {
+  gap: var(--space-md);
+  padding: var(--space-md) 0;
+}
+
+.pawn-card-header {
+  display: grid;
+  gap: var(--space-xs);
+  padding: 0 var(--space-lg);
+}
+
+.pawn-card-sm .pawn-card-header {
+  padding: 0 var(--space-md);
+}
+
+.pawn-card-title {
+  font-size: var(--text-ui-base);
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pawn-card-desc {
+  font-size: var(--text-ui-base);
+  color: var(--text-secondary);
+}
+
+.pawn-card-action {
+  margin-left: auto;
+  align-self: flex-start;
+}
+
+.pawn-card-content,
+.pawn-card-footer {
+  padding: 0 var(--space-lg);
+}
+
+.pawn-card-sm .pawn-card-content,
+.pawn-card-sm .pawn-card-footer {
+  padding: 0 var(--space-md);
+}
+
+.pawn-card-footer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}

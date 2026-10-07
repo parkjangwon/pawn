@@ -1,0 +1,80 @@
+/* Pawn-native Select (styled native <select>) — visual spec: design/v3-component-specs.md §10. */
+
+.pawn-select {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: var(--text-primary);
+}
+
+.pawn-select select {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--border-color);
+  background: var(--bg-input);
+  color: inherit;
+  font-family: inherit;
+  font-size: var(--text-ui-base);
+  outline: none;
+  cursor: pointer;
+  transition:
+    background-color var(--dur-fast),
+    border-color var(--dur-fast);
+}
+
+.pawn-select select:hover {
+  border-color: var(--border-strong);
+}
+
+.pawn-select select:focus-visible {
+  border-color: var(--border-strong);
+}
+
+.pawn-select select:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pawn-select select[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.pawn-select-xs select {
+  height: 20px;
+  padding-left: var(--space-sm);
+  padding-right: var(--space-xl);
+  border-radius: var(--radius-xs);
+}
+
+.pawn-select-sm select {
+  height: 24px;
+  padding-left: var(--space-sm);
+  padding-right: var(--space-xl);
+  border-radius: var(--radius-sm);
+}
+
+.pawn-select-default select {
+  height: 28px;
+  padding-left: var(--space-sm);
+  padding-right: var(--space-xl);
+  border-radius: var(--radius-sm);
+}
+
+.pawn-select-lg select {
+  height: 32px;
+  padding-left: var(--space-md);
+  padding-right: 28px;
+  border-radius: var(--radius-md);
+}
+
+.pawn-select-chevron {
+  position: absolute;
+  right: var(--space-sm);
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.pawn-select-lg .pawn-select-chevron {
+  width: 16px;
+  height: 16px;
+}

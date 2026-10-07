@@ -1,0 +1,160 @@
+/* Pawn-native Button — visual spec: design/v3-component-specs.md §1 (ZCode button homage). */
+
+.pawn-btn {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-xs);
+  border: 1px solid transparent;
+  background-clip: padding-box;
+  white-space: nowrap;
+  user-select: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: var(--text-ui-base);
+  line-height: 1.5;
+  transition:
+    background-color var(--dur-fast),
+    border-color var(--dur-fast),
+    color var(--dur-fast);
+}
+
+.pawn-btn:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.pawn-btn svg {
+  pointer-events: none;
+  flex-shrink: 0;
+}
+
+/* sizes: heights 20/24/28/32, icon squares match */
+.pawn-btn-xs {
+  height: 20px;
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-xs);
+}
+
+.pawn-btn-sm {
+  height: 24px;
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.pawn-btn-default {
+  height: 28px;
+  padding: 0 var(--space-sm);
+  border-radius: var(--radius-sm);
+}
+
+.pawn-btn-lg {
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--radius-md);
+}
+
+.pawn-btn-icon,
+.pawn-btn-icon-md {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+}
+
+.pawn-btn-icon-md {
+  border-radius: var(--radius-md);
+}
+
+.pawn-btn-icon-xs {
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border-radius: var(--radius-xs);
+}
+
+.pawn-btn-icon-sm {
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border-radius: var(--radius-sm);
+}
+
+.pawn-btn-icon-lg {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: var(--radius-md);
+}
+
+/* variants */
+.pawn-btn-default {
+  background: var(--primary);
+  color: var(--on-primary);
+}
+
+.pawn-btn-default:hover {
+  background: color-mix(in srgb, var(--primary) 80%, transparent);
+}
+
+.pawn-btn-outline {
+  border-color: var(--border-color);
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.pawn-btn-outline:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.pawn-btn-secondary {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.pawn-btn-secondary:hover {
+  background: color-mix(in srgb, var(--bg-active) 80%, transparent);
+}
+
+.pawn-btn-ghost {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.pawn-btn-ghost:hover {
+  background: var(--bg-hover);
+}
+
+.pawn-btn-destructive {
+  background: var(--danger);
+  border-color: var(--danger);
+  color: #ffffff;
+}
+
+.pawn-btn-destructive:hover {
+  background: color-mix(in srgb, var(--danger) 90%, transparent);
+}
+
+.pawn-btn-warning {
+  background: var(--warning);
+  border-color: var(--warning);
+  color: #ffffff;
+}
+
+.pawn-btn-warning:hover {
+  background: color-mix(in srgb, var(--warning) 90%, transparent);
+}
+
+.pawn-btn-link {
+  height: auto;
+  padding: 0;
+  background: transparent;
+  color: var(--primary);
+  text-underline-offset: 4px;
+}
+
+.pawn-btn-link:hover {
+  text-decoration: underline;
+}

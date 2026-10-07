@@ -1,0 +1,59 @@
+/* Pawn-native Switch — visual spec: design/v3-component-specs.md §8. */
+
+.pawn-switch {
+  position: relative;
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  padding: 1px;
+  border: none;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primary) 30%, transparent);
+  cursor: pointer;
+  transition: background-color var(--dur-fast);
+}
+
+.pawn-switch-default {
+  width: 32px;
+  height: 18px;
+}
+
+.pawn-switch-sm {
+  width: 28px;
+  height: 16px;
+}
+
+.pawn-switch[data-state='checked'] {
+  background: var(--primary);
+}
+
+.pawn-switch:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.pawn-switch-thumb {
+  display: block;
+  border-radius: 999px;
+  background: var(--on-primary);
+  pointer-events: none;
+  transition: transform var(--dur-fast);
+}
+
+.pawn-switch-default .pawn-switch-thumb {
+  width: 16px;
+  height: 16px;
+}
+
+.pawn-switch-sm .pawn-switch-thumb {
+  width: 14px;
+  height: 14px;
+}
+
+.pawn-switch-default[data-state='checked'] .pawn-switch-thumb {
+  transform: translateX(14px);
+}
+
+.pawn-switch-sm[data-state='checked'] .pawn-switch-thumb {
+  transform: translateX(12px);
+}
