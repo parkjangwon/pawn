@@ -1120,8 +1120,7 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 /* Select & Inputs */
-.settings-content select,
-.settings-select {
+.settings-content select {
   padding: var(--space-6) 12px;
   border: 1px solid var(--control-border, var(--border-color));
   border-radius: var(--radius-sm);
@@ -1134,13 +1133,11 @@ body.resizing-sidebar .settings-resizer::after {
   transition: border-color var(--dur-fast) var(--ease-out-soft);
 }
 
-.settings-content select:focus,
-.settings-select:focus {
+.settings-content select:focus {
   border-color: var(--accent);
 }
 
 .app.dark .settings-content select,
-.app.dark .settings-select,
 .app.dark .add-form select,
 .app.dark .add-form input,
 .app.dark .add-form textarea,
@@ -1151,8 +1148,7 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--text-primary);
 }
 
-.app.dark .settings-content select option,
-.app.dark .settings-select option {
+.app.dark .settings-content select option {
   background: var(--bg-input);
   color: var(--text-primary);
 }

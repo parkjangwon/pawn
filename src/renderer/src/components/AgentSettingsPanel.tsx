@@ -196,7 +196,6 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
             <span className="settings-row-desc">{'Smart sends core coding tools always and loads browser, computer, account (GitHub/GitLab/Google/CodeCommit) and app tools only when a chat needs them — about half the tool tokens per request. All sends every tool.'}</span>
           </div>
           <Select
-            className="settings-select"
             aria-label={'Tool loading'}
             value={toolLoading}
             onChange={(e) => setToolLoading(e.target.value === 'all' ? 'all' : 'smart')}
