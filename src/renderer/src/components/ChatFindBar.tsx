@@ -3,6 +3,7 @@ import { tx } from '../i18n'
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import type { Message } from '../stores/app'
 import { stripDisplayImages } from '../utils/attachments'
+import Tooltip from './Tooltip'
 import {
   clearFindHighlights,
   collectFindRanges,
@@ -183,35 +184,38 @@ export default function ChatFindBar({
         >
           {counter}
         </span>
-        <button
-          type="button"
-          className="chat-find-btn"
-          onClick={() => step('prev')}
-          disabled={total === 0}
-          aria-label={'Previous match (Shift+Enter)'}
-          title={'Previous match (Shift+Enter)'}
-        >
-          <ChevronUp size={14} aria-hidden />
-        </button>
-        <button
-          type="button"
-          className="chat-find-btn"
-          onClick={() => step('next')}
-          disabled={total === 0}
-          aria-label={'Next match (Enter)'}
-          title={'Next match (Enter)'}
-        >
-          <ChevronDown size={14} aria-hidden />
-        </button>
-        <button
-          type="button"
-          className="chat-find-btn"
-          onClick={onClose}
-          aria-label={'Close (Esc)'}
-          title={'Close (Esc)'}
-        >
-          <X size={14} aria-hidden />
-        </button>
+        <Tooltip label={'Previous match'} shortcut={'Shift+Enter'} placement="bottom" disabled={total === 0}>
+          <button
+            type="button"
+            className="chat-find-btn"
+            onClick={() => step('prev')}
+            disabled={total === 0}
+            aria-label={'Previous match (Shift+Enter)'}
+          >
+            <ChevronUp size={14} aria-hidden />
+          </button>
+        </Tooltip>
+        <Tooltip label={'Next match'} shortcut={'Enter'} placement="bottom" disabled={total === 0}>
+          <button
+            type="button"
+            className="chat-find-btn"
+            onClick={() => step('next')}
+            disabled={total === 0}
+            aria-label={'Next match (Enter)'}
+          >
+            <ChevronDown size={14} aria-hidden />
+          </button>
+        </Tooltip>
+        <Tooltip label={'Close'} shortcut={'Esc'} placement="bottom">
+          <button
+            type="button"
+            className="chat-find-btn"
+            onClick={onClose}
+            aria-label={'Close (Esc)'}
+          >
+            <X size={14} aria-hidden />
+          </button>
+        </Tooltip>
       </div>
       {earlier > 0 && (
         <div className="chat-find-earlier">

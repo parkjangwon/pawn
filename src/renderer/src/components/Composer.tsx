@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import TriggerMenu, { type TriggerItem } from './TriggerMenu'
 import GitSummaryChip from './GitSummaryChip'
+import Tooltip from './Tooltip'
 import { useProviderStore } from '../stores/provider'
 import { useRecordingStore } from '../stores/recording'
 import { previewVisionTarget } from '../agent/router'
@@ -628,16 +629,17 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                         </button>
                       </div>
                     )}
-                    <button
-                      type="button"
-                      className="send-btn"
-                      onClick={() => onSend()}
-                      disabled={noProviders || (!input.trim() && attachments.length === 0)}
-                      title={'Send'}
-                      aria-label={'Send'}
-                    >
-                      <ArrowUp size={16} />
-                    </button>
+                    <Tooltip label={'Send'} shortcut={'Enter'} placement="top">
+                      <button
+                        type="button"
+                        className="send-btn"
+                        onClick={() => onSend()}
+                        disabled={noProviders || (!input.trim() && attachments.length === 0)}
+                        aria-label={'Send'}
+                      >
+                        <ArrowUp size={16} />
+                      </button>
+                    </Tooltip>
                   </>
                 )}
               </div>

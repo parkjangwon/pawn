@@ -330,15 +330,16 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
 
       {/* Primary action: New Session */}
       <div className="sidebar-actions">
-        <button
-          type="button"
-          className="sidebar-action-btn"
-          onClick={handleNewSession}
-          title={`${'New chat'} (${formatCombo(keybindings['new-session'])})`}
-        >
-          <Pencil size={16} aria-hidden />
-          <span>{'New chat'}</span>
-        </button>
+        <Tooltip label={'New chat'} shortcut={formatCombo(keybindings['new-session'])} placement="bottom">
+          <button
+            type="button"
+            className="sidebar-action-btn"
+            onClick={handleNewSession}
+          >
+            <Pencil size={16} aria-hidden />
+            <span>{'New chat'}</span>
+          </button>
+        </Tooltip>
         <button
           type="button"
           className={`sidebar-action-btn ${mainView === 'automations' ? 'active' : ''}`}
