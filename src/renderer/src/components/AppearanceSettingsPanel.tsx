@@ -25,6 +25,16 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
             <button
               type="button"
               role="radio"
+              aria-checked={theme === 'system'}
+              className={`theme-segment-btn ${theme === 'system' ? 'active' : ''}`}
+              onClick={() => set('system')}
+            >
+              <Monitor size={14} />
+              <span>{'System'}</span>
+            </button>
+            <button
+              type="button"
+              role="radio"
               aria-checked={theme === 'light'}
               className={`theme-segment-btn ${theme === 'light' ? 'active' : ''}`}
               onClick={() => set('light')}
@@ -41,16 +51,6 @@ export default function AppearanceSettingsPanel({ state }: { state: SettingsStat
             >
               <Moon size={14} />
               <span>{'Dark'}</span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              aria-checked={theme === 'system'}
-              className={`theme-segment-btn ${theme === 'system' ? 'active' : ''}`}
-              onClick={() => set('system')}
-            >
-              <Monitor size={14} />
-              <span>{'System'}</span>
             </button>
           </div>
         </div>

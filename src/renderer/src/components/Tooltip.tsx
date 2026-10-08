@@ -156,7 +156,7 @@ export default function Tooltip({
         createPortal(
           <div
             ref={tooltipRef}
-            className={`app-tooltip ${coords.top === -9999 ? 'measuring' : ''}`}
+            className={`app-tooltip ${coords.top === -9999 ? 'measuring' : ''} ${typeof document !== 'undefined' && document.querySelector('.app.dark') ? 'dark' : ''}`}
             style={{
               top: `${coords.top}px`,
               left: `${coords.left}px`
