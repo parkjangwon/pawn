@@ -10,6 +10,7 @@
 .pawn-select select {
   appearance: none;
   -webkit-appearance: none;
+  width: 100%;
   border: 1px solid var(--border-color);
   background: var(--bg-input);
   color: inherit;
