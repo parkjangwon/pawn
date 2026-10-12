@@ -30,8 +30,7 @@ export const KEYBINDING_IDS: KeyBindingId[] = [
 
 export const DEFAULT_KEYBINDINGS: Record<KeyBindingId, string> = {
   'toggle-right-panel': 'Alt+Meta+B',
-  // Control+` — same muscle memory as VS Code / most IDE terminal panels.
-  'toggle-terminal': 'Ctrl+`',
+  'toggle-terminal': 'Meta+J',
   'toggle-sidebar': 'Meta+B',
   'open-command-palette': 'Meta+K',
   'open-settings': 'Meta+,',

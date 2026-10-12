@@ -40,7 +40,7 @@ let forwardingPaused = false
 // Keep in sync with the renderer's DEFAULT_KEYBINDINGS; config overrides win.
 const DEFAULT_KEYBINDINGS: Record<string, string> = {
   'toggle-right-panel': 'Alt+Meta+B',
-  'toggle-terminal': 'Ctrl+`',
+  'toggle-terminal': 'Meta+J',
   'toggle-sidebar': 'Meta+B',
   'open-command-palette': 'Meta+K',
   'open-settings': 'Meta+,',

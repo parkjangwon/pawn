@@ -42,16 +42,16 @@ describe('BottomTerminal', () => {
     expect(container.querySelector('.bottom-terminal')?.className).toContain('open')
   })
 
-  it('toggles with Ctrl+` in browser mode', () => {
+  it('toggles with Meta+J in browser mode', () => {
     ;(window as any).api.platform = 'browser'
     const { container } = render(<BottomTerminal />)
     expect(container.querySelector('.bottom-terminal')?.getAttribute('style')).toContain('display: none')
 
-    fireEvent.keyDown(window, { key: '`', ctrlKey: true, code: 'Backquote' })
+    fireEvent.keyDown(window, { key: 'j', metaKey: true, code: 'KeyJ' })
     expect(container.querySelector('.bottom-terminal')?.className).toContain('open')
     expect(screen.getByText('TERMINAL_VIEW')).toBeInTheDocument()
 
-    fireEvent.keyDown(window, { key: '`', ctrlKey: true, code: 'Backquote' })
+    fireEvent.keyDown(window, { key: 'j', metaKey: true, code: 'KeyJ' })
     expect(container.querySelector('.bottom-terminal')?.className).toContain('closing')
   })
 
