@@ -36,7 +36,9 @@ function artifactName(version, platform, arch) {
     case 'win32':
       return `pawn-${version}-${arch === 'arm64' ? 'arm64' : 'x64'}-setup.exe`
     case 'linux':
-      return `pawn-${version}-${arch === 'arm64' ? 'arm64' : 'x64'}.AppImage`
+      // electron-builder names AppImages with the Go-style arch (x86_64), not
+      // process.arch's x64 — mirrors the actual release assets.
+      return `pawn-${version}-${arch === 'arm64' ? 'arm64' : 'x86_64'}.AppImage`
     default:
       return null
   }
