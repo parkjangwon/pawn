@@ -8,13 +8,14 @@ import type { ITheme } from '@xterm/xterm'
  */
 
 const TOKEN_FALLBACKS = {
-  background: ['--bg-primary', '#161616'],
+  background: ['--bg-secondary', '#161616'],
   foreground: ['--text-primary', '#d4d4d4'],
   cursor: ['--text-primary', '#d4d4d4'],
   selectionBackground: ['--text-muted', 'rgba(115, 115, 115, 0.35)']
 } satisfies Partial<Record<keyof ITheme, readonly [string, string]>>
 
-const ANSI: ITheme = {
+// Palette for the dark canvas (#161616): brighter ANSI hues.
+const ANSI_DARK: ITheme = {
   black: '#1e1e1e',
   red: '#e34c4c',
   green: '#4caf50',
@@ -33,8 +34,35 @@ const ANSI: ITheme = {
   brightWhite: '#ffffff'
 }
 
+// Palette for the light canvas (#ffffff): darkened ANSI hues so output
+// written in each color stays readable without the dark-theme glow.
+const ANSI_LIGHT: ITheme = {
+  black: '#262626',
+  red: '#c62828',
+  green: '#1e8a3e',
+  yellow: '#9a6b00',
+  blue: '#1565c0',
+  magenta: '#8e24aa',
+  cyan: '#00838f',
+  white: '#8a8a8a',
+  brightBlack: '#6b6b6b',
+  brightRed: '#c62828',
+  brightGreen: '#1e8a3e',
+  brightYellow: '#9a6b00',
+  brightBlue: '#1565c0',
+  brightMagenta: '#8e24aa',
+  brightCyan: '#00838f',
+  brightWhite: '#a5a5a5'
+}
+
 let probeEl: HTMLSpanElement | null = null
 let normalizeCtx: CanvasRenderingContext2D | null | undefined
+
+/** Element whose class list scopes pawn tokens (.app.light / .app.dark). */
+export function getThemeScopeElement(): Element | null {
+  if (typeof document === 'undefined') return null
+  return document.querySelector('.app') ?? document.documentElement
+}
 
 function getProbe(): HTMLSpanElement | null {
   if (typeof document === 'undefined') return null
@@ -82,13 +110,14 @@ function normalizeCssColor(raw: string, fallback: string): string {
 
 /** Read pawn tokens and return an xterm-parseable theme. */
 export function readPawnTerminalTheme(): ITheme {
-  const rootStyle =
-    typeof document === 'undefined' ? null : getComputedStyle(document.documentElement)
+  const scope = getThemeScopeElement()
+  const rootStyle = scope ? getComputedStyle(scope) : null
   const themed = Object.fromEntries(
     Object.entries(TOKEN_FALLBACKS).map(([key, [token, fallback]]) => {
       const raw = rootStyle?.getPropertyValue(token).trim() || fallback
       return [key, normalizeCssColor(raw, fallback)]
     })
   ) as ITheme
-  return { ...themed, ...ANSI }
+  const ansi = scope?.classList.contains('light') ? ANSI_LIGHT : ANSI_DARK
+  return { ...themed, ...ansi }
 }

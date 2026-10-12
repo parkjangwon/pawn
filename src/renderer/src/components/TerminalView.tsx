@@ -6,7 +6,7 @@ import { Terminal } from '@xterm/xterm'
 import type { ILink } from '@xterm/xterm'
 import { FitAddon } from '@xterm/addon-fit'
 import '@xterm/xterm/css/xterm.css'
-import { readPawnTerminalTheme } from './terminalTheme'
+import { readPawnTerminalTheme, getThemeScopeElement } from './terminalTheme'
 import { getHttpLinksForTerminalBufferLine, isHttpTerminalUrl } from './terminalLinks'
 
 interface TerminalViewProps {
@@ -71,7 +71,11 @@ export default function TerminalView({ projectPath }: TerminalViewProps): React.
       const themeObserver = new MutationObserver(() => {
         if (termRef.current) termRef.current.options.theme = readPawnTerminalTheme()
       })
-      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] })
+      // Theme classes (.light/.dark) live on the .app element, not <html>.
+      const themeScope = getThemeScopeElement()
+      if (themeScope) {
+        themeObserver.observe(themeScope, { attributes: true, attributeFilter: ['class'] })
+      }
       const linkProvider = term.registerLinkProvider({
         provideLinks(bufferLineNumber, callback) {
           const links = getHttpLinksForTerminalBufferLine(
