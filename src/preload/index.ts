@@ -283,7 +283,8 @@ const api = {
   config: {
     load: () => ipcRenderer.invoke('config:load'),
     save: (config: unknown) => ipcRenderer.invoke('config:save', config),
-    getPaths: () => ipcRenderer.invoke('config:getPaths')
+    getPaths: () => ipcRenderer.invoke('config:getPaths'),
+    secretStorageStatus: () => ipcRenderer.invoke('config:secretStorageStatus')
   },
 
   // Database (SQLite)
@@ -521,7 +522,8 @@ const api = {
       ipcRenderer.invoke('tests:affected', root, files, opts || {})
   },
   net: {
-    probePort: (port: number, host?: string) => ipcRenderer.invoke('net:probePort', port, host)
+    probePort: (port: number, host?: string) => ipcRenderer.invoke('net:probePort', port, host),
+    probe: (url: string) => ipcRenderer.invoke('net:probe', url)
   },
   /** Full tool outputs offloaded out of the context window. */
   outputs: {

@@ -208,6 +208,17 @@ export function WorkedFor({ durationMs }: { durationMs?: number }): React.JSX.El
   )
 }
 
+function ProviderProgressLine({ sessionId }: { sessionId?: string | null }): React.JSX.Element | null {
+  const progress = useChatStore((s) => (sessionId ? s.providerProgress?.[sessionId] : undefined))
+  if (!progress) return null
+  const label = progress.phase === 'retrying'
+    ? `Retrying ${progress.attempt}/${progress.max}…`
+    : 'Connecting…'
+  return (
+    <div className="message-provider-progress" role="status" aria-live="polite">{label}</div>
+  )
+}
+
 const MessageRow = memo(function MessageRow({
   msg,
   animateIn,
@@ -287,6 +298,7 @@ const MessageRow = memo(function MessageRow({
         </div>
       )}
       <div className="message-body">
+        {isStreamingTail ? <ProviderProgressLine sessionId={sessionId} /> : null}
         {msg.role === 'assistant' && thinking ? (
           <ThinkingBlock text={thinking} live={Boolean(liveThinking)} />
         ) : null}
@@ -516,6 +528,7 @@ export default function MessageList({
           {!turnHasAssistant && <div className="message-role">{'Assistant'}</div>}
           <ModWaitingLine />
           <div className="message-content streaming">
+            <ProviderProgressLine sessionId={sessionId} />
             <span className="cursor-blink">▍</span>
           </div>
         </div>

@@ -22,6 +22,7 @@ import {
 } from './chatState'
 import { loadTranscript, persistTranscript, systemError } from './chatTranscript'
 import { agentLoop, processQueue } from './chatLoop'
+import type { FetchProgress } from '../agent/llmRetry'
 
 // Re-exports so existing import sites keep working after the split.
 export {
@@ -51,6 +52,8 @@ export interface ChatState {
   streamingSessionId: string | null
   /** All sessions currently running an agent turn (multi-session). */
   streamingSessionIds: string[]
+  /** Provider connect/retry line, per session. Gone on the first token or when the turn ends. */
+  providerProgress: Record<string, FetchProgress>
   /** Flat queue for UI; also keyed per session via sessionQueues. */
   queue: QueueItem[]
   sendMessage: (projectId: string, sessionId: string, content: string, mode: SendMode, attachments?: ChatAttachment[]) => void
@@ -69,6 +72,8 @@ export interface ChatState {
   /** Stop one session, or every session when omitted. */
   stopStreaming: (sessionId?: string) => void
   isSessionStreaming: (sessionId: string) => boolean
+  setProviderProgress: (sessionId: string, progress: FetchProgress) => void
+  clearProviderProgress: (sessionId: string) => void
   /** After cold start: resume incomplete turns from durable checkpoints. */
   resumeInterruptedTurns: () => Promise<number>
   /**
@@ -83,9 +88,21 @@ export const useChatStore = create<ChatState>((set, get) => ({
   isStreaming: false,
   streamingSessionId: null,
   streamingSessionIds: [],
+  providerProgress: {},
   queue: [],
 
   isSessionStreaming: (sessionId) => get().streamingSessionIds.includes(sessionId),
+
+  setProviderProgress: (sessionId, progress) => set((s) => ({
+    providerProgress: { ...s.providerProgress, [sessionId]: progress }
+  })),
+
+  clearProviderProgress: (sessionId) => set((s) => {
+    if (!s.providerProgress?.[sessionId]) return s
+    const providerProgress = { ...s.providerProgress }
+    delete providerProgress[sessionId]
+    return { providerProgress }
+  }),
 
   sendMessage: (projectId, sessionId, content, mode, attachments) => {
     // Refresh measured pricing from recent usage (throttled inside the router)
@@ -258,7 +275,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     void window.api.shell?.killAll?.()?.catch?.(() => {})
     void window.api.browser?.hideCursor?.()?.catch?.(() => {})
     usePermissionStore.getState().denyAll()
-    set({ isStreaming: false, streamingSessionId: null, streamingSessionIds: [] })
+    set({ isStreaming: false, streamingSessionId: null, streamingSessionIds: [], providerProgress: {} })
     window.api.setStreaming?.(false)
     processQueue(set, get)
   },

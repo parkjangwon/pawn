@@ -248,6 +248,14 @@ pawn-headless eval [--tasks ids,tags] [--modes a,b] [--models id,id]
 pawn-headless tasks
 ```
 
+Exit codes:
+
+| Code | Meaning |
+|---|---|
+| `0` | `run` finished with `ok: true`; `eval` passed every task; `help` / `tasks`. |
+| `1` | `run` finished with `ok: false` (provider error card, agent error, or timeout; `error` holds the cause and fix with keys masked); `eval` had a failing task; or an uncaught exception. |
+| `2` | Usage or setup problem before any turn ran: no usable provider (no key), empty `run` prompt, no `eval` tasks matched, or unknown command. |
+
 `--permission deny` maps to `ask`. Config default is `~/.pawn/config.toml`. Keys: `PAWN_API_KEY_<PROVIDER_ID>` or `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `DEEPSEEK_API_KEY` / `OPENROUTER_API_KEY` / `GEMINI_API_KEY`.
 
 ## 15. Security invariants

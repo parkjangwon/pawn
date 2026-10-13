@@ -147,7 +147,8 @@ if (typeof window !== 'undefined' && !window.api) {
         await fetch('/api/config/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) })
         return { ok: true }
       },
-      getPaths: async () => ({ configPath: '', dataDir: '' })
+      getPaths: async () => ({ configPath: '', dataDir: '' }),
+      secretStorageStatus: async () => ({ encrypted: true })
     },
 
     // Database (SQLite via HTTP)
@@ -241,6 +242,10 @@ if (typeof window !== 'undefined' && !window.api) {
       askPermission: async () => ({ ok: true }),
       listen: async () => ({ ok: true, events: [] }),
       onEvent: () => () => {}
+    },
+
+    net: {
+      probe: async () => ({ ok: false })
     },
 
     // Preview only: SSH hosts live in the desktop main process.
