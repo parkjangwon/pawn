@@ -63,6 +63,8 @@ interface ModsUiState {
   updatePaneTree: (id: string, tree: unknown) => void
   closePane: (id: string) => void
   clearSessionUi: () => void
+  /** Chat switch: drop per-chat chrome but keep what mods set for the project (status, bands). */
+  clearChatUi: () => void
 }
 
 let toastSeq = 0
@@ -124,6 +126,15 @@ export const useModsUiStore = create<ModsUiState>((set, get) => ({
       panes: get().panes.map((p) => (p.id === id ? { ...p, tree } : p))
     }),
   closePane: (id) => set({ panes: get().panes.filter((p) => p.id !== id) }),
+  clearChatUi: () =>
+    set({
+      toasts: [],
+      notices: [],
+      timeline: [],
+      logs: [],
+      panes: [],
+      renderGeneration: get().renderGeneration + 1
+    }),
   clearSessionUi: () =>
     set({
       spinnerSuffix: '',

@@ -7,6 +7,9 @@ export interface ModsApiHost {
   pluginRoot: string
   sessionId: () => string
   cwd: () => string
+  stateGet: (key: string) => unknown
+  stateSet: (key: string, value: unknown) => void
+  stateDelete: (key: string) => void
   getCommands: () => ModCommandReg[]
   registerCommand: (cmd: ModCommandReg) => void
   getTools: () => ModToolReg[]
@@ -125,6 +128,11 @@ export function buildModsApi(host: ModsApiHost): ModsApi {
       cwd: () => host.cwd(),
       messages: () => host.messages(),
       usage: () => ({ context: host.contextUsage() })
+    },
+    state: {
+      get: (key) => host.stateGet(key),
+      set: (key, value) => host.stateSet(key, value),
+      delete: (key) => host.stateDelete(key)
     },
     fs: {
       read: async (path) => {
