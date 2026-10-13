@@ -9,8 +9,9 @@
  * provider messages.
  */
 
-import { tx } from '../i18n/strings'
+import { EN, tx } from '../i18n/strings'
 import { redactSecrets } from './redactSecrets'
+import { summarizeProviderError } from './testProvider'
 
 export type ProviderErrorKind =
   | 'auth'
@@ -153,15 +154,33 @@ export interface ProviderErrorCopy {
   fix: string
 }
 
-export function describeProviderError(info: Pick<ProviderErrorInfo, 'kind' | 'reason'>): ProviderErrorCopy {
+export function describeProviderError(info: Pick<ProviderErrorInfo, 'kind' | 'reason'> & { detail?: string }): ProviderErrorCopy {
   const kind = KINDS.includes(info.kind) ? info.kind : 'generic'
   const reason = info.reason && info.reason in KIND_OF ? info.reason : undefined
+  const titleKey = reason ? `chat.errorCard.title.${reason}` : ''
+  const code = info.detail?.match(/HTTP (\d{3})/)?.[1]
+  const cause = reason ? tx(`chat.errorCard.cause.${reason}`) : ''
   return {
-    title: tx(`chat.errorCard.title${cap(kind)}`),
-    cause: reason ? tx(`chat.errorCard.cause.${reason}`) : '',
+    title: tx(titleKey in EN ? titleKey : `chat.errorCard.title${cap(kind)}`),
+    cause: cause && code ? cause.replace(/\.?$/, ` (HTTP ${code}).`) : cause,
     fix: reason ? tx(`chat.errorCard.fix.${reason}`) : tx(`chat.errorCard.hint${cap(kind)}`)
   }
 }
+
+/**
+ * Settings → Providers "Test connection" failure line:
+ * `Connection failed (401): the API key was rejected. …`
+ */
+export function formatConnectionTestFailure(rawMessage: string): string {
+  const reason = providerErrorReason(rawMessage)
+  const http = rawMessage.match(/HTTP (\d{3})(?::\s*([\s\S]*))?/)
+  const label = http?.[1] ?? rawMessage.match(/\(cause: ([A-Za-z0-9_]+)/)?.[1] ?? (reason === 'timeout' ? 'timeout' : reason && KIND_OF[reason] === 'network' ? 'network' : 'error')
+  // Redact before summarize/truncate so a cut-off key can't slip past the masker.
+  const summary = http ? summarizeProviderError(Number(http[1]), redactSecrets(http[2] ?? '')).replace(/^FAIL: \d{3}(?: — )?/, '') : redactSecrets(rawMessage)
+  const body = reason ? tx(`chat.connTest.${reason}`) : summary.slice(0, 120)
+  return `Connection failed (${label}): ${body}`
+}
+
 
 /** One-paragraph plain-text form for logs and the headless CLI. */
 export function formatProviderError(message: string): string {

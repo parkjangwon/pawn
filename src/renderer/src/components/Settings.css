@@ -2390,3 +2390,5 @@ body.resizing-sidebar .settings-resizer::after {
   margin-top: 0;
   padding-top: var(--space-sm);
 }
+
+.provider-test-line.provider-test-fail { color: var(--danger); font-size: var(--text-ui-sm); }

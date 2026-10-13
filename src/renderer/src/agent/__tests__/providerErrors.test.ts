@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { classifyProviderError, describeProviderError, enrichTransportError, formatProviderError, providerErrorReason } from '../providerErrors'
+import { classifyProviderError, describeProviderError, enrichTransportError, formatConnectionTestFailure, formatProviderError, providerErrorReason } from '../providerErrors'
 
 describe('providerErrorReason', () => {
   const cases: Array<[string, string | null]> = [
@@ -75,8 +75,41 @@ describe('describeProviderError', () => {
     expect(describeProviderError({ kind: 'config', reason: 'setup' }).fix).toContain('Settings → Providers')
     expect(describeProviderError({ kind: 'billing', reason: 'quota' }).fix).toMatch(/credits|billing/)
   })
+  it('shows the real HTTP status, not a hardcoded one', () => {
+    const detail = 'HTTP 400: {"error":{"message":"x is not a valid model ID"}}'
+    const c = describeProviderError(classifyProviderError(detail))
+    expect(c.cause).toBe("The model ID doesn't exist for this provider, or your account can't access it (HTTP 400).")
+    expect(c.cause).not.toContain('404')
+    expect(describeProviderError({ kind: 'auth', reason: 'invalidKey' }).cause).toBe('The API key is invalid, expired, or revoked.')
+  })
+  it('uses its own title for badEndpoint, badPort and setup', () => {
+    expect(describeProviderError({ kind: 'config', reason: 'badEndpoint' }).title).toBe('The provider URL looks wrong')
+    expect(describeProviderError({ kind: 'config', reason: 'badPort' }).title).toBe('The provider URL uses a blocked port')
+    expect(describeProviderError({ kind: 'config', reason: 'setup' }).title).toBe('Add an AI provider to start')
+    expect(describeProviderError({ kind: 'config' }).title).toBe("Pawn isn't set up for this request")
+  })
   it('formats a single line for logs', () => {
     expect(formatProviderError('HTTP 401: x')).toMatch(/^The provider rejected your credentials\. .*Fix: Check or replace the key/)
+  })
+})
+
+describe('formatConnectionTestFailure', () => {
+  it('uses designer copy with the HTTP status', () => {
+    expect(formatConnectionTestFailure('HTTP 401: {"error":"bad"}')).toBe(
+      'Connection failed (401): the API key was rejected. Check or replace the key, then test again.'
+    )
+    expect(formatConnectionTestFailure('timeout')).toMatch(/^Connection failed \(timeout\): /)
+  })
+  it('labels transport failures by cause code', () => {
+    expect(formatConnectionTestFailure('fetch failed (cause: ECONNREFUSED connect ECONNREFUSED 127.0.0.1:1)')).toBe(
+      'Connection failed (ECONNREFUSED): nothing is listening at this URL. Start the server or fix the URL and port, then test again.'
+    )
+  })
+  it('falls back to a redacted, truncated summary for unclassified errors', () => {
+    const key = 'sk-proj-AbCdEf0123456789ghijKLMNOP'
+    const out = formatConnectionTestFailure(`HTTP 400: {"error":{"message":"weird ${key}"}}`)
+    expect(out).toMatch(/^Connection failed \(400\): weird /)
+    expect(out).not.toContain(key)
   })
 })
 
