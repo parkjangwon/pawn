@@ -1,12 +1,37 @@
 /**
- * Encrypt BYOK provider API keys at rest with Electron safeStorage.
+ * Encrypt BYOK provider API keys at rest with an injected OS-keychain cipher.
+ * The Electron main process installs `safeStorage` at startup (src/main/index.ts);
+ * this module stays electron-free so the headless CLI can bundle it. Without a
+ * cipher, keys are stored as-is and `enc:` values decrypt to ''.
  * Stored form: `enc:v1:<base64 ciphertext>`. Plain keys are migrated on next save.
  */
 
-import { safeStorage } from 'electron'
 import type { PawnConfig, ProviderConfig } from './config'
 
 export const ENC_PREFIX = 'enc:v1:'
+
+/** Structural subset of Electron's `safeStorage`. */
+export interface SecretCipher {
+  isEncryptionAvailable(): boolean
+  encryptString(plain: string): Buffer
+  decryptString(encrypted: Buffer): string
+}
+
+const NO_CIPHER: SecretCipher = {
+  isEncryptionAvailable: () => false,
+  encryptString: () => {
+    throw new Error('no secret cipher installed')
+  },
+  decryptString: () => {
+    throw new Error('no secret cipher installed')
+  }
+}
+
+let safeStorage: SecretCipher = NO_CIPHER
+
+export function setSecretCipher(cipher: SecretCipher | null): void {
+  safeStorage = cipher ?? NO_CIPHER
+}
 
 export function encryptApiKey(key: string | undefined): string | undefined {
   if (key == null || key === '') return key

@@ -1,24 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { setSecretCipher } from '../providerSecrets'
+import { fakeCipher } from './fakeCipher'
 
-vi.mock('electron', () => {
-  const store = new Map<string, string>()
-  return {
-    safeStorage: {
-      isEncryptionAvailable: () => true,
-      encryptString: (s: string) => {
-        const id = `x${store.size}`
-        store.set(id, s)
-        return Buffer.from(id, 'utf8')
-      },
-      decryptString: (buf: Buffer) => {
-        const id = buf.toString('utf8')
-        const v = store.get(id)
-        if (v == null) throw new Error('unknown')
-        return v
-      }
-    }
-  }
-})
+setSecretCipher(fakeCipher())
+
 
 import {
   encryptApiKey,
@@ -52,5 +37,18 @@ describe('providerSecrets', () => {
     expect(sealed.providers?.[0].apiKey).toMatch(new RegExp(`^${ENC_PREFIX}`))
     const open = decryptProvidersInConfig(sealed)
     expect(open.providers?.[0].apiKey).toBe('abc')
+  })
+})
+
+describe('providerSecrets without a cipher (headless)', () => {
+  it('stores keys as-is and refuses to surface ciphertext', () => {
+    const sealed = encryptApiKey('sk-sealed-before')
+    setSecretCipher(null)
+    try {
+      expect(encryptApiKey('sk-plain-key')).toBe('sk-plain-key')
+      expect(decryptApiKey(sealed)).toBe('')
+    } finally {
+      setSecretCipher(fakeCipher())
+    }
   })
 })

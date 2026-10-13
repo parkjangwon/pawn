@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, session } from 'electron'
+import { app, BrowserWindow, dialog, safeStorage, session } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { registerAllIpc } from './ipc'
 import { disposeLsp } from './ipc/lsp'
@@ -23,6 +23,7 @@ import { installAppMenu } from './appMenu'
 import { setAppLanguage } from './appLanguage'
 import { loadConfig } from './config'
 import { DEV_CSP, PROD_CSP } from './csp'
+import { setSecretCipher } from './providerSecrets'
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err)
@@ -30,6 +31,8 @@ process.on('uncaughtException', (err) => {
 process.on('unhandledRejection', (reason) => {
   console.error('[main] unhandledRejection:', reason)
 })
+
+setSecretCipher(safeStorage)
 
 // Two instances would open the same SQLite database from separate processes,
 // which can corrupt the WAL; focus the existing window instead.
