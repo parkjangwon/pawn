@@ -141,12 +141,21 @@ describe('agentLoop (hermetic smoke)', () => {
     const set = useChatStore.setState
     const get = useChatStore.getState
     await agentLoop('p1', 's1', 'break', set, get)
-    // A transient failure is retried across MAX_ROUTE_ATTEMPTS before the turn fails.
-    expect(harness.callLLM).toHaveBeenCalledTimes(3)
+    // The router only has one model, so the failed model is not re-run.
+    expect(harness.callLLM).toHaveBeenCalledTimes(1)
     expect(useChatStore.getState().isSessionStreaming('s1')).toBe(false)
     const lastMsg = [...sessionMessages()].reverse().find((m) => m.role === 'assistant')
     expect(lastMsg?.content).toContain('All model attempts failed')
     expect(lastMsg?.content).not.toContain('fallbacks also failed')
+  })
+
+  it('does not re-run an already-failed model when the router returns it again (429)', async () => {
+    seedProvider()
+    harness.callLLM.mockRejectedValue(Object.assign(new Error('HTTP 429: slow down'), { transient: true }))
+    await agentLoop('p1', 's1', 'break', useChatStore.setState, useChatStore.getState)
+    expect(harness.callLLM).toHaveBeenCalledTimes(1)
+    const lastMsg = [...sessionMessages()].reverse().find((m) => m.role === 'assistant')
+    expect(lastMsg?.error?.kind).toBe('rate')
   })
 
   it('classifies the first model error when a later fallback fails differently', async () => {

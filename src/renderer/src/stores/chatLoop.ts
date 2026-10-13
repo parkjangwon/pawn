@@ -656,6 +656,12 @@ export async function agentLoop(
             needsVision: false
           })
         }
+        // Router fell back to an already-failed model (only one enabled): end the
+        // turn so the first error is shown instead of re-running fetchWithRetry.
+        if (decision && excluded.has(decision.key)) {
+          decision = null
+          break
+        }
         if (!decision) break
 
         // Surface why the router picked this model (escalation, fallback,

@@ -375,6 +375,12 @@ export async function runSubagent(
           maxTier,
           harnessMode: parentHarnessMode
         })
+        // Router fell back to an already-failed model (only one enabled): stop
+        // instead of re-running fetchWithRetry on it.
+        if (decision && excluded.has(decision.key)) {
+          decision = null
+          break
+        }
         if (!decision) break
 
         const assistantMsgId = `sub-${runId}-${rounds}-${attempt}`
