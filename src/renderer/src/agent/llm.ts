@@ -532,7 +532,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   armIdleTimer()
   let response: Response
   try {
-    response = await fetchWithRetry(url, headers, body, isBrowser, combinedSignal)
+    response = await fetchWithRetry(url, headers, body, isBrowser, combinedSignal, signal)
   } catch (err) {
     if (timeoutController.signal.aborted) {
       throw markTransient(new Error('Provider request timed out (no response within 90s)'), true)

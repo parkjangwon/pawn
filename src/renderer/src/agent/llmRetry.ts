@@ -5,6 +5,15 @@
  */
 
 import { isDeepSeekRetryableError } from './deepseekCompat'
+import { enrichTransportError } from './providerErrors'
+
+/** Total time fetchWithRetry may spend sleeping between attempts. */
+export const RETRY_WAIT_BUDGET_MS = 20_000
+/** Max single wait honoured from a Retry-After header. */
+export const RETRY_AFTER_CAP_MS = 10_000
+
+const QUOTA_MARKERS =
+  /insufficient_quota|exceeded your current quota|credit balance is too low|insufficient credits|insufficient balance|insufficient_balance|out of credits|billing_not_active|billing hard limit|payment required/i
 
 /**
  * Parse Retry-After header if present. Supports integer seconds and HTTP-date.
@@ -67,22 +76,36 @@ export async function fetchWithRetry(
   headers: Record<string, string>,
   body: Record<string, unknown>,
   isBrowser: boolean,
-  signal: AbortSignal
+  signal: AbortSignal,
+  probeScope?: object
 ): Promise<Response> {
   const payload = JSON.stringify(body)
   let lastError: Error | null = null
+  // Probe only the error we are about to throw. Each probe can block ~5s.
+  const scope = probeScope ?? signal
+  const withProbe = async (err: Error): Promise<Error> => {
+    if (isBrowser) return err
+    const enriched = await enrichTransportError(err.message, url, scope)
+    if (enriched === err.message) return err
+    return markTransient(new Error(enriched, { cause: err }), true)
+  }
 
   // Flag set only when the error is transient (network blip, 429, 5xx).
   // 4xx and parse failures never retry — the same bytes fail forever.
   let retryable = false
   let lastRetryAfterMs: number | null = null
   let isRateLimit = false
+  let waitedMs = 0
 
   for (let attempt = 0; attempt < 3; attempt++) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     if (attempt > 0) {
-      if (!retryable) throw lastError!
-      const delayMs = calculateBackoffDelay(attempt, isRateLimit, lastRetryAfterMs)
+      if (!retryable) throw await withProbe(lastError!)
+      const capped = lastRetryAfterMs && Math.min(lastRetryAfterMs, RETRY_AFTER_CAP_MS)
+      const delayMs = calculateBackoffDelay(attempt, isRateLimit, capped)
+      // Waiting would blow the budget: fail now so the user sees the error card.
+      if (waitedMs + delayMs > RETRY_WAIT_BUDGET_MS) throw await withProbe(lastError!)
+      waitedMs += delayMs
       await new Promise((r) => setTimeout(r, delayMs))
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     }
@@ -107,8 +130,8 @@ export async function fetchWithRetry(
       if (err instanceof DOMException && err.name === 'AbortError') throw err
       if (signal.aborted) throw err
       retryable = true
-      lastError = markTransient(err, true)
-      if (attempt === 2) throw lastError
+      lastError = markTransient(err instanceof Error ? err : new Error(String(err)), true)
+      if (attempt === 2) throw await withProbe(lastError)
       continue
     }
 
@@ -117,6 +140,8 @@ export async function fetchWithRetry(
     const status = response.status
     const text = await response.text().catch(() => '')
     const err = new Error(`HTTP ${status}: ${text.slice(0, 300)}`)
+    // Quota/billing failures arrive as 429 but never recover by waiting.
+    if (status === 402 || QUOTA_MARKERS.test(text)) throw markTransient(err, false)
     const isDsRetry = isDeepSeekRetryableError(status, text)
     if (status === 429 || status >= 500 || isDsRetry) {
       retryable = true

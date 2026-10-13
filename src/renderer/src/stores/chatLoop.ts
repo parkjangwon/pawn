@@ -21,6 +21,7 @@ import {
   checkpointSnapshot, classifyLlmError, currentMessageContent, demoteVisionPayloadsToText, loadTranscript,
   persistTranscript, systemError, ToolLoopCounter, toolResultCap, truncateToolResult
 } from './chatTranscript'
+import { errorTextWithCause, formatAllAttemptsFailed } from '../agent/providerErrors'
 import type { MessageErrorInfo } from './app'
 import { useAppStore } from './app'
 import { useChangeLedger } from './changeLedger'
@@ -117,7 +118,7 @@ export async function agentLoop(
 
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
-    const noProviderError: MessageErrorInfo = { kind: 'generic', detail: '', settingsTarget: 'providers' }
+    const noProviderError: MessageErrorInfo = { kind: 'config', reason: 'setup', detail: '', settingsTarget: 'providers' }
     systemError(projectId, sessionId, 'No provider or model configured. Open Settings → Providers, then Settings → Models.', noProviderError)
     if (epoch === getSessionEpoch(sessionId)) {
       setSessionStreamingFlags(set, get, sessionId, false)
@@ -598,6 +599,9 @@ export async function agentLoop(
       let result: LlmResult | null = null
       let decision: RouteDecision | null = null
       let lastAssistantMsgId: string | null = null
+      // First failure in this round's failover, not the last fallback.
+      let firstFail: { label: string; message: string } | null = null
+      let lastFail: { label: string; message: string } | null = null
 
       let needsVision = transcriptNeedsVision(entries)
       // Read-only tools start while the response is still streaming.
@@ -651,6 +655,12 @@ export async function agentLoop(
             newTurn: round === 1,
             needsVision: false
           })
+        }
+        // Router fell back to an already-failed model (only one enabled): end the
+        // turn so the first error is shown instead of re-running fetchWithRetry.
+        if (decision && excluded.has(decision.key)) {
+          decision = null
+          break
         }
         if (!decision) break
 
@@ -746,7 +756,10 @@ export async function agentLoop(
             if (!streamed.trim()) useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
             throw err
           }
-          const message = err instanceof Error ? err.message : String(err)
+          const message = errorTextWithCause(err)
+          const fail = { label: decision.model.label || decision.model.modelId, message }
+          if (!firstFail) firstFail = fail
+          lastFail = fail
           // Preserve partial stream on failover: keep the bubble with a note so
           // the user never loses text they already read; the next attempt gets
           // a fresh assistant bubble.
@@ -793,19 +806,21 @@ export async function agentLoop(
           }
           excluded.add(decision.key)
           result = null
-          if (attempt === MAX_ROUTE_ATTEMPTS - 1) {
+          if (attempt === MAX_ROUTE_ATTEMPTS - 1 && firstFail) {
             systemError(
               projectId,
               sessionId,
-              `All model attempts failed. Last error: ${message}`,
-              classifyLlmError(message)
+              formatAllAttemptsFailed(firstFail, fail),
+              classifyLlmError(firstFail.message)
             )
           }
         }
       }
 
       if (!decision) {
-        if (needsVision) {
+        if (firstFail && lastFail && !needsVision) {
+          systemError(projectId, sessionId, formatAllAttemptsFailed(firstFail, lastFail), classifyLlmError(firstFail.message))
+        } else if (needsVision) {
           const code = describeVisionRouteFailure()
           const detailKey =
             code === 'fallback_disabled'
