@@ -2,6 +2,9 @@ import { useRef, useState } from 'react'
 import { getModRuntime } from '../agent/mods'
 import { modEventLabel } from '../agent/mods/eventLabel'
 import { useModsUiStore } from '../agent/mods/uiStore'
+import Button from './Button'
+import Input from './Input'
+import Select from './Select'
 
 /** Render frozen mod UI trees from $.ui.resolve element constructors. */
 
@@ -111,7 +114,9 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
   }
   if (type === 'Button') {
     return (
-      <button
+      <Button
+        variant="secondary"
+        size="sm"
         type="button"
         className="mod-tree-button"
         disabled={props.disabled === true}
@@ -125,7 +130,7 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
         }}
       >
         {text || kids.map((c, i) => <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} />) || 'Button'}
-      </button>
+      </Button>
     )
   }
   if (type === 'Input') {
@@ -159,7 +164,8 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
         })
       : []
     return (
-      <select
+      <Select
+        size="sm"
         className="mod-tree-select"
         defaultValue={typeof props.value === 'string' ? props.value : options[0]?.value}
         onChange={(e) => {
@@ -176,7 +182,7 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
     )
   }
   return (
@@ -218,7 +224,8 @@ function ModTreeInput({
     })
   }
   return (
-    <input
+    <Input
+      size="sm"
       className="mod-tree-input"
       value={value}
       placeholder={placeholder}
