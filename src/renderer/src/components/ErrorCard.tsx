@@ -1,23 +1,7 @@
-import { tx } from '../i18n'
+import { describeProviderError } from '../agent/providerErrors'
 import { openSettingsSection } from './settingsState'
 import type { MessageErrorInfo } from '../stores/app'
 import './ErrorCard.css'
-
-const TITLE_KEYS: Record<MessageErrorInfo['kind'], string> = {
-  auth: 'chat.errorCard.titleAuth',
-  rate: 'chat.errorCard.titleRate',
-  server: 'chat.errorCard.titleServer',
-  network: 'chat.errorCard.titleNetwork',
-  generic: 'chat.errorCard.titleGeneric'
-}
-
-const HINT_KEYS: Record<MessageErrorInfo['kind'], string> = {
-  auth: 'chat.errorCard.hintAuth',
-  rate: 'chat.errorCard.hintRate',
-  server: 'chat.errorCard.hintServer',
-  network: 'chat.errorCard.hintNetwork',
-  generic: 'chat.errorCard.hintGeneric'
-}
 
 interface ErrorCardProps {
   error: MessageErrorInfo
@@ -28,6 +12,7 @@ interface ErrorCardProps {
 /** Actionable failure card for a collapsed agent turn: what broke, what to
  *  do next, the raw detail on demand, and one-click recovery. */
 export default function ErrorCard({ error, onRetry }: ErrorCardProps): React.JSX.Element {
+  const copy = describeProviderError(error)
   return (
     <div className="error-card" role="alert">
       <div className="error-card-head">
@@ -48,8 +33,9 @@ export default function ErrorCard({ error, onRetry }: ErrorCardProps): React.JSX
           <line x1="12" y1="16" x2="12.01" y2="16" />
         </svg>
         <div className="error-card-copy">
-          <div className="error-card-title">{tx(TITLE_KEYS[error.kind])}</div>
-          <div className="error-card-hint">{tx(HINT_KEYS[error.kind])}</div>
+          <div className="error-card-title">{copy.title}</div>
+          {copy.cause && <div className="error-card-cause">{copy.cause}</div>}
+          <div className="error-card-hint">{copy.fix}</div>
         </div>
       </div>
       {error.detail ? (

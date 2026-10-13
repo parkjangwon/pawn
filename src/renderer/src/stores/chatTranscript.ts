@@ -1,4 +1,5 @@
 import { useAppStore } from './app'
+import { classifyProviderError } from '../agent/providerErrors'
 import type { MessageErrorInfo } from './app'
 import { useProviderStore } from './provider'
 import { useUsageStore } from './usage'
@@ -42,36 +43,9 @@ export function systemError(
   })
 }
 
-/** Lowercase substrings that mark a network-level failure (no provider response). */
-const NETWORK_ERROR_MARKERS = [
-  'fetch failed',
-  'failed to fetch',
-  'networkerror',
-  'network error',
-  'econnrefused',
-  'econnreset',
-  'enotfound',
-  'etimedout',
-  'eai_again',
-  'err_internet'
-]
-
 /** Map a thrown LLM error to a user-facing failure class for the error card. */
 export function classifyLlmError(message: string): MessageErrorInfo {
-  const status = message.match(/HTTP (\d{3})/)?.[1]
-  const detail = message.length > 500 ? `${message.slice(0, 500)}…` : message
-  if (status === '401' || status === '403') {
-    return { kind: 'auth', detail, settingsTarget: 'providers' }
-  }
-  if (status === '429') return { kind: 'rate', detail, settingsTarget: 'models' }
-  if (status !== undefined && status.startsWith('5')) {
-    return { kind: 'server', detail, settingsTarget: 'models' }
-  }
-  const lowered = message.toLowerCase()
-  if (NETWORK_ERROR_MARKERS.some((marker) => lowered.includes(marker))) {
-    return { kind: 'network', detail }
-  }
-  return { kind: 'generic', detail }
+  return classifyProviderError(message)
 }
 
 export async function loadTranscript(projectId: string, sessionId: string): Promise<TranscriptEntry[]> {

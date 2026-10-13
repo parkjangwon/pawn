@@ -114,7 +114,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               </button>
             </div>
             {testResult[p.id] && (
-              <div className={'settings-form-error provider-test-line' + (testResult[p.id]?.ok ? ' test-ok' : '')} role="status">
+              <div className={'settings-form-error provider-test-line' + (testResult[p.id]?.ok ? ' test-ok' : ' provider-test-fail')} role="status">
                 {testResult[p.id]?.ok ? '✓ ' + 'Connected' : '✗ ' + testResult[p.id]?.message}
               </div>
             )}
