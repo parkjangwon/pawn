@@ -161,6 +161,8 @@ export async function agentLoop(
   /** completed | aborted | failed — failed leaves checkpoint for cold resume. */
   let turnEnd: 'completed' | 'aborted' | 'failed' = 'completed'
   let modTurnOpen = false
+  /** beginTurn token. 0 until this turn binds cwd and messages. */
+  let modTurnToken = 0
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -364,6 +366,15 @@ export async function agentLoop(
           }
         })
         const mods = getModRuntime()
+        // Live view of this turn's transcript. `entries` is reassigned as the turn grows.
+        modTurnToken = mods.beginTurn(sessionId, {
+          cwd: cwd || projectPath || '',
+          projectPath: projectPath || null,
+          messages: () =>
+            entries
+              .filter((e) => e.role === 'user' || e.role === 'assistant')
+              .map((e) => ({ role: e.role, text: e.content || '' }))
+        })
         const isFresh = entries.filter((e) => e.role === 'user' || e.role === 'assistant').length === 0
         if (isFresh) {
           const start = await fireHook({
@@ -1357,11 +1368,21 @@ export async function agentLoop(
     const aborted = signal.aborted
     if (aborted) turnEnd = 'aborted'
     else if (turnEnd !== 'failed') turnEnd = 'completed'
+    // A newer turn for this session already replaced the binding; its token must win.
+    const closeModTurn = (): void => {
+      const token = modTurnToken
+      if (!token) return
+      modTurnToken = 0
+      getModRuntime().endTurn(sessionId, token)
+    }
     if (modTurnOpen) {
       modTurnOpen = false
       void getModRuntime()
         .emit('turn.complete', { sessionId, status: turnEnd }, async (e) => e)
         .catch(() => {})
+        .finally(closeModTurn)
+    } else {
+      closeModTurn()
     }
     useChangeLedger.getState().endTurn()
     releaseSleepHold()
