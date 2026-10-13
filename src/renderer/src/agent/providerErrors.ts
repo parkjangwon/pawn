@@ -278,6 +278,6 @@ export function formatAllAttemptsFailed(
   last: { label: string; message: string }
 ): string {
   const head = `All model attempts failed. ${first.label}: ${first.message}`
-  if (last.message === first.message) return head
-  return `${head} (fallbacks also failed; last: ${last.label}: ${last.message.slice(0, 200)})`
+  const out = last.message === first.message ? head : `${head} (fallbacks also failed; last: ${last.label}: ${last.message.slice(0, 200)})`
+  return redactSecrets(out)
 }

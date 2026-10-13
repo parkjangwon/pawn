@@ -8,6 +8,11 @@
 const MASK = '***'
 
 const RULES: Array<[RegExp, string]> = [
+  // Passwords are often short (`password=hunter2`). `key: 404` stays on the rule below.
+  [
+    /((?:["']?)\b(?:password|passwd|pwd)\b["']?\s*[:=]\s*["']?)[^\s"',;&})\]]+/gi,
+    `$1${MASK}`
+  ],
   // Header/JSON/form assignments: authorization, api_key, x-api-key, token, secret…
   // Value may be quoted and may carry a scheme ("Bearer abc").
   // Bare `key` too. Value must be >= 8 so `key: 404` and other short words survive.
@@ -40,7 +45,7 @@ function tokenishUser(info: string): boolean {
 
 /** `https://user:PASS@host` → `https://user:***@host`; token-as-user too. Emails have no scheme. */
 function maskUrlUserinfo(text: string): string {
-  return text.replace(/\b(https?:\/\/)([^/\s@]+)@/gi, (whole, scheme: string, info: string) => {
+  return text.replace(/\b((?:https?|wss?):\/\/)([^/\s@]+)@/gi, (whole, scheme: string, info: string) => {
     const colon = info.indexOf(':')
     if (colon >= 0) {
       return info.slice(colon + 1) ? `${scheme}${info.slice(0, colon)}:${MASK}@` : whole
@@ -49,9 +54,43 @@ function maskUrlUserinfo(text: string): string {
   })
 }
 
+const SECRET_PATH_NAME = /^(?:keys|tokens|api-key|key|token|secret)$/i
+
+// shortcut: one letter plus one digit counts as high-entropy, upgrade if long slugs with a single digit show up
+function highEntropySeg(seg: string): boolean {
+  return seg.length >= 24 && /^[A-Za-z0-9_-]+$/.test(seg) && /[A-Za-z]/.test(seg) && /\d/.test(seg)
+}
+
+function maskPathsInUrl(url: string): string {
+  const sl = url.indexOf('/', url.indexOf('://') + 3)
+  if (sl < 0) return url
+  const q = url.slice(sl).search(/[?#]/)
+  const cut = q < 0 ? url.length : sl + q
+  const segs = url.slice(sl, cut).split('/')
+  for (let i = 1; i < segs.length; i++) {
+    if (segs[i] && (SECRET_PATH_NAME.test(segs[i - 1]) || highEntropySeg(segs[i]))) segs[i] = MASK
+  }
+  return url.slice(0, sl) + segs.join('/') + url.slice(cut)
+}
+
+function maskUrlPaths(text: string): string {
+  return text.replace(/\b(?:https?|wss?):\/\/[^\s"'<>]+/gi, maskPathsInUrl)
+}
+
+// Key regexes stop at the newline, so the next pure-alnum line is still the key.
+const MASKED_KEY_EOL = /(?:^|[^A-Za-z0-9_])(?:sk-ant-|sk-(?:proj-|or-v1-|or-)?|hf_|AIza|(?:xai|gsk|ghp|gho|ghs|github_pat|xox[baprs])-)\*\*\*$/
+
+function maskKeyContinuations(text: string): string {
+  const lines = text.split('\n')
+  for (let i = 0; i < lines.length - 1; i++) {
+    if (MASKED_KEY_EOL.test(lines[i]) && /^[A-Za-z0-9]{8,}$/.test(lines[i + 1])) lines[i + 1] = MASK
+  }
+  return lines.join('\n')
+}
+
 export function redactSecrets(text: string): string {
   if (!text) return text
-  let out = maskUrlUserinfo(text)
+  let out = maskUrlPaths(maskUrlUserinfo(text))
   for (const [re, rep] of RULES) out = out.replace(re, rep)
-  return out
+  return maskKeyContinuations(out)
 }
