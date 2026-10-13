@@ -412,6 +412,8 @@ export async function agentLoop(
         }
         await mods.emit('turn.start', { sessionId }, async (e) => e)
         modTurnOpen = true
+        // The spinner shows from the first token, before any tool runs.
+        void mods.refreshSpinnerSuffix().catch(() => {})
       } catch {
         /* hooks optional */
       }

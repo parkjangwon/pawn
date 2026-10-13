@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { tx } from '../i18n'
-import { getModRuntime, listActiveModLine, reloadMods, useModsUiStore } from '../agent/mods'
+import { getModRuntime, listActiveModLine, reloadMods, useModsUiStore, watchModSpinnerSuffix } from '../agent/mods'
 import { modConflictLine, modEventLabel } from '../agent/mods/eventLabel'
 import { useAppStore } from '../stores/app'
 import { useFocusTrap } from '../utils/focusTrap'
@@ -43,6 +43,8 @@ export default function ModsChrome({
     return p?.paths?.[0] || ''
   })
   const sessionId = useAppStore((s) => s.activeSessionId || '')
+
+  useEffect(() => watchModSpinnerSuffix(), [])
 
   useEffect(() => {
     return getModRuntime().subscribe(() => {

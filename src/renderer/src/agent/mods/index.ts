@@ -5,6 +5,7 @@ export {
   __resetModRuntimeForTests
 } from './runtime'
 export { useModsUiStore } from './uiStore'
+export { formatModSpinnerSuffix, watchModSpinnerSuffix } from './spinner'
 export { matcherMatches } from './match'
 export { deriveModCapabilities, deriveModRisk } from './capabilities'
 export type { ModCapability, ModCapabilityId, ModRiskLevel } from './capabilities'

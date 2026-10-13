@@ -12,6 +12,7 @@ import ErrorCard from './ErrorCard'
 import { useStreamingStore } from '../stores/streaming'
 import { useChatStore } from '../stores/chat'
 import { useModsUiStore } from '../agent/mods/uiStore'
+import { formatModSpinnerSuffix } from '../agent/mods/spinnerText'
 import { stripDisplayImages } from '../utils/attachments'
 import { formatDuration, formatMessageTime, formatMessageTimeFull, normalizeTimestampMs } from '../utils/messageTime'
 import type { Message } from '../stores/app'
@@ -89,6 +90,37 @@ const StreamingMarkdown = memo(function StreamingMarkdown({
   )
 })
 
+/** A mod's spinner text (`ui.render` Spinner `props.suffix`). */
+function ModSpinnerSuffix({ suffix }: { suffix: string }): React.JSX.Element | null {
+  const text = formatModSpinnerSuffix(suffix)
+  if (!text) return null
+  return (
+    <span className="message-thinking-mod-suffix" title={'Status text from a mod'}>
+      {' · '}
+      {text}
+    </span>
+  )
+}
+
+/**
+ * The thinking line for a live turn that has no reasoning text yet (most
+ * models never stream any). Only drawn when a mod has a suffix, so chats
+ * without mods keep the plain cursor.
+ */
+function ModWaitingLine(): React.JSX.Element | null {
+  const suffix = useModsUiStore((s) => s.spinnerSuffix)
+  if (!formatModSpinnerSuffix(suffix)) return null
+  return (
+    <div className="message-thinking live one-line message-mod-waiting" aria-live="polite">
+      <span className="message-thinking-spinner" aria-hidden="true" />
+      <span className="message-thinking-label">
+        {'Thinking…'}
+        <ModSpinnerSuffix suffix={suffix} />
+      </span>
+    </div>
+  )
+}
+
 /**
  * Thinking/reasoning: a single compact line while live — keeps the bubble
  * small and progress feels instant (Reasonix-style). The full text stays
@@ -117,12 +149,7 @@ function ThinkingBlock({
         <span className="message-thinking-spinner" aria-hidden="true" />
         <span className="message-thinking-label">
           {'Thinking…'}
-          {spinnerSuffix ? (
-            <span className="message-thinking-mod-suffix" title={'Status text from a mod'}>
-              {' · '}
-              {spinnerSuffix}
-            </span>
-          ) : null}
+          <ModSpinnerSuffix suffix={spinnerSuffix} />
         </span>
         <span className="message-thinking-elapsed">{elapsed}s</span>
       </div>
@@ -262,6 +289,9 @@ const MessageRow = memo(function MessageRow({
       <div className="message-body">
         {msg.role === 'assistant' && thinking ? (
           <ThinkingBlock text={thinking} live={Boolean(liveThinking)} />
+        ) : null}
+        {msg.role === 'assistant' && (isLive || isStreamingTail) && !liveThinking && !liveActivity && !content.trim() ? (
+          <ModWaitingLine />
         ) : null}
         {msg.role === 'assistant' && liveActivity ? (
           <div className="message-activity live one-line">
@@ -484,6 +514,7 @@ export default function MessageList({
       {busy && lastRole !== 'assistant' && (
         <div className={`message assistant message-enter${turnHasAssistant ? ' message-continuation' : ''}`}>
           {!turnHasAssistant && <div className="message-role">{'Assistant'}</div>}
+          <ModWaitingLine />
           <div className="message-content streaming">
             <span className="cursor-blink">▍</span>
           </div>
