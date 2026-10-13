@@ -11,18 +11,23 @@
   line-break: strict;
 }
 
-/* One wrapping row of small pills: chip, conflicts, log, status. */
+/* One row of small pills: chip, conflicts, log, status. */
 .mods-chrome-strip {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   align-items: center;
   gap: var(--space-sm);
   width: 100%;
+  min-width: 0;
 }
 
 .mods-chrome-strip > * {
   min-width: 0;
   max-width: 100%;
+}
+
+.mods-chrome-strip > .mods-chrome-chip-wrap {
+  flex: 0 0 auto;
 }
 
 .mods-chrome-pill {
@@ -272,6 +277,8 @@ span.mods-chrome-pill {
 }
 
 .mods-chrome-above {
+  padding: var(--space-sm) 15px;
+  box-sizing: border-box;
   font-size: var(--font-sm);
   color: var(--text-secondary);
 }
@@ -377,6 +384,17 @@ span.mods-chrome-pill {
   max-width: 100%;
 }
 
+.mods-chrome-above > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mods-chrome-above .pawn-input,
+.mods-chrome-above .mod-tree-input {
+  flex: 1 1 160px;
+  min-width: 0;
+}
+
 .mod-tree-text,
 .mod-tree-markdown,
 .mod-tree-code {
@@ -448,6 +466,8 @@ span.mods-chrome-pill {
 
 /* Conflicts pill keeps the warning tint, sized like the other strip pills. */
 .mods-chrome-pill.mods-chrome-conflicts {
+  flex: 1 1 auto;
+  min-width: 0;
   border-color: color-mix(in srgb, var(--warning) 35%, var(--border-color));
   background: color-mix(in srgb, var(--warning) 8%, var(--bg-secondary));
   color: var(--text-secondary);
