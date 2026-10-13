@@ -231,9 +231,9 @@ describe('mods session scope', () => {
     await rt.emit('turn.start', { sessionId: 'A' }, async (e) => e)
     rt.setContext({ sessionId: 'B', cwd: '/p' })
     await vi.waitFor(() => expect(logs()).toContain('A>B:B'))
-    await rt.emitToolCall('read_file', {}, async () => ({ result: 'ok' }))
-    await rt.emit('tool.check', { tool: 'read_file' }, async (e) => e)
-    const suffix = await rt.refreshSpinnerSuffix()
+    await rt.emitToolCall('read_file', {}, async () => ({ result: 'ok' }), undefined, 'A')
+    await rt.emit('tool.check', { tool: 'read_file', sessionId: 'A' }, async (e) => e)
+    const suffix = await rt.refreshSpinnerSuffix({}, 'A')
     await rt.emit('turn.complete', { sessionId: 'A', status: 'completed' }, async (e) => e)
 
     expect(logs()).toEqual(['start A A', 'A>B:B', 'tool A A', 'check A A', 'spin A', 'done A A'])
@@ -249,5 +249,53 @@ describe('mods session scope', () => {
     expect((await rt.emitCommandRun('who', '')).text).toBe('')
     rt.setContext({ sessionId: 'A', cwd: '/p' })
     expect((await rt.emitCommandRun('who', '')).text).toBe('A')
+  })
+
+  it('keeps state separate for two chats running concurrently', async () => {
+    const rt = getModRuntime()
+    rt.setContext({ sessionId: 'A', cwd: '/p' })
+    await rt.load([
+      {
+        id: 'conc@t',
+        name: 'conc',
+        root: '/p',
+        tier: 'user',
+        sources: [
+          src(
+            [
+              'export function register(on) {',
+              "  on('tool.call', async (api, e, next) => {",
+              '    const before = api.session.id()',
+              '    await new Promise((r) => setTimeout(r, Number(e.delay || 0)))',
+              '    const after = api.session.id()',
+              "    const n = Number(api.state.get('n') || 0) + 1",
+              "    api.state.set('n', n)",
+              "    api.ui.log(before + ' ' + after + ' ' + n)",
+              '    return next(e)',
+              '  })',
+              "  on('command.run', { command: 'n' }, async (api) => ({ text: String(api.state.get('n') || 0) }))",
+              '}'
+            ].join('\n')
+          )
+        ]
+      }
+    ])
+    useModsUiStore.getState().clearSessionUi()
+    await rt.emit('turn.start', { sessionId: 'A' }, async (e) => e)
+    await rt.emit('turn.start', { sessionId: 'B' }, async (e) => e)
+    const ok = async () => ({ result: 'ok' })
+    const pending = Promise.all([
+      rt.emitToolCall('t', { delay: 5 }, ok, undefined, 'A'),
+      rt.emitToolCall('t', { delay: 30 }, ok, undefined, 'B')
+    ])
+    // A finishes first while B is still running; with a shared session slot A would read B.
+    await new Promise((r) => setTimeout(r, 15))
+    rt.setContext({ sessionId: 'B', cwd: '/p' })
+    await pending
+    expect(logs().sort()).toEqual(['A A 1', 'B B 1'])
+    rt.setContext({ sessionId: 'A', cwd: '/p' })
+    expect((await rt.emitCommandRun('n', '')).text).toBe('1')
+    rt.setContext({ sessionId: 'B', cwd: '/p' })
+    expect((await rt.emitCommandRun('n', '')).text).toBe('1')
   })
 })

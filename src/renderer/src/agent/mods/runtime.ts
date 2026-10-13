@@ -101,8 +101,8 @@ interface HookEntry {
   handler: ModHookHandler
   catchHandler?: ModHookHandler
   plugin: string
+  root: string
   tier: ModTier
-  api: ModsApi
 }
 
 export interface ModSourcePayload {
@@ -150,10 +150,6 @@ export class ModRuntime {
   private loaded: LoadedModInfo[] = []
   private blobUrls: string[] = []
   private ctx: ModRuntimeContext = { sessionId: '', cwd: '' }
-  /** Turn/tool/spinner dispatch. Null while handling a non-turn event. */
-  private turnSession: string | null = null
-  /** sessionId captured at turn.start, dropped at turn.complete. */
-  private openTurns = new Set<string>()
   /** $.state, keyed by sessionId then plugin then key. */
   private stateBySession = new Map<string, Map<string, Map<string, unknown>>>()
   private ready = false
@@ -178,14 +174,10 @@ export class ModRuntime {
     }
   }
 
-  private currentSessionId(): string {
-    return this.turnSession ?? this.ctx.sessionId
-  }
-
-  private stateBucket(plugin: string): Map<string, unknown> {
-    const sid = this.currentSessionId() || ''
-    let byPlugin = this.stateBySession.get(sid)
-    if (!byPlugin) this.stateBySession.set(sid, (byPlugin = new Map()))
+  private stateBucket(plugin: string, sid: string): Map<string, unknown> {
+    const key = sid || ''
+    let byPlugin = this.stateBySession.get(key)
+    if (!byPlugin) this.stateBySession.set(key, (byPlugin = new Map()))
     let bucket = byPlugin.get(plugin)
     if (!bucket) byPlugin.set(plugin, (bucket = new Map()))
     return bucket
@@ -208,29 +200,10 @@ export class ModRuntime {
     )
   }
 
-  /** Session a background turn captured at start, when the active chat has moved on. */
-  private backgroundTurn(): string | null {
-    if (this.openTurns.has(this.ctx.sessionId) || this.openTurns.size !== 1) return null
-    const [sid] = this.openTurns
-    return sid || null
-  }
-
-  /**
-   * Session to freeze for this event. Tool arguments named sessionId are not
-   * the turn; an explicit id is trusted only when that turn is still open.
-   */
-  private boundSession(event: string, input: unknown): string | null {
-    if (!this.turnScoped(event, input)) return null
-    const turn = event === 'turn.start' || event === 'turn.step' || event === 'turn.complete'
-    const stamped = this.readSid(input)
-    if (turn) return stamped || this.currentSessionId()
-    if (stamped && this.openTurns.has(stamped)) return stamped
-    const bg = this.backgroundTurn()
-    if (bg) return bg
-    if ((event === 'tool.call' || event === 'tool.check') && this.openTurns.has(this.ctx.sessionId)) {
-      return this.ctx.sessionId
-    }
-    return null
+  /** Turn events take the id for this call. Other events use the visible chat. */
+  private sessionFor(event: string, input: unknown, explicit?: string): string {
+    if (!this.turnScoped(event, input)) return this.ctx.sessionId
+    return explicit || this.readSid(input) || this.ctx.sessionId
   }
 
   private stampSession(input: unknown, sessionId: string): unknown {
@@ -239,14 +212,9 @@ export class ModRuntime {
     return { ...(input as Record<string, unknown>), sessionId }
   }
 
-  private async bindTurn<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
-    const prev = this.turnSession
-    this.turnSession = sessionId
-    try {
-      return await fn()
-    } finally {
-      this.turnSession = prev
-    }
+  /** Api whose session and $.state close over this call's sid only. */
+  private apiFor(plugin: string, root: string, sid: string): ModsApi {
+    return buildModsApi(this.makeHost(plugin, root, sid))
   }
 
   /** Subscribe to load/unload/command changes (chat chip, settings badge). */
@@ -346,9 +314,7 @@ export class ModRuntime {
       calls: []
     }
 
-    const host = this.makeHost(src.name, src.root)
-    const api = buildModsApi(host)
-    const on = this.makeOn(src.name, src.tier || 'user', api)
+    const on = this.makeOn(src.name, src.root, src.tier || 'user')
 
     // Load every listed module; the mod runs when at least one settles.
     const errors: string[] = []
@@ -405,18 +371,18 @@ export class ModRuntime {
     this.loaded.push(info)
   }
 
-  private makeHost(pluginName: string, pluginRoot: string): ModsApiHost {
+  private makeHost(pluginName: string, pluginRoot: string, sid: string): ModsApiHost {
     return {
       pluginName,
       pluginRoot,
-      sessionId: () => this.currentSessionId(),
+      sessionId: () => sid,
       cwd: () => this.ctx.cwd || this.ctx.projectPath || '',
-      stateGet: (key) => this.stateBucket(pluginName).get(key),
+      stateGet: (key) => this.stateBucket(pluginName, sid).get(key),
       stateSet: (key, value) => {
-        this.stateBucket(pluginName).set(key, value)
+        this.stateBucket(pluginName, sid).set(key, value)
       },
       stateDelete: (key) => {
-        this.stateBucket(pluginName).delete(key)
+        this.stateBucket(pluginName, sid).delete(key)
       },
       getCommands: () => this.commands,
       registerCommand: (cmd) => {
@@ -433,7 +399,7 @@ export class ModRuntime {
       getEnv: (name) => this.readEnv(pluginName, name),
       setEnv: (name, value) => this.writeEnv(pluginName, name, value),
       envForProcess: () => ({ ...(this.envOverlay.get(pluginName) || {}) }),
-      emit: (event, input, core) => this.emit(event, input, core || (async (e) => e)),
+      emit: (event, input, core) => this.emit(event, input, core || (async (e) => e), undefined, sid),
       submitPrompt: (text, asUser) => this.ctx.submitPrompt?.(text, asUser),
       abortTurn: () => this.ctx.abortTurn?.(),
       messages: () => this.ctx.messages?.() || [],
@@ -443,7 +409,7 @@ export class ModRuntime {
     }
   }
 
-  private makeOn(plugin: string, tier: ModTier, api: ModsApi): ModOn {
+  private makeOn(plugin: string, root: string, tier: ModTier): ModOn {
     return (event, matcherOrHandler, maybeHandler) => {
       let matcher: ModMatcher | undefined
       let handler: ModHookHandler
@@ -456,7 +422,7 @@ export class ModRuntime {
       if (typeof handler !== 'function') {
         throw new Error(`on('${event}'): handler is not a function`)
       }
-      const entry: HookEntry = { event, matcher, handler, plugin, tier, api }
+      const entry: HookEntry = { event, matcher, handler, plugin, root, tier }
       this.hooks.push(entry)
       return {
         catch: (catchHandler) => {
@@ -474,36 +440,18 @@ export class ModRuntime {
     event: string,
     input: unknown,
     core: (e: unknown) => Promise<unknown> = async (e) => e,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    sessionId?: string
   ): Promise<unknown> {
-    // A background turn's bind must not leak into chat.switch / session.*.
-    if (this.turnSession && !this.turnScoped(event, input)) {
-      const prev = this.turnSession
-      this.turnSession = null
-      try {
-        return await this.emit(event, input, core, signal)
-      } finally {
-        this.turnSession = prev
-      }
-    }
-    if (!this.turnSession) {
-      const sid = this.boundSession(event, input)
-      if (sid) {
-        if (event === 'turn.start') this.openTurns.add(sid)
-        const nextInput = event === 'ui.render' ? input : this.stampSession(input, sid)
-        try {
-          return await this.bindTurn(sid, () => this.emit(event, nextInput, core, signal))
-        } finally {
-          if (event === 'turn.complete') this.openTurns.delete(sid)
-        }
-      }
-    } else if (event === 'turn.start') {
-      this.openTurns.add(this.readSid(input) || this.currentSessionId())
-    }
+    const sid = this.sessionFor(event, input, sessionId)
+    const eventInput =
+      this.turnScoped(event, input) && event !== 'ui.render' && sid
+        ? this.stampSession(input, sid)
+        : input
 
     if (!this.ready && event !== 'session.start') {
       // Allow emit during load of session.start; otherwise pass to core.
-      if (this.hooks.length === 0) return core(input)
+      if (this.hooks.length === 0) return core(eventInput)
     }
 
     const controllers = typeof AbortController !== 'undefined' ? new AbortController() : null
@@ -511,7 +459,7 @@ export class ModRuntime {
     this.lastAnswerPlugin = null
 
     const matched = this.hooks
-      .filter((h) => h.event === event && matcherMatches(h.matcher, input))
+      .filter((h) => h.event === event && matcherMatches(h.matcher, eventInput))
       .sort((a, b) => TIER_ORDER.indexOf(a.tier) - TIER_ORDER.indexOf(b.tier))
 
     if (matched.length > 1 && (event === 'tool.call' || event === 'prompt.submit')) {
@@ -541,6 +489,7 @@ export class ModRuntime {
           skipUntil = null
         }
 
+        const api = this.apiFor(entry.plugin, entry.root, sid)
         const started = Date.now()
         const budget = {
           ms: HOOK_BUDGET_MS,
@@ -567,7 +516,7 @@ export class ModRuntime {
 
         try {
           const result = await Promise.race([
-            Promise.resolve(entry.handler(entry.api, deepFreeze(e), next)),
+            Promise.resolve(entry.handler(api, deepFreeze(e), next)),
             new Promise<never>((_, reject) => {
               const t = setTimeout(() => reject(new Error('hook timeout')), HOOK_BUDGET_MS)
               if (combined) {
@@ -595,7 +544,7 @@ export class ModRuntime {
             }
             catchNext.called = nextCalled
             try {
-              const caught = await entry.catchHandler(entry.api, deepFreeze(e), catchNext)
+              const caught = await entry.catchHandler(api, deepFreeze(e), catchNext)
               if (!nextCalled) {
                 this.lastAnswerPlugin = entry.plugin
                 activeEntry = null
@@ -614,7 +563,7 @@ export class ModRuntime {
       return core(e)
     }
 
-    return runFrom(input)
+    return runFrom(eventInput)
   }
 
   /** Convenience: tool.call with deny/result short-circuit. */
@@ -644,9 +593,10 @@ export class ModRuntime {
           coreResult = await run()
           return coreResult
         },
-        signal
+        signal,
+        turnSessionId
       )
-    const out = await (turnSessionId && this.turnSession !== turnSessionId ? this.bindTurn(turnSessionId, fire) : fire())
+    const out = await fire()
     const plugin = this.lastAnswerPlugin || undefined
     if (!coreRan && out && typeof out === 'object') {
       const o = out as { deny?: string; result?: unknown }
@@ -737,7 +687,8 @@ export class ModRuntime {
   }
 
   /** One hook, with `next` returning the event instead of continuing the chain. */
-  private async callIsolated(entry: HookEntry, input: unknown): Promise<unknown> {
+  private async callIsolated(entry: HookEntry, input: unknown, sid: string): Promise<unknown> {
+    const api = this.apiFor(entry.plugin, entry.root, sid)
     const started = Date.now()
     const budget = {
       ms: HOOK_BUDGET_MS,
@@ -753,7 +704,7 @@ export class ModRuntime {
     let timer: ReturnType<typeof setTimeout> | undefined
     try {
       return await Promise.race([
-        Promise.resolve(entry.handler(entry.api, deepFreeze(input), next)),
+        Promise.resolve(entry.handler(api, deepFreeze(input), next)),
         new Promise<never>((_, reject) => {
           timer = setTimeout(() => reject(new Error('hook timeout')), HOOK_BUDGET_MS)
         })
@@ -761,7 +712,7 @@ export class ModRuntime {
     } catch (err) {
       if (entry.catchHandler) {
         try {
-          return await entry.catchHandler(entry.api, deepFreeze(input), next)
+          return await entry.catchHandler(api, deepFreeze(input), next)
         } catch {
           return input
         }
@@ -791,7 +742,7 @@ export class ModRuntime {
         props: { ...base, plugin: entry.plugin },
         requestId: 'above-prompt'
       }
-      const out = await this.callIsolated(entry, event)
+      const out = await this.callIsolated(entry, event, this.ctx.sessionId)
       if (!out || typeof out !== 'object') continue
       const props = (out as { props?: Record<string, unknown> }).props
       const tree = props?.tree ?? props?.children
@@ -802,7 +753,11 @@ export class ModRuntime {
     return bands
   }
 
-  async emitUiRender(component: string, props: Record<string, unknown>): Promise<Record<string, unknown>> {
+  async emitUiRender(
+    component: string,
+    props: Record<string, unknown>,
+    sessionId?: string
+  ): Promise<Record<string, unknown>> {
     if (component === 'AbovePrompt') {
       const bands = await this.collectAboveBands(props)
       useModsUiStore.getState().setAbovePrompts(bands)
@@ -815,7 +770,7 @@ export class ModRuntime {
       props,
       requestId: component === 'AbovePrompt' ? 'above-prompt' : undefined
     }
-    const out = await this.emit('ui.render', event, async (e) => e)
+    const out = await this.emit('ui.render', event, async (e) => e, undefined, sessionId)
     let nextProps = props
     if (out && typeof out === 'object' && 'props' in (out as object)) {
       nextProps = ((out as UiRenderEvent).props || props) as Record<string, unknown>
@@ -843,20 +798,22 @@ export class ModRuntime {
   }
 
   async refreshSpinnerSuffix(base: Record<string, unknown> = {}, turnSessionId?: string): Promise<string> {
-    const foreground = this.ctx.sessionId
-    const sid = turnSessionId || this.backgroundTurn() || undefined
-    const render = (): Promise<Record<string, unknown>> =>
-      this.emitUiRender('Spinner', {
+    const props = await this.emitUiRender(
+      'Spinner',
+      {
         word: 'Thinking',
         message: '',
         suffix: '',
         mode: 'thinking',
         ...base
-      })
-    const props = sid && this.turnSession !== sid ? await this.bindTurn(sid, render) : await render()
+      },
+      turnSessionId
+    )
     const suffix = typeof props.suffix === 'string' ? props.suffix : ''
     // A background turn must not rewrite the spinner of the chat on screen.
-    if (!sid || sid === foreground) useModsUiStore.getState().setSpinnerSuffix(suffix)
+    if (!turnSessionId || turnSessionId === this.ctx.sessionId) {
+      useModsUiStore.getState().setSpinnerSuffix(suffix)
+    }
     return suffix
   }
 }

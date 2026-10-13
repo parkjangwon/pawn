@@ -114,11 +114,12 @@ export async function executeTool(
               native ? nativeCallToAction(call).args : call.arguments,
               signal,
               projectPath,
-              { sessionId: ctx?.sessionId, cwd: projectPath }
+              { sessionId: turnSessionId, cwd: projectPath }
             )
             return { decision: permitted ? 'allow' : 'deny' }
           },
-          signal
+          signal,
+          turnSessionId
         )
         const decision =
           check && typeof check === 'object' && 'decision' in check
@@ -179,7 +180,8 @@ export async function executeTool(
         void runtime.refreshSpinnerSuffix(undefined, turnSessionId).catch(() => {})
         return { result: result.content, isError: result.isError, toolResult: result }
       },
-      signal
+      signal,
+      turnSessionId
     )
 
     if (modOut.deny) {
