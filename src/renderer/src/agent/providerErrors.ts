@@ -9,6 +9,7 @@
  */
 
 import { tx } from '../i18n/strings'
+import { redactSecrets } from './redactSecrets'
 
 export type ProviderErrorKind = 'auth' | 'rate' | 'server' | 'network' | 'model' | 'context' | 'generic'
 
@@ -104,7 +105,8 @@ export function providerErrorReason(message: string): ProviderErrorReason | null
 
 /** Map a thrown LLM error to a user-facing failure class for the error card. */
 export function classifyProviderError(message: string): ProviderErrorInfo {
-  const detail = message.length > 500 ? `${message.slice(0, 500)}…` : message
+  const safe = redactSecrets(message)
+  const detail = safe.length > 500 ? `${safe.slice(0, 500)}…` : safe
   const reason = providerErrorReason(message)
   if (!reason) return { kind: 'generic', detail }
   const kind = KIND_OF[reason]
@@ -148,7 +150,8 @@ export function providerErrorFix(message: string): string {
 /** Append the fix hint to a compact status line, if one applies. */
 export function withProviderErrorFix(summary: string, rawMessage: string): string {
   const fix = providerErrorFix(rawMessage)
-  return fix ? `${summary} — ${fix}` : summary
+  const safe = redactSecrets(summary)
+  return fix ? `${safe} — ${fix}` : safe
 }
 
 /**
@@ -159,9 +162,9 @@ export function withProviderErrorFix(summary: string, rawMessage: string): strin
 export function errorTextWithCause(err: unknown): string {
   const base = err instanceof Error ? err.message : String(err)
   const cause = (err as { cause?: unknown } | null)?.cause
-  if (!cause || typeof cause !== 'object') return base
+  if (!cause || typeof cause !== 'object') return redactSecrets(base)
   const c = cause as { code?: unknown; message?: unknown }
   const parts = [c.code, c.message].filter((x): x is string => typeof x === 'string' && x.length > 0)
   const extra = [...new Set(parts)].join(' ')
-  return extra && !base.includes(extra) ? `${base} (cause: ${extra})` : base
+  return redactSecrets(extra && !base.includes(extra) ? `${base} (cause: ${extra})` : base)
 }

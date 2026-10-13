@@ -87,3 +87,14 @@ describe('errorTextWithCause', () => {
     expect(errorTextWithCause('plain')).toBe('plain')
   })
 })
+
+describe('secret masking in error detail', () => {
+  it('never puts a key into detail, fix lines, or cause text', async () => {
+    const m = await import('../providerErrors')
+    const key = 'sk-proj-AbCdEf0123456789ghijKLMNOP'
+    const msg = `HTTP 401: {"error":{"message":"Incorrect API key provided: ${key}"}}`
+    expect(m.classifyProviderError(msg).detail).not.toContain(key)
+    expect(m.withProviderErrorFix(`FAIL: 401 — ${key}`, msg)).not.toContain(key)
+    expect(m.errorTextWithCause(new Error(`bad Bearer ${key}`))).not.toContain(key)
+  })
+})

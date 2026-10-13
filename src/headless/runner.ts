@@ -10,6 +10,7 @@
 
 import { createNodeApi, type HeadlessConfig } from './nodeApi'
 import { describeProviderError } from '../renderer/src/agent/providerErrors'
+import { redactSecrets } from '../renderer/src/agent/redactSecrets'
 
 export type HeadlessPermission = 'auto' | 'yolo' | 'deny'
 
@@ -279,7 +280,7 @@ export async function runHeadlessTurn(opts: HeadlessTurnOptions): Promise<Headle
       ...(ulw ? { ultraWork: { status: ulw.status === 'active' ? 'stopped' : ulw.status, iterations: ulw.iteration, reason: ulw.lastReason } } : {}),
       ok: outcome === 'completed' && !error,
       outcome: error && outcome === 'completed' ? 'error' : outcome,
-      ...(error ? { error } : {}),
+      ...(error ? { error: redactSecrets(error) } : {}),
       finalText: assistant[assistant.length - 1]?.content ?? '',
       assistantMessages: assistant.length,
       tools,
