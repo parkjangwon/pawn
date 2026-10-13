@@ -686,6 +686,10 @@ export async function agentLoop(
          result = await callLLM({
             decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal,
             complexity,
+            onProgress: (p) => {
+              if (epoch !== getSessionEpoch(sessionId)) return
+              get().setProviderProgress(sessionId, p)
+            },
             onToolCall: startEarly,
             toolDenylist: hiddenToolNames({
               entries,

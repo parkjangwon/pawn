@@ -677,6 +677,35 @@ export class ModRuntime {
     return bands
   }
 
+  private aboveRunning: Promise<void> | null = null
+  private aboveQueued = false
+
+  /**
+   * Redraw the AbovePrompt bands at most once per burst. A press used to
+   * draw twice (ModTree emitted ui.render itself and also bumped the render
+   * generation, and the mod's own `$.ui.invalidate()` bumped it again), and
+   * overlapping draws could finish out of order and show an older tree.
+   * Calls made while a draw runs fold into one more draw after it.
+   */
+  requestAbovePromptRender(): Promise<void> {
+    if (this.aboveRunning) {
+      this.aboveQueued = true
+      return this.aboveRunning
+    }
+    const run = async (): Promise<void> => {
+      // Let synchronous invalidations from the same tick land first.
+      await Promise.resolve()
+      do {
+        this.aboveQueued = false
+        await this.emitUiRender('AbovePrompt', {}).catch(() => {})
+      } while (this.aboveQueued)
+    }
+    this.aboveRunning = run().finally(() => {
+      this.aboveRunning = null
+    })
+    return this.aboveRunning
+  }
+
   async emitUiRender(component: string, props: Record<string, unknown>): Promise<Record<string, unknown>> {
     if (component === 'AbovePrompt') {
       const bands = await this.collectAboveBands(props)

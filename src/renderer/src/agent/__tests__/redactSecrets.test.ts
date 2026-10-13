@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { formatAllAttemptsFailed } from '../providerErrors'
 import { redactSecrets } from '../redactSecrets'
 
 const OPENAI = 'sk-proj-AbCdEf0123456789ghijKLMNOP'
@@ -57,5 +58,49 @@ describe('redactSecrets', () => {
     ]) {
       expect(redactSecrets(s)).toBe(s)
     }
+  })
+
+  it('masks tokens in URL paths', () => {
+    const tok = 'AbCdEf0123456789ghijKLMN'
+    expect(redactSecrets(`https://h/v1/keys/${tok}/x`)).toBe('https://h/v1/keys/***/x')
+    expect(redactSecrets('https://h/v1/key/s3cr3t/x')).toBe('https://h/v1/key/***/x')
+    expect(redactSecrets('https://h/v1/tokens/s3cr3t/x')).toBe('https://h/v1/tokens/***/x')
+    expect(redactSecrets('https://h/v1/token/s3cr3t/x')).toBe('https://h/v1/token/***/x')
+    expect(redactSecrets('https://h/v1/secret/s3cr3t/x')).toBe('https://h/v1/secret/***/x')
+    expect(redactSecrets('https://h/v1/api-key/s3cr3t/x')).toBe('https://h/v1/api-key/***/x')
+    expect(redactSecrets(`https://h/v1/${tok}/x?y=1`)).toBe('https://h/v1/***/x?y=1')
+    expect(redactSecrets('https://h/v1/abcdefghijklmnopqrstuvwxyz/x')).toBe('https://h/v1/abcdefghijklmnopqrstuvwxyz/x')
+  })
+
+  it('masks short passwords in assignments and URL userinfo', () => {
+    expect(redactSecrets('password=hunter2')).toBe('password=***')
+    expect(redactSecrets('passwd=x')).toBe('passwd=***')
+    expect(redactSecrets('pwd: a')).toBe('pwd: ***')
+    expect(redactSecrets('https://user:a@host/')).toBe('https://user:***@host/')
+    expect(redactSecrets('key: 404')).toBe('key: 404')
+  })
+
+  it('masks a key continued on the next line', () => {
+    expect(redactSecrets('sk-abcdefgh\nijklmnopqrstuvwxyz')).toBe('sk-***\n***')
+    expect(redactSecrets('HTTP 401 key=Zq8xL2mN4pR6tV8wY0aC3eG5iK7oQ9sU\nUnauthorized')).toBe('HTTP 401 key=***\nUnauthorized')
+  })
+
+  it('masks ws and wss userinfo', () => {
+    expect(redactSecrets('wss://user:token@host/v1')).toBe('wss://user:***@host/v1')
+    expect(redactSecrets('ws://user:x@host/')).toBe('ws://user:***@host/')
+  })
+
+  it('redacts secrets in formatAllAttemptsFailed output', () => {
+    const same = formatAllAttemptsFailed(
+      { label: 'gpt-4o', message: `Incorrect API key provided: ${OPENAI}` },
+      { label: 'gpt-4o', message: `Incorrect API key provided: ${OPENAI}` }
+    )
+    expect(same).toBe('All model attempts failed. gpt-4o: Incorrect API key provided: sk-***')
+    expect(same).not.toContain(OPENAI)
+    const other = formatAllAttemptsFailed(
+      { label: 'gpt-4o', message: 'key: 404' },
+      { label: 'claude', message: 'password=hunter2' }
+    )
+    expect(other).toBe('All model attempts failed. gpt-4o: key: 404 (fallbacks also failed; last: claude: password=***)')
   })
 })

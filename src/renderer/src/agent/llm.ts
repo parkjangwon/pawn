@@ -3,6 +3,7 @@
  * streaming call itself (OpenAI-compatible and Claude formats).
  */
 import { useAppStore } from '../stores/app'
+import { useChatStore } from '../stores/chat'
 import { useStreamingStore } from '../stores/streaming'
 import { useProviderStore } from '../stores/provider'
 import { toolsToClaude, toolsToOpenAI, getMcpToolDefinitions, type ToolCall } from './tools'
@@ -36,11 +37,12 @@ import {
   parseCompatUsage,
   type Complexity
 } from './deepseekCompat'
-import { fetchWithRetry, markTransient } from './llmRetry'
+import { fetchWithRetry, markTransient, type FetchProgress } from './llmRetry'
 
 // Retry/transport policy was split into llmRetry.ts; re-export so existing
 // importers (ultraWork, learning, compaction, secondOpinion) keep working.
 export { parseRetryAfterHeader, calculateBackoffDelay, markTransient, fetchWithRetry } from './llmRetry'
+export type { FetchProgress } from './llmRetry'
 
 export function withConversationCacheAnchors(
   messages: Array<Record<string, unknown>>
@@ -152,6 +154,8 @@ export interface LlmRequest {
    * of the response is still streaming (lets read-only tools start early).
    */
   onToolCall?: (call: ToolCall) => void
+  /** Connect / retry status while the provider has not sent a token yet. */
+  onProgress?: (progress: FetchProgress) => void
 }
 
 /** No data for this long means the provider connection is dead; bail out. */
@@ -402,9 +406,17 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
     if (think) useStreamingStore.getState().setThinking(assistantMsgId, think)
   }
 
+  let droppedProviderProgress = false
+  const dropProviderProgress = (): void => {
+    if (droppedProviderProgress || quiet) return
+    droppedProviderProgress = true
+    useChatStore.getState().clearProviderProgress(sessionId)
+  }
+
   const flushText = (): void => {
     const display = fullText
     const think = liveThinkingText()
+    if (display || think) dropProviderProgress()
     if (display === lastFlushed && think === lastThinkingFlushed) return
     pendingDisplay = display
     pendingThinking = think
@@ -532,7 +544,7 @@ export async function callLLM(req: LlmRequest): Promise<LlmResult> {
   armIdleTimer()
   let response: Response
   try {
-    response = await fetchWithRetry(url, headers, body, isBrowser, combinedSignal, signal)
+    response = await fetchWithRetry(url, headers, body, isBrowser, combinedSignal, signal, req.onProgress)
   } catch (err) {
     if (timeoutController.signal.aborted) {
       throw markTransient(new Error('Provider request timed out (no response within 90s)'), true)
