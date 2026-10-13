@@ -601,6 +601,7 @@ export async function agentLoop(
       let lastAssistantMsgId: string | null = null
       // First failure in this round's failover, not the last fallback.
       let firstFail: { label: string; message: string } | null = null
+      let lastFail: { label: string; message: string } | null = null
 
       let needsVision = transcriptNeedsVision(entries)
       // Read-only tools start while the response is still streaming.
@@ -752,6 +753,7 @@ export async function agentLoop(
           const message = errorTextWithCause(err)
           const fail = { label: decision.model.label || decision.model.modelId, message }
           if (!firstFail) firstFail = fail
+          lastFail = fail
           // Preserve partial stream on failover: keep the bubble with a note so
           // the user never loses text they already read; the next attempt gets
           // a fresh assistant bubble.
@@ -810,7 +812,9 @@ export async function agentLoop(
       }
 
       if (!decision) {
-        if (needsVision) {
+        if (firstFail && lastFail && !needsVision) {
+          systemError(projectId, sessionId, formatAllAttemptsFailed(firstFail, lastFail), classifyLlmError(firstFail.message))
+        } else if (needsVision) {
           const code = describeVisionRouteFailure()
           const detailKey =
             code === 'fallback_disabled'

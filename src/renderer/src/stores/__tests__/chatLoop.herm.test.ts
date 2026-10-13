@@ -193,4 +193,38 @@ describe('agentLoop (hermetic smoke)', () => {
     expect(lastMsg?.content).toContain(`last: Model B: ${missing.slice(0, 200)}`)
     expect(lastMsg?.content).not.toContain(missing)
   })
+
+  it('reports provider errors when routing runs out of models after failures', async () => {
+    const model = (providerId: string, modelId: string, label: string) => ({
+      providerId, modelId, label, enabled: true,
+      pricing: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+    })
+    useProviderStore.setState({
+      providers: [
+        { id: 'p1', name: 'P1', baseUrl: 'https://p1.test', apiKey: 'bad', enabled: true },
+        { id: 'p2', name: 'P2', baseUrl: 'https://p2.test', apiKey: 'k', enabled: true }
+      ] as never,
+      models: [model('p1', 'a', 'Model A'), model('p2', 'b', 'Model B')] as never
+    })
+    const dec = (providerId: string, modelId: string, label: string) => ({
+      provider: { id: providerId } as never,
+      model: model(providerId, modelId, label) as never,
+      key: `${providerId}:${modelId}`,
+      tier: 'low' as const,
+      reason: 'test'
+    })
+    let n = 0
+    harness.route.mockImplementation(() => {
+      const i = n++
+      return i === 0 ? dec('p1', 'a', 'Model A') : i === 1 ? dec('p2', 'b', 'Model B') : null
+    })
+    harness.callLLM.mockImplementation(async (req: { decision: { model: { modelId: string } } }) => {
+      throw Object.assign(new Error(req.decision.model.modelId === 'a' ? 'HTTP 401: bad key' : 'HTTP 404: missing'), { transient: false })
+    })
+    await agentLoop('p1', 's1', 'break', useChatStore.setState, useChatStore.getState)
+    const lastMsg = [...sessionMessages()].reverse().find((m) => m.role === 'assistant')
+    expect(lastMsg?.error?.kind).toBe('auth')
+    expect(lastMsg?.content).toContain('All model attempts failed')
+    expect(lastMsg?.content).not.toContain('No usable model')
+  })
 })
