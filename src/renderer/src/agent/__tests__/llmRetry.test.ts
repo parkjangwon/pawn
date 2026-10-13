@@ -224,6 +224,27 @@ describe('fetchWithRetry connect timeout', () => {
     expect(checker).toHaveBeenCalledTimes(1)
   })
 
+  it('does not abort the fetch when the connect check is skipped for a proxy', async () => {
+    const checker = vi.fn(async () => ({ ok: true as const, skipped: true, reason: 'proxy' as const, ms: 0 as const }))
+    vi.stubGlobal('fetch', vi.fn((_url: unknown, init?: RequestInit) => new Promise<Response>((resolve, reject) => {
+      const timer = setTimeout(() => {
+        if (init?.signal?.aborted) {
+          reject(new DOMException('The operation was aborted.', 'AbortError'))
+          return
+        }
+        resolve(new Response('ok', { status: 200 }))
+      }, 30)
+      init?.signal?.addEventListener('abort', () => {
+        clearTimeout(timer)
+        reject(new DOMException('The operation was aborted.', 'AbortError'))
+      }, { once: true })
+    })))
+    const res = await fetchWithRetry('https://x.test/v1', {}, {}, false, new AbortController().signal, undefined, undefined, checker)
+    expect(res.status).toBe(200)
+    expect(await res.text()).toBe('ok')
+    expect(checker).toHaveBeenCalledTimes(1)
+  })
+
   it('lets a slow reasoning model finish when the connect check succeeds', async () => {
     vi.useFakeTimers()
     const checker = vi.fn(async () => ({ ok: true as const, ms: 4 }))

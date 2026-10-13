@@ -17,7 +17,7 @@ export const CONNECT_TIMEOUT_MS = 12_000
 export type ConnectChecker = (
   url: string,
   timeoutMs: number
-) => Promise<{ ok: boolean; ms?: number; code?: string }>
+) => Promise<{ ok: boolean; ms?: number; code?: string; skipped?: boolean; reason?: string }>
 
 function resolveConnectChecker(isBrowser: boolean, injected?: ConnectChecker): ConnectChecker | undefined {
   if (isBrowser) return undefined

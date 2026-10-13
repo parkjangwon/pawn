@@ -1,3 +1,4 @@
+import { session } from 'electron'
 import { handleTrusted } from './trust'
 import { connectCheck, probeUrl } from '../netProbe'
 
@@ -13,6 +14,6 @@ export function registerNetIpc(): void {
     if (typeof url !== 'string' || typeof timeoutMs !== 'number' || !Number.isFinite(timeoutMs) || timeoutMs <= 0) {
       return { ok: false, code: 'EINVAL' }
     }
-    return connectCheck(url, timeoutMs)
+    return connectCheck(url, timeoutMs, { resolveProxy: (u) => session.defaultSession.resolveProxy(u) })
   })
 }
