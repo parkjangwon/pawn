@@ -11,6 +11,8 @@ import { enrichTransportError, errorTextWithCause } from './providerErrors'
 export const RETRY_WAIT_BUDGET_MS = 20_000
 /** Max single wait honoured from a Retry-After header. */
 export const RETRY_AFTER_CAP_MS = 10_000
+/** Abort a fetch that has not received response headers. Cleared once they arrive, so the body is not cut. */
+export const CONNECT_TIMEOUT_MS = 12_000
 
 const QUOTA_MARKERS =
   /insufficient_quota|exceeded your current quota|credit balance is too low|insufficient credits|insufficient balance|insufficient_balance|out of credits|billing_not_active|billing hard limit|payment required/i
@@ -71,6 +73,10 @@ export function markTransient(err: unknown, transient: boolean): Error {
   return e
 }
 
+/**
+ * connecting: the first attempt.
+ * retrying.attempt is the retry number (1 = first retry); max is how many retries we allow (MAX_ATTEMPTS - 1).
+ */
 export type FetchProgress =
   | { phase: 'connecting' }
   | { phase: 'retrying'; attempt: number; max: number }
@@ -91,7 +97,8 @@ export async function fetchWithRetry(
   isBrowser: boolean,
   signal: AbortSignal,
   probeScope?: object,
-  onProgress?: (progress: FetchProgress) => void
+  onProgress?: (progress: FetchProgress) => void,
+  connectTimeoutMs = CONNECT_TIMEOUT_MS
 ): Promise<Response> {
   const payload = JSON.stringify(body)
   let lastError: Error | null = null
@@ -100,7 +107,8 @@ export async function fetchWithRetry(
   const withProbe = async (err: Error): Promise<Error> => {
     if (isBrowser) return err
     const enriched = await enrichTransportError(err.message, url, scope, err)
-    if (enriched === err.message) return err
+    // Keep the connect-phase error intact so cause.code stays UND_ERR_CONNECT_TIMEOUT.
+    if (enriched === err.message || err.message.startsWith('connect-phase timeout')) return err
     return markTransient(new Error(enriched, { cause: err }), true)
   }
 
@@ -116,7 +124,7 @@ export async function fetchWithRetry(
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     if (attempt > 0) {
       if (!retryable) throw await withProbe(lastError!)
-      onProgress?.({ phase: 'retrying', attempt: attempt + 1, max: MAX_ATTEMPTS })
+      onProgress?.({ phase: 'retrying', attempt, max: MAX_ATTEMPTS - 1 })
       const capped = lastRetryAfterMs && Math.min(lastRetryAfterMs, RETRY_AFTER_CAP_MS)
       const delayMs = calculateBackoffDelay(attempt, isRateLimit, capped)
       // Waiting would blow the budget: fail now so the user sees the error card.
@@ -133,28 +141,39 @@ export async function fetchWithRetry(
     isRateLimit = false
 
     let response: Response
+    // Headers-only deadline. Cleared as soon as fetch settles so it cannot abort the body.
+    const connectCtl = new AbortController()
+    const connectTimer = setTimeout(() => connectCtl.abort(), connectTimeoutMs)
+    const attemptSignal = AbortSignal.any([signal, connectCtl.signal])
     try {
       response = isBrowser
         ? await fetch('/api/proxy', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ url, headers, body: payload }),
-            signal
+            signal: attemptSignal
           })
-        : await fetch(url, { method: 'POST', headers, body: payload, signal })
+        : await fetch(url, { method: 'POST', headers, body: payload, signal: attemptSignal })
     } catch (err) {
+      clearTimeout(connectTimer)
       // Only a fetch that never produced a response is a network blip worth
       // retrying; a 4xx below is a bad request and must not be retried.
+      // Caller abort (Stop, idle) wins over our connect deadline.
       if (signal.aborted) throw err
-      const connectTimeout = isConnectTimeout(err)
-      // Caller abort (Stop, idle timeout). Our connect-phase abort is retried once.
-      if (err instanceof DOMException && err.name === 'AbortError' && !connectTimeout) throw err
+      const failure = connectCtl.signal.aborted
+        ? markTransient(new Error(`connect-phase timeout after ${connectTimeoutMs / 1000}s`, {
+            cause: { code: 'UND_ERR_CONNECT_TIMEOUT', message: 'connect timeout' }
+          }), true)
+        : err
+      const connectTimeout = isConnectTimeout(failure)
+      if (failure instanceof DOMException && failure.name === 'AbortError' && !connectTimeout) throw failure
       connectStreak = connectTimeout ? connectStreak + 1 : 0
       retryable = true
-      lastError = markTransient(err instanceof Error ? err : new Error(String(err)), true)
+      lastError = markTransient(failure instanceof Error ? failure : new Error(String(failure)), true)
       if (connectStreak >= 2 || attempt === MAX_ATTEMPTS - 1) throw await withProbe(lastError)
       continue
     }
+    clearTimeout(connectTimer)
 
     if (response.ok) return response
 

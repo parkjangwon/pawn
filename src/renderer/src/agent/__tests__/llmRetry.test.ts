@@ -5,6 +5,8 @@ import {
   fetchWithRetry,
   markTransient
 } from '../llm'
+import { CONNECT_TIMEOUT_MS } from '../llmRetry'
+import { classifyProviderError } from '../providerErrors'
 
 describe('llm retry and backoff utilities', () => {
   describe('parseRetryAfterHeader', () => {
@@ -111,5 +113,116 @@ describe('llm retry and backoff utilities', () => {
       ).rejects.toThrow('HTTP 400')
       expect(globalThis.fetch).toHaveBeenCalledTimes(1)
     })
+  })
+})
+
+function causeCode(err: unknown): string {
+  let cur: unknown = err
+  for (let i = 0; i < 4 && cur && typeof cur === 'object'; i++) {
+    const code = (cur as { code?: unknown }).code
+    if (typeof code === 'string') return code
+    cur = (cur as { cause?: unknown }).cause
+  }
+  return ''
+}
+
+/** Never settles until the attempt signal aborts. */
+function hangUntilAbort(): ReturnType<typeof vi.fn> {
+  return vi.fn((_url: unknown, init?: RequestInit) => new Promise((_resolve, reject) => {
+    const signal = init?.signal
+    const abort = (): void => reject(new DOMException('The operation was aborted.', 'AbortError'))
+    if (!signal || signal.aborted) {
+      abort()
+      return
+    }
+    signal.addEventListener('abort', abort, { once: true })
+  }))
+}
+
+describe('fetchWithRetry connect timeout', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('stops after two connect-phase timeouts, skips the probe, and reports retry 1/2', async () => {
+    expect(CONNECT_TIMEOUT_MS).toBe(12_000)
+    const probe = vi.fn(async () => ({ ok: false, code: 'ECONNREFUSED', message: 'connect refused' }))
+    vi.stubGlobal('window', { api: { net: { probe } } })
+    const fetchMock = hangUntilAbort()
+    vi.stubGlobal('fetch', fetchMock)
+    const seen: Array<{ phase: string; attempt?: number; max?: number }> = []
+    const started = Date.now()
+    const err = await fetchWithRetry(
+      'https://10.255.255.1/v1',
+      {},
+      {},
+      false,
+      new AbortController().signal,
+      undefined,
+      (ev) => seen.push(ev),
+      30
+    ).catch((e) => e)
+    expect(Date.now() - started).toBeLessThan(5_000)
+    expect(err.message).toContain('connect-phase timeout')
+    expect(causeCode(err)).toBe('UND_ERR_CONNECT_TIMEOUT')
+    expect(err.cause).toEqual({ code: 'UND_ERR_CONNECT_TIMEOUT', message: 'connect timeout' })
+    expect(err.transient).toBe(true)
+    expect(classifyProviderError(err.message).reason).toBe('timeout')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(probe).not.toHaveBeenCalled()
+    expect(seen).toEqual([
+      { phase: 'connecting' },
+      { phase: 'retrying', attempt: 1, max: 2 }
+    ])
+  })
+
+  it('rethrows a caller abort during connect', async () => {
+    const controller = new AbortController()
+    let started!: () => void
+    const pendingStart = new Promise<void>((resolve) => { started = resolve })
+    vi.stubGlobal('fetch', vi.fn((_url: unknown, init?: RequestInit) => new Promise((_resolve, reject) => {
+      started()
+      const abort = (): void => reject(new DOMException('The operation was aborted.', 'AbortError'))
+      if (init?.signal?.aborted) abort()
+      else init?.signal?.addEventListener('abort', abort, { once: true })
+    })))
+    const pending = fetchWithRetry('https://x.test', {}, {}, false, controller.signal, undefined, undefined, 5_000)
+    await pendingStart
+    controller.abort()
+    const err = await pending.catch((e) => e)
+    expect(err).toBeInstanceOf(DOMException)
+    expect(err.name).toBe('AbortError')
+    expect(String(err.message)).not.toContain('connect-phase')
+  })
+
+  it('does not abort a slow body after headers arrive', async () => {
+    vi.stubGlobal('fetch', vi.fn((_url: unknown, init?: RequestInit) => {
+      const signal = init?.signal
+      const stream = new ReadableStream({
+        start(controller) {
+          setTimeout(() => {
+            if (signal?.aborted) {
+              controller.error(new DOMException('The operation was aborted.', 'AbortError'))
+              return
+            }
+            controller.enqueue(new TextEncoder().encode('ok'))
+            controller.close()
+          }, 80)
+        }
+      })
+      return Promise.resolve(new Response(stream, { status: 200 }))
+    }))
+    const res = await fetchWithRetry('https://x.test', {}, {}, false, new AbortController().signal, undefined, undefined, 30)
+    expect(await res.text()).toBe('ok')
+  })
+
+  it('uses the same connect deadline on the browser proxy branch', async () => {
+    const fetchMock = hangUntilAbort()
+    vi.stubGlobal('fetch', fetchMock)
+    const err = await fetchWithRetry('https://10.255.255.1/v1', {}, {}, true, new AbortController().signal, undefined, undefined, 30).catch((e) => e)
+    expect(err.message).toContain('connect-phase timeout')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls[0][0]).toBe('/api/proxy')
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal)
   })
 })

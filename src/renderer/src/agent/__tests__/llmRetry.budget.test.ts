@@ -96,7 +96,7 @@ describe('fetchWithRetry budget', () => {
     expect((await p).ok).toBe(true)
     expect(seen).toEqual([
       { phase: 'connecting' },
-      { phase: 'retrying', attempt: 2, max: 3 }
+      { phase: 'retrying', attempt: 1, max: 2 }
     ])
   })
 
