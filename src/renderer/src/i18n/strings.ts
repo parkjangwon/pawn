@@ -137,7 +137,7 @@ export const EN: Record<string, string> = {
   'chat.errorCard.fix.timeout': 'Retry; if it keeps happening, check your connection or pick a faster model in Settings → Models.',
   'chat.errorCard.fix.refused': 'Start the local server, or fix the base URL/port in Settings → Providers.',
   'chat.errorCard.fix.proxy': 'Check your proxy settings (HTTPS_PROXY / system proxy), or try without the proxy.',
-  'chat.errorCard.fix.unknownModel': 'Fix the model ID in Settings → Models (copy it from the provider\'s model list).',
+  'chat.errorCard.fix.unknownModel': 'Correct the model ID in Settings → Models (copy it from the provider\'s model list).',
   'chat.errorCard.fix.rateLimit': 'Wait a moment and retry (Pawn already retries automatically), or switch models in Settings → Models.',
   'chat.errorCard.fix.contextTooLong': 'Start a new chat or compact this one, or pick a model with a larger context window in Settings → Models.',
   'chat.errorCard.fix.server': 'This usually clears on retry. If it persists, check the provider status page or switch models in Settings → Models.',
