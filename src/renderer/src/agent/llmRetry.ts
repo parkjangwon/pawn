@@ -76,10 +76,19 @@ export async function fetchWithRetry(
   headers: Record<string, string>,
   body: Record<string, unknown>,
   isBrowser: boolean,
-  signal: AbortSignal
+  signal: AbortSignal,
+  probeScope?: object
 ): Promise<Response> {
   const payload = JSON.stringify(body)
   let lastError: Error | null = null
+  // Probe only the error we are about to throw. Each probe can block ~5s.
+  const scope = probeScope ?? signal
+  const withProbe = async (err: Error): Promise<Error> => {
+    if (isBrowser) return err
+    const enriched = await enrichTransportError(err.message, url, scope)
+    if (enriched === err.message) return err
+    return markTransient(new Error(enriched, { cause: err }), true)
+  }
 
   // Flag set only when the error is transient (network blip, 429, 5xx).
   // 4xx and parse failures never retry — the same bytes fail forever.
@@ -91,11 +100,11 @@ export async function fetchWithRetry(
   for (let attempt = 0; attempt < 3; attempt++) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     if (attempt > 0) {
-      if (!retryable) throw lastError!
+      if (!retryable) throw await withProbe(lastError!)
       const capped = lastRetryAfterMs && Math.min(lastRetryAfterMs, RETRY_AFTER_CAP_MS)
       const delayMs = calculateBackoffDelay(attempt, isRateLimit, capped)
       // Waiting would blow the budget: fail now so the user sees the error card.
-      if (waitedMs + delayMs > RETRY_WAIT_BUDGET_MS) throw lastError!
+      if (waitedMs + delayMs > RETRY_WAIT_BUDGET_MS) throw await withProbe(lastError!)
       waitedMs += delayMs
       await new Promise((r) => setTimeout(r, delayMs))
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
@@ -121,14 +130,8 @@ export async function fetchWithRetry(
       if (err instanceof DOMException && err.name === 'AbortError') throw err
       if (signal.aborted) throw err
       retryable = true
-      let transportErr = err
-      if (!isBrowser) {
-        const message = err instanceof Error ? err.message : String(err)
-        const enriched = await enrichTransportError(message, url)
-        if (enriched !== message) transportErr = new Error(enriched, { cause: err })
-      }
-      lastError = markTransient(transportErr, true)
-      if (attempt === 2) throw lastError
+      lastError = markTransient(err instanceof Error ? err : new Error(String(err)), true)
+      if (attempt === 2) throw await withProbe(lastError)
       continue
     }
 

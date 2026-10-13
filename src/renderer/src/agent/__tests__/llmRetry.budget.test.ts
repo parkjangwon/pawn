@@ -47,6 +47,42 @@ describe('fetchWithRetry budget', () => {
     expect(f).toHaveBeenCalledTimes(2)
   })
 
+  it('probes a failing fetch once across retries and reuses it for the same signal', async () => {
+    const probe = vi.fn(async () => ({ ok: false, code: 'ECONNREFUSED', message: 'connect refused' }))
+    vi.stubGlobal('window', { api: { net: { probe } } })
+    const fetchMock = vi.fn(async () => {
+      throw new TypeError('Failed to fetch')
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    const signal = new AbortController().signal
+    const fail = async (sig: AbortSignal): Promise<Error> => {
+      try {
+        await fetchWithRetry('https://down.test/v1', {}, {}, false, sig)
+      } catch (e) {
+        return e as Error
+      }
+      throw new Error('expected fetchWithRetry to fail')
+    }
+
+    const first = fail(signal)
+    await vi.advanceTimersByTimeAsync(30_000)
+    const err = await first
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(probe).toHaveBeenCalledTimes(1)
+    expect(probe).toHaveBeenCalledWith('https://down.test/v1')
+    expect(err.message).toContain('ECONNREFUSED')
+
+    const second = fail(signal)
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect((await second).message).toContain('ECONNREFUSED')
+    expect(probe).toHaveBeenCalledTimes(1)
+
+    const other = fail(new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect((await other).message).toContain('ECONNREFUSED')
+    expect(probe).toHaveBeenCalledTimes(2)
+  })
+
   it('still retries 503', async () => {
     const f = vi
       .fn()

@@ -40,6 +40,7 @@ export type ProviderErrorReason =
   | 'quota'
   | 'badEndpoint'
   | 'badPort'
+  | 'invalidUrl'
   | 'setup'
 
 export type ProviderSettingsTarget = 'providers' | 'models' | 'usage'
@@ -72,6 +73,7 @@ const KIND_OF: Record<ProviderErrorReason, ProviderErrorKind> = {
   quota: 'billing',
   badEndpoint: 'config',
   badPort: 'config',
+  invalidUrl: 'config',
   setup: 'config'
 }
 
@@ -121,6 +123,8 @@ export function providerErrorReason(message: string): ProviderErrorReason | null
 
   // Transport failures (no HTTP status).
   if (status === undefined) {
+    // Before offline: Chromium wraps EINVALIDURL as "Failed to fetch (cause: …)".
+    if (has(s, 'einvalidurl', 'invalid url', 'err_invalid_url')) return 'invalidUrl'
     // undici refuses some ports outright (e.g. :1, :6000) before connecting.
     if (has(s, 'bad port', 'ebadport')) return 'badPort'
     if (has(s, 'enotfound', 'eai_again', 'getaddrinfo', 'err_name_not_resolved')) return 'dns'
@@ -208,18 +212,48 @@ export function withProviderErrorFix(summary: string, rawMessage: string): strin
  */
 const TRANSPORT_FAILURE = /failed to fetch|fetch failed|networkerror/i
 
+type ProbeResult = { code?: string; message?: string } | null
+
+// One probe per url for the life of `scope` (pass the turn AbortSignal). Dies with the key.
+const probeCache = new WeakMap<object, Map<string, Promise<ProbeResult>>>()
+
+async function runProbe(url: string): Promise<ProbeResult> {
+  try {
+    if (typeof window === 'undefined' || !window.api?.net?.probe) return null
+    return (await window.api.net.probe(url)) ?? null
+  } catch {
+    return null
+  }
+}
+
+function applyProbe(message: string, result: ProbeResult): string {
+  if (!result?.code) return message
+  return `${message} (cause: ${result.code}${result.message ? ` ${result.message}` : ''})`
+}
+
 /**
  * Chromium's fetch reports every transport failure as "Failed to fetch".
  * Ask the main process to connect once and append its cause code.
+ * Pass `scope` (the turn's AbortSignal) to reuse a probe for that url.
  * Never throws.
  */
-export async function enrichTransportError(message: string, url: string | undefined): Promise<string> {
+export async function enrichTransportError(
+  message: string,
+  url: string | undefined,
+  scope?: object
+): Promise<string> {
   try {
     if (!url || message.includes('(cause:') || !TRANSPORT_FAILURE.test(message)) return message
-    if (typeof window === 'undefined' || !window.api?.net?.probe) return message
-    const result = await window.api.net.probe(url)
-    if (!result?.code) return message
-    return `${message} (cause: ${result.code}${result.message ? ` ${result.message}` : ''})`
+    let pending: Promise<ProbeResult>
+    if (scope) {
+      let byUrl = probeCache.get(scope)
+      if (!byUrl) probeCache.set(scope, (byUrl = new Map()))
+      pending = byUrl.get(url) ?? runProbe(url)
+      byUrl.set(url, pending)
+    } else {
+      pending = runProbe(url)
+    }
+    return applyProbe(message, await pending)
   } catch {
     return message
   }

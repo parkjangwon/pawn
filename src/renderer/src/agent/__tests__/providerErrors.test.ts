@@ -32,6 +32,10 @@ describe('providerErrorReason', () => {
     ['HTTP 404: {"error":{"message":"model \'llama9\' not found"}}', 'unknownModel'],
     ['TypeError: fetch failed (cause: bad port)', 'badPort'],
     ['TypeError: Failed to fetch (cause: EBADPORT bad port)', 'badPort'],
+    ['Failed to fetch (cause: EINVALIDURL)', 'invalidUrl'],
+    ['TypeError: fetch failed (cause: ERR_INVALID_URL)', 'invalidUrl'],
+    ['invalid url', 'invalidUrl'],
+    ['Failed to fetch', 'offline'],
     ['HTTP 400: bad request', null],
     ['something odd happened', null]
   ]
@@ -57,7 +61,7 @@ describe('classifyProviderError', () => {
 
 describe('describeProviderError', () => {
   it('gives a cause and a concrete fix for every reason', () => {
-    for (const msg of ['HTTP 401: a', 'HTTP 403: a', 'HTTP 429: a', 'HTTP 502: a', 'HTTP 404: a', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'HTTP 407: a', 'context_length_exceeded', 'missing api key', 'Failed to fetch', 'insufficient_quota', 'bad port']) {
+    for (const msg of ['HTTP 401: a', 'HTTP 403: a', 'HTTP 429: a', 'HTTP 502: a', 'HTTP 404: a', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'HTTP 407: a', 'context_length_exceeded', 'missing api key', 'Failed to fetch', 'insufficient_quota', 'bad port', 'Failed to fetch (cause: EINVALIDURL)']) {
       const c = describeProviderError(classifyProviderError(msg))
       expect(c.title).toBeTruthy()
       expect(c.cause).toBeTruthy()
@@ -85,6 +89,10 @@ describe('describeProviderError', () => {
   it('uses its own title for badEndpoint, badPort and setup', () => {
     expect(describeProviderError({ kind: 'config', reason: 'badEndpoint' }).title).toBe('The provider URL looks wrong')
     expect(describeProviderError({ kind: 'config', reason: 'badPort' }).title).toBe('The provider URL uses a blocked port')
+    const invalidUrl = classifyProviderError('Failed to fetch (cause: EINVALIDURL)')
+    expect(invalidUrl).toMatchObject({ kind: 'config', reason: 'invalidUrl', settingsTarget: 'providers' })
+    expect(describeProviderError(invalidUrl).title).toBe('The provider URL is invalid')
+    expect(providerErrorReason('Failed to fetch')).toBe('offline')
     expect(describeProviderError({ kind: 'config', reason: 'setup' }).title).toBe('Add an AI provider to start')
     expect(describeProviderError({ kind: 'config' }).title).toBe("Pawn isn't set up for this request")
   })
@@ -103,6 +111,9 @@ describe('formatConnectionTestFailure', () => {
   it('labels transport failures by cause code', () => {
     expect(formatConnectionTestFailure('fetch failed (cause: ECONNREFUSED connect ECONNREFUSED 127.0.0.1:1)')).toBe(
       'Connection failed (ECONNREFUSED): nothing is listening at this URL. Start the server or fix the URL and port, then test again.'
+    )
+    expect(formatConnectionTestFailure('Failed to fetch (cause: EINVALIDURL)')).toBe(
+      'Connection failed (EINVALIDURL): this base URL is invalid. Fix it, then test again.'
     )
   })
   it('falls back to a redacted, truncated summary for unclassified errors', () => {

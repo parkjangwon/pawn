@@ -28,4 +28,34 @@ describe('redactSecrets', () => {
     expect(redactSecrets('HTTP 404: model `gpt-9` does not exist')).toBe('HTTP 404: model `gpt-9` does not exist')
     expect(redactSecrets('')).toBe('')
   })
+
+  it('masks bare assignments, url userinfo, auth schemes, and hf tokens', () => {
+    expect(redactSecrets('HTTP 401 key=Zq8xL2mN4pR6tV8wY0aC3eG5iK7oQ9sU')).toBe('HTTP 401 key=***')
+    expect(redactSecrets('api_key: Zq8xL2mN4pR6tV8w')).toBe('api_key: ***')
+    expect(redactSecrets('token=0123456789abcdef')).toBe('token=***')
+    expect(redactSecrets('secret: hunter2hunter2')).toBe('secret: ***')
+    expect(redactSecrets('password=correcthorsebatterystaple')).toBe('password=***')
+    expect(redactSecrets('https://user:PASS@host/')).toBe('https://user:***@host/')
+    expect(redactSecrets('http://Zq8xL2mN4pR6@host/v1')).toBe('http://***@host/v1')
+    expect(redactSecrets('https://hf_AbCdEf0123456789@host/')).toBe('https://***@host/')
+    expect(redactSecrets('BEARER abcdefghij1234567890')).toBe('BEARER ***')
+    expect(redactSecrets('bearer abcdefghij1234567890')).toBe('bearer ***')
+    expect(redactSecrets('Basic dXNlcjpwYXNzMTIz')).toBe('Basic ***')
+    expect(redactSecrets('hf_AbCdEf0123456789')).toBe('hf_***')
+  })
+
+  it('does not mask prose, emails, plain urls, or short values', () => {
+    for (const s of [
+      'the key is missing',
+      'token limit exceeded',
+      'email user@example.com',
+      'https://example.com/path',
+      'key: 404',
+      'https://username@github.com/org/repo',
+      'hf_short',
+      'monkey=abcdefghij'
+    ]) {
+      expect(redactSecrets(s)).toBe(s)
+    }
+  })
 })
