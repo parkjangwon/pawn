@@ -147,7 +147,8 @@ if (typeof window !== 'undefined' && !window.api) {
         await fetch('/api/config/save', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(config) })
         return { ok: true }
       },
-      getPaths: async () => ({ configPath: '', dataDir: '' })
+      getPaths: async () => ({ configPath: '', dataDir: '' }),
+      secretStorageStatus: async () => ({ encrypted: true })
     },
 
     // Database (SQLite via HTTP)

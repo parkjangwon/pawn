@@ -603,7 +603,9 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
           settings: { ...(config.settings || {}), ...(patch?.settings || {}) }
         }
         return { ok: true }
-      }
+      },
+      // Headless keeps config in memory (keys come from env); nothing is written to disk.
+      secretStorageStatus: async () => ({ encrypted: false, reason: 'no-cipher' as const })
     },
     connections: { list: async () => [] },
     notification: {
