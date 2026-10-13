@@ -83,6 +83,51 @@ describe('fetchWithRetry budget', () => {
     expect(probe).toHaveBeenCalledTimes(2)
   })
 
+  it('reports connecting, then retrying, before each extra attempt', async () => {
+    const seen: Array<{ phase: string; attempt?: number; max?: number }> = []
+    const f = vi.fn()
+      .mockResolvedValueOnce(res(503, 'down'))
+      .mockResolvedValueOnce(res(200, 'ok'))
+    vi.stubGlobal('fetch', f)
+    const p = fetchWithRetry('https://x.test', {}, {}, false, new AbortController().signal, undefined, (ev) => {
+      seen.push(ev)
+    })
+    await vi.advanceTimersByTimeAsync(10_000)
+    expect((await p).ok).toBe(true)
+    expect(seen).toEqual([
+      { phase: 'connecting' },
+      { phase: 'retrying', attempt: 2, max: 3 }
+    ])
+  })
+
+  it('stops after two connect timeouts in a row', async () => {
+    const makes = [
+      () => new TypeError('fetch failed', { cause: Object.assign(new Error('Connect Timeout Error'), { code: 'UND_ERR_CONNECT_TIMEOUT' }) }),
+      () => new TypeError('connect ETIMEDOUT 1.2.3.4:443'),
+      () => new DOMException('connect-phase timeout', 'AbortError')
+    ]
+    for (const make of makes) {
+      const f = vi.fn(async () => { throw make() })
+      vi.stubGlobal('fetch', f)
+      const p = fetchWithRetry('https://x.test', {}, {}, false, new AbortController().signal).catch((e) => e)
+      await vi.advanceTimersByTimeAsync(30_000)
+      expect(f).toHaveBeenCalledTimes(2)
+      await p
+    }
+  })
+
+  it('keeps retrying when a connect timeout is not repeated', async () => {
+    const f = vi.fn()
+      .mockRejectedValueOnce(new TypeError('fetch failed', { cause: Object.assign(new Error('Connect Timeout Error'), { code: 'UND_ERR_CONNECT_TIMEOUT' }) }))
+      .mockResolvedValueOnce(res(503, 'down'))
+      .mockResolvedValueOnce(res(200, 'ok'))
+    vi.stubGlobal('fetch', f)
+    const p = fetchWithRetry('https://x.test', {}, {}, false, new AbortController().signal)
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect((await p).ok).toBe(true)
+    expect(f).toHaveBeenCalledTimes(3)
+  })
+
   it('still retries 503', async () => {
     const f = vi
       .fn()

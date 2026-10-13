@@ -33,11 +33,17 @@ export function setSessionStreamingFlags(
   if (streaming) ids.add(sessionId)
   else ids.delete(sessionId)
   const list = Array.from(ids)
-  set({
+  const patch: Partial<ChatState> = {
     streamingSessionIds: list,
     isStreaming: list.length > 0,
     streamingSessionId: streaming ? sessionId : list[list.length - 1] || null
-  })
+  }
+  if (!streaming && get().providerProgress?.[sessionId]) {
+    const providerProgress = { ...get().providerProgress }
+    delete providerProgress[sessionId]
+    patch.providerProgress = providerProgress
+  }
+  set(patch)
   if (window.api?.setSessionStreaming) {
     window.api.setSessionStreaming(sessionId, streaming)
   } else {

@@ -152,6 +152,22 @@ describe('enrichTransportError', () => {
     expect(providerErrorReason(out)).toBe('badPort')
   })
 
+  it('does not probe when the message or err.cause already has a cause code', async () => {
+    const probe = vi.fn(async () => ({ ok: false, code: 'EBADPORT', message: 'bad port' }))
+    vi.stubGlobal('window', { api: { net: { probe } } })
+    for (const code of ['UND_ERR_CONNECT_TIMEOUT', 'ECONNREFUSED', 'ENOTFOUND', 'ETIMEDOUT', 'ECONNRESET', 'EAI_AGAIN', 'UND_ERR_SOCKET']) {
+      const msg = `TypeError: fetch failed ${code}`
+      expect(await enrichTransportError(msg, 'https://api.example.com/v1')).toBe(msg)
+    }
+    const err = new TypeError('fetch failed', {
+      cause: Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:1'), { code: 'ECONNREFUSED' })
+    })
+    const out = await enrichTransportError(err.message, 'https://api.example.com/v1', undefined, err)
+    expect(out).toContain('ECONNREFUSED')
+    expect(out).toContain('fetch failed')
+    expect(probe).not.toHaveBeenCalled()
+  })
+
   it('leaves other messages, missing urls, and probe failures unchanged', async () => {
     const probe = vi.fn(async () => {
       throw new Error('ipc down')
