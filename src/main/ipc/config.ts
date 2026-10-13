@@ -1,6 +1,12 @@
 import { handleTrusted } from './trust'
 import { getConfigPath, getPawnDir, loadConfig, saveConfig, type PawnConfig } from '../config'
-import { decryptProvidersInConfig, encryptProvidersInConfig } from '../providerSecrets'
+import {
+  decryptProvidersInConfig,
+  encryptProvidersInConfig,
+  getSecretStorageStatus,
+  preserveSealedProviderKeys,
+  warnIfPlaintextSecrets
+} from '../providerSecrets'
 
 export function registerConfigIpc(): void {
   handleTrusted('config:load', async () => {
@@ -19,12 +25,15 @@ export function registerConfigIpc(): void {
     }
     try {
       // Encrypt keys before they hit disk. Merge happens inside saveConfig.
-      const sealed = encryptProvidersInConfig(config as PawnConfig)
+      const kept = preserveSealedProviderKeys(config as PawnConfig, loadConfig())
+      const sealed = encryptProvidersInConfig(kept)
+      if (sealed.providers?.some((p) => p.apiKey && !p.apiKey.startsWith('enc:'))) warnIfPlaintextSecrets()
       saveConfig(sealed)
       return { ok: true }
     } catch (err) {
       return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
+  handleTrusted('config:secretStorageStatus', async () => getSecretStorageStatus())
   handleTrusted('config:getPaths', async () => ({ configPath: getConfigPath(), dataDir: getPawnDir() }))
 }
