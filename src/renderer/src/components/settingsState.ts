@@ -18,6 +18,7 @@ import {
   pickTestModelId,
   summarizeProviderError
 } from '../agent/testProvider'
+import { enrichTransportError, formatConnectionTestFailure } from '../agent/providerErrors'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
 import { isOpenRouterProvider } from '../agent/listModels'
@@ -428,6 +429,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     setTestingId(providerId)
     setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: '' } }))
     const signal = AbortSignal.timeout(TEST_TIMEOUT_MS)
+    let url: string | undefined
     try {
       if (p.apiFormat === 'kiro') {
         const r = await Promise.race([
@@ -446,7 +448,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         return
       }
       const call = await prepareSideCall(p, buildTestRequestBody(p.apiFormat, modelId))
-      const url = call.url
+      url = call.url
       const headers = call.headers
       const body = call.body
       const isBrowser = window.api?.platform === 'browser'
@@ -469,17 +471,21 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         __providerTestOutcome[providerId] = 'fail'
         setTestResult((r) => ({
           ...r,
-          [providerId]: { ok: false, message: summarizeProviderError(response.status, text) }
+          [providerId]: {
+            ok: false,
+            message: formatConnectionTestFailure(`HTTP ${response.status}: ${text}`)
+          }
         }))
       }
     } catch (err) {
       __providerTestOutcome[providerId] = 'fail'
       const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.message === 'timeout')
       if (timedOut) {
-        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: 'Timed out after 15s' } }))
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: formatConnectionTestFailure('timeout') } }))
       } else {
         const msg = err instanceof Error ? err.message : 'Something failed — see the console for details.'
-        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: msg.slice(0, 60) } }))
+        const enriched = await enrichTransportError(msg, url)
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: formatConnectionTestFailure(enriched) } }))
       }
     } finally {
       setTestingId(null)

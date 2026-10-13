@@ -23,7 +23,7 @@ import { installAppMenu } from './appMenu'
 import { setAppLanguage } from './appLanguage'
 import { loadConfig } from './config'
 import { DEV_CSP, PROD_CSP } from './csp'
-import { setSecretCipher } from './providerSecrets'
+import { setSecretCipher, warnIfPlaintextSecrets } from './providerSecrets'
 
 process.on('uncaughtException', (err) => {
   console.error('[main] uncaughtException:', err)
@@ -52,6 +52,8 @@ if (!app.requestSingleInstanceLock()) {
 registerShortcutForwarding()
 
 app.whenReady().then(() => {
+  // Backend selection is only known after ready (Linux: gnome-libsecret/kwallet/basic_text).
+  warnIfPlaintextSecrets()
   try {
     boot()
   } catch (err) {
