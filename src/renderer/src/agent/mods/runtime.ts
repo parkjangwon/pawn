@@ -150,6 +150,12 @@ export class ModRuntime {
   private loaded: LoadedModInfo[] = []
   private blobUrls: string[] = []
   private ctx: ModRuntimeContext = { sessionId: '', cwd: '' }
+  /** Turn/tool/spinner dispatch. Null while handling a non-turn event. */
+  private turnSession: string | null = null
+  /** sessionId captured at turn.start, dropped at turn.complete. */
+  private openTurns = new Set<string>()
+  /** $.state, keyed by sessionId then plugin then key. */
+  private stateBySession = new Map<string, Map<string, Map<string, unknown>>>()
   private ready = false
   private lastAnswerPlugin: string | null = null
   private listeners = new Set<() => void>()
@@ -157,7 +163,90 @@ export class ModRuntime {
   private envOverlay = new Map<string, Record<string, string>>()
 
   setContext(ctx: Partial<ModRuntimeContext>): void {
+    const prev = this.ctx.sessionId
     this.ctx = { ...this.ctx, ...ctx }
+    const next = this.ctx.sessionId
+    if (
+      ctx.sessionId !== undefined &&
+      prev &&
+      next &&
+      prev !== next &&
+      prev !== 'pending' &&
+      next !== 'pending'
+    ) {
+      void this.emit('chat.switch', { from: prev, to: next })
+    }
+  }
+
+  private currentSessionId(): string {
+    return this.turnSession ?? this.ctx.sessionId
+  }
+
+  private stateBucket(plugin: string): Map<string, unknown> {
+    const sid = this.currentSessionId() || ''
+    let byPlugin = this.stateBySession.get(sid)
+    if (!byPlugin) this.stateBySession.set(sid, (byPlugin = new Map()))
+    let bucket = byPlugin.get(plugin)
+    if (!bucket) byPlugin.set(plugin, (bucket = new Map()))
+    return bucket
+  }
+
+  private readSid(input: unknown): string | undefined {
+    if (!input || typeof input !== 'object') return undefined
+    const sid = (input as { sessionId?: unknown }).sessionId
+    return typeof sid === 'string' && sid ? sid : undefined
+  }
+
+  private turnScoped(event: string, input: unknown): boolean {
+    if (event === 'turn.start' || event === 'turn.step' || event === 'turn.complete') return true
+    if (event === 'tool.call' || event === 'tool.check') return true
+    return (
+      event === 'ui.render' &&
+      !!input &&
+      typeof input === 'object' &&
+      (input as { component?: unknown }).component === 'Spinner'
+    )
+  }
+
+  /** Session a background turn captured at start, when the active chat has moved on. */
+  private backgroundTurn(): string | null {
+    if (this.openTurns.has(this.ctx.sessionId) || this.openTurns.size !== 1) return null
+    const [sid] = this.openTurns
+    return sid || null
+  }
+
+  /**
+   * Session to freeze for this event. Tool arguments named sessionId are not
+   * the turn; an explicit id is trusted only when that turn is still open.
+   */
+  private boundSession(event: string, input: unknown): string | null {
+    if (!this.turnScoped(event, input)) return null
+    const turn = event === 'turn.start' || event === 'turn.step' || event === 'turn.complete'
+    const stamped = this.readSid(input)
+    if (turn) return stamped || this.currentSessionId()
+    if (stamped && this.openTurns.has(stamped)) return stamped
+    const bg = this.backgroundTurn()
+    if (bg) return bg
+    if ((event === 'tool.call' || event === 'tool.check') && this.openTurns.has(this.ctx.sessionId)) {
+      return this.ctx.sessionId
+    }
+    return null
+  }
+
+  private stampSession(input: unknown, sessionId: string): unknown {
+    if (!input || typeof input !== 'object' || Array.isArray(input)) return { sessionId }
+    if ((input as { sessionId?: unknown }).sessionId === sessionId) return input
+    return { ...(input as Record<string, unknown>), sessionId }
+  }
+
+  private async bindTurn<T>(sessionId: string, fn: () => Promise<T>): Promise<T> {
+    const prev = this.turnSession
+    this.turnSession = sessionId
+    try {
+      return await fn()
+    } finally {
+      this.turnSession = prev
+    }
   }
 
   /** Subscribe to load/unload/command changes (chat chip, settings badge). */
@@ -320,8 +409,15 @@ export class ModRuntime {
     return {
       pluginName,
       pluginRoot,
-      sessionId: () => this.ctx.sessionId,
+      sessionId: () => this.currentSessionId(),
       cwd: () => this.ctx.cwd || this.ctx.projectPath || '',
+      stateGet: (key) => this.stateBucket(pluginName).get(key),
+      stateSet: (key, value) => {
+        this.stateBucket(pluginName).set(key, value)
+      },
+      stateDelete: (key) => {
+        this.stateBucket(pluginName).delete(key)
+      },
       getCommands: () => this.commands,
       registerCommand: (cmd) => {
         this.commands = this.commands.filter((c) => c.name.toLowerCase() !== cmd.name.toLowerCase())
@@ -380,6 +476,31 @@ export class ModRuntime {
     core: (e: unknown) => Promise<unknown> = async (e) => e,
     signal?: AbortSignal
   ): Promise<unknown> {
+    // A background turn's bind must not leak into chat.switch / session.*.
+    if (this.turnSession && !this.turnScoped(event, input)) {
+      const prev = this.turnSession
+      this.turnSession = null
+      try {
+        return await this.emit(event, input, core, signal)
+      } finally {
+        this.turnSession = prev
+      }
+    }
+    if (!this.turnSession) {
+      const sid = this.boundSession(event, input)
+      if (sid) {
+        if (event === 'turn.start') this.openTurns.add(sid)
+        const nextInput = event === 'ui.render' ? input : this.stampSession(input, sid)
+        try {
+          return await this.bindTurn(sid, () => this.emit(event, nextInput, core, signal))
+        } finally {
+          if (event === 'turn.complete') this.openTurns.delete(sid)
+        }
+      }
+    } else if (event === 'turn.start') {
+      this.openTurns.add(this.readSid(input) || this.currentSessionId())
+    }
+
     if (!this.ready && event !== 'session.start') {
       // Allow emit during load of session.start; otherwise pass to core.
       if (this.hooks.length === 0) return core(input)
@@ -501,7 +622,9 @@ export class ModRuntime {
     tool: string,
     args: Record<string, unknown>,
     run: () => Promise<T>,
-    signal?: AbortSignal
+    signal?: AbortSignal,
+    /** Session captured when this turn started. Does not change the active chat. */
+    turnSessionId?: string
   ): Promise<{
     deny?: string
     result?: string
@@ -512,16 +635,18 @@ export class ModRuntime {
   }> {
     let coreRan = false
     let coreResult: T | undefined
-    const out = await this.emit(
-      'tool.call',
-      { tool, ...args },
-      async () => {
-        coreRan = true
-        coreResult = await run()
-        return coreResult
-      },
-      signal
-    )
+    const fire = (): Promise<unknown> =>
+      this.emit(
+        'tool.call',
+        { tool, ...args, ...(turnSessionId ? { sessionId: turnSessionId } : {}) },
+        async () => {
+          coreRan = true
+          coreResult = await run()
+          return coreResult
+        },
+        signal
+      )
+    const out = await (turnSessionId && this.turnSession !== turnSessionId ? this.bindTurn(turnSessionId, fire) : fire())
     const plugin = this.lastAnswerPlugin || undefined
     if (!coreRan && out && typeof out === 'object') {
       const o = out as { deny?: string; result?: unknown }
@@ -717,16 +842,21 @@ export class ModRuntime {
       .map(([event, plugins]) => ({ event, plugins }))
   }
 
-  async refreshSpinnerSuffix(base: Record<string, unknown> = {}): Promise<string> {
-    const props = await this.emitUiRender('Spinner', {
-      word: 'Thinking',
-      message: '',
-      suffix: '',
-      mode: 'thinking',
-      ...base
-    })
+  async refreshSpinnerSuffix(base: Record<string, unknown> = {}, turnSessionId?: string): Promise<string> {
+    const foreground = this.ctx.sessionId
+    const sid = turnSessionId || this.backgroundTurn() || undefined
+    const render = (): Promise<Record<string, unknown>> =>
+      this.emitUiRender('Spinner', {
+        word: 'Thinking',
+        message: '',
+        suffix: '',
+        mode: 'thinking',
+        ...base
+      })
+    const props = sid && this.turnSession !== sid ? await this.bindTurn(sid, render) : await render()
     const suffix = typeof props.suffix === 'string' ? props.suffix : ''
-    useModsUiStore.getState().setSpinnerSuffix(suffix)
+    // A background turn must not rewrite the spinner of the chat on screen.
+    if (!sid || sid === foreground) useModsUiStore.getState().setSpinnerSuffix(suffix)
     return suffix
   }
 }

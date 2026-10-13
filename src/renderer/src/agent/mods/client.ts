@@ -17,29 +17,45 @@ export function modsLoadKey(ctx: Pick<ModRuntimeContext, 'projectPath'>): string
   return ctx.projectPath || ''
 }
 
-export async function ensureModsLoaded(ctx: ModRuntimeContext): Promise<LoadedModInfo[]> {
-  const runtime = getModRuntime()
-  runtime.setContext(ctx)
-  const key = modsLoadKey(ctx)
+function chatSwitch(ctx: ModRuntimeContext): boolean {
   // 'pending' is the home composer before a chat exists; the first send turns
   // it into a real id, which is the same conversation, not a switch.
-  const chatChanged =
+  return (
     lastSessionId !== null &&
     lastSessionId !== 'pending' &&
     ctx.sessionId !== 'pending' &&
     lastSessionId !== ctx.sessionId
+  )
+}
+
+/** Retarget the open chat. Call only after any in-flight load has settled. */
+function retarget(ctx: ModRuntimeContext): void {
+  const switched = chatSwitch(ctx)
   lastSessionId = ctx.sessionId
-  if (loadPromise && lastKey === key) {
-    if (chatChanged) useModsUiStore.getState().clearChatUi()
-    return loadPromise
+  getModRuntime().setContext(ctx)
+  if (switched) useModsUiStore.getState().clearChatUi()
+}
+
+export async function ensureModsLoaded(ctx: ModRuntimeContext): Promise<LoadedModInfo[]> {
+  const key = modsLoadKey(ctx)
+  // Same project: join the in-flight (or finished) load, then retarget.
+  // A reload may replace the promise while we wait; loop and join that one.
+  while (loadPromise && lastKey === key) {
+    const pending = loadPromise
+    await pending.catch(() => [])
+    if (loadPromise === pending && lastKey === key) {
+      retarget(ctx)
+      return getModRuntime().getLoaded()
+    }
   }
 
-  lastKey = key
-  // Preload (chat chrome) and the first send can race on a project switch:
-  // run loads one after another so two runtime.load() calls never interleave.
   const previous = loadPromise
-  loadPromise = (async () => {
+  const runtime = getModRuntime()
+  // loadPromise is set before this function awaits. The loader itself awaits
+  // `previous` first, so two runtime.load() calls never interleave.
+  const mine = (async (): Promise<LoadedModInfo[]> => {
     if (previous) await previous.catch(() => [])
+    retarget(ctx)
     const api = window.api?.mods
     if (!api?.loadSources) {
       await runtime.load([])
@@ -60,17 +76,22 @@ export async function ensureModsLoaded(ctx: ModRuntimeContext): Promise<LoadedMo
     }))
     return runtime.load(sources)
   })()
+  loadPromise = mine
+  lastKey = key
 
+  let failed = false
   try {
-    return await loadPromise
+    return await mine
   } catch {
-    loadPromise = null
+    failed = true
     return []
+  } finally {
+    if (failed && loadPromise === mine) loadPromise = null
   }
 }
 
 export async function reloadMods(ctx: ModRuntimeContext): Promise<LoadedModInfo[]> {
-  loadPromise = null
+  // Do not clear loadPromise: a reload must run after any in-flight load.
   lastKey = ''
   useModsUiStore.getState().clearSessionUi()
   return ensureModsLoaded(ctx)

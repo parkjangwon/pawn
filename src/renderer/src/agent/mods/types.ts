@@ -116,6 +116,12 @@ export interface ModsApi {
     messages: () => Array<{ role: string; text: string }>
     usage: () => { context: { tokens: number; window: number; percent: number } }
   }
+  /** In-memory per-mod values for the chat this hook is running as. Not durable. */
+  state: {
+    get: (key: string) => unknown
+    set: (key: string, value: unknown) => void
+    delete: (key: string) => void
+  }
   fs: {
     read: (path: string) => Promise<string>
     write: (path: string, text: string) => Promise<void>

@@ -47,7 +47,9 @@ Sample: `examples/mods/first-mod/`.
 | Project | `<project>/.claude/plugins/` | Loaded with the open project |
 | Claude installs | Claude `installed_plugins.json` | Off until **Also scan Claude plugins** is on |
 
-Mods load as soon as a project is shown, before the first prompt, and stay loaded for every chat in that project. Module state (counters, timers) survives a chat switch. Switching chats clears panes, toasts, notices, and the intervention log. Opening another project, or a change in Settings or the chip menu, reloads every mod.
+Mods load as soon as a project is shown, before the first prompt, and stay loaded for every chat in that project. Module-level variables (counters, timers) survive a chat switch. `$.state` does not: it is a separate in-memory map per mod and per chat. Switching chats emits `chat.switch` with `{ from, to }` and clears panes, toasts, notices, and the intervention log. The draft id `pending` (the home composer before a chat exists) is not a switch. Opening another project, or a change in Settings or the chip menu, reloads every mod.
+
+A turn keeps the `sessionId` captured at `turn.start`. Later `turn.complete`, `tool.call`, `tool.check`, and Spinner `ui.render` for that turn are dispatched with that id. `$.session.id()` and `$.state` inside those handlers see the turn's chat, including when the user has switched away and the turn is still running. They do not follow the chat on screen. A background turn does not rewrite the visible spinner.
 
 Settings file: `~/.pawn/mods-settings.json`.
 
@@ -111,6 +113,7 @@ The validator allows a wider Claude Code set. Only these are emitted today.
 | `session.start` | After load, once for each loaded mod | Every `session.start` hook runs on each emission. `plugin` is the mod that just loaded. Register a command only when `plugin === $.plugin.name`. A second `$.command.register` of the same name throws. |
 | `session.end` | On unload, once for each loaded mod | Same fan-out. `plugin` is the mod that is ending. Observe. |
 | `session.compact` | After the transcript is compacted | Observe. Payload `{ sessionId }`. |
+| `chat.switch` | The open chat changes from one id to another | Observe. Payload `{ from, to }`. Not emitted for `pending`, or when the id does not change. |
 | `prompt.submit` | User text, before the settings `UserPromptSubmit` hook. The mod sees at most 200 000 characters. If it echoes that text unchanged, the rest of the message stays. A rewrite replaces the whole message. | `next({ ...e, text })` rewrites. Return `{ drop: "reason" }` without `next` to cancel the turn. |
 | `turn.start` | After the prompt is accepted | Observe. Payload includes `sessionId`. |
 | `turn.complete` | When the turn ends | Observe. Payload `{ sessionId, status }` where status is `completed`, `aborted`, or `failed`. |
@@ -178,7 +181,8 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 | `$.tool.register({ name, description, inputSchema, handler })` | Exposes `mcp__<plugin>__<name>` to the model. `handler(args)` runs after hooks, unless a hook answers first. A name already taken by MCP is left to MCP. |
 | `$.tool.call({ tool, ...args })` | Emits `tool.call`. |
 | `$.prompt.submit({ text, asUser })` | Sends a prompt into the chat. |
-| `$.session.id` / `cwd` / `messages` / `usage` | Current chat. |
+| `$.session.id` / `cwd` / `messages` / `usage` | Current chat. On a turn, tool, or spinner event, `$.session.id()` is the chat captured at `turn.start`, not whichever chat is open now. |
+| `$.state.get` / `set` / `delete` | In-memory values for this mod and this chat. Not written to disk. A background turn reads and writes the chat it started in. |
 | `$.fs.read` / `write` / `exists` / `list` / `stat` | Through the app file IPC. 4 MiB cap. Paths are resolved from the session cwd. `list` reports `size: 0`. |
 | `$.process.run(argv, { timeoutMs, cwd })` | Shell, sandbox on. Default timeout 30s, maximum 10 minutes. Values from `$.env.set` are merged into that child. This is what marks the mod high risk. |
 | `$.http.fetch(url, init)` | `http`/`https` only. `init` is `method`, `headers`, `body`, `timeoutMs` (default 30s, maximum 120s). 4xx and 5xx return `{ status, ok, headers, text }`. A bad URL or another scheme throws. High risk. |
