@@ -16,7 +16,12 @@ import type { HeadlessConfig } from '../nodeApi'
  * many tool results the conversation already has, so the real agent loop
  * walks through: read_file → edit_file → final answer.
  */
-type Step = (req: { toolResults: string[]; messages: any[] }) => { tool?: { name: string; args: Record<string, unknown> }; text?: string }
+type Step = (req: { toolResults: string[]; messages: any[] }) => {
+  tool?: { name: string; args: Record<string, unknown> }
+  text?: string
+  /** Fail the request with this HTTP status/body instead of answering. */
+  httpError?: { status: number; body: string }
+}
 
 let server: Server
 let baseUrl = ''
@@ -40,6 +45,11 @@ beforeAll(async () => {
       const messages: any[] = json.messages || []
       const toolResults = messages.filter((m) => m.role === 'tool').map((m) => String(m.content))
       const step = script({ toolResults, messages })
+      if (step.httpError) {
+        res.writeHead(step.httpError.status, { 'Content-Type': 'application/json' })
+        res.end(step.httpError.body)
+        return
+      }
       if (json.stream === false) {
         // Non-streaming (evaluator / summarizer) requests get a plain JSON body.
         res.writeHead(200, { 'Content-Type': 'application/json' })
@@ -152,6 +162,27 @@ describe('headless runner (real agent loop, scripted provider)', () => {
       const res = await runHeadlessTurn({ prompt: 'format', cwd: dir, config: fakeConfig(), permission: 'yolo', timeoutMs: 30_000 })
       expect(res.finalText).toContain('The user chose: tabs')
       expect(res.autoAnswers[0]).toContain('Which style?')
+    } finally {
+      await rm(dir, { recursive: true, force: true })
+    }
+  }, 60_000)
+})
+
+describe('headless runner: provider failures', () => {
+  it('reports an error card as ok:false with cause, fix and a masked key', async () => {
+    const key = 'sk-proj-LeakedKey0123456789abcdefXYZ'
+    script = () => ({
+      httpError: { status: 401, body: JSON.stringify({ error: { message: `Incorrect API key provided: ${key}`, type: 'invalid_request_error' } }) }
+    })
+    const dir = await mkdtemp(join(tmpdir(), 'pawn-headless-'))
+    try {
+      const res = await runHeadlessTurn({ prompt: 'hi', cwd: dir, config: fakeConfig(), permission: 'yolo', timeoutMs: 30_000 })
+      expect(res.ok).toBe(false)
+      expect(res.outcome).toBe('error')
+      expect(res.assistantMessages).toBe(0)
+      expect(res.error).toContain('The provider rejected your credentials')
+      expect(res.error).toContain('Settings → Providers')
+      expect(JSON.stringify(res)).not.toContain(key)
     } finally {
       await rm(dir, { recursive: true, force: true })
     }

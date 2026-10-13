@@ -1,4 +1,5 @@
-import { Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertTriangle, Trash2 } from 'lucide-react'
 import { PROVIDER_PRESETS } from '../agent/providerPresets'
 import { isOpenRouterProvider } from '../agent/listModels'
 import type { ApiFormat } from '../types/provider'
@@ -41,11 +42,13 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
     handleAddProvider,
     setShowAddProvider
   } = state
+  const plaintext = usePlaintextSecretStorage()
 
   return (
     <div className="settings-section">
       <h2>{'Providers'}</h2>
       <p className="settings-desc">{'Manage AI provider connections'}</p>
+      {plaintext && <SecretStorageWarningBanner />}
       <div className="settings-card">
         {providers.map((p) => {
           const isOpenRouter = isOpenRouterProvider(p)
@@ -111,7 +114,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               </button>
             </div>
             {testResult[p.id] && (
-              <div className={'settings-form-error provider-test-line' + (testResult[p.id]?.ok ? ' test-ok' : '')} role="status">
+              <div className={'settings-form-error provider-test-line' + (testResult[p.id]?.ok ? ' test-ok' : ' provider-test-fail')} role="status">
                 {testResult[p.id]?.ok ? '✓ ' + 'Connected' : '✗ ' + testResult[p.id]?.message}
               </div>
             )}
@@ -210,4 +213,31 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
       )}
     </div>
   )
+}
+
+export function SecretStorageWarningBanner(): React.JSX.Element {
+  return (
+    <div className="settings-warning-banner secret-storage-warning" role="status" data-testid="secret-storage-warning">
+      <AlertTriangle size={14} aria-hidden="true" className="settings-warning-banner-icon" />
+      <div>
+        <strong className="settings-warning-banner-title">{'API keys are stored unencrypted'}</strong>
+        <div className="settings-warning-banner-body">{'No OS keychain was found, so keys are saved in plain text in ~/.pawn/config.toml (readable only by you). To encrypt them, install and unlock GNOME Keyring or KWallet, then restart Pawn.'}</div>
+      </div>
+    </div>
+  )
+}
+
+/** True when the main process reports provider secrets would be stored unencrypted. */
+export function usePlaintextSecretStorage(): boolean {
+  const [plaintext, setPlaintext] = useState(false)
+  useEffect(() => {
+    let alive = true
+    const fn = window.api?.config?.secretStorageStatus
+    if (!fn) return
+    fn()
+      .then((s) => { if (alive) setPlaintext(!s.encrypted) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+  return plaintext
 }

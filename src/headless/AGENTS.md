@@ -19,6 +19,7 @@ npm run build:headless
 npm run headless -- run "task" --cwd DIR [--mode default|eco|maxing] [--model M] [--permission auto|yolo|deny] [--plan] [--json]
 npm run eval
 ```
+Exit codes: `0` ok · `1` run `ok:false` (provider error card, agent error, timeout) / eval failure / crash · `2` usage or setup error (no usable provider, empty prompt, no tasks matched, unknown command). Provider errors in `error` are classified by `src/renderer/src/agent/providerErrors.ts` and masked by `redactSecrets.ts`.
 
 ## CONVENTIONS
 - `nodeApi.ts` must match the preload `window.api` shape for every channel the agent uses. When a preload channel is added or changed, update it here too, or headless silently diverges.

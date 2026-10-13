@@ -767,6 +767,8 @@ declare global {
         load: () => Promise<Record<string, unknown>>
         save: (config: unknown) => Promise<{ ok?: boolean }>
         getPaths: () => Promise<{ configPath: string; dataDir: string }>
+        /** Whether provider API keys are sealed by the OS keychain (false → plain text on disk). */
+        secretStorageStatus?: () => Promise<{ encrypted: boolean; reason?: 'no-cipher' | 'unavailable' | 'basic_text'; backend?: string }>
       }
       db: {
         loadAll: () => Promise<{ projects: Array<{ id: string; name: string; path: string; sessions: Array<{ id: string; title: string; path: string; createdAt: number }> }> }>
@@ -1428,6 +1430,7 @@ declare global {
       }
       net?: {
         probePort: (port: number, host?: string) => Promise<{ ok: boolean; open: boolean }>
+        probe: (url: string) => Promise<{ ok: boolean; status?: number; code?: string; message?: string }>
       }
       outputs?: {
         save: (sessionId: string, content: string) => Promise<{ ok: boolean; error?: string; id?: string; chars?: number; lines?: number }>

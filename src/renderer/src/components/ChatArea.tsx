@@ -1246,6 +1246,15 @@ export default function ChatArea({
     />
   )
 
+  // Mods chrome always sits directly above the composer, in both home and
+  // docked modes, so AbovePrompt bands read as part of the input stack.
+  const composerWithMods = (
+    <div className="composer-stack">
+      <ModsChrome onOpenSettings={onOpenSettings} />
+      {composerEl}
+    </div>
+  )
+
   return (
     <main
       className="chat-area"
@@ -1329,7 +1338,7 @@ export default function ChatArea({
             // doesn't tick "Open or create a project folder".
             activeProject={activeProject?.id === '__general__' ? undefined : activeProject}
             onPick={(text) => { setInput(text); setTrigger(null) }}
-            composer={composerEl}
+            composer={composerWithMods}
           />
         ) : (
           <>
@@ -1387,14 +1396,13 @@ export default function ChatArea({
       <RecordingBar sessionId={activeSessionId} />
       <UltraWorkBanner sessionId={activeSessionId} />
       <PlanStrip sessionId={activeSessionId} />
-      <ModsChrome onOpenSettings={onOpenSettings} />
       <div className="question-card-slot">
         <QuestionCard sessionId={activeSessionId} />
       </div>
       <TurnReviewBar sessionId={activeSessionId} />
       {/* On the home screen the composer lives inside WelcomeScreen (under the
           greeting); everywhere else it stays docked at the bottom. */}
-      {isHome ? null : composerEl}
+      {isHome ? null : composerWithMods}
       {showProjectEdit && activeProjectId && (
         <ProjectEditDialog projectId={activeProjectId} onClose={() => setShowProjectEdit(false)} />
       )}

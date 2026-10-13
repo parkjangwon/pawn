@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import MessageList from '../MessageList'
 import { useStreamingStore, __flushStreamingForTests } from '../../stores/streaming'
+import { useChatStore } from '../../stores/chat'
 import type { Message } from '../../stores/app'
 
 vi.mock('react-i18next', () => ({
@@ -35,6 +36,7 @@ function renderList(props: Partial<Parameters<typeof MessageList>[0]> = {}): Ret
 
 beforeEach(() => {
   useStreamingStore.setState({ content: {}, thinking: {} })
+  useChatStore.setState({ providerProgress: {} })
 })
 
 describe('MessageList', () => {
@@ -122,6 +124,34 @@ describe('MessageList', () => {
     expect(screen.getByRole('heading', { level: 2, name: 'Done' })).toBeInTheDocument()
     // …while the in-progress tail line stays as raw text with the cursor.
     expect(screen.getByText(/still typing/)).toBeInTheDocument()
+  })
+
+  it('shows Connecting and Retrying next to the streaming indicator', () => {
+    useChatStore.setState({ providerProgress: { s1: { phase: 'connecting' } } })
+    const { rerender } = renderList({
+      sessionId: 's1',
+      isStreaming: true,
+      messages: [msg('u1', 'user', 'hi')]
+    })
+    const connecting = screen.getByRole('status')
+    expect(connecting).toHaveClass('message-provider-progress')
+    expect(connecting).toHaveTextContent('Connecting…')
+    expect(connecting).toHaveAttribute('aria-live', 'polite')
+
+    useChatStore.setState({ providerProgress: { s1: { phase: 'retrying', attempt: 2, max: 3 } } })
+    rerender(
+      <MessageList
+        messages={[msg('u1', 'user', 'hi'), msg('a1', 'assistant', '')]}
+        isStreaming={true}
+        endRef={endRef}
+        startIndex={0}
+        nearTop={false}
+        onShowEarlier={() => {}}
+        onScroll={() => {}}
+        sessionId="s1"
+      />
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('Retrying 2/3…')
   })
 
   it('shows one-line thinking indicator while live, then expands the full text after flush', () => {

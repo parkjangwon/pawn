@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { ProviderErrorInfo } from '../agent/providerErrors'
 import { uid } from '../utils/uid'
 import { clearSessionRoute } from '../agent/router'
 import { useUsageStore } from './usage'
@@ -14,14 +15,8 @@ export interface Session {
 }
 
 /** Structured failure info for an assistant error card (runtime-only: not persisted). */
-export interface MessageErrorInfo {
-  /** auth = bad key, rate = 429, server = 5xx, network = unreachable, generic = rest. */
-  kind: 'auth' | 'rate' | 'server' | 'network' | 'generic'
-  /** Raw provider error text, for the collapsible details block. */
-  detail: string
-  /** Settings section a fix most likely lives in. */
-  settingsTarget?: 'providers' | 'models' | 'usage'
-}
+/** Error-card payload; classification lives in agent/providerErrors.ts. */
+export type MessageErrorInfo = ProviderErrorInfo
 
 export interface Message {
   id: string

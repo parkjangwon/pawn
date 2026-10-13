@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { getModRuntime } from '../agent/mods'
 import { modEventLabel } from '../agent/mods/eventLabel'
 import { useModsUiStore } from '../agent/mods/uiStore'
+import Button from './Button'
+import Input from './Input'
+import Select from './Select'
 
 /** Render frozen mod UI trees from $.ui.resolve element constructors. */
 
@@ -43,11 +46,14 @@ async function emitUiEvent(
   payload: Record<string, unknown>
 ): Promise<void> {
   const runtime = getModRuntime()
+  const generation = useModsUiStore.getState().renderGeneration
   await runtime
     .emit(event, { plugin: plugin || '', ...payload }, async (e) => e)
     .catch(() => {})
+  // Name the control, not what the user typed: an Input value can be
+  // anything (a note, a token) and the intervention log is shown in chat.
   const label =
-    typeof payload.value === 'string' && payload.value.trim()
+    event !== 'ui.input' && typeof payload.value === 'string' && payload.value.trim()
       ? payload.value.trim()
       : typeof payload.id === 'string'
         ? payload.id
@@ -59,8 +65,12 @@ async function emitUiEvent(
         ? `Chose ${label}.`
         : `Pressed ${label}.`
   useModsUiStore.getState().pushTimeline(plugin || 'extension', text, 'press')
-  useModsUiStore.getState().invalidate()
-  void runtime.emitUiRender('AbovePrompt', {}).catch(() => {})
+  // One redraw: ModsChrome re-renders the bands when the generation moves.
+  // A handler that already called $.ui.invalidate() moved it; don't add a
+  // second draw on top.
+  if (useModsUiStore.getState().renderGeneration === generation) {
+    useModsUiStore.getState().invalidate()
+  }
 }
 
 export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): React.JSX.Element | null {
@@ -104,7 +114,9 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
   }
   if (type === 'Button') {
     return (
-      <button
+      <Button
+        variant="secondary"
+        size="sm"
         type="button"
         className="mod-tree-button"
         disabled={props.disabled === true}
@@ -118,7 +130,7 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
         }}
       >
         {text || kids.map((c, i) => <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} />) || 'Button'}
-      </button>
+      </Button>
     )
   }
   if (type === 'Input') {
@@ -152,7 +164,8 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
         })
       : []
     return (
-      <select
+      <Select
+        size="sm"
         className="mod-tree-select"
         defaultValue={typeof props.value === 'string' ? props.value : options[0]?.value}
         onChange={(e) => {
@@ -169,7 +182,7 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
             {o.label}
           </option>
         ))}
-      </select>
+      </Select>
     )
   }
   return (
@@ -196,30 +209,32 @@ function ModTreeInput({
   defaultValue: string
 }): React.JSX.Element {
   const [value, setValue] = useState(defaultValue)
+  // Enter commits, and the blur that usually follows must not send the same
+  // value again (that was two ui.input events and two log lines per edit).
+  const sent = useRef(defaultValue)
+  const commit = (submit: boolean): void => {
+    if (!submit && value === sent.current) return
+    sent.current = value
+    void emitUiEvent('ui.input', plugin, {
+      component: 'Input',
+      id,
+      surfaceId,
+      value,
+      ...(submit ? { submit: true } : {})
+    })
+  }
   return (
-    <input
+    <Input
+      size="sm"
       className="mod-tree-input"
       value={value}
       placeholder={placeholder}
       onChange={(e) => setValue(e.target.value)}
-      onBlur={() => {
-        void emitUiEvent('ui.input', plugin, {
-          component: 'Input',
-          id,
-          surfaceId,
-          value
-        })
-      }}
+      onBlur={() => commit(false)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault()
-          void emitUiEvent('ui.input', plugin, {
-            component: 'Input',
-            id,
-            surfaceId,
-            value,
-            submit: true
-          })
+          commit(true)
         }
       }}
     />

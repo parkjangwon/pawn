@@ -21,6 +21,7 @@ import {
   checkpointSnapshot, classifyLlmError, currentMessageContent, demoteVisionPayloadsToText, loadTranscript,
   persistTranscript, systemError, ToolLoopCounter, toolResultCap, truncateToolResult
 } from './chatTranscript'
+import { errorTextWithCause, formatAllAttemptsFailed } from '../agent/providerErrors'
 import type { MessageErrorInfo } from './app'
 import { useAppStore } from './app'
 import { useChangeLedger } from './changeLedger'
@@ -117,7 +118,7 @@ export async function agentLoop(
 
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
-    const noProviderError: MessageErrorInfo = { kind: 'generic', detail: '', settingsTarget: 'providers' }
+    const noProviderError: MessageErrorInfo = { kind: 'config', reason: 'setup', detail: '', settingsTarget: 'providers' }
     systemError(projectId, sessionId, 'No provider or model configured. Open Settings → Providers, then Settings → Models.', noProviderError)
     if (epoch === getSessionEpoch(sessionId)) {
       setSessionStreamingFlags(set, get, sessionId, false)
@@ -160,6 +161,8 @@ export async function agentLoop(
   /** completed | aborted | failed — failed leaves checkpoint for cold resume. */
   let turnEnd: 'completed' | 'aborted' | 'failed' = 'completed'
   let modTurnOpen = false
+  /** beginTurn token. 0 until this turn binds cwd and messages. */
+  let modTurnToken = 0
 
   try {
     const project = useAppStore.getState().projects.find((p) => p.id === projectId)
@@ -363,6 +366,15 @@ export async function agentLoop(
           }
         })
         const mods = getModRuntime()
+        // Live view of this turn's transcript. `entries` is reassigned as the turn grows.
+        modTurnToken = mods.beginTurn(sessionId, {
+          cwd: cwd || projectPath || '',
+          projectPath: projectPath || null,
+          messages: () =>
+            entries
+              .filter((e) => e.role === 'user' || e.role === 'assistant')
+              .map((e) => ({ role: e.role, text: e.content || '' }))
+        })
         const isFresh = entries.filter((e) => e.role === 'user' || e.role === 'assistant').length === 0
         if (isFresh) {
           const start = await fireHook({
@@ -598,6 +610,9 @@ export async function agentLoop(
       let result: LlmResult | null = null
       let decision: RouteDecision | null = null
       let lastAssistantMsgId: string | null = null
+      // First failure in this round's failover, not the last fallback.
+      let firstFail: { label: string; message: string } | null = null
+      let lastFail: { label: string; message: string } | null = null
 
       let needsVision = transcriptNeedsVision(entries)
       // Read-only tools start while the response is still streaming.
@@ -652,6 +667,12 @@ export async function agentLoop(
             needsVision: false
           })
         }
+        // Router fell back to an already-failed model (only one enabled): end the
+        // turn so the first error is shown instead of re-running fetchWithRetry.
+        if (decision && excluded.has(decision.key)) {
+          decision = null
+          break
+        }
         if (!decision) break
 
         // Surface why the router picked this model (escalation, fallback,
@@ -676,6 +697,10 @@ export async function agentLoop(
          result = await callLLM({
             decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal,
             complexity,
+            onProgress: (p) => {
+              if (epoch !== getSessionEpoch(sessionId)) return
+              get().setProviderProgress(sessionId, p)
+            },
             onToolCall: startEarly,
             toolDenylist: hiddenToolNames({
               entries,
@@ -746,7 +771,10 @@ export async function agentLoop(
             if (!streamed.trim()) useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
             throw err
           }
-          const message = err instanceof Error ? err.message : String(err)
+          const message = errorTextWithCause(err)
+          const fail = { label: decision.model.label || decision.model.modelId, message }
+          if (!firstFail) firstFail = fail
+          lastFail = fail
           // Preserve partial stream on failover: keep the bubble with a note so
           // the user never loses text they already read; the next attempt gets
           // a fresh assistant bubble.
@@ -793,19 +821,21 @@ export async function agentLoop(
           }
           excluded.add(decision.key)
           result = null
-          if (attempt === MAX_ROUTE_ATTEMPTS - 1) {
+          if (attempt === MAX_ROUTE_ATTEMPTS - 1 && firstFail) {
             systemError(
               projectId,
               sessionId,
-              `All model attempts failed. Last error: ${message}`,
-              classifyLlmError(message)
+              formatAllAttemptsFailed(firstFail, fail),
+              classifyLlmError(firstFail.message)
             )
           }
         }
       }
 
       if (!decision) {
-        if (needsVision) {
+        if (firstFail && lastFail && !needsVision) {
+          systemError(projectId, sessionId, formatAllAttemptsFailed(firstFail, lastFail), classifyLlmError(firstFail.message))
+        } else if (needsVision) {
           const code = describeVisionRouteFailure()
           const detailKey =
             code === 'fallback_disabled'
@@ -1338,11 +1368,21 @@ export async function agentLoop(
     const aborted = signal.aborted
     if (aborted) turnEnd = 'aborted'
     else if (turnEnd !== 'failed') turnEnd = 'completed'
+    // A newer turn for this session already replaced the binding; its token must win.
+    const closeModTurn = (): void => {
+      const token = modTurnToken
+      if (!token) return
+      modTurnToken = 0
+      getModRuntime().endTurn(sessionId, token)
+    }
     if (modTurnOpen) {
       modTurnOpen = false
       void getModRuntime()
         .emit('turn.complete', { sessionId, status: turnEnd }, async (e) => e)
         .catch(() => {})
+        .finally(closeModTurn)
+    } else {
+      closeModTurn()
     }
     useChangeLedger.getState().endTurn()
     releaseSleepHold()

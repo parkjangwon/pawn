@@ -64,13 +64,7 @@ export async function executeTool(
   // Mods `tool.call` runs before settings PreToolUse / permission / execution
   // (Claude Code order). A mod may deny, answer with `{ result }`, or call next.
   const runtime = getModRuntime()
-  if (ctx?.sessionId) {
-    runtime.setContext({
-      sessionId: ctx.sessionId,
-      cwd: projectPath || '',
-      projectPath: projectPath || null
-    })
-  }
+  const turnSessionId = ctx?.sessionId
 
   try {
     const modOut = await runtime.emitToolCall(
@@ -120,11 +114,12 @@ export async function executeTool(
               native ? nativeCallToAction(call).args : call.arguments,
               signal,
               projectPath,
-              { sessionId: ctx?.sessionId, cwd: projectPath }
+              { sessionId: turnSessionId, cwd: projectPath }
             )
             return { decision: permitted ? 'allow' : 'deny' }
           },
-          signal
+          signal,
+          turnSessionId
         )
         const decision =
           check && typeof check === 'object' && 'decision' in check
@@ -182,10 +177,11 @@ export async function executeTool(
             result = await handler(call, projectPath, signal, ctx, api)
           }
         }
-        void runtime.refreshSpinnerSuffix().catch(() => {})
+        void runtime.refreshSpinnerSuffix(undefined, turnSessionId).catch(() => {})
         return { result: result.content, isError: result.isError, toolResult: result }
       },
-      signal
+      signal,
+      turnSessionId
     )
 
     if (modOut.deny) {

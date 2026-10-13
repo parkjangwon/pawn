@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { tx } from '../i18n'
-import { getModRuntime, listActiveModLine, reloadMods, useModsUiStore } from '../agent/mods'
+import { ensureModsLoaded, getModRuntime, listActiveModLine, reloadMods, useModsUiStore } from '../agent/mods'
 import { modConflictLine, modEventLabel } from '../agent/mods/eventLabel'
 import { useAppStore } from '../stores/app'
 import { useFocusTrap } from '../utils/focusTrap'
 import { openPluginsExtensions } from './settingsState'
+import Card from './Card'
 import ModTree from './ModTree'
 import './ModsChrome.css'
 
@@ -44,6 +45,17 @@ export default function ModsChrome({
   })
   const sessionId = useAppStore((s) => s.activeSessionId || '')
 
+  // Load mods as soon as a project (or chat) is shown, not on the first
+  // prompt: the chip, AbovePrompt band and /commands must be there at start.
+  // Same project → no reload; ensureModsLoaded only retargets the chat.
+  useEffect(() => {
+    void ensureModsLoaded({
+      sessionId: sessionId || 'pending',
+      cwd: projectPath,
+      projectPath: projectPath || null
+    }).catch(() => [])
+  }, [projectPath, sessionId])
+
   useEffect(() => {
     return getModRuntime().subscribe(() => {
       /* runtimeGeneration already bumped */
@@ -51,7 +63,7 @@ export default function ModsChrome({
   }, [])
 
   useEffect(() => {
-    void getModRuntime().emitUiRender('AbovePrompt', {}).catch(() => {})
+    void getModRuntime().requestAbovePromptRender()
   }, [renderGeneration, runtimeGeneration])
 
   const activeMods = useMemo(() => {
@@ -155,169 +167,175 @@ export default function ModsChrome({
         ? `${activeMods[0].name} active`
         : `${activeMods.length} mods active`
 
+  const hasStrip = Boolean(
+    chipLabel || conflicts.length > 0 || timeline.length > 0 || statusEntries.length > 0
+  )
+
   return (
     <>
       {hasInline && (
         <div className="mods-chrome" aria-live="polite">
-          {chipLabel && (
-            <div className="mods-chrome-chip-wrap">
-              <button
-                type="button"
-                className="mods-chrome-chip"
-                aria-expanded={menuOpen}
-                aria-haspopup="dialog"
-                onClick={() => setMenuOpen((v) => !v)}
-                title={'Active mods'}
-              >
-                <span className="mods-chrome-dot" aria-hidden />
-                <span>{chipLabel}</span>
-              </button>
-              {menuOpen && (
-                <div
-                  ref={menuRef}
-                  className="mods-chrome-menu"
-                  role="dialog"
-                  aria-label={'Mods in this chat'}
-                >
-                  <div className="mods-chrome-menu-head">{'Mods in this chat'}</div>
-                  <ul className="mods-chrome-menu-list">
-                    {activeMods.map((mod) => (
-                      <li key={mod.id} className="mods-chrome-menu-row">
-                        <div className="mods-chrome-menu-info">
-                          <strong>{mod.name}</strong>
-                          <span>
-                            {mod.description?.trim() ||
-                              mod.hooks.slice(0, 3).map((hook) => modEventLabel(hook)).join(' · ') ||
-                              mod.source}
-                          </span>
-                        </div>
-                        <label className="mods-chrome-mini-toggle">
-                          <input
-                            type="checkbox"
-                            checked={mod.enabled}
-                            aria-label={`Turn ${mod.name} on`}
-                            onChange={(e) => void toggleMod(mod.name, e.target.checked)}
-                          />
-                        </label>
-                      </li>
-                    ))}
-                  </ul>
-                  {conflicts.length > 0 && (
-                    <div className="mods-chrome-menu-cmds">
-                      <div className="mods-chrome-menu-head">{'Hook conflicts'}</div>
-                      {conflicts.map((c) => (
-                        <div key={c.event} className="mods-chrome-conflict-block">
-                          <p className="mods-chrome-conflict-line">{modConflictLine(c.event, c.plugins)}</p>
-                          <div className="mods-chrome-order">
-                            {c.plugins.map((name) => (
-                              <span key={name} className="mods-chrome-order-item">
-                                <button
-                                  type="button"
-                                  aria-label={`Run ${name} sooner`}
-                                  onClick={() => void moveMod(name, -1)}
-                                >
-                                  {'Sooner'}
-                                </button>
-                                <span>{name}</span>
-                                <button
-                                  type="button"
-                                  aria-label={`Run ${name} later`}
-                                  onClick={() => void moveMod(name, 1)}
-                                >
-                                  {'Later'}
-                                </button>
+          {hasStrip && (
+            <div className="mods-chrome-strip">
+              {chipLabel && (
+                <div className="mods-chrome-chip-wrap">
+                  <button
+                    type="button"
+                    className="mods-chrome-chip"
+                    aria-expanded={menuOpen}
+                    aria-haspopup="dialog"
+                    onClick={() => setMenuOpen((v) => !v)}
+                    title={'Active mods'}
+                  >
+                    <span className="mods-chrome-dot" aria-hidden />
+                    <span className="mods-chrome-pill-text">{chipLabel}</span>
+                  </button>
+                  {menuOpen && (
+                    <div
+                      ref={menuRef}
+                      className="mods-chrome-menu"
+                      role="dialog"
+                      aria-label={'Mods in this chat'}
+                    >
+                      <div className="mods-chrome-menu-head">{'Mods in this chat'}</div>
+                      <ul className="mods-chrome-menu-list">
+                        {activeMods.map((mod) => (
+                          <li key={mod.id} className="mods-chrome-menu-row">
+                            <div className="mods-chrome-menu-info">
+                              <strong>{mod.name}</strong>
+                              <span>
+                                {mod.description?.trim() ||
+                                  mod.hooks.slice(0, 3).map((hook) => modEventLabel(hook)).join(' · ') ||
+                                  mod.source}
                               </span>
-                            ))}
-                          </div>
+                            </div>
+                            <label className="mods-chrome-mini-toggle">
+                              <input
+                                type="checkbox"
+                                checked={mod.enabled}
+                                aria-label={`Turn ${mod.name} on`}
+                                onChange={(e) => void toggleMod(mod.name, e.target.checked)}
+                              />
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
+                      {conflicts.length > 0 && (
+                        <div className="mods-chrome-menu-cmds">
+                          <div className="mods-chrome-menu-head">{'Hook conflicts'}</div>
+                          {conflicts.map((c) => (
+                            <div key={c.event} className="mods-chrome-conflict-block">
+                              <p className="mods-chrome-conflict-line">{modConflictLine(c.event, c.plugins)}</p>
+                              <div className="mods-chrome-order">
+                                {c.plugins.map((name) => (
+                                  <span key={name} className="mods-chrome-order-item">
+                                    <button
+                                      type="button"
+                                      aria-label={`Run ${name} sooner`}
+                                      onClick={() => void moveMod(name, -1)}
+                                    >
+                                      {'Sooner'}
+                                    </button>
+                                    <span>{name}</span>
+                                    <button
+                                      type="button"
+                                      aria-label={`Run ${name} later`}
+                                      onClick={() => void moveMod(name, 1)}
+                                    >
+                                      {'Later'}
+                                    </button>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
+                      {commands.length > 0 && (
+                        <div className="mods-chrome-menu-cmds">
+                          <div className="mods-chrome-menu-head">{'Commands'}</div>
+                          {commands.map((cmd) => (
+                            <div key={`${cmd.plugin}:${cmd.name}`} className="mods-chrome-cmd">
+                              <code>/{cmd.name}</code>
+                              <span>{cmd.plugin}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      <button type="button" className="mods-chrome-menu-settings" onClick={openSettings}>
+                        {'Manage mods'}
+                      </button>
                     </div>
                   )}
-                  {commands.length > 0 && (
-                    <div className="mods-chrome-menu-cmds">
-                      <div className="mods-chrome-menu-head">{'Commands'}</div>
-                      {commands.map((cmd) => (
-                        <div key={`${cmd.plugin}:${cmd.name}`} className="mods-chrome-cmd">
-                          <code>/{cmd.name}</code>
-                          <span>{cmd.plugin}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                  <button type="button" className="mods-chrome-menu-settings" onClick={openSettings}>
-                    {'Manage mods'}
-                  </button>
                 </div>
+              )}
+
+              {conflicts.length > 0 && (
+                <span className="mods-chrome-pill mods-chrome-conflicts" role="status">
+                  <span className="mods-chrome-origin">{'Hook conflicts'}</span>
+                  <span className="mods-chrome-pill-text">
+                    {modConflictLine(conflicts[0].event, conflicts[0].plugins)}
+                    {conflicts.length > 1 ? `  +${conflicts.length - 1}` : ''}
+                  </span>
+                </span>
+              )}
+
+              {timeline.length > 0 && (
+                <button
+                  type="button"
+                  className="mods-chrome-pill mods-chrome-status-toggle"
+                  aria-expanded={timelineOpen}
+                  onClick={() => setTimelineOpen((v) => !v)}
+                >
+                  <span className="mods-chrome-origin">{'Intervention log'}</span>
+                  <span className="mods-chrome-pill-text">
+                    {timeline[timeline.length - 1]?.text}
+                    {` · ${timeline.length}`}
+                  </span>
+                </button>
+              )}
+
+              {statusEntries.length > 0 && (
+                <button
+                  type="button"
+                  className="mods-chrome-pill mods-chrome-status-toggle"
+                  aria-expanded={statusOpen}
+                  onClick={() => setStatusOpen((v) => !v)}
+                >
+                  <span className="mods-chrome-origin">{statusEntries[0][0]}</span>
+                  <span className="mods-chrome-pill-text">
+                    {statusEntries[0][1]}
+                    {statusEntries.length > 1 ? ` · +${statusEntries.length - 1}` : ''}
+                  </span>
+                </button>
               )}
             </div>
           )}
 
-          {conflicts.length > 0 && (
-            <div className="mods-chrome-conflicts" role="status">
-              <span className="mods-chrome-origin">{'Hook conflicts'}</span>
-              <span className="mods-chrome-status-preview">
-                {modConflictLine(conflicts[0].event, conflicts[0].plugins)}
-                {conflicts.length > 1 ? `  +${conflicts.length - 1}` : ''}
-              </span>
-            </div>
-          )}
-
-          {timeline.length > 0 && (
-            <div className="mods-chrome-timeline">
-              <button
-                type="button"
-                className="mods-chrome-status-toggle"
-                aria-expanded={timelineOpen}
-                onClick={() => setTimelineOpen((v) => !v)}
-              >
-                <span className="mods-chrome-origin">{'Intervention log'}</span>
-                <span className="mods-chrome-status-preview">
-                  {timeline[timeline.length - 1]?.text}
-                  {` · ${timeline.length}`}
-                </span>
-              </button>
-              {timelineOpen && (
-                <div className="mods-chrome-timeline-list">
-                  {[...timeline].reverse().slice(0, 12).map((entry) => (
-                    <div key={entry.id} className={`mods-chrome-timeline-row ${entry.kind}`}>
-                      <span className="mods-chrome-origin">{entry.plugin}</span>
-                      <span>{entry.text}</span>
-                      <time dateTime={new Date(entry.at).toISOString()}>
-                        {new Date(entry.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                      </time>
-                    </div>
-                  ))}
-                  <button type="button" className="mods-chrome-menu-settings" onClick={() => clearTimeline()}>
-                    {'Clear log'}
-                  </button>
+          {timelineOpen && timeline.length > 0 && (
+            <div className="mods-chrome-timeline-list">
+              {[...timeline].reverse().slice(0, 12).map((entry) => (
+                <div key={entry.id} className={`mods-chrome-timeline-row ${entry.kind}`}>
+                  <span className="mods-chrome-origin">{entry.plugin}</span>
+                  <span>{entry.text}</span>
+                  <time dateTime={new Date(entry.at).toISOString()}>
+                    {new Date(entry.at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                  </time>
                 </div>
-              )}
+              ))}
+              <button type="button" className="mods-chrome-menu-settings" onClick={() => clearTimeline()}>
+                {'Clear log'}
+              </button>
             </div>
           )}
 
-          {statusEntries.length > 0 && (
-            <div className="mods-chrome-status">
-              <button
-                type="button"
-                className="mods-chrome-status-toggle"
-                aria-expanded={statusOpen}
-                onClick={() => setStatusOpen((v) => !v)}
-              >
-                <span className="mods-chrome-origin">{statusEntries[0][0]}</span>
-                <span className="mods-chrome-status-preview">
-                  {statusEntries[0][1]}
-                  {statusEntries.length > 1 ? ` · +${statusEntries.length - 1}` : ''}
-                </span>
-              </button>
-              {statusOpen &&
-                statusEntries.slice(1).map(([plugin, text]) => (
-                  <div key={plugin} className="mods-chrome-status-row">
-                    <span className="mods-chrome-origin">{plugin}</span>
-                    <span>{text}</span>
-                  </div>
-                ))}
-            </div>
-          )}
+          {statusOpen &&
+            statusEntries.slice(1).map(([plugin, text]) => (
+              <div key={plugin} className="mods-chrome-status-row">
+                <span className="mods-chrome-origin">{plugin}</span>
+                <span>{text}</span>
+              </div>
+            ))}
 
           {notices.map((n) => (
             <div key={n.id} className={`mods-chrome-notice ${n.kind}`} role="status">
@@ -334,39 +352,50 @@ export default function ModsChrome({
             </div>
           ))}
 
+          {panes.length > 0 && (
+            <div className="mods-chrome-dock" role="group" aria-label={'Mod panels'}>
+              {panes.map((pane) => (
+                <Card
+                  key={pane.id}
+                  size="sm"
+                  className="mods-chrome-pane"
+                  role="complementary"
+                  aria-label={pane.title}
+                >
+                  <div className="mods-chrome-pane-head">
+                    <span className="mods-chrome-origin">{pane.plugin}</span>
+                    <strong>{pane.title}</strong>
+                    <button
+                      type="button"
+                      className="mods-chrome-dismiss"
+                      aria-label={'Close'}
+                      onClick={() => closePane(pane.id)}
+                    >
+                      <CloseIcon />
+                    </button>
+                  </div>
+                  <div className="mods-chrome-pane-body">
+                    {pane.tree != null ? (
+                      <ModTree tree={pane.tree} plugin={pane.plugin} surfaceId={pane.id} />
+                    ) : (
+                      <span className="mods-chrome-pane-empty">{`${pane.plugin} opened a panel, but there is nothing to show yet.`}</span>
+                    )}
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
           {abovePrompts.map((band) => (
-            <div
+            <Card
               key={band.plugin}
+              size="sm"
               className="mods-chrome-above"
               role="region"
               aria-label={'Mod prompt band'}
             >
               <ModTree tree={band.tree} plugin={band.plugin} surfaceId={`above-prompt-${band.plugin}`} />
-            </div>
-          ))}
-
-          {panes.map((pane) => (
-            <div key={pane.id} className="mods-chrome-pane" role="complementary" aria-label={pane.title}>
-              <div className="mods-chrome-pane-head">
-                <span className="mods-chrome-origin">{pane.plugin}</span>
-                <strong>{pane.title}</strong>
-                <button
-                  type="button"
-                  className="mods-chrome-dismiss"
-                  aria-label={'Close'}
-                  onClick={() => closePane(pane.id)}
-                >
-                  <CloseIcon />
-                </button>
-              </div>
-              <div className="mods-chrome-pane-body">
-                {pane.tree != null ? (
-                  <ModTree tree={pane.tree} plugin={pane.plugin} surfaceId={pane.id} />
-                ) : (
-                  <span className="mods-chrome-pane-empty">{`${pane.plugin} opened a panel, but there is nothing to show yet.`}</span>
-                )}
-              </div>
-            </div>
+            </Card>
           ))}
         </div>
       )}
