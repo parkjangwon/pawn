@@ -1,7 +1,7 @@
 import { createServer, type Server } from 'node:http'
-import type { AddressInfo } from 'node:net'
-import { describe, expect, it } from 'vitest'
-import { probeUrl } from '../netProbe'
+import net, { createServer as createNetServer, type AddressInfo, type Server as NetServer, type Socket } from 'node:net'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { connectCheck, probeUrl } from '../netProbe'
 
 function listen(server: Server): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -50,5 +50,67 @@ describe('probeUrl', () => {
     } finally {
       await close(server)
     }
+  })
+})
+
+function listenNet(server: NetServer): Promise<number> {
+  return new Promise((resolve, reject) => {
+    server.once('error', reject)
+    server.listen(0, '127.0.0.1', () => resolve((server.address() as AddressInfo).port))
+  })
+}
+
+function closeNet(server: NetServer): Promise<void> {
+  return new Promise((resolve) => {
+    server.close(() => resolve())
+  })
+}
+
+describe('connectCheck', () => {
+  const stray: Socket[] = []
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    for (const socket of stray) socket.destroy()
+    stray.length = 0
+  })
+
+  it('resolves once TCP connects and destroys the socket', async () => {
+    const server = createNetServer()
+    let closed!: () => void
+    const closedP = new Promise<void>((resolve) => { closed = resolve })
+    server.on('connection', (sock) => sock.once('close', () => closed()))
+    const port = await listenNet(server)
+    try {
+      const result = await connectCheck(`http://127.0.0.1:${port}/v1`, 2_000)
+      expect(result.ok).toBe(true)
+      if (result.ok) expect(result.ms).toBeGreaterThanOrEqual(0)
+      await closedP
+    } finally {
+      await closeNet(server)
+    }
+  })
+
+  it('returns the socket error code when connect fails', async () => {
+    const result = await connectCheck('http://127.0.0.1:1/', 2_000)
+    expect(result).toEqual({ ok: false, code: 'ECONNREFUSED' })
+  })
+
+  it('returns UND_ERR_CONNECT_TIMEOUT when the handshake exceeds timeoutMs', async () => {
+    vi.spyOn(net, 'connect').mockImplementation((() => {
+      const socket = new net.Socket()
+      stray.push(socket)
+      return socket
+    }) as typeof net.connect)
+    const result = await connectCheck('http://10.255.255.1/', 30)
+    expect(result).toEqual({ ok: false, code: 'UND_ERR_CONNECT_TIMEOUT' })
+    expect(stray[0]?.destroyed).toBe(true)
+  })
+
+  it('rejects a non-http URL without opening a socket', async () => {
+    const connect = vi.spyOn(net, 'connect')
+    expect(await connectCheck('ftp://127.0.0.1/', 1_000)).toEqual({ ok: false, code: 'EINVALIDURL' })
+    expect(await connectCheck('not a url', 1_000)).toEqual({ ok: false, code: 'EINVALIDURL' })
+    expect(connect).not.toHaveBeenCalled()
   })
 })

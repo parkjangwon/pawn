@@ -138,7 +138,7 @@ describe('MessageList', () => {
     expect(connecting).toHaveTextContent('Connecting…')
     expect(connecting).toHaveAttribute('aria-live', 'polite')
 
-    useChatStore.setState({ providerProgress: { s1: { phase: 'retrying', attempt: 2, max: 3 } } })
+    useChatStore.setState({ providerProgress: { s1: { phase: 'retrying', attempt: 1, max: 2 } } })
     rerender(
       <MessageList
         messages={[msg('u1', 'user', 'hi'), msg('a1', 'assistant', '')]}
@@ -151,7 +151,22 @@ describe('MessageList', () => {
         sessionId="s1"
       />
     )
-    expect(screen.getByRole('status')).toHaveTextContent('Retrying 2/3…')
+    expect(screen.getByRole('status')).toHaveTextContent('Retrying 1/2…')
+
+    useChatStore.setState({ providerProgress: { s1: { phase: 'retrying', attempt: 2, max: 2 } } })
+    rerender(
+      <MessageList
+        messages={[msg('u1', 'user', 'hi'), msg('a1', 'assistant', '')]}
+        isStreaming={true}
+        endRef={endRef}
+        startIndex={0}
+        nearTop={false}
+        onShowEarlier={() => {}}
+        onScroll={() => {}}
+        sessionId="s1"
+      />
+    )
+    expect(screen.getByRole('status')).toHaveTextContent('Retrying 2/2…')
   })
 
   it('shows one-line thinking indicator while live, then expands the full text after flush', () => {

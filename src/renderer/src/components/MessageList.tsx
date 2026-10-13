@@ -211,6 +211,7 @@ export function WorkedFor({ durationMs }: { durationMs?: number }): React.JSX.El
 function ProviderProgressLine({ sessionId }: { sessionId?: string | null }): React.JSX.Element | null {
   const progress = useChatStore((s) => (sessionId ? s.providerProgress?.[sessionId] : undefined))
   if (!progress) return null
+  // attempt/max count retries only: "Retrying 1/2…" then "Retrying 2/2…".
   const label = progress.phase === 'retrying'
     ? `Retrying ${progress.attempt}/${progress.max}…`
     : 'Connecting…'

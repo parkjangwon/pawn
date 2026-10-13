@@ -245,7 +245,9 @@ if (typeof window !== 'undefined' && !window.api) {
     },
 
     net: {
-      probe: async () => ({ ok: false })
+      probe: async () => ({ ok: false }),
+      // No main-process socket here. Desktop uses net:connectCheck.
+      connectCheck: async () => ({ ok: true, ms: 0 })
     },
 
     // Preview only: SSH hosts live in the desktop main process.
