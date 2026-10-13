@@ -1,26 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { setSecretCipher } from '../providerSecrets'
+import { fakeCipher } from './fakeCipher'
+
+setSecretCipher(fakeCipher())
 import { mkdtempSync, readFileSync, statSync, rmSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 
-vi.mock('electron', () => {
-  const store = new Map<string, string>()
-  return {
-    safeStorage: {
-      isEncryptionAvailable: () => true,
-      encryptString: (s: string) => {
-        const id = `k${store.size}`
-        store.set(id, s)
-        return Buffer.from(id, 'utf8')
-      },
-      decryptString: (buf: Buffer) => {
-        const v = store.get(buf.toString('utf8'))
-        if (v == null) throw new Error('unknown')
-        return v
-      }
-    }
-  }
-})
 
 import { TypeSafeClient } from '@typesafe-ai/sdk'
 import {
