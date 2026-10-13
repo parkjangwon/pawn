@@ -5,6 +5,7 @@
  */
 
 import { isDeepSeekRetryableError } from './deepseekCompat'
+import { enrichTransportError } from './providerErrors'
 
 /**
  * Parse Retry-After header if present. Supports integer seconds and HTTP-date.
@@ -107,7 +108,13 @@ export async function fetchWithRetry(
       if (err instanceof DOMException && err.name === 'AbortError') throw err
       if (signal.aborted) throw err
       retryable = true
-      lastError = markTransient(err, true)
+      let transportErr = err
+      if (!isBrowser) {
+        const message = err instanceof Error ? err.message : String(err)
+        const enriched = await enrichTransportError(message, url)
+        if (enriched !== message) transportErr = new Error(enriched, { cause: err })
+      }
+      lastError = markTransient(transportErr, true)
       if (attempt === 2) throw lastError
       continue
     }

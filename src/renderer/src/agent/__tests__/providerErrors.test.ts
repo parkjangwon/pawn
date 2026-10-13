@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest'
-import { classifyProviderError, describeProviderError, formatProviderError, providerErrorReason } from '../providerErrors'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { classifyProviderError, describeProviderError, enrichTransportError, formatProviderError, providerErrorReason } from '../providerErrors'
 
 describe('providerErrorReason', () => {
   const cases: Array<[string, string | null]> = [
@@ -31,6 +31,7 @@ describe('providerErrorReason', () => {
     ['HTTP 404: {"error":"Not Found"}', 'badEndpoint'],
     ['HTTP 404: {"error":{"message":"model \'llama9\' not found"}}', 'unknownModel'],
     ['TypeError: fetch failed (cause: bad port)', 'badPort'],
+    ['TypeError: Failed to fetch (cause: EBADPORT bad port)', 'badPort'],
     ['HTTP 400: bad request', null],
     ['something odd happened', null]
   ]
@@ -84,6 +85,39 @@ describe('withProviderErrorFix', () => {
     const { withProviderErrorFix } = await import('../providerErrors')
     expect(withProviderErrorFix('FAIL: 401', 'HTTP 401: bad')).toBe('FAIL: 401 — Check or replace the key in Settings → Providers, then retry.')
     expect(withProviderErrorFix('FAIL: 400', 'HTTP 400: bad')).toBe('FAIL: 400')
+  })
+})
+
+describe('enrichTransportError', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('appends the probe cause so a bare fetch failure classifies', async () => {
+    const probe = vi.fn(async () => ({ ok: false, code: 'ECONNREFUSED', message: 'connect ECONNREFUSED 127.0.0.1:1' }))
+    vi.stubGlobal('window', { api: { net: { probe } } })
+    const out = await enrichTransportError('TypeError: Failed to fetch', 'http://127.0.0.1:1/v1')
+    expect(probe).toHaveBeenCalledWith('http://127.0.0.1:1/v1')
+    expect(out).toBe('TypeError: Failed to fetch (cause: ECONNREFUSED connect ECONNREFUSED 127.0.0.1:1)')
+    expect(providerErrorReason(out)).toBe('refused')
+  })
+
+  it('maps an unsafe-port probe to badPort', async () => {
+    vi.stubGlobal('window', { api: { net: { probe: async () => ({ ok: false, code: 'EBADPORT', message: 'bad port' }) } } })
+    const out = await enrichTransportError('Failed to fetch', 'http://127.0.0.1:6000/v1')
+    expect(providerErrorReason(out)).toBe('badPort')
+  })
+
+  it('leaves other messages, missing urls, and probe failures unchanged', async () => {
+    const probe = vi.fn(async () => {
+      throw new Error('ipc down')
+    })
+    vi.stubGlobal('window', { api: { net: { probe } } })
+    expect(await enrichTransportError('HTTP 401: no', 'http://127.0.0.1/v1')).toBe('HTTP 401: no')
+    expect(await enrichTransportError('Failed to fetch (cause: ECONNREFUSED)', 'http://127.0.0.1/v1')).toBe('Failed to fetch (cause: ECONNREFUSED)')
+    expect(await enrichTransportError('Failed to fetch', undefined)).toBe('Failed to fetch')
+    expect(await enrichTransportError('NetworkError when attempting to fetch resource.', 'http://127.0.0.1/v1')).toBe('NetworkError when attempting to fetch resource.')
+    expect(probe).toHaveBeenCalledTimes(1)
   })
 })
 

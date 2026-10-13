@@ -1,7 +1,8 @@
 /**
  * Single place that turns a raw provider/transport error into a user-facing
  * failure class plus a "likely cause" and "what to do" line. Used by the chat
- * error card (renderer) and the headless CLI result. Pure: no DOM, no Electron.
+ * error card (renderer) and the headless CLI result. Pure except
+ * enrichTransportError, which asks window.api.net.probe. No Electron import.
  *
  * Inputs look like `HTTP 401: {"error":...}` (see llmRetry.fetchWithRetry),
  * Node/undici network errors (`fetch failed`, `ECONNREFUSED`, ...), or plain
@@ -120,7 +121,7 @@ export function providerErrorReason(message: string): ProviderErrorReason | null
   // Transport failures (no HTTP status).
   if (status === undefined) {
     // undici refuses some ports outright (e.g. :1, :6000) before connecting.
-    if (has(s, 'bad port')) return 'badPort'
+    if (has(s, 'bad port', 'ebadport')) return 'badPort'
     if (has(s, 'enotfound', 'eai_again', 'getaddrinfo', 'err_name_not_resolved')) return 'dns'
     if (has(s, 'econnrefused', 'err_connection_refused')) return 'refused'
     if (has(s, 'etimedout', 'timed out', 'timeout', 'und_err_connect_timeout', 'err_timed_out')) return 'timeout'
@@ -186,6 +187,25 @@ export function withProviderErrorFix(summary: string, rawMessage: string): strin
  * "fetch failed" and keeps the useful part (ECONNREFUSED, ENOTFOUND, timeout)
  * on `err.cause`, so classification needs both.
  */
+const TRANSPORT_FAILURE = /failed to fetch|fetch failed|networkerror/i
+
+/**
+ * Chromium's fetch reports every transport failure as "Failed to fetch".
+ * Ask the main process to connect once and append its cause code.
+ * Never throws.
+ */
+export async function enrichTransportError(message: string, url: string | undefined): Promise<string> {
+  try {
+    if (!url || message.includes('(cause:') || !TRANSPORT_FAILURE.test(message)) return message
+    if (typeof window === 'undefined' || !window.api?.net?.probe) return message
+    const result = await window.api.net.probe(url)
+    if (!result?.code) return message
+    return `${message} (cause: ${result.code}${result.message ? ` ${result.message}` : ''})`
+  } catch {
+    return message
+  }
+}
+
 export function errorTextWithCause(err: unknown): string {
   const base = err instanceof Error ? err.message : String(err)
   const cause = (err as { cause?: unknown } | null)?.cause

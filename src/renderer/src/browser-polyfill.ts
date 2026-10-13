@@ -243,6 +243,10 @@ if (typeof window !== 'undefined' && !window.api) {
       onEvent: () => () => {}
     },
 
+    net: {
+      probe: async () => ({ ok: false })
+    },
+
     // Preview only: SSH hosts live in the desktop main process.
     ssh: {
       list: async () => ({ ok: true, hosts: [], sshpassAvailable: false }),

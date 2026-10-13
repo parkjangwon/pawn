@@ -35,6 +35,7 @@ import {
   formatValidateReport
 } from '../main/mods'
 import { modHttpFetch } from '../main/mods/http'
+import { probeUrl } from '../main/netProbe'
 
 export interface HeadlessConfig {
   settings?: Record<string, unknown>
@@ -574,7 +575,10 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
       update: (root: string) => rt.codeIndex.update(root)
     },
     tests: { affected: (root: string, files: string[], o?: unknown) => rt.tests.affected(root, files, o) },
-    net: { probePort: (port: number, host?: string) => rt.net.probePort(port, host) },
+    net: {
+      probePort: (port: number, host?: string) => rt.net.probePort(port, host),
+      probe: (url: string) => probeUrl(url)
+    },
     outputs: {
       save: (sessionId: string, content: string) => rt.outputs.save(sessionId, content),
       read: (id: string, o?: unknown) => rt.outputs.read(id, o)
