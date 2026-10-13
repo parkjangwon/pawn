@@ -48,12 +48,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
     <div className="settings-section">
       <h2>{'Providers'}</h2>
       <p className="settings-desc">{'Manage AI provider connections'}</p>
-      {plaintext && (
-        <div className="settings-form-error secret-storage-warning" role="alert" data-testid="secret-storage-warning">
-          <AlertTriangle size={14} aria-hidden="true" />{' '}
-          {'No OS keychain encryption is available, so API keys are stored in plain text in ~/.pawn/config.toml (owner-only file permissions). On Linux, install and unlock a keyring (e.g. GNOME Keyring or KWallet) to encrypt them.'}
-        </div>
-      )}
+      {plaintext && <SecretStorageWarningBanner />}
       <div className="settings-card">
         {providers.map((p) => {
           const isOpenRouter = isOpenRouterProvider(p)
@@ -216,6 +211,18 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
       ) : (
         <button className="add-btn-full" onClick={() => setShowAddProvider(true)}>{'Add custom provider'}</button>
       )}
+    </div>
+  )
+}
+
+export function SecretStorageWarningBanner(): React.JSX.Element {
+  return (
+    <div className="settings-warning-banner secret-storage-warning" role="status" data-testid="secret-storage-warning">
+      <AlertTriangle size={14} aria-hidden="true" className="settings-warning-banner-icon" />
+      <div>
+        <strong className="settings-warning-banner-title">{'API keys are stored unencrypted'}</strong>
+        <div className="settings-warning-banner-body">{'No OS keychain was found, so keys are saved in plain text in ~/.pawn/config.toml (readable only by you). To encrypt them, install and unlock GNOME Keyring or KWallet, then restart Pawn.'}</div>
+      </div>
     </div>
   )
 }

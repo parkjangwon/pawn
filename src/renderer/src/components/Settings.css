@@ -1452,6 +1452,34 @@ body.resizing-sidebar .settings-resizer::after {
   color: var(--danger);
 }
 
+.settings-warning-banner {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 8px 10px;
+  margin-bottom: 12px;
+  border-radius: var(--radius-sm);
+  color: var(--warning);
+  background: color-mix(in srgb, var(--warning) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warning) 35%, transparent);
+  font-size: var(--text-ui-sm);
+  line-height: 1.45;
+}
+
+.settings-warning-banner-icon {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.settings-warning-banner-title {
+  display: block;
+  font-weight: 600;
+}
+
+.settings-warning-banner-body {
+  color: var(--text-secondary);
+}
+
 .form-actions {
   display: flex;
   gap: var(--space-sm);
