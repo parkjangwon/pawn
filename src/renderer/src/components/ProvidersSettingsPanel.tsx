@@ -1,4 +1,5 @@
-import { Trash2 } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { AlertTriangle, Trash2 } from 'lucide-react'
 import { PROVIDER_PRESETS } from '../agent/providerPresets'
 import { isOpenRouterProvider } from '../agent/listModels'
 import type { ApiFormat } from '../types/provider'
@@ -41,11 +42,18 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
     handleAddProvider,
     setShowAddProvider
   } = state
+  const plaintext = usePlaintextSecretStorage()
 
   return (
     <div className="settings-section">
       <h2>{'Providers'}</h2>
       <p className="settings-desc">{'Manage AI provider connections'}</p>
+      {plaintext && (
+        <div className="settings-form-error secret-storage-warning" role="alert" data-testid="secret-storage-warning">
+          <AlertTriangle size={14} aria-hidden="true" />{' '}
+          {'No OS keychain encryption is available, so API keys are stored in plain text in ~/.pawn/config.toml (owner-only file permissions). On Linux, install and unlock a keyring (e.g. GNOME Keyring or KWallet) to encrypt them.'}
+        </div>
+      )}
       <div className="settings-card">
         {providers.map((p) => {
           const isOpenRouter = isOpenRouterProvider(p)
@@ -210,4 +218,19 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
       )}
     </div>
   )
+}
+
+/** True when the main process reports provider secrets would be stored unencrypted. */
+export function usePlaintextSecretStorage(): boolean {
+  const [plaintext, setPlaintext] = useState(false)
+  useEffect(() => {
+    let alive = true
+    const fn = window.api?.config?.secretStorageStatus
+    if (!fn) return
+    fn()
+      .then((s) => { if (alive) setPlaintext(!s.encrypted) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+  return plaintext
 }
