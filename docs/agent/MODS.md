@@ -47,6 +47,8 @@ Sample: `examples/mods/first-mod/`.
 | Project | `<project>/.claude/plugins/` | Loaded with the open project |
 | Claude installs | Claude `installed_plugins.json` | Off until **Also scan Claude plugins** is on |
 
+Mods load as soon as a project is shown, before the first prompt, and stay loaded for every chat in that project. Module state (counters, timers) survives a chat switch. Switching chats clears panes, toasts, notices, and the intervention log. Opening another project, or a change in Settings or the chip menu, reloads every mod.
+
 Settings file: `~/.pawn/mods-settings.json`.
 
 | Field | Meaning |

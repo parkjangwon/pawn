@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { tx } from '../i18n'
-import { getModRuntime, listActiveModLine, reloadMods, useModsUiStore } from '../agent/mods'
+import { ensureModsLoaded, getModRuntime, listActiveModLine, reloadMods, useModsUiStore } from '../agent/mods'
 import { modConflictLine, modEventLabel } from '../agent/mods/eventLabel'
 import { useAppStore } from '../stores/app'
 import { useFocusTrap } from '../utils/focusTrap'
@@ -43,6 +43,17 @@ export default function ModsChrome({
     return p?.paths?.[0] || ''
   })
   const sessionId = useAppStore((s) => s.activeSessionId || '')
+
+  // Load mods as soon as a project (or chat) is shown, not on the first
+  // prompt: the chip, AbovePrompt band and /commands must be there at start.
+  // Same project → no reload; ensureModsLoaded only retargets the chat.
+  useEffect(() => {
+    void ensureModsLoaded({
+      sessionId: sessionId || 'pending',
+      cwd: projectPath,
+      projectPath: projectPath || null
+    }).catch(() => [])
+  }, [projectPath, sessionId])
 
   useEffect(() => {
     return getModRuntime().subscribe(() => {
