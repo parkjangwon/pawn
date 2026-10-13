@@ -27,8 +27,11 @@ let note = ''
 
 // Pawn / Claude Code calls this once when the mod loads
 export function register(on) {
-  // Runs when the session starts, before your first prompt
+  // Runs when the session starts, before your first prompt.
+  // Pawn emits session.start once for every loaded mod, so only register
+  // when the event is about this mod; a second /tally register throws.
   on('session.start', async ($, e, next) => {
+    if (e.plugin !== $.plugin.name) return next(e)
     await $.command.register({
       name: 'tally',
       description: 'Show how many tool calls the agent has made'
