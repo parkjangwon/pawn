@@ -283,7 +283,8 @@ const api = {
   config: {
     load: () => ipcRenderer.invoke('config:load'),
     save: (config: unknown) => ipcRenderer.invoke('config:save', config),
-    getPaths: () => ipcRenderer.invoke('config:getPaths')
+    getPaths: () => ipcRenderer.invoke('config:getPaths'),
+    secretStorageStatus: () => ipcRenderer.invoke('config:secretStorageStatus')
   },
 
   // Database (SQLite)
