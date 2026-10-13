@@ -62,7 +62,7 @@ export default function ModsChrome({
   }, [])
 
   useEffect(() => {
-    void getModRuntime().emitUiRender('AbovePrompt', {}).catch(() => {})
+    void getModRuntime().requestAbovePromptRender()
   }, [renderGeneration, runtimeGeneration])
 
   const activeMods = useMemo(() => {

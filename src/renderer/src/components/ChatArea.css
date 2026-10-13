@@ -2132,6 +2132,12 @@
   font-weight: 600;
   color: var(--text-secondary);
 }
+.message-provider-progress {
+  margin-bottom: 6px;
+  font-size: var(--text-ui-xs);
+  font-weight: 500;
+  color: var(--text-secondary);
+}
 .message-thinking-spinner {
   width: 10px;
   height: 10px;

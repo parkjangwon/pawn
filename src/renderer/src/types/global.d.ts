@@ -1430,6 +1430,7 @@ declare global {
       }
       net?: {
         probePort: (port: number, host?: string) => Promise<{ ok: boolean; open: boolean }>
+        probe: (url: string) => Promise<{ ok: boolean; status?: number; code?: string; message?: string }>
       }
       outputs?: {
         save: (sessionId: string, content: string) => Promise<{ ok: boolean; error?: string; id?: string; chars?: number; lines?: number }>

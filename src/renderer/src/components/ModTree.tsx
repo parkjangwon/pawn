@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { getModRuntime } from '../agent/mods'
 import { modEventLabel } from '../agent/mods/eventLabel'
 import { useModsUiStore } from '../agent/mods/uiStore'
@@ -43,11 +43,14 @@ async function emitUiEvent(
   payload: Record<string, unknown>
 ): Promise<void> {
   const runtime = getModRuntime()
+  const generation = useModsUiStore.getState().renderGeneration
   await runtime
     .emit(event, { plugin: plugin || '', ...payload }, async (e) => e)
     .catch(() => {})
+  // Name the control, not what the user typed: an Input value can be
+  // anything (a note, a token) and the intervention log is shown in chat.
   const label =
-    typeof payload.value === 'string' && payload.value.trim()
+    event !== 'ui.input' && typeof payload.value === 'string' && payload.value.trim()
       ? payload.value.trim()
       : typeof payload.id === 'string'
         ? payload.id
@@ -59,8 +62,12 @@ async function emitUiEvent(
         ? `Chose ${label}.`
         : `Pressed ${label}.`
   useModsUiStore.getState().pushTimeline(plugin || 'extension', text, 'press')
-  useModsUiStore.getState().invalidate()
-  void runtime.emitUiRender('AbovePrompt', {}).catch(() => {})
+  // One redraw: ModsChrome re-renders the bands when the generation moves.
+  // A handler that already called $.ui.invalidate() moved it; don't add a
+  // second draw on top.
+  if (useModsUiStore.getState().renderGeneration === generation) {
+    useModsUiStore.getState().invalidate()
+  }
 }
 
 export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): React.JSX.Element | null {
@@ -196,30 +203,31 @@ function ModTreeInput({
   defaultValue: string
 }): React.JSX.Element {
   const [value, setValue] = useState(defaultValue)
+  // Enter commits, and the blur that usually follows must not send the same
+  // value again (that was two ui.input events and two log lines per edit).
+  const sent = useRef(defaultValue)
+  const commit = (submit: boolean): void => {
+    if (!submit && value === sent.current) return
+    sent.current = value
+    void emitUiEvent('ui.input', plugin, {
+      component: 'Input',
+      id,
+      surfaceId,
+      value,
+      ...(submit ? { submit: true } : {})
+    })
+  }
   return (
     <input
       className="mod-tree-input"
       value={value}
       placeholder={placeholder}
       onChange={(e) => setValue(e.target.value)}
-      onBlur={() => {
-        void emitUiEvent('ui.input', plugin, {
-          component: 'Input',
-          id,
-          surfaceId,
-          value
-        })
-      }}
+      onBlur={() => commit(false)}
       onKeyDown={(e) => {
         if (e.key === 'Enter') {
           e.preventDefault()
-          void emitUiEvent('ui.input', plugin, {
-            component: 'Input',
-            id,
-            surfaceId,
-            value,
-            submit: true
-          })
+          commit(true)
         }
       }}
     />
