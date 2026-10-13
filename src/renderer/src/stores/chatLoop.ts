@@ -21,7 +21,7 @@ import {
   checkpointSnapshot, classifyLlmError, currentMessageContent, demoteVisionPayloadsToText, loadTranscript,
   persistTranscript, systemError, ToolLoopCounter, toolResultCap, truncateToolResult
 } from './chatTranscript'
-import { errorTextWithCause } from '../agent/providerErrors'
+import { errorTextWithCause, formatAllAttemptsFailed } from '../agent/providerErrors'
 import type { MessageErrorInfo } from './app'
 import { useAppStore } from './app'
 import { useChangeLedger } from './changeLedger'
@@ -599,6 +599,8 @@ export async function agentLoop(
       let result: LlmResult | null = null
       let decision: RouteDecision | null = null
       let lastAssistantMsgId: string | null = null
+      // First failure in this round's failover, not the last fallback.
+      let firstFail: { label: string; message: string } | null = null
 
       let needsVision = transcriptNeedsVision(entries)
       // Read-only tools start while the response is still streaming.
@@ -748,6 +750,8 @@ export async function agentLoop(
             throw err
           }
           const message = errorTextWithCause(err)
+          const fail = { label: decision.model.label || decision.model.modelId, message }
+          if (!firstFail) firstFail = fail
           // Preserve partial stream on failover: keep the bubble with a note so
           // the user never loses text they already read; the next attempt gets
           // a fresh assistant bubble.
@@ -794,12 +798,12 @@ export async function agentLoop(
           }
           excluded.add(decision.key)
           result = null
-          if (attempt === MAX_ROUTE_ATTEMPTS - 1) {
+          if (attempt === MAX_ROUTE_ATTEMPTS - 1 && firstFail) {
             systemError(
               projectId,
               sessionId,
-              `All model attempts failed. Last error: ${message}`,
-              classifyLlmError(message)
+              formatAllAttemptsFailed(firstFail, fail),
+              classifyLlmError(firstFail.message)
             )
           }
         }

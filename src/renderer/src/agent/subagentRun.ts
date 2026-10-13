@@ -1,4 +1,5 @@
 import { callLLM } from './llm'
+import { errorTextWithCause, formatAllAttemptsFailed } from './providerErrors'
 import { injectBackgroundResult } from './subagentReporting'
 // Reporting helpers were split into subagentReporting.ts; the old path
 // re-exports so the subagent facade and tool handlers keep working.
@@ -358,6 +359,8 @@ export async function runSubagent(
       let result: Awaited<ReturnType<typeof callLLM>> | null = null
       let decision: RouteDecision | null = null
       let lastErr = ''
+      let firstFail: { label: string; message: string } | null = null
+      let lastFail: { label: string; message: string } | null = null
 
       for (let attempt = 0; attempt < MAX_ROUTE_ATTEMPTS; attempt++) {
         if (signal.aborted) break
@@ -417,17 +420,31 @@ export async function runSubagent(
           break
         } catch (err) {
           lastErr = String(err)
+          const fail = {
+            label: decision.model.label || decision.model.modelId,
+            message: errorTextWithCause(err)
+          }
+          if (!firstFail) firstFail = fail
+          lastFail = fail
           result = null
           if (signal.aborted) break
           if ((err as { transient?: boolean }).transient !== false) {
             noteProviderFailure(decision.provider.id)
           }
           excluded.add(decision.key)
-          if (attempt === MAX_ROUTE_ATTEMPTS - 1) return await failFinish(lastErr || 'All model attempts failed')
+          if (attempt === MAX_ROUTE_ATTEMPTS - 1 && firstFail && lastFail) {
+            return await failFinish(formatAllAttemptsFailed(firstFail, lastFail))
+          }
         }
       }
 
-      if (!decision || !result) return await failFinish(lastErr || 'No model available to run subagent')
+      if (!decision || !result) {
+        return await failFinish(
+          signal.aborted || !firstFail || !lastFail
+            ? (lastErr || 'No model available to run subagent')
+            : formatAllAttemptsFailed(firstFail, lastFail)
+        )
+      }
 
       entries.push({
         role: 'assistant',

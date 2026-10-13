@@ -215,3 +215,16 @@ export function errorTextWithCause(err: unknown): string {
   const extra = [...new Set(parts)].join(' ')
   return redactSecrets(extra && !base.includes(extra) ? `${base} (cause: ${extra})` : base)
 }
+
+/**
+ * The first attempt is the model the user picked (or the router's first choice).
+ * A later fallback's 404/429 must not hide that error on the card.
+ */
+export function formatAllAttemptsFailed(
+  first: { label: string; message: string },
+  last: { label: string; message: string }
+): string {
+  const head = `All model attempts failed. ${first.label}: ${first.message}`
+  if (last.message === first.message) return head
+  return `${head} (fallbacks also failed; last: ${last.label}: ${last.message.slice(0, 200)})`
+}

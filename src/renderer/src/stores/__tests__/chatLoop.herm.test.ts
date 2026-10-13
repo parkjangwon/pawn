@@ -146,5 +146,51 @@ describe('agentLoop (hermetic smoke)', () => {
     expect(useChatStore.getState().isSessionStreaming('s1')).toBe(false)
     const lastMsg = [...sessionMessages()].reverse().find((m) => m.role === 'assistant')
     expect(lastMsg?.content).toContain('All model attempts failed')
+    expect(lastMsg?.content).not.toContain('fallbacks also failed')
+  })
+
+  it('classifies the first model error when a later fallback fails differently', async () => {
+    useProviderStore.setState({
+      providers: [
+        { id: 'p1', name: 'P1', baseUrl: 'https://p1.test', apiKey: 'bad', enabled: true },
+        { id: 'p2', name: 'P2', baseUrl: 'https://p2.test', apiKey: 'k', enabled: true }
+      ] as never,
+      models: [
+        {
+          providerId: 'p1', modelId: 'a', label: 'Model A', enabled: true,
+          pricing: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+        },
+        {
+          providerId: 'p2', modelId: 'b', label: 'Model B', enabled: true,
+          pricing: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+        }
+      ] as never
+    })
+    const dec = (providerId: string, modelId: string, label: string) => ({
+      provider: { id: providerId } as never,
+      model: {
+        providerId, modelId, label,
+        pricing: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 }
+      } as never,
+      key: `${providerId}:${modelId}`,
+      tier: 'low' as const,
+      reason: 'test'
+    })
+    let n = 0
+    harness.route.mockImplementation(() => (n++ === 0 ? dec('p1', 'a', 'Model A') : dec('p2', 'b', 'Model B')))
+    const missing = `HTTP 404: ${'not-found '.repeat(30)}`
+    harness.callLLM.mockImplementation(async (req: { decision: { model: { modelId: string } } }) => {
+      if (req.decision.model.modelId === 'a') {
+        throw Object.assign(new Error('HTTP 401: bad key'), { transient: false })
+      }
+      throw Object.assign(new Error(missing), { transient: false })
+    })
+    await agentLoop('p1', 's1', 'break', useChatStore.setState, useChatStore.getState)
+    const lastMsg = [...sessionMessages()].reverse().find((m) => m.role === 'assistant')
+    expect(lastMsg?.error?.kind).toBe('auth')
+    expect(lastMsg?.content).toContain('401')
+    expect(lastMsg?.content).toContain('Model A: HTTP 401: bad key')
+    expect(lastMsg?.content).toContain(`last: Model B: ${missing.slice(0, 200)}`)
+    expect(lastMsg?.content).not.toContain(missing)
   })
 })
