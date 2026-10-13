@@ -1474,6 +1474,7 @@ body.resizing-sidebar .settings-resizer::after {
 .settings-warning-banner-title {
   display: block;
   font-weight: 600;
+  color: var(--text-primary);
 }
 
 .settings-warning-banner-body {
