@@ -523,7 +523,8 @@ const api = {
   },
   net: {
     probePort: (port: number, host?: string) => ipcRenderer.invoke('net:probePort', port, host),
-    probe: (url: string) => ipcRenderer.invoke('net:probe', url)
+    probe: (url: string) => ipcRenderer.invoke('net:probe', url),
+    connectCheck: (url: string, timeoutMs: number) => ipcRenderer.invoke('net:connectCheck', url, timeoutMs)
   },
   /** Full tool outputs offloaded out of the context window. */
   outputs: {

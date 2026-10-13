@@ -11,8 +11,21 @@ import { enrichTransportError, errorTextWithCause } from './providerErrors'
 export const RETRY_WAIT_BUDGET_MS = 20_000
 /** Max single wait honoured from a Retry-After header. */
 export const RETRY_AFTER_CAP_MS = 10_000
-/** Abort a fetch that has not received response headers. Cleared once they arrive, so the body is not cut. */
+/** How long the TCP/TLS connect check may take. Does not limit time to the first response byte. */
 export const CONNECT_TIMEOUT_MS = 12_000
+
+export type ConnectChecker = (
+  url: string,
+  timeoutMs: number
+) => Promise<{ ok: boolean; ms?: number; code?: string }>
+
+function resolveConnectChecker(isBrowser: boolean, injected?: ConnectChecker): ConnectChecker | undefined {
+  if (isBrowser) return undefined
+  if (injected) return injected
+  if (typeof window === 'undefined') return undefined
+  const fn = window.api?.net?.connectCheck
+  return typeof fn === 'function' ? fn : undefined
+}
 
 const QUOTA_MARKERS =
   /insufficient_quota|exceeded your current quota|credit balance is too low|insufficient credits|insufficient balance|insufficient_balance|out of credits|billing_not_active|billing hard limit|payment required/i
@@ -98,7 +111,7 @@ export async function fetchWithRetry(
   signal: AbortSignal,
   probeScope?: object,
   onProgress?: (progress: FetchProgress) => void,
-  connectTimeoutMs = CONNECT_TIMEOUT_MS
+  connectCheck?: ConnectChecker
 ): Promise<Response> {
   const payload = JSON.stringify(body)
   let lastError: Error | null = null
@@ -141,27 +154,38 @@ export async function fetchWithRetry(
     isRateLimit = false
 
     let response: Response
-    // Headers-only deadline. Cleared as soon as fetch settles so it cannot abort the body.
-    const connectCtl = new AbortController()
-    const connectTimer = setTimeout(() => connectCtl.abort(), connectTimeoutMs)
-    const attemptSignal = AbortSignal.any([signal, connectCtl.signal])
+    // Parallel connect check. Abort only when it reports a connect timeout
+    // before fetch settles — a slow first byte is not a connect failure.
+    const checker = resolveConnectChecker(isBrowser, connectCheck)
+    const connectCtl = checker ? new AbortController() : null
+    const attemptSignal = connectCtl ? AbortSignal.any([signal, connectCtl.signal]) : signal
+    const init: RequestInit = isBrowser
+      ? {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ url, headers, body: payload }),
+          signal: attemptSignal
+        }
+      : { method: 'POST', headers, body: payload, signal: attemptSignal }
+    const fetchPromise = isBrowser ? fetch('/api/proxy', init) : fetch(url, init)
+    if (checker && connectCtl) {
+      const verdict = await Promise.race([
+        fetchPromise.then(() => null, () => null),
+        checker(url, CONNECT_TIMEOUT_MS).then((result) => result, () => null)
+      ])
+      if (verdict?.ok === false && verdict.code === 'UND_ERR_CONNECT_TIMEOUT' && !signal.aborted) {
+        connectCtl.abort()
+      }
+    }
     try {
-      response = isBrowser
-        ? await fetch('/api/proxy', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ url, headers, body: payload }),
-            signal: attemptSignal
-          })
-        : await fetch(url, { method: 'POST', headers, body: payload, signal: attemptSignal })
+      response = await fetchPromise
     } catch (err) {
-      clearTimeout(connectTimer)
       // Only a fetch that never produced a response is a network blip worth
       // retrying; a 4xx below is a bad request and must not be retried.
-      // Caller abort (Stop, idle) wins over our connect deadline.
+      // Caller abort (Stop, idle) wins over the connect check.
       if (signal.aborted) throw err
-      const failure = connectCtl.signal.aborted
-        ? markTransient(new Error(`connect-phase timeout after ${connectTimeoutMs / 1000}s`, {
+      const failure = connectCtl?.signal.aborted
+        ? markTransient(new Error(`connect-phase timeout after ${CONNECT_TIMEOUT_MS / 1000}s`, {
             cause: { code: 'UND_ERR_CONNECT_TIMEOUT', message: 'connect timeout' }
           }), true)
         : err
@@ -173,7 +197,6 @@ export async function fetchWithRetry(
       if (connectStreak >= 2 || attempt === MAX_ATTEMPTS - 1) throw await withProbe(lastError)
       continue
     }
-    clearTimeout(connectTimer)
 
     if (response.ok) return response
 
