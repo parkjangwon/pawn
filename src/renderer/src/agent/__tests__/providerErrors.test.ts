@@ -67,3 +67,11 @@ describe('describeProviderError', () => {
     expect(formatProviderError('HTTP 401: x')).toMatch(/^The provider rejected your credentials\. .*Fix: Check or replace the key/)
   })
 })
+
+describe('withProviderErrorFix', () => {
+  it('appends a fix only for known causes', async () => {
+    const { withProviderErrorFix } = await import('../providerErrors')
+    expect(withProviderErrorFix('FAIL: 401', 'HTTP 401: bad')).toBe('FAIL: 401 — Check or replace the key in Settings → Providers, then retry.')
+    expect(withProviderErrorFix('FAIL: 400', 'HTTP 400: bad')).toBe('FAIL: 400')
+  })
+})

@@ -18,6 +18,7 @@ import {
   pickTestModelId,
   summarizeProviderError
 } from '../agent/testProvider'
+import { withProviderErrorFix } from '../agent/providerErrors'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
 import { isOpenRouterProvider } from '../agent/listModels'
@@ -469,17 +470,20 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
         __providerTestOutcome[providerId] = 'fail'
         setTestResult((r) => ({
           ...r,
-          [providerId]: { ok: false, message: summarizeProviderError(response.status, text) }
+          [providerId]: {
+            ok: false,
+            message: withProviderErrorFix(summarizeProviderError(response.status, text), `HTTP ${response.status}: ${text}`)
+          }
         }))
       }
     } catch (err) {
       __providerTestOutcome[providerId] = 'fail'
       const timedOut = err instanceof Error && (err.name === 'TimeoutError' || err.message === 'timeout')
       if (timedOut) {
-        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: 'Timed out after 15s' } }))
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: withProviderErrorFix('Timed out after 15s', 'timeout') } }))
       } else {
         const msg = err instanceof Error ? err.message : 'Something failed — see the console for details.'
-        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: msg.slice(0, 60) } }))
+        setTestResult((r) => ({ ...r, [providerId]: { ok: false, message: withProviderErrorFix(msg.slice(0, 60), msg) } }))
       }
     } finally {
       setTestingId(null)

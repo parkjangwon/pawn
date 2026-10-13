@@ -138,3 +138,15 @@ export function formatProviderError(message: string): string {
   const copy = describeProviderError(classifyProviderError(message))
   return [copy.title + '.', copy.cause, `Fix: ${copy.fix}`].filter(Boolean).join(' ')
 }
+
+/** Short fix hint for a known cause ('' when unknown) — for compact status lines. */
+export function providerErrorFix(message: string): string {
+  const reason = providerErrorReason(message)
+  return reason ? tx(`chat.errorCard.fix.${reason}`) : ''
+}
+
+/** Append the fix hint to a compact status line, if one applies. */
+export function withProviderErrorFix(summary: string, rawMessage: string): string {
+  const fix = providerErrorFix(rawMessage)
+  return fix ? `${summary} — ${fix}` : summary
+}
