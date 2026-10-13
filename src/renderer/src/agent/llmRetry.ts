@@ -5,7 +5,7 @@
  */
 
 import { isDeepSeekRetryableError } from './deepseekCompat'
-import { enrichTransportError } from './providerErrors'
+import { enrichTransportError, errorTextWithCause } from './providerErrors'
 
 /** Total time fetchWithRetry may spend sleeping between attempts. */
 export const RETRY_WAIT_BUDGET_MS = 20_000
@@ -71,13 +71,27 @@ export function markTransient(err: unknown, transient: boolean): Error {
   return e
 }
 
+export type FetchProgress =
+  | { phase: 'connecting' }
+  | { phase: 'retrying'; attempt: number; max: number }
+
+const MAX_ATTEMPTS = 3
+
+/** Connect never started. A second one in a row will not recover inside the budget. */
+function isConnectTimeout(err: unknown): boolean {
+  const text = errorTextWithCause(err)
+  if (/und_err_connect_timeout|connect timeout|connect-phase timeout/i.test(text)) return true
+  return /etimedout/i.test(text) && /connect/i.test(text)
+}
+
 export async function fetchWithRetry(
   url: string,
   headers: Record<string, string>,
   body: Record<string, unknown>,
   isBrowser: boolean,
   signal: AbortSignal,
-  probeScope?: object
+  probeScope?: object,
+  onProgress?: (progress: FetchProgress) => void
 ): Promise<Response> {
   const payload = JSON.stringify(body)
   let lastError: Error | null = null
@@ -85,7 +99,7 @@ export async function fetchWithRetry(
   const scope = probeScope ?? signal
   const withProbe = async (err: Error): Promise<Error> => {
     if (isBrowser) return err
-    const enriched = await enrichTransportError(err.message, url, scope)
+    const enriched = await enrichTransportError(err.message, url, scope, err)
     if (enriched === err.message) return err
     return markTransient(new Error(enriched, { cause: err }), true)
   }
@@ -96,11 +110,13 @@ export async function fetchWithRetry(
   let lastRetryAfterMs: number | null = null
   let isRateLimit = false
   let waitedMs = 0
+  let connectStreak = 0
 
-  for (let attempt = 0; attempt < 3; attempt++) {
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
     if (attempt > 0) {
       if (!retryable) throw await withProbe(lastError!)
+      onProgress?.({ phase: 'retrying', attempt: attempt + 1, max: MAX_ATTEMPTS })
       const capped = lastRetryAfterMs && Math.min(lastRetryAfterMs, RETRY_AFTER_CAP_MS)
       const delayMs = calculateBackoffDelay(attempt, isRateLimit, capped)
       // Waiting would blow the budget: fail now so the user sees the error card.
@@ -108,6 +124,8 @@ export async function fetchWithRetry(
       waitedMs += delayMs
       await new Promise((r) => setTimeout(r, delayMs))
       if (signal.aborted) throw new DOMException('Aborted', 'AbortError')
+    } else {
+      onProgress?.({ phase: 'connecting' })
     }
 
     retryable = false
@@ -127,11 +145,14 @@ export async function fetchWithRetry(
     } catch (err) {
       // Only a fetch that never produced a response is a network blip worth
       // retrying; a 4xx below is a bad request and must not be retried.
-      if (err instanceof DOMException && err.name === 'AbortError') throw err
       if (signal.aborted) throw err
+      const connectTimeout = isConnectTimeout(err)
+      // Caller abort (Stop, idle timeout). Our connect-phase abort is retried once.
+      if (err instanceof DOMException && err.name === 'AbortError' && !connectTimeout) throw err
+      connectStreak = connectTimeout ? connectStreak + 1 : 0
       retryable = true
       lastError = markTransient(err instanceof Error ? err : new Error(String(err)), true)
-      if (attempt === 2) throw await withProbe(lastError)
+      if (connectStreak >= 2 || attempt === MAX_ATTEMPTS - 1) throw await withProbe(lastError)
       continue
     }
 
@@ -145,6 +166,7 @@ export async function fetchWithRetry(
     const isDsRetry = isDeepSeekRetryableError(status, text)
     if (status === 429 || status >= 500 || isDsRetry) {
       retryable = true
+      connectStreak = 0
       isRateLimit = status === 429 || isDsRetry
       const retryAfterHeader = response.headers?.get?.('retry-after')
       lastRetryAfterMs = parseRetryAfterHeader(retryAfterHeader)

@@ -211,6 +211,18 @@ export function withProviderErrorFix(summary: string, rawMessage: string): strin
  * on `err.cause`, so classification needs both.
  */
 const TRANSPORT_FAILURE = /failed to fetch|fetch failed|networkerror/i
+/** Node errno (ECONNREFUSED) or undici code (UND_ERR_*). Already specific — no probe. */
+const CONCRETE_CAUSE = /\b(?:UND_ERR_[A-Z0-9_]+|E(?!RROR\b)[A-Z]{2,}[A-Z0-9_]*)\b/
+
+function transportCauseCode(err: unknown): string {
+  let cur: unknown = err
+  for (let i = 0; i < 4 && cur && typeof cur === 'object'; i++) {
+    const code = (cur as { code?: unknown }).code
+    if (typeof code === 'string' && CONCRETE_CAUSE.test(code)) return code
+    cur = (cur as { cause?: unknown }).cause
+  }
+  return ''
+}
 
 type ProbeResult = { code?: string; message?: string } | null
 
@@ -235,15 +247,19 @@ function applyProbe(message: string, result: ProbeResult): string {
  * Chromium's fetch reports every transport failure as "Failed to fetch".
  * Ask the main process to connect once and append its cause code.
  * Pass `scope` (the turn's AbortSignal) to reuse a probe for that url.
+ * Pass `err` when fetch already set `cause.code` — that skips the probe.
  * Never throws.
  */
 export async function enrichTransportError(
   message: string,
   url: string | undefined,
-  scope?: object
+  scope?: object,
+  err?: unknown
 ): Promise<string> {
   try {
-    if (!url || message.includes('(cause:') || !TRANSPORT_FAILURE.test(message)) return message
+    const code = err !== undefined ? transportCauseCode(err) : ''
+    const text = code && !message.includes(code) ? `${message} (cause: ${code})` : message
+    if (!url || text.includes('(cause:') || CONCRETE_CAUSE.test(text) || !TRANSPORT_FAILURE.test(text)) return text
     let pending: Promise<ProbeResult>
     if (scope) {
       let byUrl = probeCache.get(scope)
@@ -253,7 +269,7 @@ export async function enrichTransportError(
     } else {
       pending = runProbe(url)
     }
-    return applyProbe(message, await pending)
+    return applyProbe(text, await pending)
   } catch {
     return message
   }

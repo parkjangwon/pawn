@@ -2,6 +2,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { callLLM, fetchWithRetry, type LlmRequest } from '../../agent/llm'
 import { useAppStore } from '../app'
+import { useChatStore } from '../chat'
 import type { Provider, ModelEntry } from '../../types/provider'
 
 const provider: Provider = {
@@ -88,6 +89,20 @@ describe('callLLM (OpenAI stream)', () => {
     await callLLM(makeRequest('openai'))
     const body = JSON.parse((vi.mocked(fetch).mock.calls[0][1] as RequestInit).body as string)
     expect(body.reasoning_effort).toBeUndefined()
+  })
+
+  it('clears provider progress when the first token arrives', async () => {
+    useChatStore.setState({ providerProgress: { s1: { phase: 'connecting' } } })
+    const onProgress = vi.fn()
+    vi.mocked(fetch).mockImplementation(async () => {
+      expect(onProgress).toHaveBeenCalledWith({ phase: 'connecting' })
+      return streamResponse([
+        'data: {"choices":[{"delta":{"content":"Hi"}}]}\n\n',
+        'data: [DONE]\n\n'
+      ])
+    })
+    await callLLM({ ...makeRequest('openai'), onProgress })
+    expect(useChatStore.getState().providerProgress.s1).toBeUndefined()
   })
 
   it('streams updates into the assistant message', async () => {
