@@ -1,19 +1,64 @@
 .mods-chrome {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-sm);
   width: 100%;
   max-width: var(--chat-content-max, 720px);
   margin: 0 auto;
   box-sizing: border-box;
-  padding: 0 0 8px;
+  padding: 0 0 var(--space-sm);
   word-break: keep-all;
   line-break: strict;
 }
 
+/* One wrapping row of small pills: chip, conflicts, log, status. */
+.mods-chrome-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm);
+  width: 100%;
+}
+
+.mods-chrome-strip > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.mods-chrome-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-sm);
+  max-width: 100%;
+  height: 20px;
+  padding: 2px var(--space-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  border-radius: 999px;
+  background: var(--bg-active);
+  color: var(--text-primary);
+  font-size: var(--text-ui-xs);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+span.mods-chrome-pill {
+  cursor: default;
+}
+
+.mods-chrome-pill-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mods-chrome-chip-wrap {
   position: relative;
-  align-self: flex-start;
+  max-width: 100%;
 }
 
 .mods-chrome-chip {
@@ -149,18 +194,11 @@
   cursor: pointer;
 }
 
-.mods-chrome-status {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.mods-chrome-status-toggle,
 .mods-chrome-status-row,
 .mods-chrome-notice {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-sm);
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
@@ -169,18 +207,10 @@
   color: var(--text-secondary);
   text-align: left;
   width: 100%;
-  cursor: pointer;
 }
 
 .mods-chrome-status-row {
   cursor: default;
-}
-
-.mods-chrome-status-preview {
-  flex: 1;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .mods-chrome-notice {
@@ -233,18 +263,31 @@
   background: var(--bg-hover);
 }
 
+/* Above-prompt bands and docked panes are Cards (pawn-card) — keep composer
+   width with no extra side margins. */
 .mods-chrome-above,
-.mods-chrome-pane {
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  background: var(--bg-secondary);
-  overflow: hidden;
+.mods-chrome-dock {
+  width: 100%;
+  margin: 0;
 }
 
 .mods-chrome-above {
-  padding: 8px 10px;
   font-size: var(--font-sm);
   color: var(--text-secondary);
+}
+
+.mods-chrome-dock {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.mods-chrome-pane {
+  flex-shrink: 0;
+  overflow: hidden;
+  margin: 0;
 }
 
 .mods-chrome-pane-head {
@@ -276,12 +319,13 @@
 
 .mods-chrome-toast-stack {
   position: fixed;
-  right: 16px;
-  bottom: 16px;
+  right: var(--space-lg);
+  /* Fixed corner overlay that clears the composer below it. */
+  bottom: calc(96px + var(--space-lg));
   z-index: var(--z-toast);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--space-sm);
   width: min(340px, calc(100vw - 32px));
   pointer-events: none;
 }
@@ -302,8 +346,35 @@
 
 .mod-tree-box {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--space-sm);
+}
+
+/* Text takes the free space on the left; controls stay compact on the right. */
+.mod-tree-box > .mod-tree-text,
+.mod-tree-box > .mod-tree-markdown,
+.mod-tree-box > .mod-tree-code {
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mod-tree-box .pawn-btn {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.mod-tree-box .pawn-input,
+.mod-tree-box .pawn-select {
+  flex: 0 1 220px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .mod-tree-text,
@@ -322,45 +393,20 @@
   color: var(--primary);
 }
 
-.mod-tree-button {
-  display: inline-flex;
-  padding: 4px 10px;
-  border-radius: var(--radius-xs);
-  background: var(--bg-primary);
-  border: 1px solid var(--border-color);
-  font-size: 11px;
-  color: var(--text-primary);
-  cursor: pointer;
+/* Design-system Button (pawn-btn) keeps its own padding/background/border.
+   Guard only against full-width stretching inside flex rows. */
+.mod-tree-button.pawn-btn {
+  width: auto;
+  flex: 0 0 auto;
 }
 
-.mod-tree-button:hover:not(:disabled) {
-  border-color: var(--accent);
+.mod-tree-input {
+  margin: 0;
 }
 
-.mod-tree-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.mod-tree-input,
-.mod-tree-select {
-  display: block;
-  width: 100%;
+.mod-tree-select.pawn-select {
+  margin: var(--space-xs) 0;
   max-width: 280px;
-  margin: 4px 0;
-  padding: 5px 8px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
-  background: var(--bg-primary);
-  color: var(--text-primary);
-  font-size: var(--font-xs);
-}
-
-.mods-chrome-conflicts .mods-chrome-status-preview {
-  white-space: normal;
-  overflow: visible;
-  text-overflow: unset;
-  line-height: 1.45;
 }
 
 .mods-chrome-conflict-line {
@@ -400,32 +446,17 @@
   border-color: var(--primary);
 }
 
-.mods-chrome-above + .mods-chrome-above {
-  margin-top: 6px;
-}
-
-.mods-chrome-conflicts {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 5px 10px;
-  border-radius: var(--radius-sm);
-  border: 1px solid color-mix(in srgb, var(--warning) 35%, var(--border-color));
+/* Conflicts pill keeps the warning tint, sized like the other strip pills. */
+.mods-chrome-pill.mods-chrome-conflicts {
+  border-color: color-mix(in srgb, var(--warning) 35%, var(--border-color));
   background: color-mix(in srgb, var(--warning) 8%, var(--bg-secondary));
-  font-size: 11px;
   color: var(--text-secondary);
-}
-
-.mods-chrome-timeline {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
 }
 
 .mods-chrome-timeline-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-xs);
   max-height: 200px;
   overflow: auto;
 }

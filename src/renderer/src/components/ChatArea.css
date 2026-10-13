@@ -791,6 +791,13 @@
   padding: 2px var(--space-xl);
 }
 
+/* Mods chrome + composer stack: chrome sits directly above the composer. */
+.composer-stack {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
 /* Input area — same max-width as welcome/messages so the column reads as one unit */
 .chat-input-wrapper {
   flex-shrink: 0;
