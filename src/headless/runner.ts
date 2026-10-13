@@ -9,6 +9,7 @@
  */
 
 import { createNodeApi, type HeadlessConfig } from './nodeApi'
+import { describeProviderError } from '../renderer/src/agent/providerErrors'
 
 export type HeadlessPermission = 'auto' | 'yolo' | 'deny'
 
@@ -247,7 +248,9 @@ export async function runHeadlessTurn(opts: HeadlessTurnOptions): Promise<Headle
     .projects.find((p) => p.id === projectId)
     ?.sessions.find((s) => s.id === sessionId)
   const messages = session?.messages ?? []
-  const assistant = messages.filter((m) => m.role === 'assistant' && m.content.trim())
+  // Error cards are assistant-role rows; they are failures, not answers.
+  const assistant = messages.filter((m) => m.role === 'assistant' && !m.error && m.content.trim())
+  const errorCard = [...messages].reverse().find((m) => m.role === 'assistant' && m.error)
   const tools: HeadlessToolRecord[] = messages
     .filter((m) => m.role === 'system' && m.toolMeta)
     .map((m) => ({
@@ -264,6 +267,10 @@ export async function runHeadlessTurn(opts: HeadlessTurnOptions): Promise<Headle
   const route = useUsageStore.getState().lastRoute[sessionId]
   if (route?.label && !models.includes(route.label)) models.push(route.label)
   if (!error && assistant.length === 0 && errorsShown.length) error = errorsShown[errorsShown.length - 1].slice(0, 500)
+  if (!error && assistant.length === 0 && errorCard?.error) {
+    const copy = describeProviderError(errorCard.error)
+    error = [`${copy.title}.`, copy.cause, `Fix: ${copy.fix}`, `(${errorCard.content.slice(0, 500)})`].filter(Boolean).join(' ')
+  }
 
   const ulw = opts.ultraWork ? useUltraWorkStore.getState().get(sessionId) : undefined
   if (ulw?.status === 'active') useUltraWorkStore.getState().stop(sessionId)
