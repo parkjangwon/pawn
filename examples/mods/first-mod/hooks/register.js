@@ -66,6 +66,6 @@ export function register(on) {
 
   // Runs each time the spinner is drawn
   on('ui.render', { component: 'Spinner' }, async ($, e, next) => {
-    return next({ ...e, props: { ...e.props, suffix: ' · tool calls: ' + calls + '…' } })
+    return next({ ...e, props: { ...e.props, suffix: calls ? ' · tool calls: ' + calls : '' } })
   })
 }

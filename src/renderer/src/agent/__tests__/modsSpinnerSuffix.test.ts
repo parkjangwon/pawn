@@ -15,9 +15,10 @@ const settle = (): Promise<void> => new Promise((r) => setTimeout(r, 20))
 
 describe('formatModSpinnerSuffix', () => {
   it('drops the mod’s own leading separator so the line has one " · "', () => {
-    expect(formatModSpinnerSuffix(' · tool calls: 2…')).toBe('tool calls: 2…')
+    expect(formatModSpinnerSuffix(' · tool calls: 2…')).toBe('tool calls: 2')
     expect(formatModSpinnerSuffix('— busy')).toBe('busy')
     expect(formatModSpinnerSuffix('plain')).toBe('plain')
+    expect(formatModSpinnerSuffix('x...')).toBe('x')
     expect(formatModSpinnerSuffix('  ·  ')).toBe('')
     expect(formatModSpinnerSuffix('')).toBe('')
   })
@@ -32,7 +33,7 @@ describe('watchModSpinnerSuffix', () => {
     useModsUiStore.getState().clearSessionUi()
   })
 
-  it('has a suffix right after load and follows $.ui.invalidate, with no tool run through the executor', async () => {
+  it('stays empty at zero calls and follows $.ui.invalidate, with no tool run through the executor', async () => {
     const rt = getModRuntime()
     rt.setContext({ sessionId: 's', cwd: '/tmp' })
     // Unique source per test run so the data: URL module cache gives a fresh counter.
@@ -41,7 +42,7 @@ describe('watchModSpinnerSuffix', () => {
     ])
     stop = watchModSpinnerSuffix()
     await settle()
-    expect(useModsUiStore.getState().spinnerSuffix).toContain('tool calls: 0')
+    expect(useModsUiStore.getState().spinnerSuffix).toBe('')
 
     // first-mod's tool.call hook calls $.ui.invalidate(); the core here does
     // not refresh the suffix itself (toolExecutor used to be the only caller).
@@ -56,6 +57,8 @@ describe('watchModSpinnerSuffix', () => {
       { id: 'first-mod@t', name: 'first-mod', root: '/tmp/fm', tier: 'user', sources: [`${REGISTER_JS}\n// u${Date.now()}`] }
     ])
     stop = watchModSpinnerSuffix()
+    await settle()
+    await rt.emitToolCall('read_file', { path: 'a' }, async () => ({ result: 'ok' }))
     await settle()
     expect(useModsUiStore.getState().spinnerSuffix).not.toBe('')
     await rt.unload()

@@ -616,8 +616,9 @@
 }
 
 .message-thinking-mod-suffix {
-  color: var(--text-secondary);
-  font-weight: 500;
+  color: var(--text-muted);
+  font-weight: 400;
+  font-size: var(--text-ui-xs);
 }
 
 .message-content {
@@ -2131,6 +2132,11 @@
   font-size: var(--text-ui-xs);
   font-weight: 600;
   color: var(--text-secondary);
+}
+.message-thinking.live.one-line {
+  border: 0;
+  background: transparent;
+  padding: 4px 0;
 }
 .message-thinking-spinner {
   width: 10px;
