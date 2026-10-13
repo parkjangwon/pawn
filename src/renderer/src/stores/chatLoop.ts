@@ -21,6 +21,7 @@ import {
   checkpointSnapshot, classifyLlmError, currentMessageContent, demoteVisionPayloadsToText, loadTranscript,
   persistTranscript, systemError, ToolLoopCounter, toolResultCap, truncateToolResult
 } from './chatTranscript'
+import { errorTextWithCause } from '../agent/providerErrors'
 import type { MessageErrorInfo } from './app'
 import { useAppStore } from './app'
 import { useChangeLedger } from './changeLedger'
@@ -746,7 +747,7 @@ export async function agentLoop(
             if (!streamed.trim()) useAppStore.getState().removeMessage(projectId, sessionId, assistantMsgId)
             throw err
           }
-          const message = err instanceof Error ? err.message : String(err)
+          const message = errorTextWithCause(err)
           // Preserve partial stream on failover: keep the bubble with a note so
           // the user never loses text they already read; the next attempt gets
           // a fresh assistant bubble.

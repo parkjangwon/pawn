@@ -75,3 +75,15 @@ describe('withProviderErrorFix', () => {
     expect(withProviderErrorFix('FAIL: 400', 'HTTP 400: bad')).toBe('FAIL: 400')
   })
 })
+
+describe('errorTextWithCause', () => {
+  it('appends undici cause code so network errors classify', async () => {
+    const { errorTextWithCause, providerErrorReason } = await import('../providerErrors')
+    const err = new TypeError('fetch failed', { cause: Object.assign(new Error('connect ECONNREFUSED 127.0.0.1:1'), { code: 'ECONNREFUSED' }) })
+    const text = errorTextWithCause(err)
+    expect(text).toBe('fetch failed (cause: ECONNREFUSED connect ECONNREFUSED 127.0.0.1:1)')
+    expect(providerErrorReason(text)).toBe('refused')
+    expect(errorTextWithCause(new Error('HTTP 401: x'))).toBe('HTTP 401: x')
+    expect(errorTextWithCause('plain')).toBe('plain')
+  })
+})

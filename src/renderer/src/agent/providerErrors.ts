@@ -150,3 +150,18 @@ export function withProviderErrorFix(summary: string, rawMessage: string): strin
   const fix = providerErrorFix(rawMessage)
   return fix ? `${summary} — ${fix}` : summary
 }
+
+/**
+ * Error text including the low-level cause. Node's fetch throws a bare
+ * "fetch failed" and keeps the useful part (ECONNREFUSED, ENOTFOUND, timeout)
+ * on `err.cause`, so classification needs both.
+ */
+export function errorTextWithCause(err: unknown): string {
+  const base = err instanceof Error ? err.message : String(err)
+  const cause = (err as { cause?: unknown } | null)?.cause
+  if (!cause || typeof cause !== 'object') return base
+  const c = cause as { code?: unknown; message?: unknown }
+  const parts = [c.code, c.message].filter((x): x is string => typeof x === 'string' && x.length > 0)
+  const extra = [...new Set(parts)].join(' ')
+  return extra && !base.includes(extra) ? `${base} (cause: ${extra})` : base
+}
