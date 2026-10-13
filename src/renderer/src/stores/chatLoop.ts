@@ -118,7 +118,7 @@ export async function agentLoop(
 
   const { providers, models } = useProviderStore.getState()
   if (providers.filter((p) => p.enabled).length === 0 || models.filter((m) => m.enabled).length === 0) {
-    const noProviderError: MessageErrorInfo = { kind: 'generic', detail: '', settingsTarget: 'providers' }
+    const noProviderError: MessageErrorInfo = { kind: 'config', reason: 'setup', detail: '', settingsTarget: 'providers' }
     systemError(projectId, sessionId, 'No provider or model configured. Open Settings → Providers, then Settings → Models.', noProviderError)
     if (epoch === getSessionEpoch(sessionId)) {
       setSessionStreamingFlags(set, get, sessionId, false)
