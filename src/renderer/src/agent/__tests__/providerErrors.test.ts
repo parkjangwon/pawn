@@ -24,6 +24,13 @@ describe('providerErrorReason', () => {
     ['net::ERR_INTERNET_DISCONNECTED', 'offline'],
     ['TypeError: Failed to fetch', 'offline'],
     ['tunneling socket could not be established, proxy refused', 'proxy'],
+    ['HTTP 429: {"error":{"message":"You exceeded your current quota, please check your plan and billing details.","type":"insufficient_quota"}}', 'quota'],
+    ['HTTP 400: {"error":{"message":"Your credit balance is too low to access the Anthropic API."}}', 'quota'],
+    ['HTTP 402: Payment Required', 'quota'],
+    ['HTTP 404: <html>Cannot POST /chat/completions</html>', 'badEndpoint'],
+    ['HTTP 404: {"error":"Not Found"}', 'badEndpoint'],
+    ['HTTP 404: {"error":{"message":"model \'llama9\' not found"}}', 'unknownModel'],
+    ['TypeError: fetch failed (cause: bad port)', 'badPort'],
     ['HTTP 400: bad request', null],
     ['something odd happened', null]
   ]
@@ -35,7 +42,9 @@ describe('providerErrorReason', () => {
 describe('classifyProviderError', () => {
   it('maps reason to kind and settings target', () => {
     expect(classifyProviderError('HTTP 401: nope')).toMatchObject({ kind: 'auth', reason: 'invalidKey', settingsTarget: 'providers' })
-    expect(classifyProviderError('HTTP 404: x')).toMatchObject({ kind: 'model', settingsTarget: 'models' })
+    expect(classifyProviderError('HTTP 404: model not found')).toMatchObject({ kind: 'model', settingsTarget: 'models' })
+    expect(classifyProviderError('HTTP 404: Not Found')).toMatchObject({ kind: 'config', reason: 'badEndpoint', settingsTarget: 'providers' })
+    expect(classifyProviderError('HTTP 429: {"error":{"code":"insufficient_quota"}}')).toMatchObject({ kind: 'billing', reason: 'quota' })
     expect(classifyProviderError('connect ECONNREFUSED')).toMatchObject({ kind: 'network', reason: 'refused' })
     expect(classifyProviderError('connect ECONNREFUSED').settingsTarget).toBeUndefined()
     expect(classifyProviderError('weird')).toEqual({ kind: 'generic', detail: 'weird' })
@@ -47,7 +56,7 @@ describe('classifyProviderError', () => {
 
 describe('describeProviderError', () => {
   it('gives a cause and a concrete fix for every reason', () => {
-    for (const msg of ['HTTP 401: a', 'HTTP 403: a', 'HTTP 429: a', 'HTTP 502: a', 'HTTP 404: a', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'HTTP 407: a', 'context_length_exceeded', 'missing api key', 'Failed to fetch']) {
+    for (const msg of ['HTTP 401: a', 'HTTP 403: a', 'HTTP 429: a', 'HTTP 502: a', 'HTTP 404: a', 'ENOTFOUND', 'ECONNREFUSED', 'ETIMEDOUT', 'HTTP 407: a', 'context_length_exceeded', 'missing api key', 'Failed to fetch', 'insufficient_quota', 'bad port']) {
       const c = describeProviderError(classifyProviderError(msg))
       expect(c.title).toBeTruthy()
       expect(c.cause).toBeTruthy()
@@ -62,6 +71,8 @@ describe('describeProviderError', () => {
       fix: 'Check the API key in Settings → Providers, then retry.'
     })
     expect(describeProviderError({ kind: 'bogus' as never }).title).toBe('The request failed')
+    expect(describeProviderError({ kind: 'config', reason: 'setup' }).fix).toContain('Settings → Providers')
+    expect(describeProviderError({ kind: 'billing', reason: 'quota' }).fix).toMatch(/credits|billing/)
   })
   it('formats a single line for logs', () => {
     expect(formatProviderError('HTTP 401: x')).toMatch(/^The provider rejected your credentials\. .*Fix: Check or replace the key/)

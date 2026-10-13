@@ -11,7 +11,16 @@
 import { tx } from '../i18n/strings'
 import { redactSecrets } from './redactSecrets'
 
-export type ProviderErrorKind = 'auth' | 'rate' | 'server' | 'network' | 'model' | 'context' | 'generic'
+export type ProviderErrorKind =
+  | 'auth'
+  | 'billing'
+  | 'rate'
+  | 'server'
+  | 'network'
+  | 'model'
+  | 'context'
+  | 'config'
+  | 'generic'
 
 export type ProviderErrorReason =
   | 'missingKey'
@@ -26,6 +35,10 @@ export type ProviderErrorReason =
   | 'rateLimit'
   | 'contextTooLong'
   | 'server'
+  | 'quota'
+  | 'badEndpoint'
+  | 'badPort'
+  | 'setup'
 
 export type ProviderSettingsTarget = 'providers' | 'models' | 'usage'
 
@@ -53,11 +66,16 @@ const KIND_OF: Record<ProviderErrorReason, ProviderErrorKind> = {
   unknownModel: 'model',
   rateLimit: 'rate',
   contextTooLong: 'context',
-  server: 'server'
+  server: 'server',
+  quota: 'billing',
+  badEndpoint: 'config',
+  badPort: 'config',
+  setup: 'config'
 }
 
 const TARGET_OF: Partial<Record<ProviderErrorKind, ProviderSettingsTarget>> = {
   auth: 'providers',
+  config: 'providers',
   rate: 'models',
   server: 'models',
   model: 'models',
@@ -76,24 +94,33 @@ export function providerErrorReason(message: string): ProviderErrorReason | null
   if (has(s, 'missing api key', 'no api key', 'api key is missing', 'api key not provided', 'apikey is required', 'api key is required', 'x-api-key header is required', 'missing authentication', 'no auth credentials')) {
     return 'missingKey'
   }
+  // Out of credits / billing: OpenAI sends insufficient_quota with 429, others 402/400.
+  if (
+    status === '402' ||
+    has(s, 'insufficient_quota', 'exceeded your current quota', 'credit balance is too low', 'insufficient credits', 'insufficient balance', 'insufficient_balance', 'out of credits', 'billing hard limit', 'billing_not_active', 'payment required', 'add a payment method', 'requires more credits')
+  ) {
+    return 'quota'
+  }
   if (status === '401') return 'invalidKey'
   if (status === '403') return 'forbidden'
   if (has(s, 'invalid api key', 'invalid_api_key', 'incorrect api key', 'invalid x-api-key', 'authentication_error', 'unauthorized')) {
     return 'invalidKey'
   }
   if (status === '407' || (status === undefined && has(s, 'proxy'))) return 'proxy'
-  if (status === '429' || has(s, 'rate limit', 'rate_limit', 'too many requests', 'quota')) return 'rateLimit'
-  if (
-    status === '404' ||
-    has(s, 'model_not_found', 'model not found', 'unknown model', 'does not exist', 'no such model', 'invalid model', 'not a valid model')
-  ) {
-    return 'unknownModel'
-  }
+  if (status === '429' || has(s, 'rate limit', 'rate_limit', 'too many requests')) return 'rateLimit'
+  const mentionsModel =
+    has(s, 'model_not_found', 'model not found', 'unknown model', 'no such model', 'invalid model', 'not a valid model', 'model_not_available') ||
+    (s.includes('model') && has(s, 'does not exist', 'not found', 'not supported', 'unsupported', 'not available'))
+  if (mentionsModel) return 'unknownModel'
+  // A 404 that doesn't talk about a model: the URL/path itself is wrong.
+  if (status === '404') return 'badEndpoint'
   if (status !== undefined && status.startsWith('5')) return 'server'
   if (has(s, 'overloaded')) return 'server'
 
   // Transport failures (no HTTP status).
   if (status === undefined) {
+    // undici refuses some ports outright (e.g. :1, :6000) before connecting.
+    if (has(s, 'bad port')) return 'badPort'
     if (has(s, 'enotfound', 'eai_again', 'getaddrinfo', 'err_name_not_resolved')) return 'dns'
     if (has(s, 'econnrefused', 'err_connection_refused')) return 'refused'
     if (has(s, 'etimedout', 'timed out', 'timeout', 'und_err_connect_timeout', 'err_timed_out')) return 'timeout'
@@ -115,7 +142,7 @@ export function classifyProviderError(message: string): ProviderErrorInfo {
 }
 
 const cap = (k: string): string => k.charAt(0).toUpperCase() + k.slice(1)
-const KINDS: ProviderErrorKind[] = ['auth', 'rate', 'server', 'network', 'model', 'context', 'generic']
+const KINDS: ProviderErrorKind[] = ['auth', 'billing', 'rate', 'server', 'network', 'model', 'context', 'config', 'generic']
 
 export interface ProviderErrorCopy {
   title: string
