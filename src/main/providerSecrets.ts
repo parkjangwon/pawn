@@ -15,6 +15,16 @@ export interface SecretCipher {
   isEncryptionAvailable(): boolean
   encryptString(plain: string): Buffer
   decryptString(encrypted: Buffer): string
+  /** Linux only (Electron): 'basic_text' means a hardcoded key, i.e. no real protection. */
+  getSelectedStorageBackend?(): string
+}
+
+export interface SecretStorageStatus {
+  /** True only when keys are sealed by a real OS keychain backend. */
+  encrypted: boolean
+  /** Why keys end up effectively plaintext; absent when `encrypted`. */
+  reason?: 'no-cipher' | 'unavailable' | 'basic_text'
+  backend?: string
 }
 
 const NO_CIPHER: SecretCipher = {
@@ -29,8 +39,63 @@ const NO_CIPHER: SecretCipher = {
 
 let safeStorage: SecretCipher = NO_CIPHER
 
+let warnedPlaintext = false
+
 export function setSecretCipher(cipher: SecretCipher | null): void {
   safeStorage = cipher ?? NO_CIPHER
+  warnedPlaintext = false
+}
+
+/** Whether provider secrets written now would be protected at rest. */
+export function getSecretStorageStatus(): SecretStorageStatus {
+  if (safeStorage === NO_CIPHER) return { encrypted: false, reason: 'no-cipher' }
+  let available = false
+  try {
+    available = safeStorage.isEncryptionAvailable()
+  } catch {
+    available = false
+  }
+  if (!available) return { encrypted: false, reason: 'unavailable' }
+  let backend: string | undefined
+  try {
+    backend = safeStorage.getSelectedStorageBackend?.()
+  } catch {
+    backend = undefined
+  }
+  if (backend === 'basic_text') return { encrypted: false, reason: 'basic_text', backend }
+  return backend ? { encrypted: true, backend } : { encrypted: true }
+}
+
+/** Log once per cipher that provider secrets are stored in plain text. */
+export function warnIfPlaintextSecrets(log: (msg: string) => void = console.warn): boolean {
+  const status = getSecretStorageStatus()
+  if (status.encrypted || warnedPlaintext) return false
+  warnedPlaintext = true
+  log(
+    `[secrets] OS keychain encryption unavailable (${status.reason}); provider API keys are stored in plain text in ~/.pawn/config.toml (mode 0600).`
+  )
+  return true
+}
+
+/**
+ * Keep sealed keys that the caller could not see. Without a working cipher an
+ * `enc:` value loads as '', so a settings save would otherwise wipe it. An
+ * empty incoming key keeps the stored ciphertext when it cannot be decrypted;
+ * any non-empty key the user typed wins.
+ */
+export function preserveSealedProviderKeys(incoming: PawnConfig, existing: PawnConfig): PawnConfig {
+  if (!Array.isArray(incoming.providers) || !Array.isArray(existing.providers)) return incoming
+  const stored = new Map(existing.providers.map((p) => [p.id, p.apiKey]))
+  return {
+    ...incoming,
+    providers: incoming.providers.map((p: ProviderConfig): ProviderConfig => {
+      if (p.apiKey) return p
+      const prev = stored.get(p.id)
+      if (!prev || !prev.startsWith(ENC_PREFIX)) return p
+      if (decryptApiKey(prev)) return p // readable → the user really cleared it
+      return { ...p, apiKey: prev }
+    })
+  }
 }
 
 export function encryptApiKey(key: string | undefined): string | undefined {
