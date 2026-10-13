@@ -103,3 +103,9 @@
 .error-card-btn.primary:hover {
   background: var(--accent-hover);
 }
+
+.error-card-cause {
+  font-size: var(--font-sm);
+  color: var(--text-primary);
+  line-height: 1.5;
+}
