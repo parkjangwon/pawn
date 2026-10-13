@@ -1,6 +1,9 @@
+import { mkdtemp, mkdir, readFile, readdir, rm, writeFile, access } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ensureModsLoaded, reloadMods, __resetModsClientForTests } from '../mods/client'
-import { getModRuntime, __resetModRuntimeForTests } from '../mods/runtime'
+import { getModRuntime, __resetModRuntimeForTests, type ModRuntime } from '../mods/runtime'
 import { useModsUiStore } from '../mods/uiStore'
 
 /** Node caches data: URL imports, so every load needs its own source text. */
@@ -297,5 +300,98 @@ describe('mods session scope', () => {
     expect((await rt.emitCommandRun('n', '')).text).toBe('1')
     rt.setContext({ sessionId: 'B', cwd: '/p' })
     expect((await rt.emitCommandRun('n', '')).text).toBe('1')
+  })
+
+  it('keeps fs and session cwd on the chat that started the turn', async () => {
+    const root = await mkdtemp(path.join(tmpdir(), 'mods-turn-'))
+    const dirA = path.join(root, 'A')
+    const dirB = path.join(root, 'B')
+    await mkdir(dirA)
+    await mkdir(dirB)
+    const disk = new Map<string, string>()
+    ;(globalThis as { window?: unknown }).window = {
+      api: {
+        fs: {
+          readFile: async (p: string) => {
+            const hit = disk.get(p)
+            if (hit === undefined) throw new Error('missing')
+            return hit
+          },
+          writeFile: async (p: string, content: string) => {
+            disk.set(p, content)
+            await writeFile(p, content)
+            return { ok: true }
+          },
+          exists: async (p: string) => {
+            try {
+              await access(p)
+              return true
+            } catch {
+              return false
+            }
+          },
+          listDir: async (p: string) => {
+            const names = await readdir(p, { withFileTypes: true })
+            return names.map((d) => ({ name: d.name, isDirectory: d.isDirectory() }))
+          }
+        }
+      }
+    }
+    try {
+      const rt = getModRuntime()
+      const transcript = [
+        { role: 'user', text: 'hello from A' },
+        { role: 'assistant', text: 'ack' }
+      ]
+      const messages = (): Array<{ role: string; text: string }> => transcript
+      rt.setContext({ sessionId: 'A', cwd: dirA, projectPath: dirA, messages })
+      await rt.load([
+        {
+          id: 'cwd@t',
+          name: 'cwd',
+          root: dirA,
+          tier: 'user',
+          sources: [
+            src(
+              [
+                'export function register(on) {',
+                "  on('turn.start', async (api) => {",
+                "    await api.fs.write('note.txt', 'from-a')",
+                "    const names = (await api.fs.list('.')).map((e) => e.name)",
+                '    return {',
+                '      cwd: api.session.cwd(),',
+                "      exists: await api.fs.exists('note.txt'),",
+                "      text: await api.fs.read('note.txt'),",
+                '      names,',
+                '      n: api.session.messages().length',
+                '    }',
+                '  })',
+                '}'
+              ].join('\n')
+            )
+          ]
+        }
+      ])
+      // Optional call so the same test runs (and fails on assertions) against 6080022.
+      ;(rt as { beginTurn?: ModRuntime['beginTurn'] }).beginTurn?.('A', { cwd: dirA, projectPath: dirA, messages })
+      rt.setContext({ sessionId: 'B', cwd: dirB, projectPath: dirB })
+      const out = (await rt.emit('turn.start', { sessionId: 'A' }, async (e) => e)) as {
+        cwd: string
+        exists: boolean
+        text: string
+        names: string[]
+        n: number
+      }
+      expect(out.cwd).toBe(dirA)
+      expect(out.exists).toBe(true)
+      expect(out.text).toBe('from-a')
+      expect(out.names).toContain('note.txt')
+      expect(out.n).toBe(messages().length)
+      expect(messages().length).toBeGreaterThan(0)
+      expect(await readFile(path.join(dirA, 'note.txt'), 'utf8')).toBe('from-a')
+      await expect(access(path.join(dirB, 'note.txt'))).rejects.toThrow()
+    } finally {
+      await rm(root, { recursive: true, force: true })
+    }
   })
 })

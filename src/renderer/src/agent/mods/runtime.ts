@@ -125,6 +125,14 @@ export interface ModRuntimeContext {
   abortTurn?: () => void
 }
 
+interface TurnScope {
+  cwd: string
+  projectPath?: string | null
+  messages?: () => Array<{ role: string; text: string }>
+  /** beginTurn token. 0 means setContext only, so endTurn(token) will not drop it. */
+  token: number
+}
+
 const BUILTIN_COMMANDS = new Set([
   'new',
   'clear',
@@ -150,6 +158,9 @@ export class ModRuntime {
   private loaded: LoadedModInfo[] = []
   private blobUrls: string[] = []
   private ctx: ModRuntimeContext = { sessionId: '', cwd: '' }
+  /** Per chat: cwd and transcript for the turn that started there. */
+  private turns = new Map<string, TurnScope>()
+  private turnSeq = 0
   /** $.state, keyed by sessionId then plugin then key. */
   private stateBySession = new Map<string, Map<string, Map<string, unknown>>>()
   private ready = false
@@ -161,6 +172,7 @@ export class ModRuntime {
   setContext(ctx: Partial<ModRuntimeContext>): void {
     const prev = this.ctx.sessionId
     this.ctx = { ...this.ctx, ...ctx }
+    if (ctx.sessionId) this.noteSession(ctx.sessionId, ctx)
     const next = this.ctx.sessionId
     if (
       ctx.sessionId !== undefined &&
@@ -172,6 +184,49 @@ export class ModRuntime {
     ) {
       void this.emit('chat.switch', { from: prev, to: next })
     }
+  }
+
+  /**
+   * Bind cwd and the live transcript to this chat for the turn.
+   * Returns a token for endTurn. A later beginTurn for the same id wins.
+   */
+  beginTurn(
+    sessionId: string,
+    ctx: Pick<ModRuntimeContext, 'cwd' | 'projectPath' | 'messages'>
+  ): number {
+    if (!sessionId) return 0
+    const token = ++this.turnSeq
+    this.turns.set(sessionId, {
+      cwd: ctx.cwd,
+      projectPath: ctx.projectPath,
+      messages: ctx.messages,
+      token
+    })
+    return token
+  }
+
+  /** Turn is over: keep cwd and the last transcript, but let setContext update it again. Older tokens are ignored. */
+  endTurn(sessionId: string, token?: number): void {
+    const cur = this.turns.get(sessionId)
+    if (!cur) return
+    if (token !== undefined && cur.token !== token) return
+    this.turns.set(sessionId, { ...cur, token: 0 })
+  }
+
+  /** Record this chat only. Another session's entry stays. An in-flight turn keeps its cwd. */
+  private noteSession(sessionId: string, ctx: Partial<ModRuntimeContext>): void {
+    const prev = this.turns.get(sessionId)
+    if (prev && prev.token !== 0) return
+    this.turns.set(sessionId, {
+      cwd: ctx.cwd ?? prev?.cwd ?? '',
+      projectPath: ctx.projectPath !== undefined ? ctx.projectPath : prev?.projectPath,
+      messages: ctx.messages ?? prev?.messages,
+      token: 0
+    })
+  }
+
+  private scopeFor(sid: string): TurnScope | undefined {
+    return sid ? this.turns.get(sid) : undefined
   }
 
   private stateBucket(plugin: string, sid: string): Map<string, unknown> {
@@ -376,7 +431,11 @@ export class ModRuntime {
       pluginName,
       pluginRoot,
       sessionId: () => sid,
-      cwd: () => this.ctx.cwd || this.ctx.projectPath || '',
+      cwd: () => {
+        const scope = this.scopeFor(sid)
+        if (scope) return scope.cwd || scope.projectPath || ''
+        return this.ctx.cwd || this.ctx.projectPath || ''
+      },
       stateGet: (key) => this.stateBucket(pluginName, sid).get(key),
       stateSet: (key, value) => {
         this.stateBucket(pluginName, sid).set(key, value)
@@ -402,7 +461,11 @@ export class ModRuntime {
       emit: (event, input, core) => this.emit(event, input, core || (async (e) => e), undefined, sid),
       submitPrompt: (text, asUser) => this.ctx.submitPrompt?.(text, asUser),
       abortTurn: () => this.ctx.abortTurn?.(),
-      messages: () => this.ctx.messages?.() || [],
+      messages: () => {
+        const scope = this.scopeFor(sid)
+        if (scope) return scope.messages?.() || []
+        return this.ctx.messages?.() || []
+      },
       contextUsage: () =>
         this.ctx.contextUsage?.() || { tokens: 0, window: 200_000, percent: 0 },
       reservedCommands: BUILTIN_COMMANDS

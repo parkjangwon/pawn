@@ -49,7 +49,7 @@ Sample: `examples/mods/first-mod/`.
 
 Mods load as soon as a project is shown, before the first prompt, and stay loaded for every chat in that project. Module-level variables (counters, timers) survive a chat switch. `$.state` does not: it is a separate in-memory map per mod and per chat. Switching chats emits `chat.switch` with `{ from, to }` and clears panes, toasts, notices, and the intervention log. The draft id `pending` (the home composer before a chat exists) is not a switch. Opening another project, or a change in Settings or the chip menu, reloads every mod.
 
-A turn keeps the `sessionId` captured at `turn.start`. Later `turn.complete`, `tool.call`, `tool.check`, and Spinner `ui.render` for that turn are dispatched with that id. `$.session.id()` and `$.state` inside those handlers see the turn's chat, including when the user has switched away and the turn is still running. They do not follow the chat on screen. A background turn does not rewrite the visible spinner.
+A turn keeps the `sessionId` captured at `turn.start`. Later `turn.complete`, `tool.call`, `tool.check`, and Spinner `ui.render` for that turn are dispatched with that id. `$.session.id()`, `$.session.cwd()`, `$.session.messages()`, and `$.state` inside those handlers follow the chat that started the turn, including when the user has switched away and the turn is still running. Relative `$.fs` paths resolve from that chat's cwd. They do not follow the chat on screen. A background turn does not rewrite the visible spinner.
 
 Settings file: `~/.pawn/mods-settings.json`.
 
@@ -181,9 +181,9 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 | `$.tool.register({ name, description, inputSchema, handler })` | Exposes `mcp__<plugin>__<name>` to the model. `handler(args)` runs after hooks, unless a hook answers first. A name already taken by MCP is left to MCP. |
 | `$.tool.call({ tool, ...args })` | Emits `tool.call`. |
 | `$.prompt.submit({ text, asUser })` | Sends a prompt into the chat. |
-| `$.session.id` / `cwd` / `messages` / `usage` | Current chat. On a turn, tool, or spinner event, `$.session.id()` is the chat captured at `turn.start`, not whichever chat is open now. |
+| `$.session.id` / `cwd` / `messages` / `usage` | Current chat. On a turn, tool, or spinner event, `$.session.id()`, `$.session.cwd()`, and `$.session.messages()` follow the chat that started the turn, not whichever chat is open now. |
 | `$.state.get` / `set` / `delete` | In-memory values for this mod and this chat. Not written to disk. A background turn reads and writes the chat it started in. |
-| `$.fs.read` / `write` / `exists` / `list` / `stat` | Through the app file IPC. 4 MiB cap. Paths are resolved from the session cwd. `list` reports `size: 0`. |
+| `$.fs.read` / `write` / `exists` / `list` / `stat` | Through the app file IPC. 4 MiB cap. Relative paths resolve from the cwd of the chat that started the turn (`$.session.cwd()`). `list` reports `size: 0`. |
 | `$.process.run(argv, { timeoutMs, cwd })` | Shell, sandbox on. Default timeout 30s, maximum 10 minutes. Values from `$.env.set` are merged into that child. This is what marks the mod high risk. |
 | `$.http.fetch(url, init)` | `http`/`https` only. `init` is `method`, `headers`, `body`, `timeoutMs` (default 30s, maximum 120s). 4xx and 5xx return `{ status, ok, headers, text }`. A bad URL or another scheme throws. High risk. |
 | `$.store.get` / `set` / `delete` / `keys` | Per-mod key-value store on this device. |
