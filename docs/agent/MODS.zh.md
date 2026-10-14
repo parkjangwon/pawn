@@ -53,7 +53,7 @@ my-mod/
 
 加载前，设置会打开审核对话框：
 
-- 由注册的钩子和源码里的 `$.…` 调用得出的能力标签
+- 由注册的钩子和源码里的 `$.…` 调用得出的能力列表：每项能力一行，含名称和一行说明（`strings.ts` 中的 `settings.modsSection.cap.<id>` 与 `settings.modsSection.capDesc.<id>`，id 在 `src/renderer/src/agent/mods/capabilities.ts`）。新增能力需要 id、规则和这两条文字
 - 风险：进程或网络为高，文件或工具为中，其余为低
 - 你允许的版本
 
