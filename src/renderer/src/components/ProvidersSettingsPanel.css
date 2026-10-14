@@ -1,0 +1,405 @@
+/* Settings → Providers. Same language as the mods consent dialog: bordered
+   secondary surfaces, hairline dividers, ui-sm labels over ui-xs muted text. */
+
+.providers-panel .provider-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-xl);
+}
+
+.provider-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+}
+
+.provider-card-head,
+.provider-form-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+}
+
+.provider-card-head {
+  padding: var(--space-md) var(--space-lg);
+}
+
+.provider-card-title {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  min-width: 0;
+}
+
+.provider-card-name {
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.provider-card-endpoint {
+  overflow: hidden;
+  font-family: var(--font-mono);
+  font-size: var(--text-ui-xs);
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-mark {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  font-size: var(--text-ui-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text-secondary);
+}
+
+.provider-mark.muted {
+  opacity: 0.55;
+}
+
+.provider-status {
+  flex: none;
+  padding: var(--space-2xs) var(--space-sm);
+  border-radius: 999px;
+  font-size: var(--text-ui-xs);
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.provider-status.ok {
+  color: var(--success);
+  background: color-mix(in srgb, var(--success) 12%, transparent);
+}
+
+.provider-status.fail {
+  color: var(--danger);
+  background: color-mix(in srgb, var(--danger) 12%, transparent);
+}
+
+.provider-card .provider-delete {
+  flex: none;
+}
+
+.provider-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+.provider-card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-sm) var(--space-md);
+  padding: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--border-color);
+}
+
+.provider-card-actions {
+  display: flex;
+  gap: var(--space-sm);
+}
+
+.provider-action.ok {
+  color: var(--success);
+}
+
+.provider-action.fail {
+  color: var(--danger);
+}
+
+.provider-card-meta {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-ui-xs);
+  line-height: 1.4;
+  color: var(--text-muted);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-card-meta.provider-sync-warn {
+  color: var(--warning);
+}
+
+.provider-card .provider-test-line {
+  margin: 0;
+  padding: var(--space-sm) var(--space-lg);
+  border-top: 1px solid var(--border-color);
+  font-size: var(--text-ui-xs);
+  line-height: 1.5;
+}
+
+.provider-card .provider-test-line.test-ok {
+  color: var(--success);
+}
+
+.provider-card .provider-test-line.provider-test-fail {
+  color: var(--danger);
+  font-size: var(--text-ui-xs);
+}
+
+.provider-card-empty {
+  padding: var(--space-lg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+}
+
+/* Fields: label above, control (and its button) on one row. */
+.provider-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin: 0;
+}
+
+.provider-field-label {
+  font-size: var(--text-ui-xs);
+  font-weight: 500;
+  line-height: 1;
+  color: var(--text-muted);
+}
+
+.provider-field-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.provider-field-row > :first-child {
+  flex: 1;
+  min-width: 0;
+}
+
+/* Known providers */
+.providers-panel .preset-section {
+  margin-bottom: var(--space-lg);
+}
+
+.provider-known-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--space-lg);
+  margin-bottom: var(--space-md);
+}
+
+.provider-known-head .preset-section-label {
+  max-width: 52ch;
+  margin: 0;
+  font-size: var(--text-ui-xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.provider-search {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: var(--space-6);
+  width: 200px;
+  height: 28px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--control-border);
+  border-radius: var(--radius-sm);
+  background: var(--control-bg);
+  color: var(--text-muted);
+}
+
+.provider-search:focus-within {
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.provider-search input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  font-size: var(--text-ui-sm);
+  color: var(--text-primary);
+}
+
+.provider-group + .provider-group {
+  margin-top: var(--space-lg);
+}
+
+.provider-group-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-sm);
+}
+
+.provider-group-label {
+  font-size: var(--text-ui-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.provider-group-hint {
+  font-size: var(--text-ui-xs);
+  color: var(--text-muted);
+}
+
+.provider-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  gap: var(--space-sm);
+}
+
+.provider-tile {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+  min-width: 0;
+  height: 44px;
+  padding: 0 var(--space-md) 0 var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+
+.provider-tile:hover:not(:disabled) {
+  border-color: var(--border-strong);
+  background: var(--bg-hover);
+}
+
+.provider-tile:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+
+.provider-tile.active {
+  border-color: var(--accent);
+}
+
+.provider-tile.registered {
+  cursor: default;
+  background: var(--surface);
+}
+
+.provider-tile.registered .provider-tile-name {
+  color: var(--text-secondary);
+}
+
+.provider-tile-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--text-ui-sm);
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.provider-tile .provider-mark {
+  width: 26px;
+  height: 26px;
+}
+
+.provider-tile-check {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: var(--success);
+  color: var(--bg-secondary);
+}
+
+.provider-tile .preset-recommended-tag {
+  flex: none;
+  font-size: var(--text-ui-xs);
+  color: var(--warning);
+}
+
+.provider-search-empty {
+  padding: var(--space-lg);
+  border: 1px dashed var(--border-color);
+  border-radius: var(--radius-md);
+  font-size: var(--text-ui-xs);
+  color: var(--text-muted);
+  text-align: center;
+}
+
+/* Forms (preset key, custom provider) */
+.provider-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+  margin-top: var(--space-md);
+  padding: var(--space-lg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+}
+
+.provider-form-hint {
+  margin: 0;
+  font-size: var(--text-ui-xs);
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.provider-form .form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-sm);
+  margin-top: var(--space-xs);
+}
+
+.providers-panel .provider-add-custom {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  width: 100%;
+  height: 44px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-md);
+  background: transparent;
+  font-size: var(--text-ui-sm);
+  color: var(--text-secondary);
+}
+
+.providers-panel .provider-add-custom:hover {
+  border-color: var(--text-muted);
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.provider-card-actions .pawn-btn,
+.provider-field-row .pawn-btn {
+  font-size: var(--text-ui-sm);
+}
