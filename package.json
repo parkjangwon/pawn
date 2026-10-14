@@ -1,6 +1,6 @@
 {
   "name": "pawn",
-  "version": "3.2.4",
+  "version": "3.2.5",
   "description": "AI Desktop Coding Agent — Code, Browse, Automate. BYOK, no harness, fully extensible.",
   "main": "./out/main/index.js",
   "author": {
