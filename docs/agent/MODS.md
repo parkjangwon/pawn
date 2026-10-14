@@ -72,7 +72,7 @@ Mods are not sandboxed. They run with your account: files, shell, network, the c
 Before a mod loads, Settings shows a review dialog:
 
 - a capability list derived from the hooks it registers and the `$.…` calls in source: one row per capability, with a label and a one-line description (`settings.modsSection.cap.<id>` and `settings.modsSection.capDesc.<id>` in `strings.ts`; ids in `src/renderer/src/agent/mods/capabilities.ts`). A new capability needs an id, a rule, and both strings
-- a risk chip: **high** if it can run a process or use the network, **medium** if it can touch files or tools, read message text (`message.render`), or change the theme (`$.theme.vars` / `$.theme.css`), **low** otherwise
+- a risk chip: **high** if it can run a process or use the network, **medium** if it can touch files or tools, read message text (`message.render`), change the theme (`$.theme.vars` / `$.theme.css`), or show a custom view (`$.view.open`), **low** otherwise
 - the version you are allowing
 
 Allow writes that exact version into `consentedPlugins` and removes the name from `disabledPlugins`. Revoke deletes the consent entry and disables the name.
@@ -222,6 +222,32 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 - Like slots, the runtime refuses a `$.theme.vars` / `$.theme.css` call that isn't written literally in the source. The review dialog shows them as **Change colors and styles**. Risk is **medium**: a theme can't read anything or reach the network, but it can make parts of Pawn look like something they're not.
 - Anti-spoofing: the consent dialog, the mods menu (with its Theme toggles) and **Settings → Mods** are `.mods-trusted` roots. They re-declare the default tokens, and mod var rules use `:not(.mods-trusted)`, so `$.theme.vars` never reaches them. Scoped sheets can't reach them either, and `position: fixed` / `sticky` is refused so a mod can't float a fake dialog over them.
 - Sample: `examples/mods/theming-demo/` swaps two palettes (light and dark) and styles its sidebar section. It is not installed by default; copy it to `~/.pawn/mods/theming-demo` and allow it.
+
+### Custom views
+
+`$.view.*` shows a mod's own HTML page in a sandboxed iframe. Use it when the `$.ui.resolve()` elements are not enough (charts, editors, custom layouts).
+
+| Call | What it does | Capability |
+| --- | --- | --- |
+| `$.view.open({ id, title, html, script, placement, height })` | Opens or replaces the view `id`. `placement` is `panel` (left sidebar, default), `tab` (a tab strip above the chat) or `modal` (a dialog labeled with the mod's name). `html` and `script` up to 256 KB each; `height` 60–2000 px. | `views` |
+| `$.view.post({ id, data })` | Sends JSON data into the view (`pawn.onMessage`). | none |
+| `$.view.close({ id })` / `$.view.list()` | Close one of this mod's views / list them. | none |
+
+Inside the view, a global `pawn` object:
+
+- `pawn.call(method, ...args)` → Promise. Reaches the mod's `$` for these methods only: `ui.toast`, `ui.notice`, `ui.status`, `store.get/set/delete/keys`, `fs.read`, `fs.list`, `fs.exists`, `http.fetch`, `model.complete`, `clock.now`. Each must also be written literally somewhere in the mod's source (`$.store.get`), so the review dialog already listed it. Anything else rejects.
+- `pawn.send(data)` → the mod gets `on('view.message', { plugin: '<mod>' }, ($, e, next) => …)` with `{ plugin, id, data }`.
+- `pawn.onMessage(fn)` receives `$.view.post` data. `pawn.resize(px)` sets the height (panel and modal).
+
+Sandbox and CSP:
+
+- `sandbox="allow-scripts"` only, no `allow-same-origin`: opaque origin, no access to Pawn's window, `window.api`, storage, cookies, popups, forms or top navigation.
+- The page starts with its own CSP: `default-src 'none'`, no `connect-src`, frames, workers or forms; images and fonts only as `data:`. The view itself cannot reach the network; anything remote goes through `pawn.call('http.fetch', …)`, which needs `$.http.fetch` (and its consent).
+- Scripts run only from `script` (and the bridge), which Pawn tags with a per-launch nonce. `<script>` tags and `onclick=` attributes inside `html` are blocked in the packaged app; use `script` with `addEventListener`.
+- A view can't navigate itself anywhere (the main process cancels it), so data can't leave through a URL.
+- Light/dark: the theme tokens (`--bg-primary`, `--text-primary`, `--accent`, `--border-color`, …) are copied into the page's `:root`, and the view reloads when the theme changes.
+- Risk is **medium**: the view runs code you didn't write and a modal can look like a dialog, so modals always show `mod: <name>`.
+- Sample: `examples/mods/views-demo/` (panel counter saved with `$.store`, plus a tab and a dialog). It is not installed by default; copy it to `~/.pawn/mods/views-demo` and allow it.
 
 ## 7. `$` API
 

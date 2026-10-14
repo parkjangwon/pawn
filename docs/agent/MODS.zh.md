@@ -54,7 +54,7 @@ my-mod/
 加载前，设置会打开审核对话框：
 
 - 由注册的钩子和源码里的 `$.…` 调用得出的能力列表：每项能力一行，含名称和一行说明（`strings.ts` 中的 `settings.modsSection.cap.<id>` 与 `settings.modsSection.capDesc.<id>`，id 在 `src/renderer/src/agent/mods/capabilities.ts`）。新增能力需要 id、规则和这两条文字
-- 风险：进程或网络为高，文件、工具、读取消息正文（`message.render`）或更改主题（`$.theme.vars` / `$.theme.css`）为中，其余为低
+- 风险：进程或网络为高，文件、工具、读取消息正文（`message.render`）、更改主题（`$.theme.vars` / `$.theme.css`）或显示自定义视图（`$.view.open`）为中，其余为低
 - 你允许的版本
 
 允许后，该版本写入 `consentedPlugins`，名字会从 `disabledPlugins` 去掉。撤回同意会删掉条目并关闭该名字。
@@ -168,6 +168,32 @@ export function register(on) {
 - 与插槽一样，源码中没有逐字写出的 `$.theme.vars` / `$.theme.css` 调用会被运行时拒绝。审核对话框中显示为 **Change colors and styles**。风险为**中**：主题无法读取任何内容，也无法访问网络，但可以让 Pawn 的某些部分看起来像别的东西。
 - 防伪装：同意对话框、mods 菜单（含 Theme 开关）和 **设置 → Mods** 是 `.mods-trusted` 根。它们重新声明默认变量，mod 的变量规则使用 `:not(.mods-trusted)`，因此 `$.theme.vars` 无法影响它们。限定范围的样式表也无法影响它们，并且 `position: fixed` / `sticky` 会被拒绝，mod 无法在其上浮出伪造的对话框。
 - 示例：`examples/mods/theming-demo/` 切换两套配色（浅色和深色），并为自己的侧边栏分区加样式。默认不安装；复制到 `~/.pawn/mods/theming-demo` 后允许即可。
+
+### 自定义视图 (Custom views)
+
+`$.view.*` 在沙箱 iframe 中显示 mod 自己的 HTML 页面。当 `$.ui.resolve()` 元素不够用时（图表、编辑器、自由布局）使用。
+
+| 调用 | 作用 | 权限 |
+| --- | --- | --- |
+| `$.view.open({ id, title, html, script, placement, height })` | 打开或替换视图 `id`。`placement` 为 `panel`（左侧边栏，默认）、`tab`（聊天上方的标签栏）或 `modal`（带 mod 名称的对话框）。`html` 和 `script` 各最多 256KB，`height` 为 60–2000px。 | `views` |
+| `$.view.post({ id, data })` | 向视图发送 JSON 数据（`pawn.onMessage`）。 | 无 |
+| `$.view.close({ id })` / `$.view.list()` | 关闭本 mod 的一个视图 / 列出它们。 | 无 |
+
+视图内有一个全局 `pawn` 对象：
+
+- `pawn.call(method, ...args)` → Promise。只有这些方法能到达 mod 的 `$`：`ui.toast`、`ui.notice`、`ui.status`、`store.get/set/delete/keys`、`fs.read`、`fs.list`、`fs.exists`、`http.fetch`、`model.complete`、`clock.now`。每个方法还必须在 mod 源码中逐字出现（`$.store.get`），因此审核对话框已经列出过。其余调用会被拒绝。
+- `pawn.send(data)` → mod 通过 `on('view.message', { plugin: '<mod>' }, ($, e, next) => …)` 收到 `{ plugin, id, data }`。
+- `pawn.onMessage(fn)` 接收 `$.view.post` 的数据。`pawn.resize(px)` 设置高度（panel 和 modal）。
+
+沙箱与 CSP：
+
+- 仅 `sandbox="allow-scripts"`，没有 `allow-same-origin`：不透明源，无法访问 Pawn 窗口、`window.api`、存储、Cookie、弹窗、表单或顶层导航。
+- 页面以自己的 CSP 开头：`default-src 'none'`，没有 `connect-src`、框架、Worker 或表单；图片和字体只能是 `data:`。视图本身无法访问网络；远程请求只能通过需要 `$.http.fetch`（及其同意）的 `pawn.call('http.fetch', …)`。
+- 脚本只从 `script`（和桥接脚本）运行，Pawn 会给它们加上每次启动生成的 nonce。打包版中 `html` 里的 `<script>` 和 `onclick=` 会被阻止；请在 `script` 中使用 `addEventListener`。
+- 视图无法自行导航到任何地方（主进程会取消），因此数据无法通过 URL 外泄。
+- 浅色/深色：主题变量（`--bg-primary`、`--text-primary`、`--accent`、`--border-color` 等）会复制到页面的 `:root`，主题变化时视图会重新加载。
+- 风险为**中**：视图运行的不是你写的代码，且模态框可能看起来像对话框，因此模态框始终显示 `mod: <名称>`。
+- 示例：`examples/mods/views-demo/`（用 `$.store` 保存的面板计数器，以及标签页和对话框）。默认不安装；复制到 `~/.pawn/mods/views-demo` 后允许即可。
 
 ## 7. `$` API
 

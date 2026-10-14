@@ -47,3 +47,23 @@ describe('buildDevCsp', () => {
     expect(csp.split(';').find((d) => d.includes('img-src'))).not.toContain('192.168')
   })
 })
+
+describe('mod view nonce and navigation guard', () => {
+  it('adds the view nonce to prod script-src only when well-formed', async () => {
+    const { MOD_VIEW_NONCE } = await import('../csp')
+    expect(MOD_VIEW_NONCE).toMatch(/^[A-Za-z0-9_-]{20,}$/)
+    const csp = buildProdCsp([], MOD_VIEW_NONCE)
+    expect(csp.split(';').find((d) => d.includes('script-src'))).toContain(`'nonce-${MOD_VIEW_NONCE}'`)
+    expect(csp).not.toMatch(/unsafe-inline'[^;]*script|script-src[^;]*unsafe-inline/)
+    expect(buildProdCsp([], "x' 'unsafe-inline")).toBe(PROD_CSP)
+  })
+
+  it('blocks a srcdoc view from navigating anywhere', async () => {
+    const { blocksModViewNavigation } = await import('../csp')
+    expect(blocksModViewNavigation('about:srcdoc', 'https://evil.example/?q=secret')).toBe(true)
+    expect(blocksModViewNavigation('about:srcdoc', 'data:text/html,x')).toBe(true)
+    expect(blocksModViewNavigation('about:srcdoc', 'about:srcdoc')).toBe(false)
+    expect(blocksModViewNavigation('https://example.com/', 'https://example.org/')).toBe(false)
+    expect(blocksModViewNavigation(undefined, 'https://x')).toBe(false)
+  })
+})

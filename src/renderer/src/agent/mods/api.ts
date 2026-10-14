@@ -1,5 +1,7 @@
 import { modKvStore } from './kvStore'
 import { useModsUiStore } from './uiStore'
+import { MAX_VIEW_HTML, MAX_VIEW_SCRIPT, VIEW_ID, type ModViewPlacement } from './views'
+import { postToModView } from './viewFrames'
 import { normalizeShortcut, shortcutConflictMessage } from './shortcuts'
 import { THEME_ID, sanitizeCss, sanitizeVars, type ModThemeMode } from './theme'
 import type { ModCommandReg, ModElementTable, ModSlotKind, ModSlotView, ModsApi, ModToolReg } from './types'
@@ -264,7 +266,8 @@ export function buildModsApi(host: ModsApiHost): ModsApi {
       abort: () => host.abortTurn()
     },
     slot: slotApi(host, plugin),
-    theme: themeApi(host, plugin)
+    theme: themeApi(host, plugin),
+    view: viewApi(host, plugin)
   }
 
   return api
@@ -416,5 +419,48 @@ function themeApi(host: ModsApiHost, plugin: string): ModsApi['theme'] {
       store()
         .themes.filter((t) => t.plugin === plugin)
         .map((t) => ({ id: t.id, kind: t.kind, mode: t.mode }))
+  }
+}
+
+function viewApi(host: ModsApiHost, plugin: string): ModsApi['view'] {
+  const idOf = (id: unknown): string => {
+    const s = String(id || '')
+    if (!VIEW_ID.test(s)) throw new Error(`Invalid view id: ${s}`)
+    return s
+  }
+  const placementOf = (p: unknown): ModViewPlacement => {
+    if (p === undefined || p === null || p === 'panel') return 'panel'
+    if (p === 'tab' || p === 'modal') return p
+    throw new Error(`Invalid view placement: ${String(p)}`)
+  }
+  return {
+    open: (spec) => {
+      if (!host.declaredCalls.has('$.view.open')) {
+        throw new Error("$.view.open refused: not declared in this mod's source, so it was not shown at consent")
+      }
+      const html = String(spec?.html ?? '')
+      const script = String(spec?.script ?? '')
+      if (html.length > MAX_VIEW_HTML) throw new Error('view html is too large')
+      if (script.length > MAX_VIEW_SCRIPT) throw new Error('view script is too large')
+      const h = Number(spec?.height)
+      useModsUiStore.getState().openView({
+        plugin,
+        id: idOf(spec?.id),
+        title: String(spec?.title || spec?.id),
+        placement: placementOf(spec?.placement),
+        html,
+        script,
+        height: Number.isFinite(h) && h > 0 ? Math.min(Math.max(h, 60), 2000) : undefined
+      })
+    },
+    post: (spec) => {
+      postToModView(plugin, idOf(spec?.id), spec?.data)
+    },
+    close: (spec) => useModsUiStore.getState().closeView(plugin, idOf(spec?.id)),
+    list: () =>
+      useModsUiStore
+        .getState()
+        .views.filter((v) => v.plugin === plugin)
+        .map((v) => ({ id: v.id, title: v.title, placement: v.placement }))
   }
 }

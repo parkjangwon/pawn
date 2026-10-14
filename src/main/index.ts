@@ -22,7 +22,7 @@ import { forceAllowQuit, registerQuitConfirm } from './quit'
 import { installAppMenu } from './appMenu'
 import { setAppLanguage } from './appLanguage'
 import { loadConfig } from './config'
-import { buildDevCsp, buildProdCsp, httpConnectOrigins } from './csp'
+import { MOD_VIEW_NONCE, buildDevCsp, buildProdCsp, httpConnectOrigins } from './csp'
 import { setSecretCipher, warnIfPlaintextSecrets } from './providerSecrets'
 
 process.on('uncaughtException', (err) => {
@@ -86,7 +86,7 @@ const boot = (): void => {
         ...details.responseHeaders,
         // No remote img-src: a markdown image URL is a zero-click exfil channel.
         // Dev still allows the Vite server; both policies append saved http origins.
-        'Content-Security-Policy': [(is.dev ? buildDevCsp : buildProdCsp)(remoteHttpOrigins())]
+        'Content-Security-Policy': [is.dev ? buildDevCsp(remoteHttpOrigins()) : buildProdCsp(remoteHttpOrigins(), MOD_VIEW_NONCE)]
       }
     })
   })

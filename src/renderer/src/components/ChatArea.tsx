@@ -59,6 +59,7 @@ import {
 import { buildIssuePrPlaybook, parseIssuePrArg, prefetchIssueContext } from '../agent/issueWorkflow'
 import { ensureModsLoaded, getModRuntime } from '../agent/mods'
 import ModsChrome from './ModsChrome'
+import { ModViewTabs } from './ModViews'
 import './ChatArea.css'
 
 interface ChatAreaProps {
@@ -1252,6 +1253,7 @@ export default function ChatArea({
   // "home" still loads mods for slash commands and shows toasts).
   const stackWith = (variant: 'home' | 'chat'): React.JSX.Element => (
     <div className="composer-stack">
+      {variant === 'chat' && <ModViewTabs />}
       <ModsChrome onOpenSettings={onOpenSettings} variant={variant} />
       {composerEl}
     </div>

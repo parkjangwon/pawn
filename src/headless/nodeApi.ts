@@ -662,6 +662,7 @@ export function createNodeApi(opts: NodeApiOptions): { api: Record<string, any>;
         const report = validateModPath(typeof path === 'string' ? path : '')
         return { ok: report.ok, report, text: formatValidateReport(report) }
       },
+      viewNonce: async () => ({ nonce: '' }),
       envSnapshot: async () => {
         const values: Record<string, string> = {}
         for (const [k, v] of Object.entries(process.env)) {

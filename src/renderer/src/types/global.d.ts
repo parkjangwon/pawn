@@ -1263,6 +1263,7 @@ declare global {
           existed?: boolean
         }>
         envSnapshot: () => Promise<{ ok: boolean; values: Record<string, string> }>
+        viewNonce?: () => Promise<{ nonce: string }>
         http: (
           url: string,
           init?: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }

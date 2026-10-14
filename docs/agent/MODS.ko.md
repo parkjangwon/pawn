@@ -68,7 +68,7 @@ mods는 샌드박스가 없어요. 파일, 셸, 네트워크, 채팅을 내 계�
 불러오기 전에 설정이 검토 창을 보여요.
 
 - 등록한 훅과 소스의 `$.…` 호출로 만든 권한 목록: 권한마다 한 줄에 이름과 한 줄 설명이 있어요 (`strings.ts`의 `settings.modsSection.cap.<id>`와 `settings.modsSection.capDesc.<id>`, id는 `src/renderer/src/agent/mods/capabilities.ts`). 새 권한에는 id, 규칙, 두 문자열이 모두 필요해요
-- 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구, 또는 메시지 본문을 읽거나(`message.render`) 테마를 바꾸면(`$.theme.vars` / `$.theme.css`) **보통**, 아니면 **낮음**
+- 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구, 메시지 본문을 읽거나(`message.render`) 테마를 바꾸거나(`$.theme.vars` / `$.theme.css`) 사용자 정의 뷰를 띄우면(`$.view.open`) **보통**, 아니면 **낮음**
 - 허용하는 버전
 
 허용하면 그 버전이 `consentedPlugins`에 들어가고, 이름은 `disabledPlugins`에서 빠져요. 동의를 철회하면 항목을 지우고 그 이름을 꺼요.
@@ -217,6 +217,32 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 - 슬롯처럼, 소스에 글자 그대로 없는 `$.theme.vars` / `$.theme.css` 호출은 런타임이 거부해요. 검토 대화상자에는 **Change colors and styles**로 나와요. 위험은 **보통**이에요. 테마는 아무것도 읽거나 네트워크에 닿을 수 없지만, Pawn의 일부를 다른 것처럼 보이게 할 수 있어요.
 - 위장 방지: 동의 대화상자, mods 메뉴(Theme 토글 포함), **설정 → Mods**는 `.mods-trusted` 루트예요. 기본 토큰을 다시 선언하고, mod 변수 규칙은 `:not(.mods-trusted)`를 쓰므로 `$.theme.vars`가 닿지 않아요. 범위가 정해진 시트도 닿지 않고, `position: fixed` / `sticky`는 거부돼서 가짜 대화상자를 위에 띄울 수 없어요.
 - 예제: `examples/mods/theming-demo/`는 두 팔레트(라이트와 다크)를 바꾸고 자기 사이드바 섹션을 꾸며요. 기본으로 설치되지 않아요. `~/.pawn/mods/theming-demo`에 복사한 뒤 허용하세요.
+
+### 사용자 정의 뷰 (Custom views)
+
+`$.view.*`는 mod 자신의 HTML 페이지를 샌드박스 iframe에 보여 줘요. `$.ui.resolve()` 요소로 부족할 때(차트, 편집기, 자유 레이아웃) 쓰세요.
+
+| 호출 | 하는 일 | 권한 |
+| --- | --- | --- |
+| `$.view.open({ id, title, html, script, placement, height })` | 뷰 `id`를 열거나 바꿔요. `placement`는 `panel`(왼쪽 사이드바, 기본), `tab`(채팅 위 탭 줄), `modal`(mod 이름이 붙은 대화상자). `html`과 `script`는 각각 256KB까지, `height`는 60–2000px. | `views` |
+| `$.view.post({ id, data })` | JSON 데이터를 뷰로 보내요(`pawn.onMessage`). | 없음 |
+| `$.view.close({ id })` / `$.view.list()` | 이 mod의 뷰 하나 닫기 / 목록 보기. | 없음 |
+
+뷰 안에는 전역 `pawn` 객체가 있어요.
+
+- `pawn.call(method, ...args)` → Promise. 다음 메서드만 mod의 `$`에 닿아요: `ui.toast`, `ui.notice`, `ui.status`, `store.get/set/delete/keys`, `fs.read`, `fs.list`, `fs.exists`, `http.fetch`, `model.complete`, `clock.now`. 각각 mod 소스 어딘가에 글자 그대로(`$.store.get`) 있어야 하므로 검토 대화상자에 이미 나온 것들이에요. 나머지는 거부돼요.
+- `pawn.send(data)` → mod는 `on('view.message', { plugin: '<mod>' }, ($, e, next) => …)`로 `{ plugin, id, data }`를 받아요.
+- `pawn.onMessage(fn)`은 `$.view.post` 데이터를 받아요. `pawn.resize(px)`는 높이를 정해요(panel, modal).
+
+샌드박스와 CSP:
+
+- `sandbox="allow-scripts"`만, `allow-same-origin` 없음: 불투명 출처라서 Pawn 창, `window.api`, 저장소, 쿠키, 팝업, 폼, 최상위 이동에 접근할 수 없어요.
+- 페이지는 자체 CSP로 시작해요: `default-src 'none'`, `connect-src`·프레임·워커·폼 없음, 이미지와 글꼴은 `data:`만. 뷰는 직접 네트워크에 닿을 수 없고, 원격 요청은 `$.http.fetch`(와 그 동의)가 필요한 `pawn.call('http.fetch', …)`로만 해요.
+- 스크립트는 `script`(와 브리지)에서만 실행되고, Pawn이 실행마다 바뀌는 nonce를 붙여요. 패키지된 앱에서 `html` 안의 `<script>`와 `onclick=`은 막혀요. `script`에서 `addEventListener`를 쓰세요.
+- 뷰는 스스로 다른 곳으로 이동할 수 없어요(메인 프로세스가 취소). 그래서 URL로 데이터가 나갈 수 없어요.
+- 라이트/다크: 테마 토큰(`--bg-primary`, `--text-primary`, `--accent`, `--border-color` 등)이 페이지 `:root`에 복사되고, 테마가 바뀌면 뷰를 다시 불러와요.
+- 위험은 **보통**이에요. 직접 쓰지 않은 코드가 돌고 모달이 대화상자처럼 보일 수 있어서, 모달에는 항상 `mod: <이름>`이 표시돼요.
+- 예제: `examples/mods/views-demo/`(`$.store`에 저장하는 패널 카운터, 탭과 대화상자). 기본으로 설치되지 않아요. `~/.pawn/mods/views-demo`에 복사한 뒤 허용하세요.
 
 ## 7. `$` API
 
