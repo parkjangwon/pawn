@@ -5,6 +5,7 @@ import { AppWindow, ChevronDown, PanelLeft, PanelRight, Terminal } from 'lucide-
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import NavControls from './NavControls'
 import Tooltip from './Tooltip'
+import { pawnNotify } from '../agent/notify'
 
 interface ChatHeaderProps {
   onToggleSidebar: () => void
@@ -208,9 +209,9 @@ export default function ChatHeader({
     setRunningScript(name)
     const res = await window.api.workspace.runScript(projectPath, name, packageManager)
     if (res.error) {
-      void window.api.notification?.send('Script failed', res.error).catch(() => {})
+      void pawnNotify('Script failed', res.error).catch(() => {})
     } else {
-      void window.api.notification?.send('Script started', `${packageManager} run ${name}`).catch(() => {})
+      void pawnNotify('Script started', `${packageManager} run ${name}`).catch(() => {})
       try { (window as any).__openRightPanelTab?.('terminal') } catch {}
     }
     setRunningScript(null)

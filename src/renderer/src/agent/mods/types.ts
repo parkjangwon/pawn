@@ -186,6 +186,21 @@ export interface ModsApi {
     css: (spec: { id: string; css: string; mode?: 'light' | 'dark' | 'all' }) => void
     remove: (spec: { id: string }) => void
     list: () => Array<{ id: string; kind: 'vars' | 'css'; mode: 'light' | 'dark' | 'all' }>
+  }  /** Subagent profiles the user's agent can spawn (`spawn_agent`). Names get a `<mod>-` prefix. */
+  agent: {
+    register: (spec: {
+      name?: string
+      description?: string
+      prompt?: string
+      /** A Claude Code agent file (frontmatter + body), e.g. from `$.fs.read`. */
+      markdown?: string
+      tools?: string[]
+      disallowedTools?: string[]
+      model?: string
+      maxTurns?: number
+    }) => string
+    remove: (spec: { name: string }) => void
+    list: () => Array<{ name: string; description: string }>
   }
   /** Custom views: sandboxed iframes with a postMessage bridge (see views.ts). */
   view: {
@@ -200,6 +215,19 @@ export interface ModsApi {
     post: (spec: { id: string; data: unknown }) => void
     close: (spec: { id: string }) => void
     list: () => Array<{ id: string; title: string; placement: 'panel' | 'tab' | 'modal' }>
+  }
+
+  /** Offer a provider and its models. Only the user's click in Settings → Mods adds it. */
+  provider: {
+    register: (spec: {
+      id: string
+      name: string
+      apiFormat?: 'openai' | 'claude'
+      baseUrl: string
+      models: Array<{ modelId: string; label?: string; contextWindow?: number; supportsTools?: boolean }>
+    }) => void
+    remove: (spec: { id: string }) => void
+    list: () => Array<{ id: string; name: string; baseUrl: string; models: string[] }>
   }
 }
 

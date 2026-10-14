@@ -1,6 +1,7 @@
 import { getModRuntime, type ModRuntimeContext, type ModSourcePayload } from './runtime'
 import type { LoadedModInfo } from './types'
 import { useModsUiStore } from './uiStore'
+import { useModRegistry } from './registry'
 
 let loadPromise: Promise<LoadedModInfo[]> | null = null
 let lastKey = ''
@@ -94,6 +95,7 @@ export async function reloadMods(ctx: ModRuntimeContext): Promise<LoadedModInfo[
   // Do not clear loadPromise: a reload must run after any in-flight load.
   lastKey = ''
   useModsUiStore.getState().clearSessionUi()
+    useModRegistry.getState().clear()
   return ensureModsLoaded(ctx)
 }
 

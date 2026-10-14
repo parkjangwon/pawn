@@ -8,6 +8,7 @@ import { loadAgentProfiles } from './agentProfiles'
 import { extractClaimsFromSummary } from './subagentOrchestration'
 import type { SubagentResult } from './subagentTypes'
 import { useAppStore } from '../stores/app'
+import { pawnNotify } from './notify'
 
 export function formatSubagentResults(results: SubagentResult[]): string {
   const lines: string[] = [`# Subagent results (${results.length})`, '']
@@ -74,8 +75,7 @@ export function injectBackgroundResult(
       createdAt: Date.now()
     })
     if (useAppStore.getState().activeSessionId === sessionId && !document.hasFocus()) {
-      void window.api.notification
-        ?.send?.(
+      void pawnNotify(
           'Pawn',
           result.ok
             ? `Subagent ${result.name} finished`

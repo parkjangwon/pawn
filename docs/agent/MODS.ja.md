@@ -55,6 +55,7 @@ my-mod/
 
 - 登録フックとソース中の `$.…` 呼び出しから作った権限リスト。権限ごとに 1 行で、名前と 1 行の説明を出します（`strings.ts` の `settings.modsSection.cap.<id>` と `settings.modsSection.capDesc.<id>`、id は `src/renderer/src/agent/mods/capabilities.ts`）。新しい権限には id、ルール、両方の文字列が必要です
 - 危険度: プロセスまたはネットワークなら高、ファイルまたはツール、メッセージ本文を読む（`message.render`）、テーマを変える（`$.theme.vars` / `$.theme.css`）、またはカスタムビューを出す（`$.view.open`）なら中、それ以外は低
+- ロードマップ E で追加: モデルへのリクエストを変える（`model.request`）またはプロバイダーを提案する（`$.provider.register`）なら高、モデルの応答を読む（`model.response`）またはサブエージェントを追加する（`$.agent.register`）なら中、通知を見る（`notification`）なら低
 - 許可する版
 
 許可するとその版が `consentedPlugins` に入り、名前は `disabledPlugins` から外れます。同意を取り消すと項目を消し、その名前をオフにします。
@@ -101,6 +102,9 @@ export function register(on) {
 | `command.run` | 登録した `/名前` を打ったとき、または `$.command.run` を呼んだとき | `{ text }` を返すと mod の返事としてチャットに出る。 |
 | `ui.render` | スピナーと、入力欄の上の帯（`AbovePrompt`） | スピナーは一つのチェーンで、最後の `props.suffix` が残る。`AbovePrompt` は各 mod を別々に呼ぶ。自分の帯の `props.tree` と `props.plugin` を返す。他の mod の木は見えない。 |
 | `ui.press` / `ui.input` / `ui.select` | mod ツリーの Button、Input、Select を使ったとき | `id` と `value` を読む。 |
+| `model.request` | メインチャットのモデル呼び出しの直前（リトライごとにも） | `next({ ...e, systemAppend })` でシステムプロンプトに最大 8 000 文字を `<mod-instructions>` で包んで追加。ほかのフィールドは変更不可。ペイロード `{ sessionId, round, provider, model, messageCount, lastUserText }`。 |
+| `model.response` | モデル呼び出しが成功したあと | 観察のみ。ペイロード `{ sessionId, round, provider, model, text, toolCalls, usage }`。 |
+| `notification` | Pawn が送るすべてのデスクトップ通知 | 観察のみ。ペイロード `{ title, body, source }`。mod は通知を隠したり書き換えたりできない。 |
 
 ツールの順: `tool.call` → 設定 `PreToolUse` → Plan モード確認 → `tool.check` / 権限 → ツール。
 
@@ -194,6 +198,41 @@ export function register(on) {
 - ライト/ダーク: テーマトークン（`--bg-primary`、`--text-primary`、`--accent`、`--border-color` など）がページの `:root` にコピーされ、テーマが変わるとビューを再読み込みします。
 - 危険度は**中**です。自分で書いていないコードが動き、モーダルはダイアログのように見えうるため、モーダルには常に `mod: <名前>` が表示されます。
 - サンプル: `examples/mods/views-demo/`（`$.store` に保存するパネルのカウンター、タブとダイアログ）。既定ではインストールされません。`~/.pawn/mods/views-demo` にコピーして許可してください。
+
+### モデルイベント、サブエージェント、プロバイダー
+
+信頼の要るフックなので、イベント名がソースに文字どおり書かれていない `on('model.request' | 'model.response' | 'notification', …)` と `message.*` はランタイムが拒否します。計算した名前では届きません。
+
+| 呼び出し | 動作 | 権限 |
+| --- | --- | --- |
+| `$.agent.register({ name, description, prompt, tools, disallowedTools, model, maxTurns })` | アシスタントが起動できるサブエージェントを追加。名前は `<mod>-<name>` なので組み込みエージェントを置き換えられません。同名のディスク上のエージェントファイルが優先。`prompt` の代わりに `markdown` を渡すと Claude Code のエージェントファイル（frontmatter + 本文）を使います。mod のエージェントは常に worktree で `apply: none`、`maxTurns` の上限は 25。完全な名前を返します。 | `subagents`（中） |
+| `$.agent.remove({ name })` / `$.agent.list()` | この mod のエージェントを削除 / 一覧。 | なし |
+| `$.provider.register({ id, name, apiFormat, baseUrl, models })` | プロバイダー（`openai` または `claude` 形式）とモデル最大 32 個を提案。`baseUrl` は `https`、または `localhost`/`127.0.0.1` の `http` で、認証情報を含められません。自動では何も変わりません。提案は **設定 → Mods → Providers offered by mods** に表示され、**Add** でプロバイダーとモデルがオフ・キーなしで追加されます。 | `providers`（高） |
+| `$.provider.remove({ id })` / `$.provider.list()` | 提案の取り下げ / この mod の提案一覧。 | なし |
+
+登録はセッション中だけ有効で、mod の再読み込みで消えます。スロットと同じく、ソースに文字どおり書かれていない `$.agent.register` / `$.provider.register` は拒否されます。
+
+サンプル: `examples/mods/events-demo/` がすべてを使います。既定ではインストールされません。`~/.pawn/mods/events-demo` にコピーして許可してください。
+
+### Claude Code 互換
+
+Pawn は Claude Code プラグインのフォルダ構成（`.claude-plugin/plugin.json`、`hooks/`、`agents/`、`skills/`）を読みます。引き継がれるもの:
+
+| Claude Code | Pawn |
+| --- | --- |
+| フック `SessionStart` / `SessionEnd` | `session.start` / `session.end` |
+| フック `UserPromptSubmit` | `prompt.submit` |
+| フック `PreToolUse` | `tool.call` |
+| フック `PermissionRequest` | `tool.check` |
+| フック `Stop` | `turn.complete` |
+| フック `PreCompact` | `session.compact`（圧縮のあとに実行） |
+| フック `Notification` | `notification` |
+| フック `PostToolUse`、`SubagentStop` など | 検証は通るが発火しない（警告） |
+| エージェントファイル（`agents/*.md`） | `$.agent.register({ markdown })` で読み込むか、`~/.claude/agents` / `.claude/agents` に置く |
+| スキル（`skills/*/SKILL.md`） | 通常のスキルフォルダから読む。mod の呼び出しは不要 |
+| `ANTHROPIC_BASE_URL` のカスタムモデル | `$.provider.register` の提案をユーザーが追加 |
+
+`on()` は Claude Code の名前をそのまま（`'PreToolUse'`）、または `classic.` 付きで受け付け、レビューダイアログには Pawn のイベントとして表示されます。Claude Code の `hooks.json` にあるシェルの `command` フックは mod では実行されません。設定 → Hooks に入れてください。mod のフックは `modules` に並べた JavaScript モジュールです。
 
 ## 7. `$` API
 

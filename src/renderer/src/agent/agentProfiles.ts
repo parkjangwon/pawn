@@ -64,7 +64,7 @@ export interface AgentProfile {
   /** Cap total tool invocations per run. */
   maxToolCalls?: number
   /** Built-in vs loaded from disk. */
-  source: 'builtin' | 'project' | 'user'
+  source: 'builtin' | 'project' | 'user' | 'mod'
   sourcePath?: string
 }
 
@@ -455,9 +455,16 @@ async function loadAgentsFromDir(
  * Resolve all available profiles. Higher-priority sources override same name.
  * Priority: project .pawn > project .claude > user .pawn > user .claude > builtin
  */
+let extraProfiles: () => AgentProfile[] = () => []
+/** Mods register agents here (src/renderer/src/agent/mods/registry.ts). Disk agents override them. */
+export function setExtraAgentProfiles(fn: () => AgentProfile[]): void {
+  extraProfiles = fn
+}
+
 export async function loadAgentProfiles(projectPath?: string): Promise<AgentProfile[]> {
   const byName = new Map<string, AgentProfile>()
   for (const b of BUILTIN_AGENT_PROFILES) byName.set(b.name, b)
+  for (const m of extraProfiles()) if (!byName.has(m.name)) byName.set(m.name, m)
 
   const home = (await window.api?.fs?.homeDir?.()?.catch?.(() => null)) || null
   const dirs: Array<{ path: string; source: 'project' | 'user' }> = []

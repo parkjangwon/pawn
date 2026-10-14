@@ -1,5 +1,6 @@
 import { modKvStore } from './kvStore'
 import { useModsUiStore } from './uiStore'
+import { buildModAgent, buildProviderOffer, modAgentName, useModRegistry } from './registry'
 import { MAX_VIEW_HTML, MAX_VIEW_SCRIPT, VIEW_ID, type ModViewPlacement } from './views'
 import { postToModView } from './viewFrames'
 import { normalizeShortcut, shortcutConflictMessage } from './shortcuts'
@@ -267,7 +268,9 @@ export function buildModsApi(host: ModsApiHost): ModsApi {
     },
     slot: slotApi(host, plugin),
     theme: themeApi(host, plugin),
-    view: viewApi(host, plugin)
+    view: viewApi(host, plugin),
+    agent: agentApi(host, plugin),
+    provider: providerApi(host, plugin)
   }
 
   return api
@@ -462,5 +465,45 @@ function viewApi(host: ModsApiHost, plugin: string): ModsApi['view'] {
         .getState()
         .views.filter((v) => v.plugin === plugin)
         .map((v) => ({ id: v.id, title: v.title, placement: v.placement }))
+  }
+}
+
+function gateCall(host: ModsApiHost, needle: string): void {
+  if (!host.declaredCalls.has(needle)) {
+    throw new Error(`${needle} refused: not declared in this mod's source, so it was not shown at consent`)
+  }
+}
+
+function agentApi(host: ModsApiHost, plugin: string): ModsApi['agent'] {
+  const mine = (): ReturnType<typeof useModRegistry.getState>['agents'] =>
+    useModRegistry.getState().agents.filter((a) => a.name.startsWith(modAgentName(plugin, '')))
+  return {
+    register: (spec) => {
+      gateCall(host, '$.agent.register')
+      const profile = buildModAgent(plugin, host.pluginRoot, spec || {})
+      useModRegistry.getState().putAgent(profile)
+      return profile.name
+    },
+    remove: (spec) => {
+      const name = String(spec?.name || '')
+      const full = name.startsWith(modAgentName(plugin, '')) ? name : modAgentName(plugin, name)
+      useModRegistry.getState().removeAgent(full)
+    },
+    list: () => mine().map((a) => ({ name: a.name, description: a.description }))
+  }
+}
+
+function providerApi(host: ModsApiHost, plugin: string): ModsApi['provider'] {
+  return {
+    register: (spec) => {
+      gateCall(host, '$.provider.register')
+      useModRegistry.getState().putProvider(buildProviderOffer(plugin, (spec || {}) as unknown as Record<string, unknown>))
+    },
+    remove: (spec) => useModRegistry.getState().removeProvider(plugin, String(spec?.id || '').toLowerCase()),
+    list: () =>
+      useModRegistry
+        .getState()
+        .providers.filter((p) => p.plugin === plugin)
+        .map((p) => ({ id: p.id, name: p.name, baseUrl: p.baseUrl, models: p.models.map((m) => m.modelId) }))
   }
 }

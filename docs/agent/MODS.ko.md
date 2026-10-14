@@ -69,6 +69,7 @@ mods는 샌드박스가 없어요. 파일, 셸, 네트워크, 채팅을 내 계�
 
 - 등록한 훅과 소스의 `$.…` 호출로 만든 권한 목록: 권한마다 한 줄에 이름과 한 줄 설명이 있어요 (`strings.ts`의 `settings.modsSection.cap.<id>`와 `settings.modsSection.capDesc.<id>`, id는 `src/renderer/src/agent/mods/capabilities.ts`). 새 권한에는 id, 규칙, 두 문자열이 모두 필요해요
 - 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구, 메시지 본문을 읽거나(`message.render`) 테마를 바꾸거나(`$.theme.vars` / `$.theme.css`) 사용자 정의 뷰를 띄우면(`$.view.open`) **보통**, 아니면 **낮음**
+- 로드맵 E 추가: 모델 요청을 바꾸거나(`model.request`) 프로바이더를 제안하면(`$.provider.register`) **높음**, 모델 응답을 읽거나(`model.response`) 서브에이전트를 추가하면(`$.agent.register`) **보통**, 알림을 보면(`notification`) **낮음**
 - 허용하는 버전
 
 허용하면 그 버전이 `consentedPlugins`에 들어가고, 이름은 `disabledPlugins`에서 빠져요. 동의를 철회하면 항목을 지우고 그 이름을 꺼요.
@@ -117,6 +118,9 @@ export function register(on) {
 | `command.run` | 등록된 `/이름`을 쳤거나, 코드가 `$.command.run`을 호출했을 때 | `{ text }`를 반환하면 mod 답으로 채팅에 올라가요. |
 | `ui.render` | 스피너, 그리고 입력창 위 띠(`AbovePrompt`) | 스피너는 한 체인이에요. 마지막 `props.suffix`가 남아요. `AbovePrompt`는 맞는 mod를 따로 불러요. 자기 띠의 `props.tree`와 `props.plugin`을 돌려주세요. 다른 mod의 트리는 안 보여요. |
 | `ui.press` / `ui.input` / `ui.select` | mod 트리의 Button, Input, Select를 썼을 때 | `id`와 `value`를 읽어요. |
+| `model.request` | 메인 채팅의 모델 호출 직전(재시도마다 포함) | `next({ ...e, systemAppend })`로 시스템 프롬프트에 최대 8 000자를 `<mod-instructions>`로 감싸 덧붙여요. 다른 필드는 바꿀 수 없어요. 페이로드 `{ sessionId, round, provider, model, messageCount, lastUserText }`. |
+| `model.response` | 모델 호출이 성공한 뒤 | 관찰만 해요. 페이로드 `{ sessionId, round, provider, model, text, toolCalls, usage }`. |
+| `notification` | Pawn이 보내는 모든 데스크톱 알림 | 관찰만 해요. 페이로드 `{ title, body, source }`. mod는 알림을 숨기거나 바꿀 수 없어요. |
 
 도구 순서: `tool.call` → 설정 `PreToolUse` → Plan 모드 확인 → `tool.check` / 권한 → 도구.
 
@@ -243,6 +247,41 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 - 라이트/다크: 테마 토큰(`--bg-primary`, `--text-primary`, `--accent`, `--border-color` 등)이 페이지 `:root`에 복사되고, 테마가 바뀌면 뷰를 다시 불러와요.
 - 위험은 **보통**이에요. 직접 쓰지 않은 코드가 돌고 모달이 대화상자처럼 보일 수 있어서, 모달에는 항상 `mod: <이름>`이 표시돼요.
 - 예제: `examples/mods/views-demo/`(`$.store`에 저장하는 패널 카운터, 탭과 대화상자). 기본으로 설치되지 않아요. `~/.pawn/mods/views-demo`에 복사한 뒤 허용하세요.
+
+### 모델 이벤트, 서브에이전트, 프로바이더
+
+신뢰가 많이 필요한 훅이라서, 이벤트 이름이 소스에 글자 그대로 없으면 런타임이 `on('model.request' | 'model.response' | 'notification', …)`와 `message.*`를 거부해요. 계산해서 만든 이름으로는 닿지 않아요.
+
+| 호출 | 하는 일 | 권한 |
+| --- | --- | --- |
+| `$.agent.register({ name, description, prompt, tools, disallowedTools, model, maxTurns })` | 어시스턴트가 띄울 수 있는 서브에이전트를 추가해요. 이름은 `<mod>-<name>`이라 내장 에이전트를 대신할 수 없어요. 같은 이름의 디스크 에이전트 파일이 이겨요. `prompt` 대신 `markdown`을 주면 Claude Code 에이전트 파일(frontmatter + 본문)을 써요. mod 에이전트는 항상 worktree에서 `apply: none`으로 돌고, `maxTurns`는 최대 25예요. 전체 이름을 돌려줘요. | `subagents` (보통) |
+| `$.agent.remove({ name })` / `$.agent.list()` | 이 mod의 에이전트 하나 제거 / 목록. | 없음 |
+| `$.provider.register({ id, name, apiFormat, baseUrl, models })` | 프로바이더(`openai` 또는 `claude` 형식)와 모델 최대 32개를 제안해요. `baseUrl`은 `https`이거나 `localhost`/`127.0.0.1`의 `http`여야 하고 자격 증명을 담으면 안 돼요. 저절로 바뀌는 건 없어요. 제안은 **설정 → Mods → Providers offered by mods**에 나오고, **Add**를 누르면 프로바이더와 모델이 꺼진 채로, 키 없이 추가돼요. | `providers` (높음) |
+| `$.provider.remove({ id })` / `$.provider.list()` | 제안 철회 / 이 mod의 제안 목록. | 없음 |
+
+등록은 세션 동안 유지되고 mod를 다시 불러오면 지워져요. 슬롯처럼, 소스에 글자 그대로 없는 `$.agent.register` / `$.provider.register` 호출은 거부돼요.
+
+예제: `examples/mods/events-demo/`가 이것들을 모두 써요. 기본으로 설치되지 않아요. `~/.pawn/mods/events-demo`에 복사하고 허용하세요.
+
+### Claude Code 호환
+
+Pawn은 Claude Code 플러그인 폴더 구조(`.claude-plugin/plugin.json`, `hooks/`, `agents/`, `skills/`)를 읽어요. 이어지는 것:
+
+| Claude Code | Pawn |
+| --- | --- |
+| 훅 `SessionStart` / `SessionEnd` | `session.start` / `session.end` |
+| 훅 `UserPromptSubmit` | `prompt.submit` |
+| 훅 `PreToolUse` | `tool.call` |
+| 훅 `PermissionRequest` | `tool.check` |
+| 훅 `Stop` | `turn.complete` |
+| 훅 `PreCompact` | `session.compact` (압축 뒤에 실행) |
+| 훅 `Notification` | `notification` |
+| 훅 `PostToolUse`, `SubagentStop` 등 | 검사기는 받아들이지만 발생하지 않아요(경고) |
+| 에이전트 파일(`agents/*.md`) | `$.agent.register({ markdown })`로 불러오거나 `~/.claude/agents` / `.claude/agents`에 두세요 |
+| 스킬(`skills/*/SKILL.md`) | 평소 스킬 폴더에서 읽어요. mod 호출은 필요 없어요 |
+| `ANTHROPIC_BASE_URL`로 쓰는 사용자 모델 | `$.provider.register` 제안을 사용자가 추가 |
+
+`on()`은 Claude Code 이름을 그대로(`'PreToolUse'`) 또는 `classic.` 접두사로 받고, 검토 대화상자는 Pawn 이벤트로 보여 줘요. Claude Code `hooks.json`의 셸 `command` 훅은 mod가 실행하지 않아요. 그건 설정 → Hooks에 넣으세요. mod 훅은 `modules`에 적은 JavaScript 모듈이에요.
 
 ## 7. `$` API
 

@@ -1,8 +1,10 @@
 import { buildModsApi, type ModsApiHost } from './api'
+import { normalizeModEvent } from './capabilities'
 import { deepFreeze } from './deepFreeze'
 import { matcherMatches } from './match'
 import { useModsUiStore } from './uiStore'
 import { modConflictLine } from './eventLabel'
+import { useModRegistry } from './registry'
 import type {
   LoadedModInfo,
   ModCommandReg,
@@ -291,6 +293,7 @@ export class ModRuntime {
     if (event === 'turn.start' || event === 'turn.step' || event === 'turn.complete') return true
     if (event === 'tool.call' || event === 'tool.check') return true
     if (event === 'message.render') return true
+    if (event === 'model.request' || event === 'model.response') return true
     return (
       event === 'ui.render' &&
       !!input &&
@@ -389,6 +392,7 @@ export class ModRuntime {
     this.envOverlay.clear()
     this.declared.clear()
     useModsUiStore.getState().clearSessionUi()
+    useModRegistry.getState().clear()
     this.notify()
   }
 
@@ -541,9 +545,15 @@ export class ModRuntime {
       if (typeof handler !== 'function') {
         throw new Error(`on('${event}'): handler is not a function`)
       }
-      if (event.startsWith('message.') && !this.declared.get(plugin)?.hooks.has(event)) {
+      const written = event
+      event = normalizeModEvent(event)
+      // Events that read content or steer the model must be written literally, so consent showed them.
+      if (
+        /^(message\.|model\.(request|response)|notification)/.test(event) &&
+        !this.declared.get(plugin)?.hooks.has(written)
+      ) {
         throw new Error(
-          `${event} refused: not declared in this mod's source, so it was not shown at consent`
+          `${written} refused: not declared in this mod's source, so it was not shown at consent`
         )
       }
       const entry: HookEntry = { event, matcher, handler, plugin, root, tier }

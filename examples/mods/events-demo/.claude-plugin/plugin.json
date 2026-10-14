@@ -1,0 +1,6 @@
+{
+  "name": "events-demo",
+  "version": "0.1.0",
+  "description": "Model request/response and notification events, a subagent, and a provider offer",
+  "author": { "name": "Pawn" }
+}
