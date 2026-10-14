@@ -184,12 +184,27 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 | `$.slot.toolbar({ id, label, title })` | A button in the composer row, next to Attach. Hidden on the empty home screen. | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | A page under **Settings → Mods**, one nav entry per page. | `settingsPage` |
 | `$.slot.statusbar({ id, text, title, tree })` | A small item in the left sidebar footer, above Settings (Pawn has no visible status bar). A text item is a button; a `tree` item draws the tree. | `statusbar` |
+| `$.slot.palette({ id, title, hint })` | An entry in the command palette, group **Mods**. Running it sends `ui.press` with `slot: 'palette'`. | `palette` |
+| `$.slot.shortcut({ id, keys, title })` | A keyboard shortcut, e.g. `Mod+Shift+U` (`Mod` = Cmd on macOS, Ctrl elsewhere). Pressing it sends `ui.press` with `slot: 'shortcut'`. | `shortcuts` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | Remove one of this mod's items / list them. | none |
 
 - Clicks arrive as `ui.press` with `{ plugin, id, slot }`. Buttons, inputs and selects inside a slot tree send `ui.press`, `ui.input` and `ui.select` with the same `slot` field. Filter with `{ plugin: '<your mod>' }`.
 - Items belong to the project's mod runtime: they stay when you switch chats and disappear when the mod unloads, is turned off, or the runtime reloads.
 - Each kind is its own capability in the review dialog. The runtime refuses a `$.slot.<kind>` call whose literal text is not in the mod's source, so a mod cannot use a slot the dialog never showed. Write the calls out (`$.slot.header(...)`), not `$.slot[name](...)`.
 - Sample: `examples/mods/ui-slots-demo/` uses every slot. It is not installed by default; copy it to `~/.pawn/mods/ui-slots-demo` and allow it.
+- **Shortcut conflicts are reported, never overridden.** `$.slot.shortcut` throws (and logs a `conflict` line in the mod timeline) when the chord matches an app keybinding (Settings → Shortcuts), a reserved app chord (copy/paste/undo, `Mod+F`, `Mod+S`, `Mod+Q`, `Mod+R`, zoom, `Alt+P`, `Escape`, `Enter`, `Tab`), or another mod's shortcut. The first mod keeps it. If you later rebind an app shortcut onto a mod's chord, the app wins. A chord with no `Mod`/`Ctrl`/`Alt` does not fire while you type in a field.
+
+### Message render hook
+
+`on('message.render', ($, e, next) => …)` decorates finished chat messages. Capability: `messages` (the mod reads message text).
+
+- `e` = `{ messageId, role, text, sessionId, props: { badges, actions, blocks } }`. Append to the arrays and `return next({ ...e, props })`.
+- `badges`: `{ id, text, tone? }` (`tone`: `info`, `success`, `warning`, `danger`). `actions`: `{ id, label }`, a button in the message's action row; a click sends `ui.press` with `{ slot: 'message', id, messageId, sessionId, role }`. `blocks`: `{ id, tree }`, a `$.ui.resolve()` tree under the message. At most 8 of each per message.
+- Each entry is stamped with the mod that added it, so a later mod cannot take over an earlier mod's item or its clicks.
+- **Streaming and performance:** a reply is only sent once it has finished; the live, streaming row is never decorated. Results are cached per (chat, message, text) and asked again only when the text changes, a mod calls for a redraw (`$.ui.invalidate`, or after any slot click), or mods reload. With no `message.render` hook loaded nothing is emitted. A hook that throws or times out leaves the message as it is.
+- **Per chat:** `e.sessionId` is the chat the message belongs to, not the chat on screen, and `$.session` inside the hook is that chat. Keep per-chat state keyed by `e.sessionId`.
+- Like slots, the event name must be written literally (`on('message.render', …)`); otherwise `on` throws `message.render refused`.
+
 
 ## 7. `$` API
 

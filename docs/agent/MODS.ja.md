@@ -130,12 +130,27 @@ export function register(on) {
 | `$.slot.toolbar({ id, label, title })` | コンポーザー行の添付ボタン横のボタン。空のホーム画面では隠れます。 | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | **設定 → Mods** の下のページ。ページごとにメニュー項目が一つ。 | `settingsPage` |
 | `$.slot.statusbar({ id, text, title, tree })` | 左サイドバー最下部、設定ボタンの上の小さな項目（Pawn には表示されるステータスバーがありません）。テキスト項目はボタン、`tree` 項目はツリーを描きます。 | `statusbar` |
+| `$.slot.palette({ id, title, hint })` | コマンドパレットの **Mods** グループの項目。実行すると `slot: 'palette'` 付きの `ui.press` を送ります。 | `palette` |
+| `$.slot.shortcut({ id, keys, title })` | キーボードショートカット。例: `Mod+Shift+U`（`Mod` は macOS で Cmd、それ以外で Ctrl）。押すと `slot: 'shortcut'` 付きの `ui.press` を送ります。 | `shortcuts` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | この mod の項目を一つ消す / 一覧を返す。 | なし |
 
 - クリックは `{ plugin, id, slot }` 付きの `ui.press` で届きます。スロットのツリー内のボタン・入力・選択も同じ `slot` を付けて `ui.press`・`ui.input`・`ui.select` を送ります。`{ plugin: '<自分の mod>' }` で絞ってください。
 - 項目はプロジェクトの mod ランタイムに属します。チャットを切り替えても残り、mod のアンロード・無効化・ランタイムの再読み込みで消えます。
 - 種類ごとにレビューダイアログで別の権限として表示されます。ソースに文字どおり書かれていない `$.slot.<種類>` の呼び出しはランタイムが拒否するので、ダイアログに出なかったスロットは使えません。`$.slot[name](...)` ではなく `$.slot.header(...)` のように書いてください。
 - サンプル: `examples/mods/ui-slots-demo/` がすべてのスロットを使います。既定ではインストールされません。`~/.pawn/mods/ui-slots-demo` にコピーして許可してください。
+- **ショートカットの衝突は報告され、上書きされません。** 組み合わせがアプリのキーバインド（設定 → ショートカット）、アプリの予約済み組み合わせ（コピー/貼り付け/元に戻す、`Mod+F`、`Mod+S`、`Mod+Q`、`Mod+R`、ズーム、`Alt+P`、`Escape`、`Enter`、`Tab`）、他の mod のショートカットと重なると、`$.slot.shortcut` は例外を投げ、mod タイムラインに `conflict` 行を残します。先に登録した mod が保持します。後でアプリのショートカットを mod の組み合わせに変更した場合はアプリが優先されます。`Mod`/`Ctrl`/`Alt` を含まない組み合わせは入力欄で入力中は発火しません。
+
+### メッセージ描画フック
+
+`on('message.render', ($, e, next) => …)` は完了したチャットメッセージを装飾します。権限: `messages`（mod がメッセージ本文を読みます）。
+
+- `e` = `{ messageId, role, text, sessionId, props: { badges, actions, blocks } }`。配列に追加して `return next({ ...e, props })` してください。
+- `badges`: `{ id, text, tone? }`（`tone`: `info`、`success`、`warning`、`danger`）。`actions`: `{ id, label }`、メッセージのアクション行のボタン。クリックで `{ slot: 'message', id, messageId, sessionId, role }` 付きの `ui.press` を送ります。`blocks`: `{ id, tree }`、メッセージ下の `$.ui.resolve()` ツリー。メッセージごとに各種類最大 8 個。
+- 各項目には追加した mod が記録されるので、後の mod が前の mod の項目やクリックを横取りできません。
+- **ストリーミングと性能:** 返信が完了してから送ります。ストリーミング中の行は装飾しません。結果は（チャット、メッセージ、本文）ごとにキャッシュされ、本文の変更、mod の再描画要求（`$.ui.invalidate`、スロットのクリック後）、mod の再読み込み時だけ再問い合わせします。`message.render` フックがなければイベントは送られません。フックが例外やタイムアウトになってもメッセージはそのままです。
+- **チャット単位:** `e.sessionId` は画面のチャットではなくメッセージが属するチャットで、フック内の `$.session` もそのチャットです。チャットごとの状態は `e.sessionId` で分けてください。
+- スロットと同様、イベント名は文字どおり書く必要があります（`on('message.render', …)`）。そうでないと `on` が `message.render refused` を投げます。
+
 
 ## 7. `$` API
 

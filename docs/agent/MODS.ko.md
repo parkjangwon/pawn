@@ -179,12 +179,27 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 | `$.slot.toolbar({ id, label, title })` | 컴포저 줄의 첨부 버튼 옆 버튼. 빈 홈 화면에서는 숨겨져요. | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | **설정 → Mods** 아래 페이지. 페이지마다 메뉴 항목 하나. | `settingsPage` |
 | `$.slot.statusbar({ id, text, title, tree })` | 왼쪽 사이드바 맨 아래, 설정 버튼 위의 작은 항목(Pawn에는 보이는 상태 표시줄이 없어요). 텍스트 항목은 버튼이고, `tree` 항목은 트리를 그려요. | `statusbar` |
+| `$.slot.palette({ id, title, hint })` | 명령 팔레트의 **Mods** 그룹 항목. 실행하면 `slot: 'palette'`가 담긴 `ui.press`를 보내요. | `palette` |
+| `$.slot.shortcut({ id, keys, title })` | 단축키. 예: `Mod+Shift+U` (`Mod`는 macOS에서 Cmd, 그 밖에서는 Ctrl). 누르면 `slot: 'shortcut'`이 담긴 `ui.press`를 보내요. | `shortcuts` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | 이 mod의 항목 하나를 지우기 / 목록 보기. | 없음 |
 
 - 클릭은 `{ plugin, id, slot }`이 담긴 `ui.press`로 와요. 슬롯 트리 안의 버튼, 입력, 선택은 같은 `slot` 필드와 함께 `ui.press`, `ui.input`, `ui.select`를 보내요. `{ plugin: '<내 mod>' }`로 거르세요.
 - 항목은 프로젝트의 mod 런타임에 속해요. 채팅을 바꿔도 남고, mod를 내리거나 끄거나 런타임을 다시 불러오면 사라져요.
 - 종류마다 검토 대화상자에 별도 권한으로 표시돼요. mod 소스에 글자 그대로 없는 `$.slot.<종류>` 호출은 런타임이 거부하므로, 대화상자에 나오지 않은 슬롯은 쓸 수 없어요. `$.slot[name](...)`이 아니라 `$.slot.header(...)`처럼 그대로 쓰세요.
 - 예제: `examples/mods/ui-slots-demo/`가 모든 슬롯을 써요. 기본으로 설치되지 않아요. `~/.pawn/mods/ui-slots-demo`에 복사한 뒤 허용하세요.
+- **단축키 충돌은 알리고, 절대 덮어쓰지 않아요.** 조합이 앱 단축키(설정 → 단축키), 앱이 예약한 조합(복사/붙여넣기/실행 취소, `Mod+F`, `Mod+S`, `Mod+Q`, `Mod+R`, 확대/축소, `Alt+P`, `Escape`, `Enter`, `Tab`), 다른 mod의 단축키와 겹치면 `$.slot.shortcut`이 예외를 던지고 mod 타임라인에 `conflict` 줄을 남겨요. 먼저 등록한 mod가 그대로 가져요. 나중에 앱 단축키를 mod 조합으로 바꾸면 앱이 이겨요. `Mod`/`Ctrl`/`Alt`가 없는 조합은 입력란에 타이핑하는 동안 실행되지 않아요.
+
+### 메시지 렌더 훅
+
+`on('message.render', ($, e, next) => …)`는 완료된 채팅 메시지를 꾸며요. 권한: `messages` (mod가 메시지 텍스트를 읽어요).
+
+- `e` = `{ messageId, role, text, sessionId, props: { badges, actions, blocks } }`. 배열에 덧붙이고 `return next({ ...e, props })` 하세요.
+- `badges`: `{ id, text, tone? }` (`tone`: `info`, `success`, `warning`, `danger`). `actions`: `{ id, label }`, 메시지 액션 줄의 버튼이에요. 누르면 `{ slot: 'message', id, messageId, sessionId, role }`이 담긴 `ui.press`를 보내요. `blocks`: `{ id, tree }`, 메시지 아래의 `$.ui.resolve()` 트리. 메시지마다 종류별 최대 8개.
+- 항목마다 추가한 mod가 찍혀서, 뒤의 mod가 앞 mod의 항목이나 클릭을 가로챌 수 없어요.
+- **스트리밍과 성능:** 답이 끝난 뒤에만 보내요. 스트리밍 중인 줄은 꾸미지 않아요. 결과는 (채팅, 메시지, 텍스트)별로 캐시되고, 텍스트가 바뀌거나 mod가 다시 그리기를 요청하거나(`$.ui.invalidate`, 슬롯 클릭 뒤) mod를 다시 불러올 때만 다시 물어요. `message.render` 훅이 없으면 아무 이벤트도 보내지 않아요. 훅이 예외를 던지거나 시간을 넘기면 메시지는 그대로예요.
+- **채팅별:** `e.sessionId`는 화면에 보이는 채팅이 아니라 메시지가 속한 채팅이고, 훅 안의 `$.session`도 그 채팅이에요. 채팅별 상태는 `e.sessionId`로 나눠 두세요.
+- 슬롯처럼 이벤트 이름은 그대로 써야 해요(`on('message.render', …)`). 아니면 `on`이 `message.render refused`를 던져요.
+
 
 ## 7. `$` API
 
