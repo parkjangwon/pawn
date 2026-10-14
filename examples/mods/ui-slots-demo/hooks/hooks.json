@@ -1,0 +1,4 @@
+{
+  "description": "The ui-slots-demo hooks module",
+  "modules": ["./register.js"]
+}

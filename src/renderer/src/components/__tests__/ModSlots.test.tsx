@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from 'node:fs'
+import { resolve } from 'node:path'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import {
@@ -190,6 +192,26 @@ describe('mod UI slots', () => {
     await loadDemo(source, 'badid')
     expect(g.__slotPresses).toContainEqual({ err: 'Invalid slot id: bad id!' })
     expect(useModsUiStore.getState().slots).toHaveLength(0)
+  })
+})
+
+describe('ui-slots-demo example', () => {
+  it('registers all five slots and asks for exactly the slot capabilities', async () => {
+    const source = readFileSync(
+      resolve(__dirname, '../../../../../examples/mods/ui-slots-demo/hooks/register.js'),
+      'utf8'
+    )
+    await loadDemo(source, 'ui-slots-demo')
+    const kinds = useModsUiStore.getState().slots.map((s) => s.slot).sort()
+    expect(kinds).toEqual(['header', 'settings', 'sidebar', 'statusbar', 'toolbar'])
+    const info = getModRuntime().getLoaded().find((m) => m.name === 'ui-slots-demo')
+    expect(deriveModCapabilities(info?.hooks || [], info?.calls || []).map((c) => c.id)).toEqual([
+      'ui',
+      'sidebar',
+      'toolbar',
+      'settingsPage',
+      'statusbar'
+    ])
   })
 })
 
