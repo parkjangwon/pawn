@@ -178,7 +178,7 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 | `$.slot.header({ id, label, title })` | 채팅 헤더 오른쪽의 버튼. | `toolbar` |
 | `$.slot.toolbar({ id, label, title })` | 컴포저 줄의 첨부 버튼 옆 버튼. 빈 홈 화면에서는 숨겨져요. | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | **설정 → Mods** 아래 페이지. 페이지마다 메뉴 항목 하나. | `settingsPage` |
-| `$.slot.statusbar({ id, text, title, tree })` | 상태 표시줄 오른쪽 항목. 텍스트 항목은 버튼이고, `tree` 항목은 트리를 그려요. | `statusbar` |
+| `$.slot.statusbar({ id, text, title, tree })` | 왼쪽 사이드바 맨 아래, 설정 버튼 위의 작은 항목(Pawn에는 보이는 상태 표시줄이 없어요). 텍스트 항목은 버튼이고, `tree` 항목은 트리를 그려요. | `statusbar` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | 이 mod의 항목 하나를 지우기 / 목록 보기. | 없음 |
 
 - 클릭은 `{ plugin, id, slot }`이 담긴 `ui.press`로 와요. 슬롯 트리 안의 버튼, 입력, 선택은 같은 `slot` 필드와 함께 `ui.press`, `ui.input`, `ui.select`를 보내요. `{ plugin: '<내 mod>' }`로 거르세요.

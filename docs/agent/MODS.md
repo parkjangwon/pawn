@@ -183,7 +183,7 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 | `$.slot.header({ id, label, title })` | A button on the right of the chat header. | `toolbar` |
 | `$.slot.toolbar({ id, label, title })` | A button in the composer row, next to Attach. Hidden on the empty home screen. | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | A page under **Settings → Mods**, one nav entry per page. | `settingsPage` |
-| `$.slot.statusbar({ id, text, title, tree })` | An item on the right of the status bar. A text item is a button; a `tree` item draws the tree. | `statusbar` |
+| `$.slot.statusbar({ id, text, title, tree })` | A small item in the left sidebar footer, above Settings (Pawn has no visible status bar). A text item is a button; a `tree` item draws the tree. | `statusbar` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | Remove one of this mod's items / list them. | none |
 
 - Clicks arrive as `ui.press` with `{ plugin, id, slot }`. Buttons, inputs and selects inside a slot tree send `ui.press`, `ui.input` and `ui.select` with the same `slot` field. Filter with `{ plugin: '<your mod>' }`.

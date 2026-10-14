@@ -83,6 +83,14 @@
   color: var(--text-primary);
 }
 
+.mod-slot-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: 0 var(--space-sm) var(--space-xs);
+}
+
 .mod-slot-status {
   display: inline-flex;
   align-items: center;

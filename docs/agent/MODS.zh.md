@@ -129,7 +129,7 @@ export function register(on) {
 | `$.slot.header({ id, label, title })` | 聊天标题栏右侧的按钮。 | `toolbar` |
 | `$.slot.toolbar({ id, label, title })` | 输入框一行中附件按钮旁的按钮。在空白主页上隐藏。 | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | **设置 → Mods** 下的页面，每个页面一个导航项。 | `settingsPage` |
-| `$.slot.statusbar({ id, text, title, tree })` | 状态栏右侧的项目。文本项是按钮；`tree` 项绘制该树。 | `statusbar` |
+| `$.slot.statusbar({ id, text, title, tree })` | 左侧边栏底部、设置按钮上方的小项目（Pawn 没有可见的状态栏）。文本项是按钮；`tree` 项绘制该树。 | `statusbar` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | 删除本 mod 的一个项目 / 列出它们。 | 无 |
 
 - 点击以带 `{ plugin, id, slot }` 的 `ui.press` 到达。插槽树里的按钮、输入框和选择框也会带同样的 `slot` 字段发送 `ui.press`、`ui.input`、`ui.select`。请用 `{ plugin: '<你的 mod>' }` 过滤。

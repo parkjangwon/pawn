@@ -92,12 +92,12 @@ export function ModToolbarSlots({ hidden }: { hidden?: boolean }): React.JSX.Ele
   )
 }
 
-/** Mod items on the right of the status bar. */
+/** Mod status items: a row in the sidebar footer, above Settings (the app has no visible status bar). */
 export function ModStatusbarSlots(): React.JSX.Element | null {
   const slots = useSlots('statusbar')
   if (slots.length === 0) return null
   return (
-    <>
+    <div className="mod-slot-status-row" aria-label="Mod status">
       {slots.map((slot) =>
         slot.tree != null ? (
           <span
@@ -119,7 +119,7 @@ export function ModStatusbarSlots(): React.JSX.Element | null {
           </button>
         )
       )}
-    </>
+    </div>
   )
 }
 

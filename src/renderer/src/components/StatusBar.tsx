@@ -5,7 +5,6 @@ import { useChatStore } from '../stores/chat'
 import { useAppStore } from '../stores/app'
 import { useUsageStore, formatTokens } from '../stores/usage'
 import { useSubagentRunsStore } from '../stores/subagentRuns'
-import { ModStatusbarSlots } from './ModSlots'
 import './StatusBar.css'
 
 export default function StatusBar(): React.JSX.Element {
@@ -92,7 +91,6 @@ export default function StatusBar(): React.JSX.Element {
         )}
       </div>
       <div className="status-right">
-        <ModStatusbarSlots />
         {totals && totals.calls > 0 && (
           <span
             className="status-usage"

@@ -129,7 +129,7 @@ export function register(on) {
 | `$.slot.header({ id, label, title })` | チャットヘッダー右側のボタン。 | `toolbar` |
 | `$.slot.toolbar({ id, label, title })` | コンポーザー行の添付ボタン横のボタン。空のホーム画面では隠れます。 | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | **設定 → Mods** の下のページ。ページごとにメニュー項目が一つ。 | `settingsPage` |
-| `$.slot.statusbar({ id, text, title, tree })` | ステータスバー右側の項目。テキスト項目はボタン、`tree` 項目はツリーを描きます。 | `statusbar` |
+| `$.slot.statusbar({ id, text, title, tree })` | 左サイドバー最下部、設定ボタンの上の小さな項目（Pawn には表示されるステータスバーがありません）。テキスト項目はボタン、`tree` 項目はツリーを描きます。 | `statusbar` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | この mod の項目を一つ消す / 一覧を返す。 | なし |
 
 - クリックは `{ plugin, id, slot }` 付きの `ui.press` で届きます。スロットのツリー内のボタン・入力・選択も同じ `slot` を付けて `ui.press`・`ui.input`・`ui.select` を送ります。`{ plugin: '<自分の mod>' }` で絞ってください。
