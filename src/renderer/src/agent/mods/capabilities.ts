@@ -1,4 +1,4 @@
-/** Map static hooks/calls analysis into human-readable capability chips. */
+/** Map static hooks/calls analysis into capability rows for the consent dialog. */
 
 export type ModCapabilityId =
   | 'tools'
@@ -11,9 +11,6 @@ export type ModCapabilityId =
   | 'toolbar'
   | 'settingsPage'
   | 'statusbar'
-  | 'palette'
-  | 'shortcuts'
-  | 'messages'
   | 'prompt'
   | 'store'
 
@@ -21,6 +18,8 @@ export interface ModCapability {
   id: ModCapabilityId
   /** i18n key under settings.modsSection.cap.* */
   labelKey: string
+  /** i18n key under settings.modsSection.capDesc.* */
+  descKey: string
 }
 
 const CALL_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
@@ -34,8 +33,6 @@ const CALL_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
   { re: /^\$\.slot\.(header|toolbar)$/, id: 'toolbar' },
   { re: /^\$\.slot\.settings$/, id: 'settingsPage' },
   { re: /^\$\.slot\.statusbar$/, id: 'statusbar' },
-  { re: /^\$\.slot\.palette$/, id: 'palette' },
-  { re: /^\$\.slot\.shortcut$/, id: 'shortcuts' },
   { re: /^\$\.prompt\./, id: 'prompt' },
   { re: /^\$\.store\./, id: 'store' }
 ]
@@ -44,7 +41,6 @@ const HOOK_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
   { re: /^tool\./, id: 'tools' },
   { re: /^command\./, id: 'commands' },
   { re: /^ui\./, id: 'ui' },
-  { re: /^message\./, id: 'messages' },
   { re: /^prompt\./, id: 'prompt' },
   { re: /^fs\./, id: 'files' },
   { re: /^http\./, id: 'network' },
@@ -62,9 +58,6 @@ const ORDER: ModCapabilityId[] = [
   'toolbar',
   'settingsPage',
   'statusbar',
-  'palette',
-  'shortcuts',
-  'messages',
   'prompt',
   'store'
 ]
@@ -83,7 +76,8 @@ export function deriveModCapabilities(hooks: string[], calls: string[]): ModCapa
   }
   return ORDER.filter((id) => ids.has(id)).map((id) => ({
     id,
-    labelKey: `settings.modsSection.cap.${id}`
+    labelKey: `settings.modsSection.cap.${id}`,
+    descKey: `settings.modsSection.capDesc.${id}`
   }))
 }
 

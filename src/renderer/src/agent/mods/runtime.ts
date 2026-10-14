@@ -19,35 +19,6 @@ import type {
 const HOOK_BUDGET_MS = 10_000
 const TIER_ORDER: ModTier[] = ['prepend', 'user', 'append', 'builtin', 'core']
 
-function decorRows(v: unknown): Array<Record<string, unknown>> {
-  if (!Array.isArray(v)) return []
-  return v.filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === 'object')
-}
-
-/** Stamp `plugin` on message.render entries this hook added. */
-function stampMessageRender(before: unknown, after: unknown, plugin: string): unknown {
-  if (!after || typeof after !== 'object') return after
-  const propsIn = (after as { props?: unknown }).props
-  if (!propsIn || typeof propsIn !== 'object') return after
-  const beforeProps =
-    before && typeof before === 'object' ? (before as { props?: unknown }).props : null
-  const prevRec =
-    beforeProps && typeof beforeProps === 'object' ? (beforeProps as Record<string, unknown>) : null
-  const props = { ...(propsIn as Record<string, unknown>) }
-  for (const key of ['badges', 'actions', 'blocks'] as const) {
-    const prevIds = new Set(
-      decorRows(prevRec?.[key]).map((item) => (typeof item.id === 'string' ? item.id : ''))
-    )
-    props[key] = decorRows(props[key]).map((item) => {
-      if (typeof item.plugin === 'string' && item.plugin) return item
-      const id = typeof item.id === 'string' ? item.id : ''
-      if (id && prevIds.has(id)) return item
-      return { ...item, plugin }
-    })
-  }
-  return { ...(after as Record<string, unknown>), props }
-}
-
 function scanModSource(source: string): { calls: Set<string>; hooks: Set<string> } {
   const calls = new Set<string>()
   const hooks = new Set<string>()
@@ -208,7 +179,7 @@ export class ModRuntime {
   private listeners = new Set<() => void>()
   private processEnv: Record<string, string> = {}
   private envOverlay = new Map<string, Record<string, string>>()
-  /** Static calls/hooks from source, keyed by plugin name. Gates $.slot and message.* . */
+  /** Static calls/hooks from source, keyed by plugin name. Gates $.slot.*. */
   private declared = new Map<string, { calls: Set<string>; hooks: Set<string> }>()
 
   setContext(ctx: Partial<ModRuntimeContext>): void {
@@ -289,7 +260,6 @@ export class ModRuntime {
   private turnScoped(event: string, input: unknown): boolean {
     if (event === 'turn.start' || event === 'turn.step' || event === 'turn.complete') return true
     if (event === 'tool.call' || event === 'tool.check') return true
-    if (event === 'message.render') return true
     return (
       event === 'ui.render' &&
       !!input &&
@@ -530,11 +500,6 @@ export class ModRuntime {
       if (typeof handler !== 'function') {
         throw new Error(`on('${event}'): handler is not a function`)
       }
-      if (event.startsWith('message.') && !this.declared.get(plugin)?.hooks.has(event)) {
-        throw new Error(
-          `${event} refused: not declared in this mod's source, so it was not shown at consent`
-        )
-      }
       const entry: HookEntry = { event, matcher, handler, plugin, root, tier }
       this.hooks.push(entry)
       return {
@@ -612,12 +577,10 @@ export class ModRuntime {
         }
 
         let nextCalled = false
-        const stamp = (value: unknown): unknown =>
-          event === 'message.render' ? stampMessageRender(e, value, entry.plugin) : value
         const next = ((nextEvent: unknown) => {
           if (activeEntry !== entry) return Promise.resolve(nextEvent)
           nextCalled = true
-          return runFrom(stamp(nextEvent))
+          return runFrom(nextEvent)
         }) as ModNext
 
         next.signal = combined || new AbortController().signal
@@ -626,7 +589,7 @@ export class ModRuntime {
         next.to = (nextEvent, tier) => {
           if (activeEntry !== entry) return Promise.resolve(nextEvent)
           nextCalled = true
-          return runFrom(stamp(nextEvent), tier)
+          return runFrom(nextEvent, tier)
         }
 
         try {
@@ -647,7 +610,7 @@ export class ModRuntime {
             // The handler settled without next: a later next() from it is
             // stale and must not re-enter the chain past this answer.
             activeEntry = null
-            return stamp(result)
+            return result
           }
           return result
         } catch (err) {
@@ -663,7 +626,6 @@ export class ModRuntime {
               if (!nextCalled) {
                 this.lastAnswerPlugin = entry.plugin
                 activeEntry = null
-                return stamp(caught)
               }
               return caught
             } catch {

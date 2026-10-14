@@ -113,66 +113,43 @@
   background: color-mix(in srgb, var(--danger) 14%, transparent);
 }
 
-.mods-consent-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: var(--z-modal);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: color-mix(in srgb, var(--bg-primary) 35%, rgba(0, 0, 0, 0.45));
+/* Shares .confirm-dialog chrome; only wider, and scrolls when findings are long. */
+.confirm-dialog.mods-consent-dialog {
+  width: 440px;
+  max-height: calc(100vh - 4rem);
+  overflow-y: auto;
 }
 
-.mods-consent-dialog {
-  width: min(480px, 100%);
-  max-height: min(80vh, 640px);
-  overflow: auto;
-  padding: var(--space-16);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-lg);
-  background: var(--bg-primary);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.28);
-}
-
-.mods-consent-dialog h3 {
-  margin: 0 0 6px;
-  font-size: var(--font-lg);
-  letter-spacing: -0.01em;
-  color: var(--text-primary);
-}
-
-.mods-consent-dialog .settings-desc {
-  margin-bottom: 12px;
-  font-size: var(--font-sm);
-  line-height: 1.5;
+.confirm-dialog.mods-consent-dialog > p {
+  margin-bottom: var(--space-md);
 }
 
 .mods-consent-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: var(--space-10);
+  gap: var(--space-xs);
+  margin-bottom: var(--space-md);
 }
 
 .mods-consent-label {
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
+  line-height: 1;
   color: var(--text-muted);
 }
 
 .mods-consent-block code {
-  padding: 8px 10px;
+  padding: var(--space-sm) var(--space-10);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   color: var(--text-secondary);
   word-break: break-word;
 }
 
 .mods-consent-findings {
-  margin: 0 0 var(--space-10);
-  padding-left: 18px;
-  font-size: var(--font-xs);
+  margin: 0 0 var(--space-md);
+  padding-left: var(--space-lg);
+  font-size: var(--text-ui-xs);
   color: var(--text-secondary);
 }
 
@@ -184,76 +161,100 @@
   color: var(--warning);
 }
 
-.mods-consent-warn {
-  margin: 0 0 var(--space-12);
-  font-size: var(--font-sm);
+.mods-consent-dialog .mods-consent-warn {
+  font-size: var(--text-ui-sm);
+  line-height: 1.5;
   color: var(--text-secondary);
 }
 
-.mods-consent-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--space-8);
-}
-
 .mods-cap-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: var(--space-10);
+  list-style: none;
+  margin: 0 0 var(--space-md);
+  padding: 0;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
 }
 
-.mods-cap-chip {
-  display: inline-flex;
-  padding: 3px 8px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--primary) 12%, transparent);
-  color: var(--primary);
-  font-size: var(--font-xs);
+.mods-cap-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2xs);
+  padding: var(--space-sm) var(--space-md);
+}
+
+.mods-cap-row + .mods-cap-row {
+  border-top: 1px solid var(--border-color);
+}
+
+.mods-cap-label {
+  font-size: var(--text-ui-sm);
   font-weight: 500;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.mods-cap-desc {
+  font-size: var(--text-ui-xs);
+  line-height: 1.4;
+  color: var(--text-secondary);
 }
 
 .mods-cap-empty {
-  font-size: var(--font-xs);
+  display: block;
+  margin: 0 0 var(--space-md);
+  font-size: var(--text-ui-xs);
+  line-height: 1.4;
   color: var(--text-muted);
 }
 
 .mods-advanced-toggle {
   display: block;
-  margin: 0 0 var(--space-10);
+  margin: 0 0 var(--space-md);
   padding: 0;
   border: none;
   background: transparent;
   color: var(--text-muted);
-  font-size: var(--font-xs);
+  font-size: var(--text-ui-xs);
   cursor: pointer;
   text-decoration: underline;
 }
 
 .mods-consent-meta {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
   align-items: center;
-  margin-bottom: var(--space-10);
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
 }
 
 .mods-version,
 .mods-version-inline {
-  font-size: 10px;
   color: var(--text-muted);
+}
+
+.mods-version {
+  display: inline-flex;
+  align-items: center;
+  height: var(--space-lg);
+  font-size: var(--text-ui-xs);
+  line-height: 1;
 }
 
 .mods-version-inline {
   margin-left: 6px;
+  font-size: 10px;
 }
 
 .mods-risk {
   display: inline-flex;
-  padding: 2px 8px;
+  align-items: center;
+  box-sizing: border-box;
+  height: var(--space-lg);
+  padding: 0 var(--space-sm);
   border-radius: 999px;
-  font-size: 10px;
+  font-size: var(--text-ui-xs);
   font-weight: 600;
+  line-height: 1;
 }
 
 .mods-risk-low {
@@ -642,8 +643,4 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.mods-consent-dialog {
-  box-shadow: 0 18px 50px color-mix(in srgb, var(--text-primary) 18%, transparent);
 }

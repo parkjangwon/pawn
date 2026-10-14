@@ -53,7 +53,7 @@ my-mod/
 
 読み込む前に設定が確認ダイアログを出します。
 
-- 登録フックとソース中の `$.…` 呼び出しから作った権限チップ
+- 登録フックとソース中の `$.…` 呼び出しから作った権限リスト。権限ごとに 1 行で、名前と 1 行の説明を出します（`strings.ts` の `settings.modsSection.cap.<id>` と `settings.modsSection.capDesc.<id>`、id は `src/renderer/src/agent/mods/capabilities.ts`）。新しい権限には id、ルール、両方の文字列が必要です
 - 危険度: プロセスまたはネットワークなら高、ファイルまたはツールなら中、それ以外は低
 - 許可する版
 
@@ -117,6 +117,25 @@ export function register(on) {
 チップはこのチャットに読み込んだ mods です。メニューで一つをオフにすると `disabledPlugins` に書いて再読込します。同じイベントを複数が聞くと競合行が出て、先/後で順番を変えられます。`AbovePrompt` を描いた mod ごとに帯が一つ出ます。介入ログは拒否、代答、ボタン、`tool.call` と `prompt.submit` の競合を残します。チャット UI を消すとログも消えます。
 
 `AbovePrompt` の書き方は [MODS.md](./MODS.md) §6 の例と同じです。サンプルは `examples/mods/first-mod/hooks/register.js`。
+
+### UI スロット (UI slots)
+
+`$.slot.*` は、コンポーザー上のバンド以外の決まった場所に mod のコントロールを置きます。どの呼び出しも mod 内だけで使う `id`（`[A-Za-z0-9_-]{1,64}`）を受け取ります。同じ `id` でもう一度呼ぶとその項目を置き換えます。mod はこうして再描画します。ツリーは上と同じ `$.ui.resolve()` の要素です。
+
+| 呼び出し | 表示場所 | 権限 |
+|----------|----------|------|
+| `$.slot.sidebar({ id, title, tree })` | 左サイドバー下部の折りたためるセクション。タイトルをクリックすると折りたたみます。 | `sidebar` |
+| `$.slot.panel({ id, title, tree })` | 今は `sidebar` と同じ場所。右パネルにはまだ mod タブがありません。 | `sidebar` |
+| `$.slot.header({ id, label, title })` | チャットヘッダー右側のボタン。 | `toolbar` |
+| `$.slot.toolbar({ id, label, title })` | コンポーザー行の添付ボタン横のボタン。空のホーム画面では隠れます。 | `toolbar` |
+| `$.slot.settings({ id, title, tree })` | **設定 → Mods** の下のページ。ページごとにメニュー項目が一つ。 | `settingsPage` |
+| `$.slot.statusbar({ id, text, title, tree })` | 左サイドバー最下部、設定ボタンの上の小さな項目（Pawn には表示されるステータスバーがありません）。テキスト項目はボタン、`tree` 項目はツリーを描きます。 | `statusbar` |
+| `$.slot.remove({ slot, id })` / `$.slot.list()` | この mod の項目を一つ消す / 一覧を返す。 | なし |
+
+- クリックは `{ plugin, id, slot }` 付きの `ui.press` で届きます。スロットのツリー内のボタン・入力・選択も同じ `slot` を付けて `ui.press`・`ui.input`・`ui.select` を送ります。`{ plugin: '<自分の mod>' }` で絞ってください。
+- 項目はプロジェクトの mod ランタイムに属します。チャットを切り替えても残り、mod のアンロード・無効化・ランタイムの再読み込みで消えます。
+- 種類ごとにレビューダイアログで別の権限として表示されます。ソースに文字どおり書かれていない `$.slot.<種類>` の呼び出しはランタイムが拒否するので、ダイアログに出なかったスロットは使えません。`$.slot[name](...)` ではなく `$.slot.header(...)` のように書いてください。
+- サンプル: `examples/mods/ui-slots-demo/` がすべてのスロットを使います。既定ではインストールされません。`~/.pawn/mods/ui-slots-demo` にコピーして許可してください。
 
 ## 7. `$` API
 

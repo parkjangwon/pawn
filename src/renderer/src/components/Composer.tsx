@@ -1,4 +1,5 @@
 import { ultraWorkTriggerLength } from '../agent/ultraWork'
+import { ModToolbarSlots } from './ModSlots'
 import './UltraWork.css'
 import { useMemo, useRef, useState } from 'react'
 import { tx } from '../i18n'
@@ -36,6 +37,8 @@ import {
 interface ComposerProps {
   activeSession: boolean
   activeSessionId: string | null
+  /** Empty home screen: mod toolbar buttons stay hidden there. */
+  isHome?: boolean
   input: string
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void
   onKeyDown: (e: React.KeyboardEvent) => void
@@ -333,6 +336,7 @@ export default function Composer(props: ComposerProps): React.JSX.Element {
                 <button className="attach-btn" onClick={() => fileInputRef.current?.click()} title={'Attach files'} aria-label={'Attach files'}>
                   <Paperclip size={15} />
                 </button>
+                <ModToolbarSlots hidden={props.isHome} />
                 {recordSupported && (
                   <button
                     type="button"

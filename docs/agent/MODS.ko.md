@@ -67,7 +67,7 @@ mods는 샌드박스가 없어요. 파일, 셸, 네트워크, 채팅을 내 계�
 
 불러오기 전에 설정이 검토 창을 보여요.
 
-- 등록한 훅과 소스의 `$.…` 호출로 만든 권한 칩
+- 등록한 훅과 소스의 `$.…` 호출로 만든 권한 목록: 권한마다 한 줄에 이름과 한 줄 설명이 있어요 (`strings.ts`의 `settings.modsSection.cap.<id>`와 `settings.modsSection.capDesc.<id>`, id는 `src/renderer/src/agent/mods/capabilities.ts`). 새 권한에는 id, 규칙, 두 문자열이 모두 필요해요
 - 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구면 **보통**, 아니면 **낮음**
 - 허용하는 버전
 
@@ -166,6 +166,25 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 | 스피너 `props.suffix` | 생각 중 줄 끝에 붙어요. |
 
 칩은 이 채팅에 불러온 mods예요. 메뉴에서 하나를 끄면 `disabledPlugins`에 적고 다시 불러와요. 같은 이벤트를 둘 이상이 들으면 메뉴에 충돌이 나오고, 먼저/나중을 바꿀 수 있어요. `AbovePrompt`를 그린 mod마다 띠가 하나씩 생겨요. 개입 기록은 막음, 대신 답함, 버튼, 그리고 `tool.call`과 `prompt.submit`의 충돌을 남겨요. 채팅 UI를 비우면 기록도 비워요.
+
+### UI 슬롯 (UI slots)
+
+`$.slot.*`는 컴포저 위 밴드 밖의 정해진 자리에 mod 컨트롤을 놓아요. 모든 호출은 mod 안에서만 쓰는 `id`(`[A-Za-z0-9_-]{1,64}`)를 받아요. 같은 `id`로 다시 부르면 그 항목을 바꿔요. mod는 이렇게 다시 그려요. 트리는 위와 같은 `$.ui.resolve()` 요소예요.
+
+| 호출 | 보이는 곳 | 권한 |
+|------|-----------|------|
+| `$.slot.sidebar({ id, title, tree })` | 왼쪽 사이드바 아래쪽의 접을 수 있는 섹션. 제목을 누르면 접혀요. | `sidebar` |
+| `$.slot.panel({ id, title, tree })` | 지금은 `sidebar`와 같은 자리. 오른쪽 패널에는 아직 mod 탭이 없어요. | `sidebar` |
+| `$.slot.header({ id, label, title })` | 채팅 헤더 오른쪽의 버튼. | `toolbar` |
+| `$.slot.toolbar({ id, label, title })` | 컴포저 줄의 첨부 버튼 옆 버튼. 빈 홈 화면에서는 숨겨져요. | `toolbar` |
+| `$.slot.settings({ id, title, tree })` | **설정 → Mods** 아래 페이지. 페이지마다 메뉴 항목 하나. | `settingsPage` |
+| `$.slot.statusbar({ id, text, title, tree })` | 왼쪽 사이드바 맨 아래, 설정 버튼 위의 작은 항목(Pawn에는 보이는 상태 표시줄이 없어요). 텍스트 항목은 버튼이고, `tree` 항목은 트리를 그려요. | `statusbar` |
+| `$.slot.remove({ slot, id })` / `$.slot.list()` | 이 mod의 항목 하나를 지우기 / 목록 보기. | 없음 |
+
+- 클릭은 `{ plugin, id, slot }`이 담긴 `ui.press`로 와요. 슬롯 트리 안의 버튼, 입력, 선택은 같은 `slot` 필드와 함께 `ui.press`, `ui.input`, `ui.select`를 보내요. `{ plugin: '<내 mod>' }`로 거르세요.
+- 항목은 프로젝트의 mod 런타임에 속해요. 채팅을 바꿔도 남고, mod를 내리거나 끄거나 런타임을 다시 불러오면 사라져요.
+- 종류마다 검토 대화상자에 별도 권한으로 표시돼요. mod 소스에 글자 그대로 없는 `$.slot.<종류>` 호출은 런타임이 거부하므로, 대화상자에 나오지 않은 슬롯은 쓸 수 없어요. `$.slot[name](...)`이 아니라 `$.slot.header(...)`처럼 그대로 쓰세요.
+- 예제: `examples/mods/ui-slots-demo/`가 모든 슬롯을 써요. 기본으로 설치되지 않아요. `~/.pawn/mods/ui-slots-demo`에 복사한 뒤 허용하세요.
 
 ## 7. `$` API
 
