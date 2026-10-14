@@ -1248,7 +1248,7 @@ export const EN: Record<string, string> = {
   'settings.modsSection.capDesc.statusbar': 'Can show small status items at the bottom of the sidebar.',
   'settings.modsSection.capDesc.palette': 'Can add its own entries to the command palette.',
   'settings.modsSection.capDesc.shortcuts': 'Can add keyboard shortcuts. App shortcuts always win; clashes are reported.',
-  'settings.modsSection.capDesc.messages': 'Reads finished messages to add badges, buttons and blocks under them.',
+  'settings.modsSection.capDesc.messages': 'Reads the text of finished messages to add badges, buttons and blocks under them. With network access it could send that text elsewhere.',
   'settings.modsSection.commandHint': 'Mod command',
   'settings.modsSection.consentAdvanced': 'Show technical hooks & calls',
   'settings.modsSection.consentAllow': 'Allow and enable',

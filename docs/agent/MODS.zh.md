@@ -54,7 +54,7 @@ my-mod/
 加载前，设置会打开审核对话框：
 
 - 由注册的钩子和源码里的 `$.…` 调用得出的能力列表：每项能力一行，含名称和一行说明（`strings.ts` 中的 `settings.modsSection.cap.<id>` 与 `settings.modsSection.capDesc.<id>`，id 在 `src/renderer/src/agent/mods/capabilities.ts`）。新增能力需要 id、规则和这两条文字
-- 风险：进程或网络为高，文件或工具为中，其余为低
+- 风险：进程或网络为高，文件、工具或读取消息正文（`message.render`）为中，其余为低
 - 你允许的版本
 
 允许后，该版本写入 `consentedPlugins`，名字会从 `disabledPlugins` 去掉。撤回同意会删掉条目并关闭该名字。

@@ -96,6 +96,6 @@ export type ModRiskLevel = 'low' | 'medium' | 'high'
 export function deriveModRisk(hooks: string[], calls: string[]): ModRiskLevel {
   const caps = new Set(deriveModCapabilities(hooks, calls).map((c) => c.id))
   if (caps.has('process') || caps.has('network')) return 'high'
-  if (caps.has('files') || caps.has('tools')) return 'medium'
+  if (caps.has('files') || caps.has('tools') || caps.has('messages')) return 'medium'
   return 'low'
 }
