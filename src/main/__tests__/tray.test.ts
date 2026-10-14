@@ -19,3 +19,47 @@ describe('tray menu labels', () => {
     expect(menuLabels('xx', false)).toEqual(menuLabels('en', false))
   })
 })
+
+import { trayMenuSpec, trayMenuLabels } from '../trayLabels'
+
+const HANGUL = /[\uac00-\ud7a3]/
+
+describe('tray context menu is English', () => {
+  const combos = [false, true].flatMap((isWin) =>
+    [false, true].flatMap((canRecord) => [false, true].map((recording) => ({ isWin, canRecord, recording })))
+  )
+
+  it.each(combos)('has English labels with no Hangul (%o)', (opts) => {
+    const spec = trayMenuSpec(opts)
+    for (const item of spec) {
+      if (item.id === 'separator') continue
+      expect(item.label).toBeTruthy()
+      expect(item.label).not.toMatch(HANGUL)
+      expect(item.label).toMatch(/^[\x20-\x7e●…]+$/)
+    }
+    expect(spec.map((i) => i.id)[0]).toBe('show')
+    expect(spec.at(-1)).toEqual({ id: 'quit', label: 'Quit Pawn' })
+  })
+
+  it('uses the exact English labels on macOS', () => {
+    expect(trayMenuSpec({ isWin: false, canRecord: true, recording: false })).toEqual([
+      { id: 'show', label: 'Show in menu bar' },
+      { id: 'separator' },
+      { id: 'open', label: 'Open Pawn' },
+      { id: 'record', label: 'Record a workflow…' },
+      { id: 'quit', label: 'Quit Pawn' }
+    ])
+    expect(trayMenuSpec({ isWin: false, canRecord: true, recording: true })[3]).toEqual({ id: 'stop', label: '● Stop recording' })
+    expect(trayMenuLabels(true).show).toBe('Show in system tray')
+  })
+
+  it('tray.ts builds from the English spec and uses no Electron roles', async () => {
+    const { readFileSync } = await import('fs')
+    const { join } = await import('path')
+    const src = readFileSync(join(__dirname, '..', 'tray.ts'), 'utf8')
+    expect(src).toContain('trayMenuSpec(')
+    expect(src).not.toMatch(/role\s*:/)
+    expect(src).not.toMatch(HANGUL)
+    expect(src).not.toMatch(/appLanguage\(\)/)
+  })
+})

@@ -26,6 +26,40 @@ export function menuLabels(lang: string, isWin: boolean): TrayLabels {
   }
 }
 
+/**
+ * The tray / menu bar context menu is always English, regardless of the app
+ * language or OS locale. Labels are explicit (no Electron roles), so nothing
+ * picks up the system locale either.
+ */
+export function trayMenuLabels(isWin: boolean): TrayLabels {
+  return menuLabels('en', isWin)
+}
+
+/** Record & Replay tray items, always English (see trayMenuLabels). */
+export function trayRecordLabels(): { record: string; stop: string } {
+  const { record, stop } = recordLabels('en')
+  return { record, stop }
+}
+
+export interface TrayMenuItemSpec {
+  id: 'show' | 'separator' | 'open' | 'record' | 'stop' | 'quit'
+  label?: string
+}
+
+/** Pure description of the tray menu items, in order (unit-testable). */
+export function trayMenuSpec(opts: { isWin: boolean; canRecord: boolean; recording: boolean }): TrayMenuItemSpec[] {
+  const l = trayMenuLabels(opts.isWin)
+  const r = trayRecordLabels()
+  const items: TrayMenuItemSpec[] = [
+    { id: 'show', label: l.show },
+    { id: 'separator' },
+    { id: 'open', label: l.open }
+  ]
+  if (opts.canRecord) items.push(opts.recording ? { id: 'stop', label: `● ${r.stop}` } : { id: 'record', label: r.record })
+  items.push({ id: 'quit', label: l.quit })
+  return items
+}
+
 export interface RecordLabels {
   record: string
   stop: string

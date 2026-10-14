@@ -1,9 +1,9 @@
-import { Tray, Menu, nativeImage, app } from 'electron'
+import { Tray, Menu, nativeImage, app, type MenuItemConstructorOptions } from 'electron'
 import { join } from 'path'
 import { getMainWindow, createMainWindow } from './window'
 import { loadConfig, saveConfig } from './config'
-import { menuLabels, recordLabels } from './trayLabels'
-import { appLanguage, setAppLanguage } from './appLanguage'
+import { trayMenuSpec } from './trayLabels'
+import { setAppLanguage } from './appLanguage'
 
 // Fallback only: 18x18 monochrome pawn silhouette (template image adapts to
 // light/dark menus). The shipped logo in resources/icon.png is preferred.
@@ -11,10 +11,6 @@ const TRAY_ICON_B64 =
   'iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAMklEQVR4nGNgGNHgPxKmiiFkG4bNELIMo5pBuAwjG1DFkGFs0DBNR1QxCJ8GqsQgTgAA73NEvJQmHWAAAAAASUVORK5CYII='
 
 let tray: Tray | null = null
-
-function labels(): { show: string; open: string; quit: string } {
-  return menuLabels(appLanguage(), process.platform === 'win32')
-}
 
 function openWindow(): void {
   const win = getMainWindow()
@@ -55,23 +51,26 @@ export function refreshTrayMenu(): void {
 }
 
 function buildMenu(): Menu {
-  const l = labels()
+  // Always English: the menu bar menu ignores the app language and OS locale.
   const rec = process.platform === 'darwin' && recordActions ? recordActions : null
-  const r = recordLabels(appLanguage())
-  const recording = rec?.recording() === true
-  return Menu.buildFromTemplate([
-    { label: l.show, type: 'checkbox', checked: true, click: (item) => setTrayEnabled(item.checked) },
-    { type: 'separator' },
-    { label: l.open, click: () => openWindow() },
-    ...(rec
-      ? [
-          recording
-            ? { label: `● ${r.stop}`, click: () => rec.stop() }
-            : { label: r.record, click: () => rec.start() }
-        ]
-      : []),
-    { label: l.quit, click: () => app.quit() }
-  ])
+  const spec = trayMenuSpec({ isWin: process.platform === 'win32', canRecord: !!rec, recording: rec?.recording() === true })
+  const template: MenuItemConstructorOptions[] = spec.map((item) => {
+    switch (item.id) {
+      case 'separator':
+        return { type: 'separator' }
+      case 'show':
+        return { label: item.label, type: 'checkbox', checked: true, click: (mi) => setTrayEnabled(mi.checked) }
+      case 'open':
+        return { label: item.label, click: () => openWindow() }
+      case 'record':
+        return { label: item.label, click: () => rec?.start() }
+      case 'stop':
+        return { label: item.label, click: () => rec?.stop() }
+      case 'quit':
+        return { label: item.label, click: () => app.quit() }
+    }
+  })
+  return Menu.buildFromTemplate(template)
 }
 
 /** Rebuild the tray menu after the app language changed. */
