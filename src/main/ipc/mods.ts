@@ -3,6 +3,7 @@ import {
   discoverMods,
   formatValidateReport,
   getModsSettings,
+  migrateSampleModDefault,
   installExampleMod,
   listModsSummary,
   loadEnabledModSources,
@@ -13,6 +14,11 @@ import {
 import { modHttpFetch, type ModHttpInit } from '../mods/http'
 
 export function registerModsIpc(): void {
+  try {
+    migrateSampleModDefault()
+  } catch {
+    /* never block IPC registration */
+  }
   handleTrusted('mods:settings', async () => getModsSettings())
 
   handleTrusted('mods:setSettings', async (_e, partial: Partial<ModsSettings>) => {

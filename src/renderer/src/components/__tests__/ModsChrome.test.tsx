@@ -73,4 +73,25 @@ describe('ModsChrome v3 chrome', () => {
     const { container } = render(<ModsChrome />)
     expect(container.textContent).toBe('')
   })
+
+  it("variant='home' still loads mods but renders no chip or band; default does", async () => {
+    const loadSources = vi.fn(async () => ({
+      ok: true,
+      sources: [{ id: 'demo@1', name: 'demo', root: '/tmp/demo', tier: 'user', sources: [bandMod] }]
+    }))
+    ;(window as { api?: unknown }).api = { mods: { loadSources } }
+    const home = render(<ModsChrome variant="home" />)
+    await vi.waitFor(() => expect(loadSources).toHaveBeenCalled())
+    await act(async () => {
+      await ensureModsLoaded({ sessionId: 'pending', cwd: '', projectPath: null })
+    })
+    expect(home.container.textContent).toBe('')
+    expect(screen.queryByText('demo active')).toBeNull()
+    expect(screen.queryByRole('region', { name: 'Mod prompt band' })).toBeNull()
+    home.unmount()
+
+    render(<ModsChrome />)
+    expect(await screen.findByRole('region', { name: 'Mod prompt band' })).toBeInTheDocument()
+    expect(await screen.findByText('demo active')).toBeInTheDocument()
+  })
 })

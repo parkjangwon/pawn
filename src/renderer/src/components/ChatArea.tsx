@@ -1246,14 +1246,17 @@ export default function ChatArea({
     />
   )
 
-  // Mods chrome always sits directly above the composer, in both home and
-  // docked modes, so AbovePrompt bands read as part of the input stack.
-  const composerWithMods = (
+  // Docked chat shows full mods chrome above the composer so AbovePrompt bands
+  // read as part of the input stack; the home composer stays clean (variant
+  // "home" still loads mods for slash commands and shows toasts).
+  const stackWith = (variant: 'home' | 'chat'): React.JSX.Element => (
     <div className="composer-stack">
-      <ModsChrome onOpenSettings={onOpenSettings} />
+      <ModsChrome onOpenSettings={onOpenSettings} variant={variant} />
       {composerEl}
     </div>
   )
+  const composerWithMods = stackWith('chat')
+  const composerHome = stackWith('home')
 
   return (
     <main
@@ -1338,7 +1341,7 @@ export default function ChatArea({
             // doesn't tick "Open or create a project folder".
             activeProject={activeProject?.id === '__general__' ? undefined : activeProject}
             onPick={(text) => { setInput(text); setTrigger(null) }}
-            composer={composerWithMods}
+            composer={composerHome}
           />
         ) : (
           <>

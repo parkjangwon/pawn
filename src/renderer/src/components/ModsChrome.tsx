@@ -16,9 +16,12 @@ import './ModsChrome.css'
  * and toasts as a corner overlay (does not push the composer).
  */
 export default function ModsChrome({
-  onOpenSettings
+  onOpenSettings,
+  variant = 'chat'
 }: {
   onOpenSettings?: () => void
+  /** 'home' keeps mods loading (slash commands) but renders only toasts. */
+  variant?: 'home' | 'chat'
 }): React.JSX.Element | null {
   const statusByPlugin = useModsUiStore((s) => s.statusByPlugin)
   const toasts = useModsUiStore((s) => s.toasts)
@@ -150,7 +153,7 @@ export default function ModsChrome({
     }
   }, [menuOpen])
 
-  const hasInline = Boolean(
+  const hasInline = variant === 'chat' && Boolean(
     activeLine ||
       statusEntries.length ||
       notices.length ||
