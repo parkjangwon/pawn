@@ -1207,6 +1207,7 @@ export default function ChatArea({
     <Composer
       activeSession={!!activeSession}
       activeSessionId={activeSessionId}
+      isHome={isHome}
       input={input}
       onChange={handleChange}
       onKeyDown={handleKeyDown}

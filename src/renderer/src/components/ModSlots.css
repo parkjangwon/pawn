@@ -1,0 +1,122 @@
+/* Mod-owned chrome ($.slot.*). Uses the app tokens so light/dark follow the theme. */
+.mod-slot-sidebar-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  max-height: 40%;
+  overflow-y: auto;
+  padding: var(--space-xs) var(--space-sm);
+  border-top: 1px solid var(--border-color);
+}
+
+.mod-slot-sidebar-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  width: 100%;
+  padding: var(--space-xs) var(--space-sm);
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-ui-sm);
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.mod-slot-sidebar-title:hover {
+  background: var(--bg-hover);
+}
+
+.mod-slot-caret {
+  width: 10px;
+  color: var(--text-muted);
+}
+
+.mod-slot-sidebar-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mod-slot-sidebar-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-xs) var(--space-sm);
+  padding: var(--space-xs) var(--space-sm) var(--space-sm) var(--space-lg);
+  color: var(--text-primary);
+  font-size: var(--text-ui-sm);
+}
+
+.mod-slot-toolbar-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.mod-slot-toolbar,
+.mod-slot-status-btn {
+  height: 24px;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: var(--text-ui-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.mod-slot-status-btn {
+  height: 18px;
+  padding: 0 var(--space-xs);
+  border-color: transparent;
+  font-size: var(--text-ui-xs);
+}
+
+.mod-slot-toolbar:hover,
+.mod-slot-status-btn:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.mod-slot-status {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-xs);
+  color: var(--text-secondary);
+  font-size: var(--text-ui-xs);
+}
+
+.mod-slot-settings-nav .settings-nav-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-sm);
+}
+
+.mod-slot-settings-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mod-slot-settings-plugin,
+.mod-slot-settings-owner {
+  color: var(--text-muted);
+  font-size: var(--text-ui-xs);
+}
+
+.mod-slot-settings-owner {
+  margin: 0 0 var(--space-lg);
+}
+
+.mod-slot-settings-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
