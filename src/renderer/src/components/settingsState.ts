@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
+import { providerFetch } from '../agent/providerFetch'
 import { tx } from '../i18n'
 import { useProviderStore } from '../stores/provider'
 import { useThemeStore } from '../stores/theme'
@@ -469,7 +470,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
           signal
         })
       } else {
-        response = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal })
+        response = await providerFetch(url, { method: 'POST', headers, body: JSON.stringify(body), signal })
       }
       if (response.ok) {
         __providerTestOutcome[providerId] = 'ok'

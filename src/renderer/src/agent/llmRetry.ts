@@ -5,6 +5,7 @@
  */
 
 import { isDeepSeekRetryableError } from './deepseekCompat'
+import { providerFetch } from './providerFetch'
 import { enrichTransportError, errorTextWithCause } from './providerErrors'
 
 /** Total time fetchWithRetry may spend sleeping between attempts. */
@@ -167,7 +168,7 @@ export async function fetchWithRetry(
           signal: attemptSignal
         }
       : { method: 'POST', headers, body: payload, signal: attemptSignal }
-    const fetchPromise = isBrowser ? fetch('/api/proxy', init) : fetch(url, init)
+    const fetchPromise = isBrowser ? fetch('/api/proxy', init) : providerFetch(url, init)
     if (checker && connectCtl) {
       const verdict = await Promise.race([
         fetchPromise.then(() => null, () => null),

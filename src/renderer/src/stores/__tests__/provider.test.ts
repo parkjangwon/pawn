@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { needsCspReload, useProviderStore } from '../provider'
+import { useProviderStore, whenProviderSavesSettled } from '../provider'
 import type { ModelEntry, Provider } from '../../types/provider'
 
 const configMock = {
@@ -81,80 +81,22 @@ describe('init', () => {
   })
 })
 
-describe('needsCspReload', () => {
-  const lan = 'http://192.168.0.10:11434'
-
-  it('reloads only for a new non-loopback http origin', () => {
-    expect(needsCspReload(`${lan}/v1`, [])).toBe(true)
-    expect(needsCspReload(lan, [lan])).toBe(false)
-    expect(needsCspReload('http://localhost:11434/v1', [])).toBe(false)
-    expect(needsCspReload('http://127.0.0.1:11434', [])).toBe(false)
-    expect(needsCspReload('http://LOCALHOST:11434', [])).toBe(false)
-    expect(needsCspReload('https://192.168.0.10:11434', [])).toBe(false)
-    expect(needsCspReload('not a url', [])).toBe(false)
-    expect(needsCspReload('http://nas.lan:11434', ['http://other.lan:11434'])).toBe(true)
-  })
-})
-
-describe('csp reload', () => {
-  const reload = vi.fn()
-
-  beforeEach(() => {
-    reload.mockReset()
+describe('no reload after saving an http provider', () => {
+  it('never reloads; whenProviderSavesSettled waits for the save', async () => {
+    const reload = vi.fn()
     Object.defineProperty(window, 'location', { configurable: true, value: { reload } })
-  })
-
-  async function initEmpty(): Promise<void> {
+    let release!: (v: { ok: boolean }) => void
+    configMock.save.mockImplementation(() => new Promise((r) => { release = r }))
     configMock.load.mockResolvedValue({ providers: [], models: [] })
     await useProviderStore.getState().init()
-  }
-
-  async function flush(): Promise<void> {
-    for (let i = 0; i < 8; i++) await Promise.resolve()
-  }
-
-  it('reloads only after the save that persists the new http origin', async () => {
-    const gates: Array<(v: { ok: boolean }) => void> = []
-    configMock.save.mockImplementation(() => new Promise((r) => { gates.push(r) }))
-    await initEmpty()
     useProviderStore.getState().addProvider({ ...provider('p1'), baseUrl: 'http://192.168.0.10:11434/v1' })
-    useProviderStore.getState().addModel(model('m1', 'p1', 'llama3.3', 'mid'))
-    await Promise.resolve()
+    let settled = false
+    void whenProviderSavesSettled().then(() => { settled = true })
+    for (let i = 0; i < 5; i++) await Promise.resolve()
+    expect(settled).toBe(false)
+    release({ ok: true })
+    await vi.waitFor(() => expect(settled).toBe(true))
     expect(reload).not.toHaveBeenCalled()
-    expect(configMock.save).toHaveBeenCalledTimes(2)
-    gates[0]({ ok: true })
-    await Promise.resolve()
-    await Promise.resolve()
-    expect(reload).not.toHaveBeenCalled()
-    gates[1]({ ok: true })
-    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1))
-  })
-
-  it('does not reload when the save fails or the origin was already allowed', async () => {
-    configMock.save.mockResolvedValue({ ok: false })
-    await initEmpty()
-    useProviderStore.getState().addProvider({ ...provider('p1'), baseUrl: 'http://192.168.0.10:11434/v1' })
-    await flush()
-    expect(reload).not.toHaveBeenCalled()
-
-    useProviderStore.setState({ initialized: false })
-    configMock.load.mockResolvedValue({
-      providers: [{ ...provider('p1'), baseUrl: 'http://192.168.0.10:11434/v1' }],
-      models: []
-    })
-    configMock.save.mockResolvedValue({ ok: true })
-    await useProviderStore.getState().init()
-    useProviderStore.getState().updateProvider('p1', { baseUrl: 'http://192.168.0.10:11434/v1' })
-    await flush()
-    expect(reload).not.toHaveBeenCalled()
-  })
-
-  it('still reloads when an earlier unrelated save failed', async () => {
-    configMock.save.mockResolvedValueOnce({ ok: false }).mockResolvedValueOnce({ ok: true })
-    await initEmpty()
-    useProviderStore.getState().addProvider(provider('old'))
-    useProviderStore.getState().addProvider({ ...provider('p2'), baseUrl: 'http://10.0.0.8:11434/v1' })
-    await vi.waitFor(() => expect(reload).toHaveBeenCalledTimes(1))
   })
 })
 

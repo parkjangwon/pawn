@@ -4,6 +4,7 @@ import { registerAllIpc } from './ipc'
 import { disposeLsp } from './ipc/lsp'
 import { disposeAgentRuntime } from './ipc/agentRuntime'
 import { disposeKiro } from './ipc/kiro'
+import { disposeProviderHttp } from './ipc/providerHttp'
 import { disposeXai } from './ipc/xai'
 import { disposeChatGpt } from './ipc/chatgpt'
 import { disposeClaudeOauth } from './ipc/claudeOauth'
@@ -117,6 +118,7 @@ const boot = (): void => {
     void disposeLsp().catch(() => {})
     void disposeAgentRuntime()
     disposeKiro()
+    disposeProviderHttp()
     disposeXai()
     disposeChatGpt()
     disposeClaudeOauth()

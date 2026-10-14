@@ -1,6 +1,16 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
+type ProviderHttpEvent =
+  | { type: 'head'; status: number; statusText: string; headers: Array<[string, string]> }
+  | { type: 'chunk'; data: Uint8Array }
+  | { type: 'end' }
+  | { type: 'error'; message: string }
+const providerHttpListeners = new Map<string, (evt: ProviderHttpEvent) => void>()
+ipcRenderer.on('providerHttp:event', (_e, id: string, evt: ProviderHttpEvent) => {
+  providerHttpListeners.get(id)?.(evt)
+})
+
 const api = {
   platform: process.platform,
   appVersion: (): Promise<string> => ipcRenderer.invoke('app:getVersion'),
@@ -645,6 +655,19 @@ const api = {
       input: { state: unknown; questions: Record<string, unknown>; model?: string },
       opts?: { purpose?: 'tool' | 'shell_risk' | 'routing'; timeoutMs?: number; maxRetries?: number }
     ) => ipcRenderer.invoke('decision:decide', input, opts || {})
+  },
+
+  /** Plain-http provider requests via main (allowlisted to saved provider origins). */
+  providerHttp: {
+    start: (
+      id: string,
+      req: { url: string; method?: string; headers?: Record<string, string>; body?: string },
+      onEvent: (evt: ProviderHttpEvent) => void
+    ): Promise<{ ok: boolean; error?: string }> => {
+      providerHttpListeners.set(id, onEvent)
+      return ipcRenderer.invoke('providerHttp:start', id, req).finally(() => providerHttpListeners.delete(id))
+    },
+    abort: (id: string): Promise<unknown> => ipcRenderer.invoke('providerHttp:abort', id)
   },
 
   /** Built-in public-web research (insane-search port) — not browser automation. */
