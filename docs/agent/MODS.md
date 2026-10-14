@@ -172,6 +172,25 @@ Elements: `Box`, `Text`, `Markdown`, `Code`, `Link`, `Button`, `Input`, `Select`
 
 The chip lists mods loaded for this chat. Its menu can turn one off (that writes `disabledPlugins` and reloads). When two mods listen to the same event, the menu lists that conflict and can move one sooner or later. Each mod that draws `AbovePrompt` gets its own band. The intervention log records blocks, answers, button presses, and conflicts from `tool.call` and `prompt.submit`. It clears with the session UI.
 
+### UI slots
+
+`$.slot.*` puts mod controls in fixed places outside the composer band. Each call takes a mod-local `id` (`[A-Za-z0-9_-]{1,64}`). Calling again with the same `id` replaces that item, which is how a mod redraws it. Trees are the same `$.ui.resolve()` elements as above.
+
+| Call | Where it shows | Capability |
+|------|----------------|------------|
+| `$.slot.sidebar({ id, title, tree })` | A collapsible section at the bottom of the left sidebar. Clicking the title collapses it. | `sidebar` |
+| `$.slot.panel({ id, title, tree })` | Same place as `sidebar` for now. The right panel has no mod tabs yet. | `sidebar` |
+| `$.slot.header({ id, label, title })` | A button on the right of the chat header. | `toolbar` |
+| `$.slot.toolbar({ id, label, title })` | A button in the composer row, next to Attach. Hidden on the empty home screen. | `toolbar` |
+| `$.slot.settings({ id, title, tree })` | A page under **Settings → Mods**, one nav entry per page. | `settingsPage` |
+| `$.slot.statusbar({ id, text, title, tree })` | An item on the right of the status bar. A text item is a button; a `tree` item draws the tree. | `statusbar` |
+| `$.slot.remove({ slot, id })` / `$.slot.list()` | Remove one of this mod's items / list them. | none |
+
+- Clicks arrive as `ui.press` with `{ plugin, id, slot }`. Buttons, inputs and selects inside a slot tree send `ui.press`, `ui.input` and `ui.select` with the same `slot` field. Filter with `{ plugin: '<your mod>' }`.
+- Items belong to the project's mod runtime: they stay when you switch chats and disappear when the mod unloads, is turned off, or the runtime reloads.
+- Each kind is its own capability in the review dialog. The runtime refuses a `$.slot.<kind>` call whose literal text is not in the mod's source, so a mod cannot use a slot the dialog never showed. Write the calls out (`$.slot.header(...)`), not `$.slot[name](...)`.
+- Sample: `examples/mods/ui-slots-demo/` uses every slot. It is not installed by default; copy it to `~/.pawn/mods/ui-slots-demo` and allow it.
+
 ## 7. `$` API
 
 | Namespace | Role |

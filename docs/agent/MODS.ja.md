@@ -118,6 +118,25 @@ export function register(on) {
 
 `AbovePrompt` の書き方は [MODS.md](./MODS.md) §6 の例と同じです。サンプルは `examples/mods/first-mod/hooks/register.js`。
 
+### UI スロット (UI slots)
+
+`$.slot.*` は、コンポーザー上のバンド以外の決まった場所に mod のコントロールを置きます。どの呼び出しも mod 内だけで使う `id`（`[A-Za-z0-9_-]{1,64}`）を受け取ります。同じ `id` でもう一度呼ぶとその項目を置き換えます。mod はこうして再描画します。ツリーは上と同じ `$.ui.resolve()` の要素です。
+
+| 呼び出し | 表示場所 | 権限 |
+|----------|----------|------|
+| `$.slot.sidebar({ id, title, tree })` | 左サイドバー下部の折りたためるセクション。タイトルをクリックすると折りたたみます。 | `sidebar` |
+| `$.slot.panel({ id, title, tree })` | 今は `sidebar` と同じ場所。右パネルにはまだ mod タブがありません。 | `sidebar` |
+| `$.slot.header({ id, label, title })` | チャットヘッダー右側のボタン。 | `toolbar` |
+| `$.slot.toolbar({ id, label, title })` | コンポーザー行の添付ボタン横のボタン。空のホーム画面では隠れます。 | `toolbar` |
+| `$.slot.settings({ id, title, tree })` | **設定 → Mods** の下のページ。ページごとにメニュー項目が一つ。 | `settingsPage` |
+| `$.slot.statusbar({ id, text, title, tree })` | ステータスバー右側の項目。テキスト項目はボタン、`tree` 項目はツリーを描きます。 | `statusbar` |
+| `$.slot.remove({ slot, id })` / `$.slot.list()` | この mod の項目を一つ消す / 一覧を返す。 | なし |
+
+- クリックは `{ plugin, id, slot }` 付きの `ui.press` で届きます。スロットのツリー内のボタン・入力・選択も同じ `slot` を付けて `ui.press`・`ui.input`・`ui.select` を送ります。`{ plugin: '<自分の mod>' }` で絞ってください。
+- 項目はプロジェクトの mod ランタイムに属します。チャットを切り替えても残り、mod のアンロード・無効化・ランタイムの再読み込みで消えます。
+- 種類ごとにレビューダイアログで別の権限として表示されます。ソースに文字どおり書かれていない `$.slot.<種類>` の呼び出しはランタイムが拒否するので、ダイアログに出なかったスロットは使えません。`$.slot[name](...)` ではなく `$.slot.header(...)` のように書いてください。
+- サンプル: `examples/mods/ui-slots-demo/` がすべてのスロットを使います。既定ではインストールされません。`~/.pawn/mods/ui-slots-demo` にコピーして許可してください。
+
 ## 7. `$` API
 
 | 名前空間 | 役割 |
