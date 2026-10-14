@@ -54,7 +54,7 @@ my-mod/
 加载前，设置会打开审核对话框：
 
 - 由注册的钩子和源码里的 `$.…` 调用得出的能力列表：每项能力一行，含名称和一行说明（`strings.ts` 中的 `settings.modsSection.cap.<id>` 与 `settings.modsSection.capDesc.<id>`，id 在 `src/renderer/src/agent/mods/capabilities.ts`）。新增能力需要 id、规则和这两条文字
-- 风险：进程或网络为高，文件、工具或读取消息正文（`message.render`）为中，其余为低
+- 风险：进程或网络为高，文件、工具、读取消息正文（`message.render`）或更改主题（`$.theme.vars` / `$.theme.css`）为中，其余为低
 - 你允许的版本
 
 允许后，该版本写入 `consentedPlugins`，名字会从 `disabledPlugins` 去掉。撤回同意会删掉条目并关闭该名字。
@@ -151,6 +151,23 @@ export function register(on) {
 - **按聊天区分：** `e.sessionId` 是消息所属的聊天，而不是屏幕上的聊天；钩子内的 `$.session` 也是该聊天。请用 `e.sessionId` 区分每个聊天的状态。
 - 与插槽一样，事件名必须按字面写出（`on('message.render', …)`），否则 `on` 会抛出 `message.render refused`。
 
+
+### 主题 (Theming)
+
+`$.theme.*` 用来给 Pawn 换色，并为 mod 自己的界面加样式。每个调用都接收一个仅在本 mod 内使用的 `id`（`[A-Za-z0-9_-]{1,64}`），用同一个 `id` 再次调用会替换它。`mode` 为 `light`、`dark` 或 `all`（默认）。
+
+| 调用 | 作用 | 权限 |
+| --- | --- | --- |
+| `$.theme.vars({ id, vars, mode })` | 覆盖应用根上的 CSS 自定义属性，例如 `{ '--accent': '#2f6b3a' }`。只接受 `--名称` 键（缺少时自动加 `--`），每次最多 128 个，值最多 200 个字符。 | `theme` |
+| `$.theme.css({ id, css, mode })` | 用 `@scope ([data-plugin="<mod>"])` 包裹的样式表，只作用于本 mod 用 `$.slot.*` 绘制的元素（`:scope` 是插槽根）。最多 32KB。 | `theme` |
+| `$.theme.remove({ id })` / `$.theme.list()` | 删除本 mod 的一项 / 列出它们。 | 无 |
+
+- 可能加载资源或跳出代码块的内容会被拒绝并报错：`url(`、`@import`、`image-set(`、`expression(`、`<`、`\`、不配对的花括号，以及 `@scope`、`@layer`、`@font-face`、`@namespace`、`@charset`。变量值还拒绝 `;`、`{`、`}`。
+- 常用变量：`--bg-primary`、`--bg-secondary`、`--bg-sidebar`、`--text-primary`、`--text-secondary`、`--text-muted`、`--border-color`、`--primary`、`--accent`、`--danger`、`--success`（完整列表见 `src/renderer/src/styles/global.css`）。
+- 用户可以只关闭某个 mod 的主题而不关闭 mod：在 mods 菜单（输入框上方的标签）中该 mod 旁边的 **Theme** 开关。选择在重启后保留。重新加载 mod 时主题会被清除。
+- 与插槽一样，源码中没有逐字写出的 `$.theme.vars` / `$.theme.css` 调用会被运行时拒绝。审核对话框中显示为 **Change colors and styles**。风险为**中**：主题无法读取任何内容，也无法访问网络，但可以让 Pawn 的某些部分看起来像别的东西。
+- 防伪装：同意对话框、mods 菜单（含 Theme 开关）和 **设置 → Mods** 是 `.mods-trusted` 根。它们重新声明默认变量，mod 的变量规则使用 `:not(.mods-trusted)`，因此 `$.theme.vars` 无法影响它们。限定范围的样式表也无法影响它们，并且 `position: fixed` / `sticky` 会被拒绝，mod 无法在其上浮出伪造的对话框。
+- 示例：`examples/mods/theming-demo/` 切换两套配色（浅色和深色），并为自己的侧边栏分区加样式。默认不安装；复制到 `~/.pawn/mods/theming-demo` 后允许即可。
 
 ## 7. `$` API
 

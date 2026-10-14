@@ -219,7 +219,7 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
     : 'No mods are running in this chat.'
 
   return (
-    <div className={`mods-settings ${embedded ? 'embedded' : ''}`}>
+    <div className={`mods-settings mods-trusted ${embedded ? 'embedded' : ''}`} data-mods-trusted="settings">
       {!embedded && (
         <>
           <h2>{'Mods'}</h2>

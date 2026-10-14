@@ -1,4 +1,7 @@
-:root {
+/* .mods-trusted re-declares the default tokens so inherited mod overrides ($.theme.vars) can't restyle
+   consent, permission and mod-settings surfaces. */
+:root,
+.mods-trusted {
   --sidebar-width: 244px;
   --titlebar-height: 0px;
   --app-header-height: 48px;
@@ -323,7 +326,9 @@ select:focus-visible {
 }
 
 /* Light theme — v3.0.0: ZCode homage (neutral monochrome, black primary). */
-.app.light {
+.app.light,
+.app.light .mods-trusted,
+.app.light.mods-trusted {
   --bg-primary: #f8f8f8;
   --bg-secondary: #ffffff;
   --bg-sidebar: #f0f0f0;
@@ -363,7 +368,9 @@ select:focus-visible {
 }
 
 /* Dark theme — v3.0.0: ZCode homage (neutral monochrome, white primary). */
-.app.dark {
+.app.dark,
+.app.dark .mods-trusted,
+.app.dark.mods-trusted {
   --bg-primary: #161616;
   --bg-secondary: #202020;
   --bg-sidebar: #161616;

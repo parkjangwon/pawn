@@ -54,7 +54,7 @@ my-mod/
 読み込む前に設定が確認ダイアログを出します。
 
 - 登録フックとソース中の `$.…` 呼び出しから作った権限リスト。権限ごとに 1 行で、名前と 1 行の説明を出します（`strings.ts` の `settings.modsSection.cap.<id>` と `settings.modsSection.capDesc.<id>`、id は `src/renderer/src/agent/mods/capabilities.ts`）。新しい権限には id、ルール、両方の文字列が必要です
-- 危険度: プロセスまたはネットワークなら高、ファイルまたはツール、またはメッセージ本文を読むなら（`message.render`）中、それ以外は低
+- 危険度: プロセスまたはネットワークなら高、ファイルまたはツール、メッセージ本文を読む（`message.render`）、またはテーマを変える（`$.theme.vars` / `$.theme.css`）なら中、それ以外は低
 - 許可する版
 
 許可するとその版が `consentedPlugins` に入り、名前は `disabledPlugins` から外れます。同意を取り消すと項目を消し、その名前をオフにします。
@@ -151,6 +151,23 @@ export function register(on) {
 - **チャット単位:** `e.sessionId` は画面のチャットではなくメッセージが属するチャットで、フック内の `$.session` もそのチャットです。チャットごとの状態は `e.sessionId` で分けてください。
 - スロットと同様、イベント名は文字どおり書く必要があります（`on('message.render', …)`）。そうでないと `on` が `message.render refused` を投げます。
 
+
+### テーマ (Theming)
+
+`$.theme.*` は Pawn の色を変え、mod 自身の UI にスタイルを当てます。どの呼び出しも mod 内だけで使う `id`（`[A-Za-z0-9_-]{1,64}`）を受け取り、同じ `id` で呼ぶと置き換えます。`mode` は `light`、`dark`、`all`（既定）のいずれかです。
+
+| 呼び出し | 内容 | 権限 |
+| --- | --- | --- |
+| `$.theme.vars({ id, vars, mode })` | アプリのルートの CSS カスタムプロパティを上書きします。例: `{ '--accent': '#2f6b3a' }`。`--名前` のキーのみ（なければ `--` を付けます）、1 回 128 個まで、値は 200 文字まで。 | `theme` |
+| `$.theme.css({ id, css, mode })` | `@scope ([data-plugin="<mod>"])` で包んだスタイルシートで、この mod が `$.slot.*` で描いた要素にだけ効きます（`:scope` はスロットのルート）。32KB まで。 | `theme` |
+| `$.theme.remove({ id })` / `$.theme.list()` | この mod の項目を一つ消す / 一覧を返す。 | なし |
+
+- リソースを読み込んだりブロックの外に出たりできるものはエラーで拒否します: `url(`、`@import`、`image-set(`、`expression(`、`<`、`\`、対応しない波括弧、`@scope`・`@layer`・`@font-face`・`@namespace`・`@charset`。変数の値は `;`、`{`、`}` も拒否します。
+- まず使う変数: `--bg-primary`、`--bg-secondary`、`--bg-sidebar`、`--text-primary`、`--text-secondary`、`--text-muted`、`--border-color`、`--primary`、`--accent`、`--danger`、`--success`（全一覧は `src/renderer/src/styles/global.css`）。
+- ユーザーは mod を止めずにその mod のテーマだけを切れます。mods メニュー（コンポーザー上のチップ）で mod の横の **Theme** トグルです。選択は再起動後も残ります。mod を再読み込みするとテーマは消えます。
+- スロットと同じく、ソースに文字どおり書かれていない `$.theme.vars` / `$.theme.css` 呼び出しはランタイムが拒否します。レビューダイアログには **Change colors and styles** と表示されます。危険度は**中**です。テーマは何も読めずネットワークにも届きませんが、Pawn の一部を別物のように見せられます。
+- なりすまし対策: 同意ダイアログ、mods メニュー（Theme トグルを含む）、**設定 → Mods** は `.mods-trusted` ルートです。既定のトークンを再宣言し、mod の変数ルールは `:not(.mods-trusted)` を使うので、`$.theme.vars` は届きません。スコープ付きシートも届かず、`position: fixed` / `sticky` は拒否されるため、偽のダイアログを上に重ねられません。
+- サンプル: `examples/mods/theming-demo/` は 2 つのパレット（ライトとダーク）を切り替え、自分のサイドバーセクションを装飾します。既定ではインストールされません。`~/.pawn/mods/theming-demo` にコピーして許可してください。
 
 ## 7. `$` API
 

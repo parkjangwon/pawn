@@ -72,7 +72,7 @@ Mods are not sandboxed. They run with your account: files, shell, network, the c
 Before a mod loads, Settings shows a review dialog:
 
 - a capability list derived from the hooks it registers and the `$.…` calls in source: one row per capability, with a label and a one-line description (`settings.modsSection.cap.<id>` and `settings.modsSection.capDesc.<id>` in `strings.ts`; ids in `src/renderer/src/agent/mods/capabilities.ts`). A new capability needs an id, a rule, and both strings
-- a risk chip: **high** if it can run a process or use the network, **medium** if it can touch files or tools, or read message text (`message.render`), **low** otherwise
+- a risk chip: **high** if it can run a process or use the network, **medium** if it can touch files or tools, read message text (`message.render`), or change the theme (`$.theme.vars` / `$.theme.css`), **low** otherwise
 - the version you are allowing
 
 Allow writes that exact version into `consentedPlugins` and removes the name from `disabledPlugins`. Revoke deletes the consent entry and disables the name.
@@ -205,6 +205,23 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 - **Per chat:** `e.sessionId` is the chat the message belongs to, not the chat on screen, and `$.session` inside the hook is that chat. Keep per-chat state keyed by `e.sessionId`.
 - Like slots, the event name must be written literally (`on('message.render', …)`); otherwise `on` throws `message.render refused`.
 
+
+### Theming
+
+`$.theme.*` recolors Pawn and styles a mod's own chrome. Each call takes a mod-local `id` (`[A-Za-z0-9_-]{1,64}`); calling again with the same `id` replaces it. `mode` is `light`, `dark` or `all` (default).
+
+| Call | What it does | Capability |
+| --- | --- | --- |
+| `$.theme.vars({ id, vars, mode })` | Overrides CSS custom properties on the app root, e.g. `{ '--accent': '#2f6b3a' }`. Only `--name` keys (the `--` is added if missing), up to 128 per call, values up to 200 characters. | `theme` |
+| `$.theme.css({ id, css, mode })` | A stylesheet wrapped in `@scope ([data-plugin="<mod>"])`, so it only reaches elements this mod drew with `$.slot.*` (`:scope` is the slot's root). Up to 32 KB. | `theme` |
+| `$.theme.remove({ id })` / `$.theme.list()` | Remove one of this mod's entries / list them. | none |
+
+- Anything that could load a resource or break out of the block is refused with an error: `url(`, `@import`, `image-set(`, `expression(`, `<`, `\`, unbalanced braces, and the at-rules `@scope`, `@layer`, `@font-face`, `@namespace`, `@charset`. Var values also refuse `;`, `{` and `}`.
+- Variables to start with: `--bg-primary`, `--bg-secondary`, `--bg-sidebar`, `--text-primary`, `--text-secondary`, `--text-muted`, `--border-color`, `--primary`, `--accent`, `--danger`, `--success` (full list in `src/renderer/src/styles/global.css`).
+- The user can switch one mod's theme off without turning the mod off: the **Theme** toggle next to it in the mods menu (the chip above the composer). The choice is kept across restarts. Themes are cleared when mods reload.
+- Like slots, the runtime refuses a `$.theme.vars` / `$.theme.css` call that isn't written literally in the source. The review dialog shows them as **Change colors and styles**. Risk is **medium**: a theme can't read anything or reach the network, but it can make parts of Pawn look like something they're not.
+- Anti-spoofing: the consent dialog, the mods menu (with its Theme toggles) and **Settings → Mods** are `.mods-trusted` roots. They re-declare the default tokens, and mod var rules use `:not(.mods-trusted)`, so `$.theme.vars` never reaches them. Scoped sheets can't reach them either, and `position: fixed` / `sticky` is refused so a mod can't float a fake dialog over them.
+- Sample: `examples/mods/theming-demo/` swaps two palettes (light and dark) and styles its sidebar section. It is not installed by default; copy it to `~/.pawn/mods/theming-demo` and allow it.
 
 ## 7. `$` API
 

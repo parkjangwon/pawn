@@ -68,6 +68,7 @@ export function ModHeaderSlots(): React.JSX.Element | null {
       {slots.map((slot) => (
         <button
           key={`${slot.plugin}/${slot.id}`}
+          data-plugin={slot.plugin}
           type="button"
           className="chat-header-btn mod-slot-header"
           title={`${slot.title} (${slot.plugin})`}
@@ -89,6 +90,7 @@ export function ModToolbarSlots({ hidden }: { hidden?: boolean }): React.JSX.Ele
       {slots.map((slot) => (
         <button
           key={`${slot.plugin}/${slot.id}`}
+          data-plugin={slot.plugin}
           type="button"
           className="mod-slot-toolbar"
           title={`${slot.title} (${slot.plugin})`}
@@ -111,6 +113,7 @@ export function ModStatusbarSlots(): React.JSX.Element | null {
         slot.tree != null ? (
           <span
             key={`${slot.plugin}/${slot.id}`}
+            data-plugin={slot.plugin}
             className="mod-slot-status"
             title={`${slot.title} (${slot.plugin})`}
           >
@@ -119,6 +122,7 @@ export function ModStatusbarSlots(): React.JSX.Element | null {
         ) : (
           <button
             key={`${slot.plugin}/${slot.id}`}
+            data-plugin={slot.plugin}
             type="button"
             className="mod-slot-status mod-slot-status-btn"
             title={`${slot.title} (${slot.plugin})`}
