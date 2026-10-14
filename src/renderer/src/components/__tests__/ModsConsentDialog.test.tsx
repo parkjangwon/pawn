@@ -92,14 +92,17 @@ describe('mod capability descriptions', () => {
     toolbar: true,
     settingsPage: true,
     statusbar: true,
+    palette: true,
+    shortcuts: true,
+    messages: true,
     prompt: true,
     store: true
   }
 
   it('gives every capability a descKey whose string exists', () => {
     const derived = deriveModCapabilities(
-      ['tool.x', 'fs.x', 'process.x', 'http.x', 'command.x', 'ui.x', 'prompt.x'],
-      ['$.tool.call', '$.fs.read', '$.process.exec', '$.http.get', '$.command.add', '$.ui.toast', '$.slot.sidebar', '$.slot.toolbar', '$.slot.settings', '$.slot.statusbar', '$.prompt.set', '$.store.get']
+      ['tool.x', 'fs.x', 'process.x', 'http.x', 'command.x', 'ui.x', 'message.render', 'prompt.x'],
+      ['$.tool.call', '$.fs.read', '$.process.exec', '$.http.get', '$.command.add', '$.ui.toast', '$.slot.sidebar', '$.slot.toolbar', '$.slot.settings', '$.slot.statusbar', '$.slot.palette', '$.slot.shortcut', '$.prompt.set', '$.store.get']
     )
     expect(derived.map((cap) => cap.id)).toEqual(Object.keys(caps))
     for (const cap of derived) {
@@ -107,5 +110,27 @@ describe('mod capability descriptions', () => {
       expect(EN[cap.descKey]).toBeTruthy()
       expect(EN[cap.labelKey]).toBeTruthy()
     }
+  })
+})
+
+describe('messages capability risk', () => {
+  it('rates a mod that only reads messages as medium risk', async () => {
+    const { deriveModRisk } = await import('../../agent/mods/capabilities')
+    expect(deriveModRisk(['message.render'], [])).toBe('medium')
+    expect(deriveModRisk(['message.render'], ['$.http.fetch'])).toBe('high')
+  })
+
+  it('shows Medium risk and the message-text description in the dialog', () => {
+    render(
+      <ModsConsentDialog
+        preview={{ name: 'msg-mod', version: '0.1.0', ok: true, hooks: ['message.render'], calls: [], findings: [] }}
+        onCancel={() => {}}
+        onConfirm={() => {}}
+      />
+    )
+    const dialog = screen.getByRole('dialog')
+    expect(dialog.querySelector('.mods-risk')).toHaveTextContent(EN['settings.modsSection.risk.medium'])
+    const row = dialog.querySelector('.mods-cap-row[data-cap="messages"]')
+    expect(row?.querySelector('.mods-cap-desc')).toHaveTextContent('Reads the text of finished messages')
   })
 })

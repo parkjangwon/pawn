@@ -38,6 +38,7 @@ const KNOWN_EVENTS = new Set([
   'agent.offer',
   'agent.spawn',
   'ui.render',
+  'message.render',
   'ui.resolve',
   'ui.press',
   'ui.input',
@@ -92,6 +93,7 @@ const EMITTED_EVENTS = new Set([
   'tool.check',
   'command.run',
   'ui.render',
+  'message.render',
   'ui.press',
   'ui.input',
   'ui.select'

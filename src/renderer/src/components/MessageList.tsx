@@ -9,6 +9,7 @@ import ToolBatch from './ToolBatch'
 import SubagentActivity from './SubagentActivity'
 import LiveToolActivity from './LiveToolActivity'
 import ErrorCard from './ErrorCard'
+import { ModMessageDecor } from './ModSlots'
 import { useStreamingStore } from '../stores/streaming'
 import { useChatStore } from '../stores/chat'
 import { useModsUiStore } from '../agent/mods/uiStore'
@@ -362,6 +363,9 @@ const MessageRow = memo(function MessageRow({
             )}
           </div>
         )}
+        {!isLive && !isStreamingTail && sessionId && !editing ? (
+          <ModMessageDecor messageId={msg.id} role={msg.role} text={msg.content} sessionId={sessionId} />
+        ) : null}
         {!intermediate && (
         <div className="message-actions">
           <button
