@@ -63,6 +63,16 @@ export function shortcutsConflict(a: string, b: string): boolean {
   return true
 }
 
+/**
+ * Chords the app handles outside the rebindable keybindings (editing, find,
+ * save, quit, reload, Alt+P model picker). A mod can never take these.
+ */
+export const RESERVED_APP_SHORTCUTS: readonly string[] = [
+  'Mod+A', 'Mod+C', 'Mod+V', 'Mod+X', 'Mod+Z', 'Mod+Shift+Z', 'Mod+Y',
+  'Mod+F', 'Mod+S', 'Mod+Q', 'Mod+R', 'Mod+Shift+R', 'Mod+=', 'Mod+-', 'Mod+0',
+  'Alt+P', 'Escape', 'Enter', 'Tab', 'Shift+Tab'
+]
+
 export function shortcutConflictMessage(keys: string, plugin: string, id: string): string | null {
   const norm = normalizeShortcut(keys)
   if (!norm) return null
@@ -71,6 +81,11 @@ export function shortcutConflictMessage(keys: string, plugin: string, id: string
     if (!combo) continue
     if (shortcutsConflict(norm, combo)) {
       return `Shortcut "${norm}" conflicts with the app shortcut ${bid} (${combo})`
+    }
+  }
+  for (const combo of RESERVED_APP_SHORTCUTS) {
+    if (shortcutsConflict(norm, combo)) {
+      return `Shortcut "${norm}" is reserved by the app (${combo})`
     }
   }
   for (const slot of useModsUiStore.getState().slots) {
