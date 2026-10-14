@@ -1,5 +1,5 @@
 import { useAppStore } from './app'
-import { classifyProviderError } from '../agent/providerErrors'
+import { classifyProviderError, type ProviderErrorContext } from '../agent/providerErrors'
 import type { MessageErrorInfo } from './app'
 import { useProviderStore } from './provider'
 import { useUsageStore } from './usage'
@@ -44,8 +44,8 @@ export function systemError(
 }
 
 /** Map a thrown LLM error to a user-facing failure class for the error card. */
-export function classifyLlmError(message: string): MessageErrorInfo {
-  return classifyProviderError(message)
+export function classifyLlmError(message: string, ctx: ProviderErrorContext = {}): MessageErrorInfo {
+  return classifyProviderError(message, ctx)
 }
 
 export async function loadTranscript(projectId: string, sessionId: string): Promise<TranscriptEntry[]> {

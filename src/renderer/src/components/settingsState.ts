@@ -19,7 +19,7 @@ import {
   pickTestModelId,
   summarizeProviderError
 } from '../agent/testProvider'
-import { enrichTransportError, formatConnectionTestFailure } from '../agent/providerErrors'
+import { enrichTransportError, formatConnectionTestFailure, headersCarryKey } from '../agent/providerErrors'
 import { loadProjectContext, skillSummary, type LoadedSkill } from '../agent/skills'
 import { isSkillEnabled, loadDisabledSkillNames, setSkillEnabled } from '../utils/skillVisibility'
 import { isOpenRouterProvider } from '../agent/listModels'
@@ -481,7 +481,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
           ...r,
           [providerId]: {
             ok: false,
-            message: formatConnectionTestFailure(`HTTP ${response.status}: ${text}`)
+            message: formatConnectionTestFailure(`HTTP ${response.status}: ${text}`, { keySent: headersCarryKey(headers) })
           }
         }))
       }

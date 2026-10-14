@@ -86,8 +86,34 @@ const TARGET_OF: Partial<Record<ProviderErrorKind, ProviderSettingsTarget>> = {
   context: 'models'
 }
 
+export interface ProviderErrorContext {
+  /**
+   * True when the failed request carried a credential (Authorization / x-api-key).
+   * Some providers answer a key they can't parse with a "missing" message —
+   * OpenRouter says "Missing Authentication header" for a malformed key — so
+   * with a key on the wire that wording means the key was rejected, not absent.
+   */
+  keySent?: boolean
+}
+
+/** True when request headers carry a non-empty credential. */
+export function headersCarryKey(headers: Record<string, string> | undefined | null): boolean {
+  if (!headers) return false
+  return Object.entries(headers).some(([k, v]) => {
+    const name = k.toLowerCase()
+    if (name !== 'authorization' && name !== 'x-api-key' && name !== 'api-key') return false
+    return String(v ?? '').replace(/^(bearer|basic)\s*/i, '').trim().length > 0
+  })
+}
+
 /** Pick the most specific reason from the message, or null for "unknown". */
-export function providerErrorReason(message: string): ProviderErrorReason | null {
+export function providerErrorReason(message: string, ctx: ProviderErrorContext = {}): ProviderErrorReason | null {
+  const reason = providerErrorReasonRaw(message)
+  if (reason === 'missingKey' && ctx.keySent) return 'invalidKey'
+  return reason
+}
+
+function providerErrorReasonRaw(message: string): ProviderErrorReason | null {
   const status = message.match(/HTTP (\d{3})/)?.[1]
   const s = message.toLowerCase()
 
@@ -95,7 +121,7 @@ export function providerErrorReason(message: string): ProviderErrorReason | null
   if (has(s, 'context_length_exceeded', 'context length', 'context window', 'maximum context', 'prompt is too long', 'too many tokens', 'input is too long', 'request too large') || status === '413') {
     return 'contextTooLong'
   }
-  if (has(s, 'missing api key', 'no api key', 'api key is missing', 'api key not provided', 'apikey is required', 'api key is required', 'x-api-key header is required', 'missing authentication', 'no auth credentials')) {
+  if (has(s, 'missing api key', 'no api key', 'api key is missing', 'api key not provided', 'apikey is required', 'api key is required', 'x-api-key header is required', 'missing authentication', 'no auth credentials', 'no cookie auth credentials')) {
     return 'missingKey'
   }
   // Out of credits / billing: OpenAI sends insufficient_quota with 429, others 402/400.
@@ -137,10 +163,10 @@ export function providerErrorReason(message: string): ProviderErrorReason | null
 }
 
 /** Map a thrown LLM error to a user-facing failure class for the error card. */
-export function classifyProviderError(message: string): ProviderErrorInfo {
+export function classifyProviderError(message: string, ctx: ProviderErrorContext = {}): ProviderErrorInfo {
   const safe = redactSecrets(message)
   const detail = safe.length > 500 ? `${safe.slice(0, 500)}…` : safe
-  const reason = providerErrorReason(message)
+  const reason = providerErrorReason(message, ctx)
   if (!reason) return { kind: 'generic', detail }
   const kind = KIND_OF[reason]
   const settingsTarget = TARGET_OF[kind]
@@ -175,8 +201,8 @@ export function describeProviderError(info: Pick<ProviderErrorInfo, 'kind' | 're
  * Settings → Providers "Test connection" failure line:
  * `Connection failed (401): the API key was rejected. …`
  */
-export function formatConnectionTestFailure(rawMessage: string): string {
-  const reason = providerErrorReason(rawMessage)
+export function formatConnectionTestFailure(rawMessage: string, ctx: ProviderErrorContext = {}): string {
+  const reason = providerErrorReason(rawMessage, ctx)
   const http = rawMessage.match(/HTTP (\d{3})(?::\s*([\s\S]*))?/)
   const label = http?.[1] ?? rawMessage.match(/\(cause: ([A-Za-z0-9_]+)/)?.[1] ?? (reason === 'timeout' ? 'timeout' : reason && KIND_OF[reason] === 'network' ? 'network' : 'error')
   // Redact before summarize/truncate so a cut-off key can't slip past the masker.

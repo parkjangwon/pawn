@@ -615,7 +615,7 @@ export async function agentLoop(
       let decision: RouteDecision | null = null
       let lastAssistantMsgId: string | null = null
       // First failure in this round's failover, not the last fallback.
-      let firstFail: { label: string; message: string } | null = null
+      let firstFail: { label: string; message: string; keySent?: boolean } | null = null
       let lastFail: { label: string; message: string } | null = null
 
       let needsVision = transcriptNeedsVision(entries)
@@ -800,7 +800,7 @@ export async function agentLoop(
             throw err
           }
           const message = errorTextWithCause(err)
-          const fail = { label: decision.model.label || decision.model.modelId, message }
+          const fail = { label: decision.model.label || decision.model.modelId, message, keySent: Boolean(decision.provider.apiKey?.trim()) }
           if (!firstFail) firstFail = fail
           lastFail = fail
           // Preserve partial stream on failover: keep the bubble with a note so
@@ -854,7 +854,7 @@ export async function agentLoop(
               projectId,
               sessionId,
               formatAllAttemptsFailed(firstFail, fail),
-              classifyLlmError(firstFail.message)
+              classifyLlmError(firstFail.message, { keySent: firstFail.keySent })
             )
           }
         }
@@ -862,7 +862,7 @@ export async function agentLoop(
 
       if (!decision) {
         if (firstFail && lastFail && !needsVision) {
-          systemError(projectId, sessionId, formatAllAttemptsFailed(firstFail, lastFail), classifyLlmError(firstFail.message))
+          systemError(projectId, sessionId, formatAllAttemptsFailed(firstFail, lastFail), classifyLlmError(firstFail.message, { keySent: firstFail.keySent }))
         } else if (needsVision) {
           const code = describeVisionRouteFailure()
           const detailKey =
