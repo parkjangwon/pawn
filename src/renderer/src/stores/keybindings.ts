@@ -100,20 +100,28 @@ function getPlatform(): string {
 }
 
 /** Display form: ⌘⌥⇧+ key on macOS, Ctrl+Alt+... elsewhere. */
-export function formatCombo(combo: string, platform?: string): string {
+/** Per-key labels for a combo, in standard modifier order (for keycap rendering). */
+export function formatComboKeys(combo: string, platform?: string): string[] {
   const plat = platform || getPlatform()
   const c = parseCombo(combo)
-  if (!c) return combo
-  const mods: string[] = []
+  if (!c) return combo ? [combo] : []
+  const mac = plat === 'darwin'
+  const keys: string[] = []
   // Standard order: Control, Option, Shift, Command. Meta and Ctrl are
   // interchangeable on every platform, so a Meta binding reads as Ctrl
   // elsewhere and vice versa.
-  if (c.ctrl) mods.push(plat === 'darwin' ? '⌃' : 'Ctrl+')
-  if (c.alt) mods.push(plat === 'darwin' ? '⌥' : 'Alt+')
-  if (c.shift) mods.push(plat === 'darwin' ? '⇧' : 'Shift+')
-  if (c.meta) mods.push(plat === 'darwin' ? '⌘' : 'Ctrl+')
-  const key = c.key.length === 1 ? c.key.toUpperCase() : c.key
-  return mods.join('') + key
+  if (c.ctrl) keys.push(mac ? '⌃' : 'Ctrl')
+  if (c.alt) keys.push(mac ? '⌥' : 'Alt')
+  if (c.shift) keys.push(mac ? '⇧' : 'Shift')
+  if (c.meta) keys.push(mac ? '⌘' : 'Ctrl')
+  keys.push(c.key.length === 1 ? c.key.toUpperCase() : c.key)
+  return keys
+}
+
+export function formatCombo(combo: string, platform?: string): string {
+  const plat = platform || getPlatform()
+  if (!parseCombo(combo)) return combo
+  return formatComboKeys(combo, plat).join(plat === 'darwin' ? '' : '+')
 }
 
 interface KeybindingsState {

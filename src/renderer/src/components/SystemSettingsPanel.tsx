@@ -95,7 +95,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
           <div className="settings-row-actions">
             <button
               type="button"
-              className="btn-action"
+              className="settings-btn-secondary btn-action"
               disabled={updateChecking}
               onClick={() => {
                 if (!window.api?.checkForUpdates) {
@@ -133,7 +133,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
             </button>
             <button
               type="button"
-              className="btn-action"
+              className="settings-btn-secondary btn-action"
               disabled={updateChecking}
               onClick={() => {
                 if (!window.api?.downloadUpdate) {
@@ -180,7 +180,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
           </div>
           <button
             type="button"
-            className="btn-action btn-with-icon"
+            className="settings-btn-secondary btn-action btn-with-icon"
             onClick={() => {
               window.api?.browser?.open?.(REPO_URL)?.catch?.(() => {})
             }}

@@ -396,10 +396,10 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           <p className="agents-settings-subhint">{'When work can be split up, Pawn can run several helpers at the same time (up to six) so independent tasks finish faster. Watch them live in the chat, or open the Agents panel for full history.'}</p>
         </div>
         <div className="agents-settings-head-actions">
-          <button type="button" className="agents-settings-refresh" onClick={() => void refresh()}>
+          <button type="button" className="settings-btn-secondary agents-settings-refresh" onClick={() => void refresh()}>
             {'Refresh'}
           </button>
-          <button type="button" className="agents-settings-primary" onClick={() => openCreate()}>
+          <button type="button" className="settings-btn-primary agents-settings-primary" onClick={() => openCreate()}>
             {'New agent'}
           </button>
         </div>
@@ -766,13 +766,13 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
           <div className="agents-editor-actions">
             <button
               type="button"
-              className="agents-settings-primary"
+              className="settings-btn-primary agents-settings-primary"
               disabled={saving}
               onClick={() => void handleSave()}
             >
               {saving ? 'Saving…' : 'Save'}
             </button>
-            <button type="button" className="agents-settings-refresh" onClick={closeEditor}>
+            <button type="button" className="settings-btn-secondary agents-settings-refresh" onClick={closeEditor}>
               {'Cancel'}
             </button>
           </div>

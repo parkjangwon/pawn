@@ -17,6 +17,12 @@
   gap: 10px;
 }
 
+/* The auth select's longest option ("SSH key (agent or default keys)") needs
+   more than one 170px column once the chevron space is reserved. */
+.remote-field-wide {
+  grid-column: span 2;
+}
+
 .remote-field {
   display: flex;
   flex-direction: column;
@@ -27,7 +33,10 @@
 
 .remote-field input,
 .remote-field select {
-  padding: 8px 10px;
+  /* Height and vertical metrics come from Input/Select (28px); only inline padding here. */
+  padding-inline: 10px;
+  padding-block: 0;
+  line-height: normal;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
@@ -81,7 +90,9 @@
 
 .remote-project-controls select,
 .remote-path-input {
-  padding: 6px 10px;
+  padding-inline: 10px;
+  padding-block: 0;
+  line-height: normal;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
@@ -92,7 +103,13 @@
 
 .remote-path-input {
   min-width: 220px;
+  /* Typed paths stay monospace; the placeholder is prose, so UI font. */
   font-family: var(--font-mono);
+}
+
+.remote-path-input::placeholder {
+  font-family: var(--font-sans);
+  letter-spacing: normal;
 }
 
 .remote-path-input:disabled {

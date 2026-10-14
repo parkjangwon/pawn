@@ -67,7 +67,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
             <span className="settings-row-desc">{'Export all settings and configuration to a file'}</span>
           </div>
           <button
-            className="btn-action"
+            className="settings-btn-secondary btn-action"
             onClick={() => {
               const data = {
                 _note: 'API keys are not exported; re-enter keys after import.',
@@ -99,7 +99,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
             </span>
           </div>
           <button
-            className="btn-action"
+            className="settings-btn-secondary btn-action"
             onClick={() => {
               const input = document.createElement('input')
               input.type = 'file'
@@ -158,7 +158,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
           </div>
           <div className="settings-row-actions">
             <button
-              className="btn-action"
+              className="settings-btn-secondary btn-action"
               onClick={() => {
                 if (!window.api?.exportBackup) {
                   setBackupMsg('Available in the desktop app')
@@ -177,7 +177,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
               {'Backup (no secrets)'}
             </button>
             <button
-              className="btn-action"
+              className="settings-btn-secondary btn-action"
               onClick={() => {
                 if (!window.api?.exportBackup) {
                   setBackupMsg('Available in the desktop app')
@@ -189,7 +189,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
               {'Full local backup'}
             </button>
             <button
-              className="btn-action"
+              className="settings-btn-secondary btn-action"
               onClick={() => {
                 if (!window.api?.importBackup) {
                   setBackupMsg('Available in the desktop app')
@@ -211,7 +211,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
             {pawnPaths?.configPath && <span className="plugin-source">{pawnPaths.configPath}</span>}
           </div>
           <div className="settings-row-actions">
-            <button className="btn-action" disabled={!pawnPaths?.configPath} onClick={() => { if (pawnPaths) void window.api.workspace.openPath(pawnPaths.configPath) }}>
+            <button className="settings-btn-secondary btn-action" disabled={!pawnPaths?.configPath} onClick={() => { if (pawnPaths) void window.api.workspace.openPath(pawnPaths.configPath) }}>
               {'Open'}
             </button>
           </div>
@@ -223,7 +223,7 @@ export default function DataSettingsPanel({ state }: { state: SettingsState }): 
             {pawnPaths?.dataDir && <span className="plugin-source">{pawnPaths.dataDir}</span>}
           </div>
           <div className="settings-row-actions">
-            <button className="btn-action" disabled={!pawnPaths?.dataDir} onClick={() => { if (pawnPaths) void window.api.workspace.openPath(pawnPaths.dataDir) }}>
+            <button className="settings-btn-secondary btn-action" disabled={!pawnPaths?.dataDir} onClick={() => { if (pawnPaths) void window.api.workspace.openPath(pawnPaths.dataDir) }}>
               {'Open'}
             </button>
           </div>

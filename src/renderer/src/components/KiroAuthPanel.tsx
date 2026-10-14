@@ -105,7 +105,7 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
           <a href={device.url} target="_blank" rel="noreferrer">
             {'Open sign-in page'}
           </a>{' '}
-          <button type="button" className="test-btn" onClick={() => void api.cancelLogin().then(() => (setDevice(null), setBusy(false)))}>
+          <button type="button" className="settings-btn-secondary test-btn" onClick={() => void api.cancelLogin().then(() => (setDevice(null), setBusy(false)))}>
             {'Cancel'}
           </button>
         </div>
@@ -114,12 +114,12 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
       {!device && (
         <div className="form-actions kiro-actions">
           {status?.signedIn ? (
-            <button type="button" className="test-btn" disabled={busy} onClick={() => void run(() => api.signOut())}>
+            <button type="button" className="settings-btn-secondary test-btn" disabled={busy} onClick={() => void run(() => api.signOut())}>
               {'Sign out'}
             </button>
           ) : (
             <>
-              <Button type="button" disabled={busy} onClick={() => void startDevice('builder-id')}>
+              <Button className="settings-btn-primary" type="button" disabled={busy} onClick={() => void startDevice('builder-id')}>
                 {'Sign in with AWS Builder ID'}
               </Button>
               <span
@@ -127,13 +127,13 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
               >
                 ✓ {'Recommended'}
               </span>
-              <button type="button" className="test-btn" disabled={busy} onClick={() => setForm(form === 'idc' ? null : 'idc')}>
+              <button type="button" className="settings-btn-secondary test-btn" disabled={busy} onClick={() => setForm(form === 'idc' ? null : 'idc')}>
                 {'IAM Identity Center…'}
               </button>
-              <button type="button" className="test-btn" disabled={busy} onClick={() => void run(() => api.importLogin('auto'), onSignedIn)}>
+              <button type="button" className="settings-btn-secondary test-btn" disabled={busy} onClick={() => void run(() => api.importLogin('auto'), onSignedIn)}>
                 {'Use Kiro CLI / IDE login'}
               </button>
-              <button type="button" className="test-btn" disabled={busy} onClick={() => setForm(form === 'apiKey' ? null : 'apiKey')}>
+              <button type="button" className="settings-btn-secondary test-btn" disabled={busy} onClick={() => setForm(form === 'apiKey' ? null : 'apiKey')}>
                 {'API key…'}
               </button>
             </>
@@ -145,7 +145,7 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
         <div className="add-form kiro-form">
           <Input placeholder="https://your-org.awsapps.com/start" value={startUrl} onChange={(e) => setStartUrl(e.target.value)} />
           <Input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={'Region'} />
-          <Button type="button" disabled={busy || !startUrl.trim()} onClick={() => void startDevice('idc')}>
+          <Button className="settings-btn-primary" type="button" disabled={busy || !startUrl.trim()} onClick={() => void startDevice('idc')}>
             {'Continue'}
           </Button>
         </div>
@@ -154,7 +154,7 @@ export default function KiroAuthPanel({ onSignedIn }: { onSignedIn?: () => void 
         <div className="add-form kiro-form">
           <Input type="password" placeholder="ksk_…" value={apiKey} onChange={(e) => setApiKey(e.target.value)} autoFocus />
           <Input placeholder="us-east-1" value={region} onChange={(e) => setRegion(e.target.value)} aria-label={'Region'} />
-          <Button type="button" disabled={busy || !apiKey.trim()} onClick={() => void run(() => api.setApiKey(apiKey.trim(), region.trim()), () => (setApiKey(''), onSignedIn?.()))}>
+          <Button className="settings-btn-primary" type="button" disabled={busy || !apiKey.trim()} onClick={() => void run(() => api.setApiKey(apiKey.trim(), region.trim()), () => (setApiKey(''), onSignedIn?.()))}>
             {'Save'}
           </Button>
         </div>

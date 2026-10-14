@@ -221,14 +221,14 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
           {hasToken && !replacing && (
             <div className="telegram-actions">
               {href && (
-                <a className="btn-cancel telegram-link" href={href} target="_blank" rel="noreferrer">
+                <a className="settings-btn-secondary btn-cancel telegram-link" href={href} target="_blank" rel="noreferrer">
                   {`Open @${status?.username}`}
                 </a>
               )}
-              <Button type="button" variant="secondary" onClick={() => setReplacing(true)}>
+              <Button className="settings-btn-secondary" type="button" variant="secondary" onClick={() => setReplacing(true)}>
                 {'Replace token'}
               </Button>
-              <Button
+              <Button className="settings-btn-secondary"
                 type="button"
                 variant="secondary"
                 onClick={() => {
@@ -259,14 +259,14 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 placeholder={'123456:ABC…'}
                 onChange={(e) => setToken(e.target.value)}
               />
-              <Button type="submit" disabled={busy || !token.trim()}>
+              <Button className="settings-btn-primary" type="submit" disabled={busy || !token.trim()}>
                 {'Save token'}
               </Button>
-              <a className="btn-cancel telegram-link" href={BOT_FATHER} target="_blank" rel="noreferrer">
+              <a className="settings-btn-secondary btn-cancel telegram-link" href={BOT_FATHER} target="_blank" rel="noreferrer">
                 {'Open BotFather'}
               </a>
               {replacing && (
-                <Button
+                <Button className="settings-btn-secondary"
                   type="button"
                   variant="secondary"
                   onClick={() => {
@@ -344,10 +344,10 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               <span className="settings-row-desc">{p.userId}</span>
             </div>
             <div className="telegram-actions">
-              <Button type="button" variant="secondary" onClick={() => void copyCode(p.code)}>
+              <Button className="settings-btn-secondary" type="button" variant="secondary" onClick={() => void copyCode(p.code)}>
                 {copied === p.code ? 'Copied' : 'Copy'}
               </Button>
-              <Button
+              <Button className="settings-btn-primary"
                 type="button"
                 onClick={() => {
                   run(window.api?.telegram?.approve(p.code))
@@ -355,7 +355,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               >
                 {'Approve'}
               </Button>
-              <Button
+              <Button className="settings-btn-secondary"
                 type="button"
                 variant="secondary"
                 onClick={() => {
@@ -384,7 +384,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
               <span className="settings-row-label">{personLabel(u)}</span>
               <span className="settings-row-desc">{u.userId}</span>
             </div>
-            <Button
+            <Button className="settings-btn-secondary"
               type="button"
               variant="secondary"
               onClick={() => {
@@ -417,7 +417,7 @@ export default function TelegramSettingsPanel(): React.JSX.Element {
                 setUserError(null)
               }}
             />
-            <Button type="submit" disabled={busy || !userId.trim()}>
+            <Button className="settings-btn-primary" type="submit" disabled={busy || !userId.trim()}>
               {'Add user'}
             </Button>
           </form>
