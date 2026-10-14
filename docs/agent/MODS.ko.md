@@ -68,7 +68,7 @@ mods는 샌드박스가 없어요. 파일, 셸, 네트워크, 채팅을 내 계�
 불러오기 전에 설정이 검토 창을 보여요.
 
 - 등록한 훅과 소스의 `$.…` 호출로 만든 권한 목록: 권한마다 한 줄에 이름과 한 줄 설명이 있어요 (`strings.ts`의 `settings.modsSection.cap.<id>`와 `settings.modsSection.capDesc.<id>`, id는 `src/renderer/src/agent/mods/capabilities.ts`). 새 권한에는 id, 규칙, 두 문자열이 모두 필요해요
-- 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구면 **보통**, 아니면 **낮음**
+- 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구, 또는 메시지 본문을 읽거나(`message.render`) 테마를 바꾸면(`$.theme.vars` / `$.theme.css`) **보통**, 아니면 **낮음**
 - 허용하는 버전
 
 허용하면 그 버전이 `consentedPlugins`에 들어가고, 이름은 `disabledPlugins`에서 빠져요. 동의를 철회하면 항목을 지우고 그 이름을 꺼요.
@@ -179,12 +179,27 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 | `$.slot.toolbar({ id, label, title })` | 컴포저 줄의 첨부 버튼 옆 버튼. 빈 홈 화면에서는 숨겨져요. | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | **설정 → Mods** 아래 페이지. 페이지마다 메뉴 항목 하나. | `settingsPage` |
 | `$.slot.statusbar({ id, text, title, tree })` | 왼쪽 사이드바 맨 아래, 설정 버튼 위의 작은 항목(Pawn에는 보이는 상태 표시줄이 없어요). 텍스트 항목은 버튼이고, `tree` 항목은 트리를 그려요. | `statusbar` |
+| `$.slot.palette({ id, title, hint })` | 명령 팔레트의 **Mods** 그룹 항목. 실행하면 `slot: 'palette'`가 담긴 `ui.press`를 보내요. | `palette` |
+| `$.slot.shortcut({ id, keys, title })` | 단축키. 예: `Mod+Shift+U` (`Mod`는 macOS에서 Cmd, 그 밖에서는 Ctrl). 누르면 `slot: 'shortcut'`이 담긴 `ui.press`를 보내요. | `shortcuts` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | 이 mod의 항목 하나를 지우기 / 목록 보기. | 없음 |
 
 - 클릭은 `{ plugin, id, slot }`이 담긴 `ui.press`로 와요. 슬롯 트리 안의 버튼, 입력, 선택은 같은 `slot` 필드와 함께 `ui.press`, `ui.input`, `ui.select`를 보내요. `{ plugin: '<내 mod>' }`로 거르세요.
 - 항목은 프로젝트의 mod 런타임에 속해요. 채팅을 바꿔도 남고, mod를 내리거나 끄거나 런타임을 다시 불러오면 사라져요.
 - 종류마다 검토 대화상자에 별도 권한으로 표시돼요. mod 소스에 글자 그대로 없는 `$.slot.<종류>` 호출은 런타임이 거부하므로, 대화상자에 나오지 않은 슬롯은 쓸 수 없어요. `$.slot[name](...)`이 아니라 `$.slot.header(...)`처럼 그대로 쓰세요.
 - 예제: `examples/mods/ui-slots-demo/`가 모든 슬롯을 써요. 기본으로 설치되지 않아요. `~/.pawn/mods/ui-slots-demo`에 복사한 뒤 허용하세요.
+- **단축키 충돌은 알리고, 절대 덮어쓰지 않아요.** 조합이 앱 단축키(설정 → 단축키), 앱이 예약한 조합(복사/붙여넣기/실행 취소, `Mod+F`, `Mod+S`, `Mod+Q`, `Mod+R`, 확대/축소, `Alt+P`, `Escape`, `Enter`, `Tab`), 다른 mod의 단축키와 겹치면 `$.slot.shortcut`이 예외를 던지고 mod 타임라인에 `conflict` 줄을 남겨요. 먼저 등록한 mod가 그대로 가져요. 나중에 앱 단축키를 mod 조합으로 바꾸면 앱이 이겨요. `Mod`/`Ctrl`/`Alt`가 없는 조합은 입력란에 타이핑하는 동안 실행되지 않아요.
+
+### 메시지 렌더 훅
+
+`on('message.render', ($, e, next) => …)`는 완료된 채팅 메시지를 꾸며요. 권한: `messages` (mod가 메시지 텍스트를 읽어요).
+
+- `e` = `{ messageId, role, text, sessionId, props: { badges, actions, blocks } }`. 배열에 덧붙이고 `return next({ ...e, props })` 하세요.
+- `badges`: `{ id, text, tone? }` (`tone`: `info`, `success`, `warning`, `danger`). `actions`: `{ id, label }`, 메시지 액션 줄의 버튼이에요. 누르면 `{ slot: 'message', id, messageId, sessionId, role }`이 담긴 `ui.press`를 보내요. `blocks`: `{ id, tree }`, 메시지 아래의 `$.ui.resolve()` 트리. 메시지마다 종류별 최대 8개.
+- 항목마다 추가한 mod가 찍혀서, 뒤의 mod가 앞 mod의 항목이나 클릭을 가로챌 수 없어요.
+- **스트리밍과 성능:** 답이 끝난 뒤에만 보내요. 스트리밍 중인 줄은 꾸미지 않아요. 결과는 (채팅, 메시지, 텍스트)별로 캐시되고, 텍스트가 바뀌거나 mod가 다시 그리기를 요청하거나(`$.ui.invalidate`, 슬롯 클릭 뒤) mod를 다시 불러올 때만 다시 물어요. `message.render` 훅이 없으면 아무 이벤트도 보내지 않아요. 훅이 예외를 던지거나 시간을 넘기면 메시지는 그대로예요.
+- **채팅별:** `e.sessionId`는 화면에 보이는 채팅이 아니라 메시지가 속한 채팅이고, 훅 안의 `$.session`도 그 채팅이에요. 채팅별 상태는 `e.sessionId`로 나눠 두세요.
+- 슬롯처럼 이벤트 이름은 그대로 써야 해요(`on('message.render', …)`). 아니면 `on`이 `message.render refused`를 던져요.
+
 
 ### 테마 (Theming)
 
@@ -199,7 +214,8 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 - 리소스를 불러오거나 블록 밖으로 나갈 수 있는 것은 오류로 거부해요: `url(`, `@import`, `image-set(`, `expression(`, `<`, `\`, 짝이 안 맞는 중괄호, 그리고 `@scope`, `@layer`, `@font-face`, `@namespace`, `@charset`. 변수 값은 `;`, `{`, `}`도 거부해요.
 - 먼저 써 볼 변수: `--bg-primary`, `--bg-secondary`, `--bg-sidebar`, `--text-primary`, `--text-secondary`, `--text-muted`, `--border-color`, `--primary`, `--accent`, `--danger`, `--success`(전체 목록은 `src/renderer/src/styles/global.css`).
 - 사용자는 mod를 끄지 않고 그 mod의 테마만 끌 수 있어요. mods 메뉴(컴포저 위 칩)에서 mod 옆의 **Theme** 토글이에요. 선택은 재시작 뒤에도 유지돼요. mod를 다시 불러오면 테마는 지워져요.
-- 슬롯처럼, 소스에 글자 그대로 없는 `$.theme.vars` / `$.theme.css` 호출은 런타임이 거부해요. 검토 대화상자에는 **Change colors and styles**로 나와요. 위험은 낮음이에요. 테마는 아무것도 읽거나 네트워크에 닿을 수 없지만 앱 모양을 바꿀 수 있어서, 설명에 그 점을 적어 두었어요.
+- 슬롯처럼, 소스에 글자 그대로 없는 `$.theme.vars` / `$.theme.css` 호출은 런타임이 거부해요. 검토 대화상자에는 **Change colors and styles**로 나와요. 위험은 **보통**이에요. 테마는 아무것도 읽거나 네트워크에 닿을 수 없지만, Pawn의 일부를 다른 것처럼 보이게 할 수 있어요.
+- 위장 방지: 동의 대화상자, mods 메뉴(Theme 토글 포함), **설정 → Mods**는 `.mods-trusted` 루트예요. 기본 토큰을 다시 선언하고, mod 변수 규칙은 `:not(.mods-trusted)`를 쓰므로 `$.theme.vars`가 닿지 않아요. 범위가 정해진 시트도 닿지 않고, `position: fixed` / `sticky`는 거부돼서 가짜 대화상자를 위에 띄울 수 없어요.
 - 예제: `examples/mods/theming-demo/`는 두 팔레트(라이트와 다크)를 바꾸고 자기 사이드바 섹션을 꾸며요. 기본으로 설치되지 않아요. `~/.pawn/mods/theming-demo`에 복사한 뒤 허용하세요.
 
 ## 7. `$` API

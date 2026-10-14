@@ -19,6 +19,36 @@ import type {
 const HOOK_BUDGET_MS = 10_000
 const TIER_ORDER: ModTier[] = ['prepend', 'user', 'append', 'builtin', 'core']
 
+function decorRows(v: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(v)) return []
+  return v.filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === 'object')
+}
+
+/** Stamp `plugin` on message.render entries this hook added, so a click reaches the owner. */
+function stampMessageRender(before: unknown, after: unknown, plugin: string): unknown {
+  if (!after || typeof after !== 'object') return after
+  const propsIn = (after as { props?: unknown }).props
+  if (!propsIn || typeof propsIn !== 'object') return after
+  const beforeProps =
+    before && typeof before === 'object' ? (before as { props?: unknown }).props : null
+  const prevRec =
+    beforeProps && typeof beforeProps === 'object' ? (beforeProps as Record<string, unknown>) : null
+  const props = { ...(propsIn as Record<string, unknown>) }
+  for (const key of ['badges', 'actions', 'blocks'] as const) {
+    const prev = new Map(
+      decorRows(prevRec?.[key]).map((item) => [typeof item.id === 'string' ? item.id : '', item])
+    )
+    props[key] = decorRows(props[key]).map((item) => {
+      const id = typeof item.id === 'string' ? item.id : ''
+      const was = id ? prev.get(id) : undefined
+      // Earlier entries keep their owner; a later mod cannot claim them.
+      if (was && typeof was.plugin === 'string') return { ...item, plugin: was.plugin }
+      return { ...item, plugin }
+    })
+  }
+  return { ...(after as Record<string, unknown>), props }
+}
+
 function scanModSource(source: string): { calls: Set<string>; hooks: Set<string> } {
   const calls = new Set<string>()
   const hooks = new Set<string>()
@@ -260,6 +290,7 @@ export class ModRuntime {
   private turnScoped(event: string, input: unknown): boolean {
     if (event === 'turn.start' || event === 'turn.step' || event === 'turn.complete') return true
     if (event === 'tool.call' || event === 'tool.check') return true
+    if (event === 'message.render') return true
     return (
       event === 'ui.render' &&
       !!input &&
@@ -500,6 +531,11 @@ export class ModRuntime {
       if (typeof handler !== 'function') {
         throw new Error(`on('${event}'): handler is not a function`)
       }
+      if (event.startsWith('message.') && !this.declared.get(plugin)?.hooks.has(event)) {
+        throw new Error(
+          `${event} refused: not declared in this mod's source, so it was not shown at consent`
+        )
+      }
       const entry: HookEntry = { event, matcher, handler, plugin, root, tier }
       this.hooks.push(entry)
       return {
@@ -514,6 +550,11 @@ export class ModRuntime {
    * Emit an event through the mod middleware chain, then `core`.
    * Matches Claude Code: observe / rewrite via next(e), or answer without next.
    */
+  /** Cheap check so per-message emits are skipped when no mod listens. */
+  hasHooks(event: string): boolean {
+    return this.hooks.some((h) => h.event === event)
+  }
+
   async emit(
     event: string,
     input: unknown,
@@ -577,10 +618,12 @@ export class ModRuntime {
         }
 
         let nextCalled = false
+        const stamp = (value: unknown): unknown =>
+          event === 'message.render' ? stampMessageRender(e, value, entry.plugin) : value
         const next = ((nextEvent: unknown) => {
           if (activeEntry !== entry) return Promise.resolve(nextEvent)
           nextCalled = true
-          return runFrom(nextEvent)
+          return runFrom(stamp(nextEvent))
         }) as ModNext
 
         next.signal = combined || new AbortController().signal
@@ -589,7 +632,7 @@ export class ModRuntime {
         next.to = (nextEvent, tier) => {
           if (activeEntry !== entry) return Promise.resolve(nextEvent)
           nextCalled = true
-          return runFrom(nextEvent, tier)
+          return runFrom(stamp(nextEvent), tier)
         }
 
         try {
@@ -610,7 +653,7 @@ export class ModRuntime {
             // The handler settled without next: a later next() from it is
             // stale and must not re-enter the chain past this answer.
             activeEntry = null
-            return result
+            return stamp(result)
           }
           return result
         } catch (err) {

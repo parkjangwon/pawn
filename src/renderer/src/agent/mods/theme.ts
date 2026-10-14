@@ -62,6 +62,10 @@ export function sanitizeCss(input: unknown): string {
   if (/\/\*/.test(css) && !/\*\//.test(css.slice(css.lastIndexOf('/*')))) {
     throw new Error('theme css refused: unterminated comment')
   }
+  // Fixed/sticky boxes could float a fake dialog over trusted surfaces.
+  if (/position\s*:\s*(fixed|sticky)/i.test(css)) {
+    throw new Error('theme css refused: position fixed/sticky is not allowed')
+  }
   if (/@(scope|layer|font-face|namespace|charset)\b/i.test(css)) {
     throw new Error('theme css refused: that at-rule is not allowed')
   }
@@ -84,7 +88,7 @@ export function buildModThemeCss(entries: ModThemeEntry[], off: readonly string[
         .map(([k, v]) => `  ${k}: ${v};`)
         .join('\n')
       // Doubled .app beats the built-in `.app.light` / `.app.dark` palettes.
-      const sel = e.mode === 'all' ? '.app.app' : `.app.app.${e.mode}`
+      const sel = e.mode === 'all' ? '.app.app:not(.mods-trusted)' : `.app.app.${e.mode}:not(.mods-trusted)`
       parts.push(`${tag}\n${sel} {\n${body}\n}`)
     } else if (e.kind === 'css' && e.css) {
       const scope = `[data-plugin="${cssString(e.plugin)}"]`

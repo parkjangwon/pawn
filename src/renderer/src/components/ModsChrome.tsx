@@ -203,7 +203,8 @@ export default function ModsChrome({
                   {menuOpen && (
                     <div
                       ref={menuRef}
-                      className="mods-chrome-menu"
+                      className="mods-chrome-menu mods-trusted"
+                      data-mods-trusted="menu"
                       role="dialog"
                       aria-label={'Mods in this chat'}
                     >

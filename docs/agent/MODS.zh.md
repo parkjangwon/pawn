@@ -54,7 +54,7 @@ my-mod/
 加载前，设置会打开审核对话框：
 
 - 由注册的钩子和源码里的 `$.…` 调用得出的能力列表：每项能力一行，含名称和一行说明（`strings.ts` 中的 `settings.modsSection.cap.<id>` 与 `settings.modsSection.capDesc.<id>`，id 在 `src/renderer/src/agent/mods/capabilities.ts`）。新增能力需要 id、规则和这两条文字
-- 风险：进程或网络为高，文件或工具为中，其余为低
+- 风险：进程或网络为高，文件、工具、读取消息正文（`message.render`）或更改主题（`$.theme.vars` / `$.theme.css`）为中，其余为低
 - 你允许的版本
 
 允许后，该版本写入 `consentedPlugins`，名字会从 `disabledPlugins` 去掉。撤回同意会删掉条目并关闭该名字。
@@ -130,12 +130,27 @@ export function register(on) {
 | `$.slot.toolbar({ id, label, title })` | 输入框一行中附件按钮旁的按钮。在空白主页上隐藏。 | `toolbar` |
 | `$.slot.settings({ id, title, tree })` | **设置 → Mods** 下的页面，每个页面一个导航项。 | `settingsPage` |
 | `$.slot.statusbar({ id, text, title, tree })` | 左侧边栏底部、设置按钮上方的小项目（Pawn 没有可见的状态栏）。文本项是按钮；`tree` 项绘制该树。 | `statusbar` |
+| `$.slot.palette({ id, title, hint })` | 命令面板 **Mods** 分组中的条目。执行时发送带 `slot: 'palette'` 的 `ui.press`。 | `palette` |
+| `$.slot.shortcut({ id, keys, title })` | 键盘快捷键，例如 `Mod+Shift+U`（`Mod` 在 macOS 上是 Cmd，其他平台是 Ctrl）。按下时发送带 `slot: 'shortcut'` 的 `ui.press`。 | `shortcuts` |
 | `$.slot.remove({ slot, id })` / `$.slot.list()` | 删除本 mod 的一个项目 / 列出它们。 | 无 |
 
 - 点击以带 `{ plugin, id, slot }` 的 `ui.press` 到达。插槽树里的按钮、输入框和选择框也会带同样的 `slot` 字段发送 `ui.press`、`ui.input`、`ui.select`。请用 `{ plugin: '<你的 mod>' }` 过滤。
 - 项目属于该项目的 mod 运行时：切换聊天时保留，mod 卸载、被关闭或运行时重新加载时消失。
 - 每种插槽在审核对话框中都是单独的权限。源码中没有逐字写出的 `$.slot.<种类>` 调用会被运行时拒绝，因此 mod 无法使用对话框未显示的插槽。请写成 `$.slot.header(...)`，不要写 `$.slot[name](...)`。
 - 示例：`examples/mods/ui-slots-demo/` 使用了所有插槽。默认不安装；复制到 `~/.pawn/mods/ui-slots-demo` 后允许即可。
+- **快捷键冲突会被报告，绝不会被静默覆盖。** 当组合键与应用快捷键（设置 → 快捷键）、应用保留的组合键（复制/粘贴/撤销、`Mod+F`、`Mod+S`、`Mod+Q`、`Mod+R`、缩放、`Alt+P`、`Escape`、`Enter`、`Tab`）或其他 mod 的快捷键相同时，`$.slot.shortcut` 会抛出异常，并在 mod 时间线中记录一条 `conflict`。先注册的 mod 保留该组合键。之后若把应用快捷键改成 mod 的组合键，以应用为准。不含 `Mod`/`Ctrl`/`Alt` 的组合键在输入框中打字时不会触发。
+
+### 消息渲染钩子
+
+`on('message.render', ($, e, next) => …)` 用于装饰已完成的聊天消息。权限：`messages`（mod 会读取消息文本）。
+
+- `e` = `{ messageId, role, text, sessionId, props: { badges, actions, blocks } }`。向数组追加后 `return next({ ...e, props })`。
+- `badges`：`{ id, text, tone? }`（`tone`：`info`、`success`、`warning`、`danger`）。`actions`：`{ id, label }`，消息操作行中的按钮；点击时发送带 `{ slot: 'message', id, messageId, sessionId, role }` 的 `ui.press`。`blocks`：`{ id, tree }`，消息下方的 `$.ui.resolve()` 树。每条消息每种最多 8 个。
+- 每个条目都会标记添加它的 mod，后面的 mod 无法接管前面 mod 的条目或点击。
+- **流式输出与性能：** 回复完成后才发送；正在流式输出的行不会被装饰。结果按（聊天、消息、文本）缓存，仅在文本变化、mod 请求重绘（`$.ui.invalidate`，或任何插槽点击之后）或 mod 重新加载时重新询问。未加载 `message.render` 钩子时不发送任何事件。钩子抛错或超时时消息保持原样。
+- **按聊天区分：** `e.sessionId` 是消息所属的聊天，而不是屏幕上的聊天；钩子内的 `$.session` 也是该聊天。请用 `e.sessionId` 区分每个聊天的状态。
+- 与插槽一样，事件名必须按字面写出（`on('message.render', …)`），否则 `on` 会抛出 `message.render refused`。
+
 
 ### 主题 (Theming)
 
@@ -150,7 +165,8 @@ export function register(on) {
 - 可能加载资源或跳出代码块的内容会被拒绝并报错：`url(`、`@import`、`image-set(`、`expression(`、`<`、`\`、不配对的花括号，以及 `@scope`、`@layer`、`@font-face`、`@namespace`、`@charset`。变量值还拒绝 `;`、`{`、`}`。
 - 常用变量：`--bg-primary`、`--bg-secondary`、`--bg-sidebar`、`--text-primary`、`--text-secondary`、`--text-muted`、`--border-color`、`--primary`、`--accent`、`--danger`、`--success`（完整列表见 `src/renderer/src/styles/global.css`）。
 - 用户可以只关闭某个 mod 的主题而不关闭 mod：在 mods 菜单（输入框上方的标签）中该 mod 旁边的 **Theme** 开关。选择在重启后保留。重新加载 mod 时主题会被清除。
-- 与插槽一样，源码中没有逐字写出的 `$.theme.vars` / `$.theme.css` 调用会被运行时拒绝。审核对话框中显示为 **Change colors and styles**。风险为低：主题无法读取任何内容，也无法访问网络，但可以改变应用外观，因此说明里写明了这一点。
+- 与插槽一样，源码中没有逐字写出的 `$.theme.vars` / `$.theme.css` 调用会被运行时拒绝。审核对话框中显示为 **Change colors and styles**。风险为**中**：主题无法读取任何内容，也无法访问网络，但可以让 Pawn 的某些部分看起来像别的东西。
+- 防伪装：同意对话框、mods 菜单（含 Theme 开关）和 **设置 → Mods** 是 `.mods-trusted` 根。它们重新声明默认变量，mod 的变量规则使用 `:not(.mods-trusted)`，因此 `$.theme.vars` 无法影响它们。限定范围的样式表也无法影响它们，并且 `position: fixed` / `sticky` 会被拒绝，mod 无法在其上浮出伪造的对话框。
 - 示例：`examples/mods/theming-demo/` 切换两套配色（浅色和深色），并为自己的侧边栏分区加样式。默认不安装；复制到 `~/.pawn/mods/theming-demo` 后允许即可。
 
 ## 7. `$` API

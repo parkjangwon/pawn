@@ -1,5 +1,6 @@
 import { modKvStore } from './kvStore'
 import { useModsUiStore } from './uiStore'
+import { normalizeShortcut, shortcutConflictMessage } from './shortcuts'
 import { THEME_ID, sanitizeCss, sanitizeVars, type ModThemeMode } from './theme'
 import type { ModCommandReg, ModElementTable, ModSlotKind, ModSlotView, ModsApi, ModToolReg } from './types'
 
@@ -350,6 +351,31 @@ function slotApi(host: ModsApiHost, plugin: string): ModsApi['slot'] {
         text: spec.text != null ? String(spec.text) : undefined,
         tree: spec.tree
       })
+    },
+    palette: (spec) => {
+      gate('palette')
+      put({
+        slot: 'palette',
+        id: idOf(spec.id),
+        plugin,
+        title: String(spec.title || spec.id).slice(0, 120),
+        hint: spec.hint != null ? String(spec.hint).slice(0, 200) : undefined
+      })
+    },
+    shortcut: (spec) => {
+      gate('shortcut')
+      const id = idOf(spec.id)
+      const raw = String(spec.keys || '')
+      const keys = normalizeShortcut(raw)
+      if (!keys) throw new Error(`Invalid shortcut: ${raw}`)
+      const conflict = shortcutConflictMessage(keys, plugin, id)
+      if (conflict) {
+        // Reported, never silently overridden: the app or the first mod keeps the chord.
+        useModsUiStore.getState().pushLog(plugin, conflict)
+        useModsUiStore.getState().pushTimeline(plugin, conflict, 'conflict')
+        throw new Error(conflict)
+      }
+      put({ slot: 'shortcut', id, plugin, title: String(spec.title || id).slice(0, 120), keys })
     },
     remove: (spec) => {
       useModsUiStore.getState().removeSlot(plugin, spec.slot, idOf(spec.id))

@@ -196,21 +196,24 @@ describe('mod UI slots', () => {
 })
 
 describe('ui-slots-demo example', () => {
-  it('registers all five slots and asks for exactly the slot capabilities', async () => {
+  it('registers the B1 slots (B2 kinds are covered in ModSlotsB2.test.tsx)', async () => {
     const source = readFileSync(
       resolve(__dirname, '../../../../../examples/mods/ui-slots-demo/hooks/register.js'),
       'utf8'
     )
     await loadDemo(source, 'ui-slots-demo')
-    const kinds = useModsUiStore.getState().slots.map((s) => s.slot).sort()
-    expect(kinds).toEqual(['header', 'settings', 'sidebar', 'statusbar', 'toolbar'])
+    const kinds = useModsUiStore.getState().slots.map((s) => s.slot)
+    for (const k of ['header', 'settings', 'sidebar', 'statusbar', 'toolbar']) expect(kinds).toContain(k)
     const info = getModRuntime().getLoaded().find((m) => m.name === 'ui-slots-demo')
     expect(deriveModCapabilities(info?.hooks || [], info?.calls || []).map((c) => c.id)).toEqual([
       'ui',
       'sidebar',
       'toolbar',
       'settingsPage',
-      'statusbar'
+      'statusbar',
+      'palette',
+      'shortcuts',
+      'messages'
     ])
   })
 })

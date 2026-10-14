@@ -26,11 +26,13 @@ import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
 import { useFocusTrap } from '../utils/focusTrap'
 import { fuzzyMatchRanges, scoreFields } from '../utils/fuzzyMatch'
 import { reloadMods } from '../agent/mods'
+import { pressModSlot } from '../agent/mods/modUiEmit'
+import { useModPaletteSlots } from './ModSlots'
 import { openPluginsExtensions, openSettingsSection } from './settingsState'
 import { SECTIONS } from './settingsMeta'
 import './CommandPalette.css'
 
-type GroupId = 'recent' | 'actions' | 'navigation' | 'sessions' | 'projects' | 'settings'
+type GroupId = 'recent' | 'actions' | 'mods' | 'navigation' | 'sessions' | 'projects' | 'settings'
 
 interface Command {
   id: string
@@ -50,7 +52,7 @@ interface CommandPaletteProps {
 }
 
 const GENERAL_ID = '__general__'
-const GROUP_ORDER: GroupId[] = ['sessions', 'recent', 'actions', 'projects', 'navigation', 'settings']
+const GROUP_ORDER: GroupId[] = ['sessions', 'recent', 'actions', 'mods', 'projects', 'navigation', 'settings']
 const MAX_SESSIONS = 14
 const MAX_PROJECTS = 20
 const RECENT_KEY = 'pawn-cp-recent'
@@ -153,6 +155,7 @@ export default function CommandPalette({
   const toggleTheme = useThemeStore((s) => s.toggle)
   const setTheme = useThemeStore((s) => s.set)
   const keybindings = useKeybindingsStore((s) => s.bindings)
+  const modPalette = useModPaletteSlots()
   const [recentIds] = useState<string[]>(() => readRecentCommands())
   const hasChat = useAppStore((s) => {
     const session = s.projects
@@ -426,11 +429,22 @@ export default function CommandPalette({
       })
     }))
 
-    return [...sessions, ...actions, ...projectCmds, ...navigation, ...settingsCmds]
+    // `$.slot.palette`: run → ui.press { slot: 'palette', id } to the owning mod.
+    const modCmds: Command[] = modPalette.map((m) => ({
+      id: `mod-${m.plugin}-${m.id}`,
+      label: m.title,
+      description: m.hint ? `${m.hint} · ${m.plugin}` : m.plugin,
+      group: 'mods' as GroupId,
+      keywords: `mod ${m.plugin} ${m.id}`,
+      icon: <Disc size={16} />,
+      action: () => run(() => void pressModSlot(m.plugin, m.id, 'palette'))
+    }))
+
+    return [...sessions, ...actions, ...modCmds, ...projectCmds, ...navigation, ...settingsCmds]
   }, [
     projects, keybindings, run, onMainViewChange, onOpenSettings, openNewChat,
     stopStreaming, isStreaming, theme, toggleTheme, setTheme, setActiveProject, setActiveSession,
-    hasChat
+    hasChat, modPalette
   ])
 
   // Empty query: recently run actions surface in their own group. With a

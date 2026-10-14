@@ -69,7 +69,8 @@ describe('theme sanitizers', () => {
     '.x { color: red } } body { display: none',
     '</style><script>alert(1)</script>',
     '@scope (body) { * { display: none } }',
-    '.x { content: "\\75 rl(" }'
+    '.x { content: "\\75 rl(" }',
+    ':scope { position: fixed; inset: 0 }'
   ])('refuses css %s', (css) => {
     expect(() => sanitizeCss(css)).toThrow()
   })
@@ -88,8 +89,8 @@ describe('buildModThemeCss', () => {
 
   it('puts vars on the app root per mode and scopes sheets to the mod', () => {
     const css = buildModThemeCss(entries, [])
-    expect(css).toContain('.app.app.light {\n  --accent: #111;\n}')
-    expect(css).toContain('.app.app {\n  --x: 1px;\n}')
+    expect(css).toContain('.app.app.light:not(.mods-trusted) {\n  --accent: #111;\n}')
+    expect(css).toContain('.app.app:not(.mods-trusted) {\n  --x: 1px;\n}')
     expect(css).toContain('@scope ([data-plugin="q"]) {\n.t { color: red }\n}')
   })
 
@@ -116,7 +117,7 @@ describe('$.theme runtime', () => {
   it('renders a style tag, refuses bad input, and toggles off per mod', async () => {
     render(<ModThemeStyles />)
     await load(themed)
-    await waitFor(() => expect(styleText()).toContain('.app.app.dark {\n  --accent: #ff8800;\n}'))
+    await waitFor(() => expect(styleText()).toContain('.app.app.dark:not(.mods-trusted) {\n  --accent: #ff8800;\n}'))
     expect(styleText()).toContain('@scope ([data-plugin="tdemo"])')
     expect(g.__themeErrs).toEqual([expect.stringMatching(/Refused value/), 'Invalid theme id: bad id!'])
     expect(useModsUiStore.getState().themes.map((t) => t.id).sort()).toEqual(['pal', 'side'])
@@ -156,7 +157,8 @@ describe('theme capability', () => {
     expect(deriveModCapabilities([], ['$.theme.vars']).map((c) => c.id)).toEqual(['theme'])
     expect(deriveModCapabilities([], ['$.theme.css']).map((c) => c.id)).toEqual(['theme'])
     expect(deriveModCapabilities([], ['$.theme.remove', '$.theme.list'])).toEqual([])
-    expect(deriveModRisk([], ['$.theme.vars'])).toBe('low')
+    expect(deriveModRisk([], ['$.theme.vars'])).toBe('medium')
+    expect(deriveModRisk([], ['$.theme.css'])).toBe('medium')
     expect(EN['settings.modsSection.cap.theme']).toBeTruthy()
     expect(EN['settings.modsSection.capDesc.theme']).toMatch(/switch its theme off/)
   })
@@ -187,5 +189,47 @@ describe('theming-demo example', () => {
       'sidebar',
       'theme'
     ])
+  })
+})
+
+describe('trusted surfaces ignore mod theme vars', () => {
+  const globalCss = readFileSync(resolve(__dirname, '../../styles/global.css'), 'utf8')
+
+  it('global.css re-declares default tokens on .mods-trusted for root, light and dark', () => {
+    expect(globalCss).toMatch(/:root,\s*\.mods-trusted \{/)
+    expect(globalCss).toMatch(/\.app\.light,\s*\.app\.light \.mods-trusted,\s*\.app\.light\.mods-trusted \{/)
+    expect(globalCss).toMatch(/\.app\.dark,\s*\.app\.dark \.mods-trusted,\s*\.app\.dark\.mods-trusted \{/)
+  })
+
+  it('mod var rules never select a trusted root', () => {
+    const css = buildModThemeCss(
+      [
+        { plugin: 'p', id: 'a', kind: 'vars', mode: 'all', vars: { '--accent': 'red' } },
+        { plugin: 'p', id: 'd', kind: 'vars', mode: 'dark', vars: { '--accent': 'red' } }
+      ],
+      []
+    )
+    const selectors = css.split('\n').filter((l) => l.endsWith(' {') && !l.startsWith('@'))
+    expect(selectors.length).toBe(2)
+    for (const sel of selectors) expect(sel).toContain(':not(.mods-trusted)')
+  })
+
+  it('consent dialog and mods settings panel render as trusted roots', async () => {
+    const { default: ModsConsentDialog } = await import('../ModsConsentDialog')
+    render(
+      <ModsConsentDialog
+        preview={{ name: 'm', version: '1', ok: true, hooks: [], calls: ['$.theme.vars'], findings: [] }}
+        onCancel={() => {}}
+        onConfirm={() => {}}
+      />
+    )
+    const root = document.querySelector('[data-mods-trusted="consent"]')
+    expect(root?.classList.contains('mods-trusted')).toBe(true)
+    expect(root?.classList.contains('app')).toBe(true)
+    expect(root?.querySelector('.mods-risk')).toHaveTextContent(EN['settings.modsSection.risk.medium'])
+    const src = readFileSync(resolve(__dirname, '../ModsSettingsPanel.tsx'), 'utf8')
+    expect(src).toContain('mods-settings mods-trusted')
+    const chrome = readFileSync(resolve(__dirname, '../ModsChrome.tsx'), 'utf8')
+    expect(chrome).toContain('mods-chrome-menu mods-trusted')
   })
 })
