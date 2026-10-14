@@ -46,6 +46,7 @@ const KNOWN_EVENTS = new Set([
   'ui.press',
   'ui.input',
   'ui.select',
+  'view.message',
   'ui.focus',
   'ui.scroll',
   'ui.close',
@@ -114,7 +115,8 @@ const EMITTED_EVENTS = new Set([
   'notification',
   'ui.press',
   'ui.input',
-  'ui.select'
+  'ui.select',
+  'view.message'
 ])
 
 function matcherLabel(raw: string | undefined): string {

@@ -37,6 +37,7 @@ export type ModCapabilityId =
   | 'shortcuts'
   | 'messages'
   | 'theme'
+  | 'views'
   | 'modelRequests'
   | 'modelResponses'
   | 'notifications'
@@ -67,6 +68,7 @@ const CALL_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
   { re: /^\$\.slot\.palette$/, id: 'palette' },
   { re: /^\$\.slot\.shortcut$/, id: 'shortcuts' },
   { re: /^\$\.theme\.(vars|css)$/, id: 'theme' },
+  { re: /^\$\.view\.open$/, id: 'views' },
   { re: /^\$\.agent\.register$/, id: 'subagents' },
   { re: /^\$\.provider\.register$/, id: 'providers' },
   { re: /^\$\.prompt\./, id: 'prompt' },
@@ -102,6 +104,7 @@ const ORDER: ModCapabilityId[] = [
   'shortcuts',
   'messages',
   'theme',
+  'views',
   'modelRequests',
   'modelResponses',
   'notifications',
@@ -142,6 +145,7 @@ export function deriveModRisk(hooks: string[], calls: string[]): ModRiskLevel {
     caps.has('tools') ||
     caps.has('messages') ||
     caps.has('theme') ||
+    caps.has('views') ||
     caps.has('modelResponses') ||
     caps.has('subagents')
   )

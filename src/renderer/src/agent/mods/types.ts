@@ -202,6 +202,21 @@ export interface ModsApi {
     remove: (spec: { name: string }) => void
     list: () => Array<{ name: string; description: string }>
   }
+  /** Custom views: sandboxed iframes with a postMessage bridge (see views.ts). */
+  view: {
+    open: (spec: {
+      id: string
+      title: string
+      html: string
+      script?: string
+      placement?: 'panel' | 'tab' | 'modal'
+      height?: number
+    }) => void
+    post: (spec: { id: string; data: unknown }) => void
+    close: (spec: { id: string }) => void
+    list: () => Array<{ id: string; title: string; placement: 'panel' | 'tab' | 'modal' }>
+  }
+
   /** Offer a provider and its models. Only the user's click in Settings → Mods adds it. */
   provider: {
     register: (spec: {
@@ -214,7 +229,6 @@ export interface ModsApi {
     remove: (spec: { id: string }) => void
     list: () => Array<{ id: string; name: string; baseUrl: string; models: string[] }>
   }
-
 }
 
 export type ModSlotKind =

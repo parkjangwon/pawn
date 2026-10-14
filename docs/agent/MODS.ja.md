@@ -54,7 +54,7 @@ my-mod/
 読み込む前に設定が確認ダイアログを出します。
 
 - 登録フックとソース中の `$.…` 呼び出しから作った権限リスト。権限ごとに 1 行で、名前と 1 行の説明を出します（`strings.ts` の `settings.modsSection.cap.<id>` と `settings.modsSection.capDesc.<id>`、id は `src/renderer/src/agent/mods/capabilities.ts`）。新しい権限には id、ルール、両方の文字列が必要です
-- 危険度: プロセスまたはネットワークなら高、ファイルまたはツール、メッセージ本文を読む（`message.render`）、またはテーマを変える（`$.theme.vars` / `$.theme.css`）なら中、それ以外は低
+- 危険度: プロセスまたはネットワークなら高、ファイルまたはツール、メッセージ本文を読む（`message.render`）、テーマを変える（`$.theme.vars` / `$.theme.css`）、またはカスタムビューを出す（`$.view.open`）なら中、それ以外は低
 - ロードマップ E で追加: モデルへのリクエストを変える（`model.request`）またはプロバイダーを提案する（`$.provider.register`）なら高、モデルの応答を読む（`model.response`）またはサブエージェントを追加する（`$.agent.register`）なら中、通知を見る（`notification`）なら低
 - 許可する版
 
@@ -172,6 +172,32 @@ export function register(on) {
 - スロットと同じく、ソースに文字どおり書かれていない `$.theme.vars` / `$.theme.css` 呼び出しはランタイムが拒否します。レビューダイアログには **Change colors and styles** と表示されます。危険度は**中**です。テーマは何も読めずネットワークにも届きませんが、Pawn の一部を別物のように見せられます。
 - なりすまし対策: 同意ダイアログ、mods メニュー（Theme トグルを含む）、**設定 → Mods** は `.mods-trusted` ルートです。既定のトークンを再宣言し、mod の変数ルールは `:not(.mods-trusted)` を使うので、`$.theme.vars` は届きません。スコープ付きシートも届かず、`position: fixed` / `sticky` は拒否されるため、偽のダイアログを上に重ねられません。
 - サンプル: `examples/mods/theming-demo/` は 2 つのパレット（ライトとダーク）を切り替え、自分のサイドバーセクションを装飾します。既定ではインストールされません。`~/.pawn/mods/theming-demo` にコピーして許可してください。
+
+### カスタムビュー (Custom views)
+
+`$.view.*` は mod 自身の HTML ページをサンドボックス化した iframe に表示します。`$.ui.resolve()` の要素で足りないとき（グラフ、エディタ、自由なレイアウト）に使います。
+
+| 呼び出し | 内容 | 権限 |
+| --- | --- | --- |
+| `$.view.open({ id, title, html, script, placement, height })` | ビュー `id` を開く／置き換える。`placement` は `panel`（左サイドバー、既定）、`tab`（チャット上のタブ列）、`modal`（mod 名付きのダイアログ）。`html` と `script` はそれぞれ 256KB まで、`height` は 60–2000px。 | `views` |
+| `$.view.post({ id, data })` | JSON データをビューへ送る（`pawn.onMessage`）。 | なし |
+| `$.view.close({ id })` / `$.view.list()` | この mod のビューを一つ閉じる / 一覧を返す。 | なし |
+
+ビューの中にはグローバルな `pawn` オブジェクトがあります。
+
+- `pawn.call(method, ...args)` → Promise。次のメソッドだけが mod の `$` に届きます: `ui.toast`、`ui.notice`、`ui.status`、`store.get/set/delete/keys`、`fs.read`、`fs.list`、`fs.exists`、`http.fetch`、`model.complete`、`clock.now`。それぞれ mod のソースのどこかに文字どおり（`$.store.get`）書かれている必要があり、レビューダイアログに既に表示されたものです。それ以外は拒否されます。
+- `pawn.send(data)` → mod は `on('view.message', { plugin: '<mod>' }, ($, e, next) => …)` で `{ plugin, id, data }` を受け取ります。
+- `pawn.onMessage(fn)` は `$.view.post` のデータを受け取ります。`pawn.resize(px)` は高さを設定します（panel と modal）。
+
+サンドボックスと CSP:
+
+- `sandbox="allow-scripts"` のみで `allow-same-origin` なし: 不透明なオリジンなので、Pawn のウィンドウ、`window.api`、ストレージ、Cookie、ポップアップ、フォーム、トップレベル遷移にアクセスできません。
+- ページは独自の CSP で始まります: `default-src 'none'`、`connect-src`・フレーム・ワーカー・フォームなし、画像とフォントは `data:` のみ。ビュー自身はネットワークに届かず、リモートへの要求は `$.http.fetch`（とその同意）が必要な `pawn.call('http.fetch', …)` だけです。
+- スクリプトは `script`（とブリッジ）からのみ実行され、Pawn が起動ごとの nonce を付けます。パッケージ版では `html` 内の `<script>` と `onclick=` はブロックされます。`script` で `addEventListener` を使ってください。
+- ビューは自分でどこへも遷移できません（メインプロセスが取り消します）。URL 経由でデータは出ません。
+- ライト/ダーク: テーマトークン（`--bg-primary`、`--text-primary`、`--accent`、`--border-color` など）がページの `:root` にコピーされ、テーマが変わるとビューを再読み込みします。
+- 危険度は**中**です。自分で書いていないコードが動き、モーダルはダイアログのように見えうるため、モーダルには常に `mod: <名前>` が表示されます。
+- サンプル: `examples/mods/views-demo/`（`$.store` に保存するパネルのカウンター、タブとダイアログ）。既定ではインストールされません。`~/.pawn/mods/views-demo` にコピーして許可してください。
 
 ### モデルイベント、サブエージェント、プロバイダー
 

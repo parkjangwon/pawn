@@ -769,6 +769,7 @@ const api = {
     validate: (path: string) => ipcRenderer.invoke('mods:validate', path),
     installExample: () => ipcRenderer.invoke('mods:installExample'),
     envSnapshot: () => ipcRenderer.invoke('mods:envSnapshot'),
+    viewNonce: () => ipcRenderer.invoke('mods:viewNonce'),
     http: (
       url: string,
       init?: { method?: string; headers?: Record<string, string>; body?: string; timeoutMs?: number }

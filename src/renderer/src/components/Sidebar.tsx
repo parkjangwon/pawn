@@ -18,6 +18,7 @@ import ConfirmDialog from './ConfirmDialog'
 import Tooltip from './Tooltip'
 import './Sidebar.css'
 import { ModSidebarSlots, ModStatusbarSlots } from './ModSlots'
+import { ModViewPanels } from './ModViews'
 
 interface SidebarProps {
   onOpenSettings: () => void
@@ -600,6 +601,7 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
 
       {/* Footer */}
       <ModSidebarSlots />
+      <ModViewPanels />
       <div className="sidebar-footer">
         <ModStatusbarSlots />
         <Tooltip label={'Settings'} shortcut={formatCombo(keybindings['open-settings'])} placement="top">
