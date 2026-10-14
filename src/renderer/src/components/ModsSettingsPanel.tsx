@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { tx } from '../i18n'
-import { deriveModCapabilities, deriveModRisk, getModRuntime, reloadMods, useModsUiStore } from '../agent/mods'
+import { getModRuntime, reloadMods, useModsUiStore } from '../agent/mods'
 import { useAppStore } from '../stores/app'
-import { useFocusTrap } from '../utils/focusTrap'
 import ConfirmDialog from './ConfirmDialog'
 import { IconFolder } from './icons'
 import Button from './Button'
+import ModsConsentDialog from './ModsConsentDialog'
 import Switch from './Switch'
 import './ModsSettingsPanel.css'
 
@@ -68,10 +68,7 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
   const [busy, setBusy] = useState(false)
   const [msg, setMsg] = useState('')
   const [consent, setConsent] = useState<ValidatePreview | null>(null)
-  const [showAdvanced, setShowAdvanced] = useState(false)
   const [claudeConfirm, setClaudeConfirm] = useState(false)
-  const dialogRef = useRef<HTMLDivElement>(null)
-  useFocusTrap(Boolean(consent), dialogRef, { initialFocus: '.btn-cancel, .btn-primary' })
 
   const refresh = useCallback(async () => {
     const api = window.api?.mods
@@ -87,15 +84,6 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
   useEffect(() => {
     void refresh()
   }, [refresh, runtimeGeneration])
-
-  useEffect(() => {
-    if (!consent) return
-    const onKey = (e: KeyboardEvent): void => {
-      if (e.key === 'Escape') setConsent(null)
-    }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [consent])
 
   const afterChange = async (): Promise<void> => {
     setBusy(true)
@@ -129,7 +117,6 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
       setMsg('Could not validate this mod')
       return
     }
-    setShowAdvanced(false)
     setConsent({
       name: mod.name,
       version: mod.version,
@@ -202,15 +189,6 @@ export default function ModsSettingsPanel({ embedded }: { embedded?: boolean }):
       setBusy(false)
     }
   }
-
-  const capabilities = useMemo(
-    () => (consent ? deriveModCapabilities(consent.hooks, consent.calls) : []),
-    [consent]
-  )
-  const risk = useMemo(
-    () => (consent ? deriveModRisk(consent.hooks, consent.calls) : 'low'),
-    [consent]
-  )
 
   const activeNames = useMemo(() => {
     void runtimeGeneration
@@ -391,76 +369,11 @@ Off by default. Turn it on only if you trust those plugins.`}</span>
       )}
 
       {consent && (
-        <div className="mods-consent-backdrop" role="presentation" onClick={() => setConsent(null)}>
-          <div
-            ref={dialogRef}
-            className="mods-consent-dialog"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="mods-consent-title"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 id="mods-consent-title">{`Allow “${consent.name}”?`}</h3>
-            <p className="settings-desc">{'This mod runs in-process with your account permissions. Check what it hooks before allowing.'}</p>
-            <div className="mods-consent-meta">
-              <span className="mods-version">{`Version ${consent.version}`}</span>
-              <span className={`mods-risk mods-risk-${risk}`}>{tx(`settings.modsSection.risk.${risk}`)}</span>
-            </div>
-            <div className="mods-cap-list">
-              {capabilities.length === 0 && (
-                <span className="mods-cap-empty">{'No special capabilities detected'}</span>
-              )}
-              {capabilities.map((cap) => (
-                <span key={cap.id} className="mods-cap-chip">
-                  {tx(cap.labelKey)}
-                </span>
-              ))}
-            </div>
-            <button
-              type="button"
-              className="mods-advanced-toggle"
-              aria-expanded={showAdvanced}
-              onClick={() => setShowAdvanced((v) => !v)}
-            >
-              {'Show technical hooks & calls'}
-            </button>
-            {showAdvanced && (
-              <>
-                <div className="mods-consent-block">
-                  <span className="mods-consent-label">{'Events it listens for'}</span>
-                  <code>{consent.hooks.join(', ') || '—'}</code>
-                </div>
-                <div className="mods-consent-block">
-                  <span className="mods-consent-label">{'APIs it may call'}</span>
-                  <code>{consent.calls.join(', ') || '—'}</code>
-                </div>
-              </>
-            )}
-            {consent.findings.length > 0 && (
-              <ul className="mods-consent-findings">
-                {consent.findings.map((f, i) => (
-                  <li key={i} className={f.severity}>
-                    {f.message}
-                  </li>
-                ))}
-              </ul>
-            )}
-            <p className="mods-consent-warn">{'You can turn it off later. Untrusted code can read files and run commands.'}</p>
-            <div className="mods-consent-actions">
-              <button type="button" className="btn-cancel" onClick={() => setConsent(null)}>
-                {'Cancel'}
-              </button>
-              <button
-                type="button"
-                className="btn-primary"
-                disabled={!consent.ok}
-                onClick={() => void confirmConsent()}
-              >
-                {'Allow and enable'}
-              </button>
-            </div>
-          </div>
-        </div>
+        <ModsConsentDialog
+          preview={consent}
+          onCancel={() => setConsent(null)}
+          onConfirm={() => void confirmConsent()}
+        />
       )}
 
       {claudeConfirm && (

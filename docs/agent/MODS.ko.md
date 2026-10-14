@@ -67,7 +67,7 @@ mods는 샌드박스가 없어요. 파일, 셸, 네트워크, 채팅을 내 계�
 
 불러오기 전에 설정이 검토 창을 보여요.
 
-- 등록한 훅과 소스의 `$.…` 호출로 만든 권한 칩
+- 등록한 훅과 소스의 `$.…` 호출로 만든 권한 목록: 권한마다 한 줄에 이름과 한 줄 설명이 있어요 (`strings.ts`의 `settings.modsSection.cap.<id>`와 `settings.modsSection.capDesc.<id>`, id는 `src/renderer/src/agent/mods/capabilities.ts`). 새 권한에는 id, 규칙, 두 문자열이 모두 필요해요
 - 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구면 **보통**, 아니면 **낮음**
 - 허용하는 버전
 

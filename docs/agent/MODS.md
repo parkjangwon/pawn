@@ -71,7 +71,7 @@ Mods are not sandboxed. They run with your account: files, shell, network, the c
 
 Before a mod loads, Settings shows a review dialog:
 
-- capability chips derived from the hooks it registers and the `$.…` calls in source
+- a capability list derived from the hooks it registers and the `$.…` calls in source: one row per capability, with a label and a one-line description (`settings.modsSection.cap.<id>` and `settings.modsSection.capDesc.<id>` in `strings.ts`; ids in `src/renderer/src/agent/mods/capabilities.ts`). A new capability needs an id, a rule, and both strings
 - a risk chip: **high** if it can run a process or use the network, **medium** if it can touch files or tools, **low** otherwise
 - the version you are allowing
 

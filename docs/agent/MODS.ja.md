@@ -53,7 +53,7 @@ my-mod/
 
 読み込む前に設定が確認ダイアログを出します。
 
-- 登録フックとソース中の `$.…` 呼び出しから作った権限チップ
+- 登録フックとソース中の `$.…` 呼び出しから作った権限リスト。権限ごとに 1 行で、名前と 1 行の説明を出します（`strings.ts` の `settings.modsSection.cap.<id>` と `settings.modsSection.capDesc.<id>`、id は `src/renderer/src/agent/mods/capabilities.ts`）。新しい権限には id、ルール、両方の文字列が必要です
 - 危険度: プロセスまたはネットワークなら高、ファイルまたはツールなら中、それ以外は低
 - 許可する版
 

@@ -1,4 +1,4 @@
-/** Map static hooks/calls analysis into human-readable capability chips. */
+/** Map static hooks/calls analysis into capability rows for the consent dialog. */
 
 export type ModCapabilityId =
   | 'tools'
@@ -14,6 +14,8 @@ export interface ModCapability {
   id: ModCapabilityId
   /** i18n key under settings.modsSection.cap.* */
   labelKey: string
+  /** i18n key under settings.modsSection.capDesc.* */
+  descKey: string
 }
 
 const CALL_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
@@ -62,7 +64,8 @@ export function deriveModCapabilities(hooks: string[], calls: string[]): ModCapa
   }
   return ORDER.filter((id) => ids.has(id)).map((id) => ({
     id,
-    labelKey: `settings.modsSection.cap.${id}`
+    labelKey: `settings.modsSection.cap.${id}`,
+    descKey: `settings.modsSection.capDesc.${id}`
   }))
 }
 
