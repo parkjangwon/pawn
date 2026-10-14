@@ -105,6 +105,12 @@ export function register(on) {
 | `model.request` | 每次主聊天模型调用之前（每次重试也会） | `next({ ...e, systemAppend })` 向系统提示追加最多 8 000 个字符，包在 `<mod-instructions>` 中。其他字段不可写。负载 `{ sessionId, round, provider, model, messageCount, lastUserText }`。 |
 | `model.response` | 每次模型调用成功之后 | 仅观察。负载 `{ sessionId, round, provider, model, text, toolCalls, usage }`。 `usage` 为 `{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }`；`inputTokens` 只是未缓存部分，完整提示为三个输入字段之和。 |
 | `notification` | Pawn 发出的每条桌面通知 | 仅观察。负载 `{ title, body, source }`。mod 不能隐藏或改写通知。 |
+| `tool.result` | 工具实际运行并成功之后（Claude Code `PostToolUse`） | 仅观察，不等待。载荷 `{ tool, tool_name, tool_use_id, tool_input, tool_response: { content, isError } }`。被拒绝、代答或拦截时不发出。 |
+| `tool.error` | 工具运行后失败或抛错（`PostToolUseFailure`） | 仅观察。相同字段加 `error`。 |
+| `subagent.start` | 子代理首次调用模型之前（`SubagentStart`） | 仅观察。载荷 `{ agent_id, agent_type, name, prompt, background }`。 |
+| `subagent.stop` | 子代理完成、失败或取消时（`SubagentStop`） | 仅观察。载荷 `{ agent_id, agent_type, name, status, ok, summary, error?, rounds, toolsUsed, filesChanged }`。 |
+
+这四个事件仅供观察：慢或失败的处理器不能改变或拖慢工具和子代理。它们读取内容，所以 `on()` 必须直接写出名字。同意界面显示为 **工具**（`tool.*`）或 **子代理**（`subagent.*`）。
 
 工具顺序：`tool.call` → 设置 `PreToolUse` → Plan 模式检查 → `tool.check` / 权限 → 工具。
 
@@ -227,7 +233,9 @@ Pawn 读取 Claude Code 插件目录结构（`.claude-plugin/plugin.json`、`hoo
 | 钩子 `Stop` | `turn.complete` |
 | 钩子 `PreCompact` | `session.compact`（在压缩之后运行） |
 | 钩子 `Notification` | `notification` |
-| 钩子 `PostToolUse`、`SubagentStop` 等 | 校验器接受，但不会发出（警告） |
+| 钩子 `PostToolUse` / `PostToolUseFailure` | `tool.result` / `tool.error` |
+| 钩子 `SubagentStart` / `SubagentStop` | `subagent.start` / `subagent.stop` |
+| 其他 Claude Code 钩子（如 `TeammateIdle`） | 校验器接受并给出警告；Pawn 没有对应时机 |
 | 代理文件（`agents/*.md`） | 用 `$.agent.register({ markdown })` 加载，或放进 `~/.claude/agents` / `.claude/agents` |
 | 技能（`skills/*/SKILL.md`） | 从常规技能目录读取，无需 mod 调用 |
 | 通过 `ANTHROPIC_BASE_URL` 的自定义模型 | `$.provider.register` 提议，由用户添加 |

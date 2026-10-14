@@ -292,6 +292,8 @@ export class ModRuntime {
   private turnScoped(event: string, input: unknown): boolean {
     if (event === 'turn.start' || event === 'turn.step' || event === 'turn.complete') return true
     if (event === 'tool.call' || event === 'tool.check') return true
+    if (event === 'tool.result' || event === 'tool.error') return true
+    if (event === 'subagent.start' || event === 'subagent.stop') return true
     if (event === 'message.render') return true
     if (event === 'model.request' || event === 'model.response') return true
     return (
@@ -549,7 +551,7 @@ export class ModRuntime {
       event = normalizeModEvent(event)
       // Events that read content or steer the model must be written literally, so consent showed them.
       if (
-        /^(message\.|model\.(request|response)|notification)/.test(event) &&
+        /^(message\.|model\.(request|response)|notification|tool\.(result|error)|subagent\.(start|stop))/.test(event) &&
         !this.declared.get(plugin)?.hooks.has(written)
       ) {
         throw new Error(

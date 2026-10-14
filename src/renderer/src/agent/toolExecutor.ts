@@ -11,6 +11,7 @@ import { effectiveToolName } from './toolIdentity'
 import { currentPolicy, toToolResult } from './toolHandlers/computer'
 import { getModRuntime } from './mods'
 import { useModsUiStore } from './mods/uiStore'
+import { modToolOutcome } from './mods/lifecycleEvents'
 
 export type { ToolExecContext } from './toolHandlers'
 export { compileGlob, matchesGlob } from './globMatch'
@@ -178,6 +179,17 @@ export async function executeTool(
           }
         }
         void runtime.refreshSpinnerSuffix(undefined, turnSessionId).catch(() => {})
+        // PostToolUse / PostToolUseFailure for mods: only when the tool really ran
+        // (not for mod deny/answer, settings-hook deny, plan mode or permission).
+        // Fire-and-forget; a mod cannot delay or change this result.
+        modToolOutcome({
+          sessionId: turnSessionId,
+          tool: call.name,
+          toolUseId: call.id,
+          input: call.arguments,
+          content: String(result.content ?? ''),
+          isError: result.isError === true
+        })
         return { result: result.content, isError: result.isError, toolResult: result }
       },
       signal,
@@ -240,9 +252,18 @@ export async function executeTool(
     }
     return result
   } catch (err) {
+    const content = `Tool error (${call.name}): ${String(err)}`
+    modToolOutcome({
+      sessionId: turnSessionId,
+      tool: call.name,
+      toolUseId: call.id,
+      input: call.arguments,
+      content,
+      isError: true
+    })
     return {
       toolCallId: call.id,
-      content: `Tool error (${call.name}): ${String(err)}`,
+      content,
       isError: true
     }
   }

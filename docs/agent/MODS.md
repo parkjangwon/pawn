@@ -107,7 +107,7 @@ The first argument is `$` (the mods API). `$.plugin.name` and `$.plugin.root` id
 
 ## 5. Events Pawn actually emits
 
-The validator allows a wider Claude Code set. Only these are emitted today.
+The validator also accepts Claude Code hook names that have no Pawn moment (a warning). Every mapped one below is emitted.
 
 | Event | When | What you can do |
 |-------|------|-----------------|
@@ -126,8 +126,14 @@ The validator allows a wider Claude Code set. Only these are emitted today.
 | `model.request` | Before each main-chat model call (also each retry) | `next({ ...e, systemAppend })` adds up to 8 000 characters to the system prompt, wrapped in `<mod-instructions>`. Nothing else is writable. Payload `{ sessionId, round, provider, model, messageCount, lastUserText }`. |
 | `model.response` | After each successful model call | Observe. Payload `{ sessionId, round, provider, model, text, toolCalls, usage }`. `usage` is `{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }`; `inputTokens` is only the uncached part, so the full prompt is the sum of the three input fields. |
 | `notification` | Every desktop notification Pawn sends | Observe. Payload `{ title, body, source }`. A mod cannot hide or rewrite a notification. |
+| `tool.result` | After a tool actually ran and succeeded (Claude Code `PostToolUse`) | Observe; not awaited. Payload `{ tool, tool_name, tool_use_id, tool_input, tool_response: { content, isError } }`. Not emitted when the call was denied, answered by a mod, or blocked. |
+| `tool.error` | After a tool ran and failed or threw (`PostToolUseFailure`) | Observe; not awaited. Same fields plus `error`. |
+| `subagent.start` | Before a subagent's first model call (`SubagentStart`) | Observe; not awaited. Payload `{ agent_id, agent_type, name, prompt, background }`. |
+| `subagent.stop` | When a subagent finishes, fails, or is cancelled (`SubagentStop`) | Observe; not awaited. Payload `{ agent_id, agent_type, name, status, ok, summary, error?, rounds, toolsUsed, filesChanged }`. |
 
-Tool order: `tool.call` → settings `PreToolUse` → Plan-mode check → `tool.check` / permission → the tool.
+These four events are observe-only: a slow or failing handler cannot change or delay the tool or subagent. `tool.result`, `tool.error` and `subagent.*` read content, so `on()` must name them literally. Consent shows them as **tools** (`tool.*`) or **subagents** (`subagent.*`).
+
+Tool order: `tool.call` → settings `PreToolUse` → Plan-mode check → `tool.check` / permission → the tool → `tool.result` or `tool.error`.
 
 `prompt.submit` runs before the settings `UserPromptSubmit` hook. A settings-hook deny still stops the turn after a mod rewrite.
 
@@ -281,7 +287,9 @@ A Claude Code plugin folder (`.claude-plugin/plugin.json`, `hooks/`, `agents/`, 
 | Hook `Stop` | `turn.complete` |
 | Hook `PreCompact` | `session.compact` (runs after compaction) |
 | Hook `Notification` | `notification` |
-| Hook `PostToolUse`, `SubagentStop` and others | Accepted by the validator, not emitted (warning) |
+| Hook `PostToolUse` / `PostToolUseFailure` | `tool.result` / `tool.error` |
+| Hook `SubagentStart` / `SubagentStop` | `subagent.start` / `subagent.stop` |
+| Other Claude Code hooks (e.g. `TeammateIdle`) | Accepted by the validator with a warning; Pawn has no matching moment |
 | Agent files (`agents/*.md`) | Load them with `$.agent.register({ markdown })`, or put them in `~/.claude/agents` / `.claude/agents` |
 | Skills (`skills/*/SKILL.md`) | Read from the usual skills folders; no mod call needed |
 | Custom models via `ANTHROPIC_BASE_URL` | `$.provider.register` offer, added by the user |

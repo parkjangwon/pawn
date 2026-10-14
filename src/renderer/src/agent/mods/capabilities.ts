@@ -12,7 +12,11 @@ export const CLASSIC_EVENT_ALIASES: Record<string, string> = {
   PermissionRequest: 'tool.check',
   Stop: 'turn.complete',
   PreCompact: 'session.compact',
-  Notification: 'notification'
+  Notification: 'notification',
+  PostToolUse: 'tool.result',
+  PostToolUseFailure: 'tool.error',
+  SubagentStart: 'subagent.start',
+  SubagentStop: 'subagent.stop'
 }
 
 /** `classic.PreToolUse` / `PreToolUse` → `tool.call`; anything else unchanged. Keeps a `{matcher}` suffix. */
@@ -83,6 +87,7 @@ const HOOK_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
   { re: /^model\.request/, id: 'modelRequests' },
   { re: /^model\.response/, id: 'modelResponses' },
   { re: /^notification/, id: 'notifications' },
+  { re: /^subagent\./, id: 'subagents' },
   { re: /^prompt\./, id: 'prompt' },
   { re: /^fs\./, id: 'files' },
   { re: /^http\./, id: 'network' },

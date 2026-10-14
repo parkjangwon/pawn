@@ -30,6 +30,7 @@ import {
 } from '../stores/subagentRuns'
 import { useAppStore } from '../stores/app'
 import { uid } from '../utils/uid'
+import { modSubagentStart, modSubagentStop } from './mods/lifecycleEvents'
 import {
   loadAgentProfiles,
   getBuiltinProfile,
@@ -126,9 +127,59 @@ function cancelPanelClose(): void {
 // --- Run loop + orchestration ----------------------------------------------
 
 
+/**
+ * Run one subagent. Wraps the run with the mod `subagent.start` /
+ * `subagent.stop` events (Claude Code SubagentStart / SubagentStop). Both are
+ * fire-and-forget; a mod can observe a run but not change or block it.
+ */
 export async function runSubagent(
   task: SubagentTask,
-  opts: {
+  opts: RunSubagentOpts
+): Promise<SubagentResult> {
+  const runId = opts.runId || uid('subrun-')
+  const agent = resolveProfileName(task.agent, task.mode)
+  const name = (task.name || 'subagent').slice(0, 80)
+  const background = opts.background === true || task.background === true
+  const promptGiven = !!task.prompt?.trim()
+  if (promptGiven) {
+    modSubagentStart({ sessionId: opts.sessionId, runId, agent, name, prompt: task.prompt, background })
+  }
+  try {
+    const result = await runSubagentInner(task, { ...opts, runId })
+    if (promptGiven) {
+      modSubagentStop({
+        sessionId: opts.sessionId,
+        runId,
+        agent: result.agent || agent,
+        name,
+        status: result.ok ? (opts.signal?.aborted ? 'aborted' : 'ok') : opts.signal?.aborted ? 'aborted' : 'error',
+        summary: result.summary || '',
+        error: result.error,
+        rounds: result.rounds,
+        toolsUsed: result.toolsUsed || [],
+        filesChanged: result.filesChanged
+      })
+    }
+    return result
+  } catch (err) {
+    if (promptGiven) {
+      modSubagentStop({
+        sessionId: opts.sessionId,
+        runId,
+        agent,
+        name,
+        status: opts.signal?.aborted ? 'aborted' : 'error',
+        summary: '',
+        error: err instanceof Error ? err.message : String(err),
+        rounds: 0,
+        toolsUsed: []
+      })
+    }
+    throw err
+  }
+}
+
+type RunSubagentOpts = {
     projectId: string
     sessionId: string
     projectPath?: string
@@ -147,7 +198,11 @@ export async function runSubagent(
      * surface (e.g. re-enabling shell).
      */
     forceBuiltinProfile?: boolean
-  }
+}
+
+async function runSubagentInner(
+  task: SubagentTask,
+  opts: RunSubagentOpts
 ): Promise<SubagentResult> {
   const label = (task.name || 'subagent').slice(0, 80)
   const profiles = opts.forceBuiltinProfile ? [] : await loadAgentProfiles(opts.projectPath)

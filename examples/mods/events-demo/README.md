@@ -5,6 +5,7 @@ Sample mod for the roadmap E events and registrations. It:
 - adds an instruction to every model call with `model.request` (`systemAppend`),
 - counts model replies and the tools they ask for with `model.response`,
 - counts desktop notifications with `Notification` (Claude Code's hook name, mapped to `notification`),
+- counts tool runs with `PostToolUse` / `PostToolUseFailure` and shows the last subagent result with `SubagentStop` (mapped to `tool.result`, `tool.error`, `subagent.stop`),
 - registers the `events-demo-doc-checker` subagent from `agents/doc-checker.md` with `$.agent.register`,
 - offers a local Ollama provider with `$.provider.register`.
 

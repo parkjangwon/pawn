@@ -63,6 +63,15 @@ const KNOWN_EVENTS = new Set([
   'classic.PostToolUse',
   'classic.Stop',
   'classic.PermissionRequest',
+  'classic.PostToolUseFailure',
+  'classic.SubagentStart',
+  'classic.SubagentStop',
+  'classic.PreCompact',
+  'classic.Notification',
+  'tool.result',
+  'tool.error',
+  'subagent.start',
+  'subagent.stop',
   'fs.read',
   'fs.write',
   'fs.list',
@@ -93,7 +102,11 @@ const CLASSIC_EVENT_ALIASES: Record<string, string> = {
   PermissionRequest: 'tool.check',
   Stop: 'turn.complete',
   PreCompact: 'session.compact',
-  Notification: 'notification'
+  Notification: 'notification',
+  PostToolUse: 'tool.result',
+  PostToolUseFailure: 'tool.error',
+  SubagentStart: 'subagent.start',
+  SubagentStop: 'subagent.stop'
 }
 
 /** The events Pawn actually emits today (MODS.md §5). Others get a warning. */
@@ -107,6 +120,10 @@ const EMITTED_EVENTS = new Set([
   'turn.complete',
   'tool.call',
   'tool.check',
+  'tool.result',
+  'tool.error',
+  'subagent.start',
+  'subagent.stop',
   'command.run',
   'ui.render',
   'message.render',
