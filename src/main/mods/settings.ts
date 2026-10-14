@@ -56,7 +56,8 @@ function normalize(raw: Partial<ModsSettings> | null | undefined, legacyConsent:
     pluginDirs: Array.from(new Set(dirs)),
     // Default off for new installs; preserve explicit true from saved settings.
     readClaudePlugins: raw?.readClaudePlugins === true,
-    pluginOrder: stringList(raw?.pluginOrder)
+    pluginOrder: stringList(raw?.pluginOrder),
+    sampleModMigrated: raw?.sampleModMigrated === true
   }
 }
 
@@ -96,6 +97,29 @@ export function setModsSettings(partial: Partial<ModsSettings>): ModsSettings {
   if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
   writeFileSync(settingsPath(), JSON.stringify(next, null, 2), 'utf-8')
   return next
+}
+
+const SAMPLE_MOD = 'first-mod'
+
+/** Runs once: turn the bundled sample mod off unless the user explicitly enabled it. */
+export function migrateSampleModDefault(): void {
+  try {
+    const p = settingsPath()
+    const raw: Record<string, unknown> = existsSync(p) ? JSON.parse(readFileSync(p, 'utf-8')) : {}
+    if (raw.sampleModMigrated === true) return
+    const s = getModsSettings()
+    const disabled = s.disabledPlugins
+    const consent = s.consentedPlugins?.find((e) => e.name.toLowerCase() === SAMPLE_MOD)
+    const explicit =
+      !!consent && consent.version !== '*' && !disabled.some((n) => n.toLowerCase() === SAMPLE_MOD)
+    if (!explicit && !disabled.some((n) => n.toLowerCase() === SAMPLE_MOD)) disabled.push(SAMPLE_MOD)
+    const next = existsSync(p) ? { ...raw, disabledPlugins: disabled } : { disabledPlugins: disabled, consentedPlugins: [] }
+    const dir = getPawnDir()
+    if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+    writeFileSync(p, JSON.stringify({ ...next, sampleModMigrated: true }, null, 2), 'utf-8')
+  } catch {
+    /* best effort; retried next launch */
+  }
 }
 
 /** Mods may load when both the mods switch and disableAllHooks allow it. */

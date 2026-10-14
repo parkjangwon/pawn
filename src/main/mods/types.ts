@@ -76,6 +76,8 @@ export interface ModsSettings {
    * Names missing from the list keep discovery order after the listed ones.
    */
   pluginOrder: string[]
+  /** One-time migration: sample mod `first-mod` defaults to off unless explicitly enabled. */
+  sampleModMigrated?: boolean
 }
 
 export const DEFAULT_MODS_SETTINGS: ModsSettings = {
@@ -85,7 +87,8 @@ export const DEFAULT_MODS_SETTINGS: ModsSettings = {
   consentedPlugins: [],
   pluginDirs: [],
   readClaudePlugins: false,
-  pluginOrder: []
+  pluginOrder: [],
+  sampleModMigrated: false
 }
 
 export interface ModValidateFinding {
