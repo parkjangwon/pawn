@@ -19,6 +19,46 @@ import type {
 const HOOK_BUDGET_MS = 10_000
 const TIER_ORDER: ModTier[] = ['prepend', 'user', 'append', 'builtin', 'core']
 
+function decorRows(v: unknown): Array<Record<string, unknown>> {
+  if (!Array.isArray(v)) return []
+  return v.filter((x): x is Record<string, unknown> => Boolean(x) && typeof x === 'object')
+}
+
+/** Stamp `plugin` on message.render entries this hook added. */
+function stampMessageRender(before: unknown, after: unknown, plugin: string): unknown {
+  if (!after || typeof after !== 'object') return after
+  const propsIn = (after as { props?: unknown }).props
+  if (!propsIn || typeof propsIn !== 'object') return after
+  const beforeProps =
+    before && typeof before === 'object' ? (before as { props?: unknown }).props : null
+  const prevRec =
+    beforeProps && typeof beforeProps === 'object' ? (beforeProps as Record<string, unknown>) : null
+  const props = { ...(propsIn as Record<string, unknown>) }
+  for (const key of ['badges', 'actions', 'blocks'] as const) {
+    const prevIds = new Set(
+      decorRows(prevRec?.[key]).map((item) => (typeof item.id === 'string' ? item.id : ''))
+    )
+    props[key] = decorRows(props[key]).map((item) => {
+      if (typeof item.plugin === 'string' && item.plugin) return item
+      const id = typeof item.id === 'string' ? item.id : ''
+      if (id && prevIds.has(id)) return item
+      return { ...item, plugin }
+    })
+  }
+  return { ...(after as Record<string, unknown>), props }
+}
+
+function scanModSource(source: string): { calls: Set<string>; hooks: Set<string> } {
+  const calls = new Set<string>()
+  const hooks = new Set<string>()
+  const callRe = /\$\.([a-zA-Z_][\w]*)\.([a-zA-Z_][\w]*)/g
+  const onRe = /\bon\s*\(\s*['"]([^'"]+)['"]/g
+  let m: RegExpExecArray | null
+  while ((m = callRe.exec(source))) calls.add(`$.${m[1]}.${m[2]}`)
+  while ((m = onRe.exec(source))) hooks.add(m[1])
+  return { calls, hooks }
+}
+
 /** prompt.submit shows the model this many characters. An unchanged echo keeps the tail. */
 export const MOD_PROMPT_CAP = 200_000
 
@@ -168,6 +208,8 @@ export class ModRuntime {
   private listeners = new Set<() => void>()
   private processEnv: Record<string, string> = {}
   private envOverlay = new Map<string, Record<string, string>>()
+  /** Static calls/hooks from source, keyed by plugin name. Gates $.slot and message.* . */
+  private declared = new Map<string, { calls: Set<string>; hooks: Set<string> }>()
 
   setContext(ctx: Partial<ModRuntimeContext>): void {
     const prev = this.ctx.sessionId
@@ -247,6 +289,7 @@ export class ModRuntime {
   private turnScoped(event: string, input: unknown): boolean {
     if (event === 'turn.start' || event === 'turn.step' || event === 'turn.complete') return true
     if (event === 'tool.call' || event === 'tool.check') return true
+    if (event === 'message.render') return true
     return (
       event === 'ui.render' &&
       !!input &&
@@ -333,6 +376,7 @@ export class ModRuntime {
     this.ready = false
     this.lastAnswerPlugin = null
     this.envOverlay.clear()
+    this.declared.clear()
     useModsUiStore.getState().clearSessionUi()
     this.notify()
   }
@@ -368,6 +412,14 @@ export class ModRuntime {
       hooks: [],
       calls: []
     }
+
+    const declared = { calls: new Set<string>(), hooks: new Set<string>() }
+    for (const source of src.sources) {
+      const scanned = scanModSource(source)
+      for (const call of scanned.calls) declared.calls.add(call)
+      for (const hook of scanned.hooks) declared.hooks.add(hook)
+    }
+    this.declared.set(src.name, declared)
 
     const on = this.makeOn(src.name, src.root, src.tier || 'user')
 
@@ -409,15 +461,7 @@ export class ModRuntime {
     const newHooks = this.hooks.slice(hooksBefore)
     info.hooks = [...new Set(newHooks.map((h) => h.event))]
     if (loaded === 0) this.hooks.length = hooksBefore
-    // Approximate calls from source text for UI
-    const callRe = /\$\.([a-zA-Z_][\w]*)\.([a-zA-Z_][\w]*)/g
-    const calls = new Set<string>()
-    let m: RegExpExecArray | null
-    for (const source of src.sources) {
-      callRe.lastIndex = 0
-      while ((m = callRe.exec(source))) calls.add(`$.${m[1]}.${m[2]}`)
-    }
-    info.calls = [...calls].sort()
+    info.calls = [...declared.calls].sort()
     if (loaded === 0) info.enabled = false
     if (errors.length > 0) {
       info.error = errors[0].slice(0, 300)
@@ -468,7 +512,8 @@ export class ModRuntime {
       },
       contextUsage: () =>
         this.ctx.contextUsage?.() || { tokens: 0, window: 200_000, percent: 0 },
-      reservedCommands: BUILTIN_COMMANDS
+      reservedCommands: BUILTIN_COMMANDS,
+      declaredCalls: this.declared.get(pluginName)?.calls || new Set()
     }
   }
 
@@ -484,6 +529,11 @@ export class ModRuntime {
       }
       if (typeof handler !== 'function') {
         throw new Error(`on('${event}'): handler is not a function`)
+      }
+      if (event.startsWith('message.') && !this.declared.get(plugin)?.hooks.has(event)) {
+        throw new Error(
+          `${event} refused: not declared in this mod's source, so it was not shown at consent`
+        )
       }
       const entry: HookEntry = { event, matcher, handler, plugin, root, tier }
       this.hooks.push(entry)
@@ -562,10 +612,12 @@ export class ModRuntime {
         }
 
         let nextCalled = false
+        const stamp = (value: unknown): unknown =>
+          event === 'message.render' ? stampMessageRender(e, value, entry.plugin) : value
         const next = ((nextEvent: unknown) => {
           if (activeEntry !== entry) return Promise.resolve(nextEvent)
           nextCalled = true
-          return runFrom(nextEvent)
+          return runFrom(stamp(nextEvent))
         }) as ModNext
 
         next.signal = combined || new AbortController().signal
@@ -574,7 +626,7 @@ export class ModRuntime {
         next.to = (nextEvent, tier) => {
           if (activeEntry !== entry) return Promise.resolve(nextEvent)
           nextCalled = true
-          return runFrom(nextEvent, tier)
+          return runFrom(stamp(nextEvent), tier)
         }
 
         try {
@@ -595,7 +647,7 @@ export class ModRuntime {
             // The handler settled without next: a later next() from it is
             // stale and must not re-enter the chain past this answer.
             activeEntry = null
-            return result
+            return stamp(result)
           }
           return result
         } catch (err) {
@@ -611,6 +663,7 @@ export class ModRuntime {
               if (!nextCalled) {
                 this.lastAnswerPlugin = entry.plugin
                 activeEntry = null
+                return stamp(caught)
               }
               return caught
             } catch {

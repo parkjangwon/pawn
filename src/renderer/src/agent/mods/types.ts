@@ -167,6 +167,43 @@ export interface ModsApi {
     }) => Promise<{ isAnswered: boolean; text?: string; reason?: string }>
   }
   turn: { abort: () => void }
+  /** Chat chrome owned by this mod. Same (plugin, id, slot) replaces. */
+  slot: {
+    sidebar: (spec: { id: string; title: string; tree?: unknown; icon?: string }) => void
+    panel: (spec: { id: string; title: string; tree?: unknown }) => void
+    header: (spec: { id: string; label: string; title?: string; icon?: string }) => void
+    toolbar: (spec: { id: string; label: string; title?: string }) => void
+    settings: (spec: { id: string; title: string; tree?: unknown }) => void
+    statusbar: (spec: { id: string; text?: string; title?: string; tree?: unknown }) => void
+    palette: (spec: { id: string; title: string; hint?: string }) => void
+    shortcut: (spec: { id: string; keys: string; title: string }) => void
+    remove: (spec: { slot: ModSlotKind; id: string }) => void
+    list: () => ModSlotView[]
+  }
+}
+
+export type ModSlotKind =
+  | 'sidebar'
+  | 'panel'
+  | 'header'
+  | 'toolbar'
+  | 'settings'
+  | 'statusbar'
+  | 'palette'
+  | 'shortcut'
+
+export interface ModSlotView {
+  slot: ModSlotKind
+  id: string
+  plugin: string
+  title: string
+  label?: string
+  text?: string
+  icon?: string
+  hint?: string
+  keys?: string
+  tree?: unknown
+  collapsed?: boolean
 }
 
 export type ModElementCtor = (props: Record<string, unknown>) => unknown

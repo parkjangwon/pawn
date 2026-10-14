@@ -1,6 +1,7 @@
 import { modKvStore } from './kvStore'
 import { useModsUiStore } from './uiStore'
-import type { ModCommandReg, ModElementTable, ModsApi, ModToolReg } from './types'
+import { normalizeShortcut, shortcutConflictMessage } from './shortcuts'
+import type { ModCommandReg, ModElementTable, ModSlotKind, ModSlotView, ModsApi, ModToolReg } from './types'
 
 export interface ModsApiHost {
   pluginName: string
@@ -23,6 +24,8 @@ export interface ModsApiHost {
   messages: () => Array<{ role: string; text: string }>
   contextUsage: () => { tokens: number; window: number; percent: number }
   reservedCommands: Set<string>
+  /** `$.slot.*` literals from this mod's source. Missing a call means consent never showed it. */
+  declaredCalls: ReadonlySet<string>
 }
 
 const DEFAULT_ELEMENTS: ModElementTable = {
@@ -258,8 +261,123 @@ export function buildModsApi(host: ModsApiHost): ModsApi {
     },
     turn: {
       abort: () => host.abortTurn()
-    }
+    },
+    slot: slotApi(host, plugin)
   }
 
   return api
+}
+
+const SLOT_ID = /^[A-Za-z0-9_-]{1,64}$/
+
+function slotApi(host: ModsApiHost, plugin: string): ModsApi['slot'] {
+  const gate = (kind: string): void => {
+    const needle = `$.slot.${kind}`
+    if (!host.declaredCalls.has(needle)) {
+      throw new Error(`${needle} refused: not declared in this mod's source, so it was not shown at consent`)
+    }
+  }
+  const idOf = (id: unknown): string => {
+    const s = String(id || '')
+    if (!SLOT_ID.test(s)) throw new Error(`Invalid slot id: ${s}`)
+    return s
+  }
+  const put = (slot: ModSlotView): void => {
+    useModsUiStore.getState().upsertSlot(slot)
+  }
+  return {
+    sidebar: (spec) => {
+      gate('sidebar')
+      put({
+        slot: 'sidebar',
+        id: idOf(spec.id),
+        plugin,
+        title: String(spec.title || spec.id),
+        icon: spec.icon,
+        tree: spec.tree
+      })
+    },
+    panel: (spec) => {
+      gate('panel')
+      // RightPanel tabs are a closed set. A panel slot is a docked pane in the mods chrome.
+      put({
+        slot: 'panel',
+        id: idOf(spec.id),
+        plugin,
+        title: String(spec.title || spec.id),
+        tree: spec.tree
+      })
+    },
+    header: (spec) => {
+      gate('header')
+      put({
+        slot: 'header',
+        id: idOf(spec.id),
+        plugin,
+        title: String(spec.title || spec.label || spec.id),
+        label: String(spec.label || spec.id),
+        icon: spec.icon
+      })
+    },
+    toolbar: (spec) => {
+      gate('toolbar')
+      put({
+        slot: 'toolbar',
+        id: idOf(spec.id),
+        plugin,
+        title: String(spec.title || spec.label || spec.id),
+        label: String(spec.label || spec.id)
+      })
+    },
+    settings: (spec) => {
+      gate('settings')
+      put({
+        slot: 'settings',
+        id: idOf(spec.id),
+        plugin,
+        title: String(spec.title || spec.id),
+        tree: spec.tree
+      })
+    },
+    statusbar: (spec) => {
+      gate('statusbar')
+      put({
+        slot: 'statusbar',
+        id: idOf(spec.id),
+        plugin,
+        title: String(spec.title || spec.text || spec.id),
+        text: spec.text != null ? String(spec.text) : undefined,
+        tree: spec.tree
+      })
+    },
+    palette: (spec) => {
+      gate('palette')
+      put({
+        slot: 'palette',
+        id: idOf(spec.id),
+        plugin,
+        title: String(spec.title || spec.id),
+        hint: spec.hint
+      })
+    },
+    shortcut: (spec) => {
+      gate('shortcut')
+      const id = idOf(spec.id)
+      const keys = normalizeShortcut(String(spec.keys || ''))
+      if (!keys) throw new Error(`Invalid shortcut: ${String(spec.keys || '')}`)
+      const conflict = shortcutConflictMessage(keys, plugin, id)
+      if (conflict) throw new Error(conflict)
+      put({
+        slot: 'shortcut',
+        id,
+        plugin,
+        title: String(spec.title || id),
+        keys
+      })
+    },
+    remove: (spec) => {
+      useModsUiStore.getState().removeSlot(plugin, spec.slot, idOf(spec.id))
+    },
+    list: () => useModsUiStore.getState().slots.filter((s) => s.plugin === plugin)
+  }
 }

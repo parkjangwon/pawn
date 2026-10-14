@@ -1,7 +1,5 @@
 import { useRef, useState } from 'react'
-import { getModRuntime } from '../agent/mods'
-import { modEventLabel } from '../agent/mods/eventLabel'
-import { useModsUiStore } from '../agent/mods/uiStore'
+import { emitModUi } from '../agent/mods/modUiEmit'
 import Button from './Button'
 import Input from './Input'
 import Select from './Select'
@@ -19,6 +17,8 @@ export interface ModTreeProps {
   plugin?: string
   /** Pane id when rendering inside an open pane. */
   surfaceId?: string
+  /** Slot kind stamped onto ui.press / ui.input / ui.select. */
+  slot?: string
 }
 
 function isNode(v: unknown): v is ModTreeNode {
@@ -40,40 +40,16 @@ function labelOf(props: Record<string, unknown>, kids: unknown[]): string {
   return ''
 }
 
-async function emitUiEvent(
+function emitUiEvent(
   event: 'ui.press' | 'ui.input' | 'ui.select',
   plugin: string | undefined,
-  payload: Record<string, unknown>
+  payload: Record<string, unknown>,
+  slot?: string
 ): Promise<void> {
-  const runtime = getModRuntime()
-  const generation = useModsUiStore.getState().renderGeneration
-  await runtime
-    .emit(event, { plugin: plugin || '', ...payload }, async (e) => e)
-    .catch(() => {})
-  // Name the control, not what the user typed: an Input value can be
-  // anything (a note, a token) and the intervention log is shown in chat.
-  const label =
-    event !== 'ui.input' && typeof payload.value === 'string' && payload.value.trim()
-      ? payload.value.trim()
-      : typeof payload.id === 'string'
-        ? payload.id
-        : modEventLabel(event)
-  const text =
-    event === 'ui.input'
-      ? `Edited ${label}.`
-      : event === 'ui.select'
-        ? `Chose ${label}.`
-        : `Pressed ${label}.`
-  useModsUiStore.getState().pushTimeline(plugin || 'extension', text, 'press')
-  // One redraw: ModsChrome re-renders the bands when the generation moves.
-  // A handler that already called $.ui.invalidate() moved it; don't add a
-  // second draw on top.
-  if (useModsUiStore.getState().renderGeneration === generation) {
-    useModsUiStore.getState().invalidate()
-  }
+  return emitModUi(event, plugin, slot ? { ...payload, slot } : payload)
 }
 
-export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): React.JSX.Element | null {
+export default function ModTree({ tree, plugin, surfaceId, slot }: ModTreeProps): React.JSX.Element | null {
   if (tree == null) return null
   if (typeof tree === 'string' || typeof tree === 'number' || typeof tree === 'boolean') {
     return <span className="mod-tree-text">{String(tree)}</span>
@@ -82,7 +58,7 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
     return (
       <>
         {tree.map((child, i) => (
-          <ModTree key={i} tree={child} plugin={plugin} surfaceId={surfaceId} />
+          <ModTree key={i} tree={child} plugin={plugin} surfaceId={surfaceId} slot={slot} />
         ))}
       </>
     )
@@ -100,7 +76,7 @@ export default function ModTree({ tree, plugin, surfaceId }: ModTreeProps): Reac
   if (type === 'Text' || type === 'Markdown' || type === 'Code') {
     return (
       <span className={`mod-tree-${type.toLowerCase()}`}>
-        {text || kids.map((c, i) => <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} />)}
+        {text || kids.map((c, i) => <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} slot={slot} />)}
       </span>
     )
   }
