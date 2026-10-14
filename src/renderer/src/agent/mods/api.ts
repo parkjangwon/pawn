@@ -1,6 +1,5 @@
 import { modKvStore } from './kvStore'
 import { useModsUiStore } from './uiStore'
-import { normalizeShortcut, shortcutConflictMessage } from './shortcuts'
 import type { ModCommandReg, ModElementTable, ModSlotKind, ModSlotView, ModsApi, ModToolReg } from './types'
 
 export interface ModsApiHost {
@@ -348,31 +347,6 @@ function slotApi(host: ModsApiHost, plugin: string): ModsApi['slot'] {
         title: String(spec.title || spec.text || spec.id),
         text: spec.text != null ? String(spec.text) : undefined,
         tree: spec.tree
-      })
-    },
-    palette: (spec) => {
-      gate('palette')
-      put({
-        slot: 'palette',
-        id: idOf(spec.id),
-        plugin,
-        title: String(spec.title || spec.id),
-        hint: spec.hint
-      })
-    },
-    shortcut: (spec) => {
-      gate('shortcut')
-      const id = idOf(spec.id)
-      const keys = normalizeShortcut(String(spec.keys || ''))
-      if (!keys) throw new Error(`Invalid shortcut: ${String(spec.keys || '')}`)
-      const conflict = shortcutConflictMessage(keys, plugin, id)
-      if (conflict) throw new Error(conflict)
-      put({
-        slot: 'shortcut',
-        id,
-        plugin,
-        title: String(spec.title || id),
-        keys
       })
     },
     remove: (spec) => {

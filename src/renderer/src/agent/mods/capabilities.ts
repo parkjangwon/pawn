@@ -11,9 +11,6 @@ export type ModCapabilityId =
   | 'toolbar'
   | 'settingsPage'
   | 'statusbar'
-  | 'palette'
-  | 'shortcuts'
-  | 'messages'
   | 'prompt'
   | 'store'
 
@@ -36,8 +33,6 @@ const CALL_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
   { re: /^\$\.slot\.(header|toolbar)$/, id: 'toolbar' },
   { re: /^\$\.slot\.settings$/, id: 'settingsPage' },
   { re: /^\$\.slot\.statusbar$/, id: 'statusbar' },
-  { re: /^\$\.slot\.palette$/, id: 'palette' },
-  { re: /^\$\.slot\.shortcut$/, id: 'shortcuts' },
   { re: /^\$\.prompt\./, id: 'prompt' },
   { re: /^\$\.store\./, id: 'store' }
 ]
@@ -46,7 +41,6 @@ const HOOK_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
   { re: /^tool\./, id: 'tools' },
   { re: /^command\./, id: 'commands' },
   { re: /^ui\./, id: 'ui' },
-  { re: /^message\./, id: 'messages' },
   { re: /^prompt\./, id: 'prompt' },
   { re: /^fs\./, id: 'files' },
   { re: /^http\./, id: 'network' },
@@ -64,9 +58,6 @@ const ORDER: ModCapabilityId[] = [
   'toolbar',
   'settingsPage',
   'statusbar',
-  'palette',
-  'shortcuts',
-  'messages',
   'prompt',
   'store'
 ]

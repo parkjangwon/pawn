@@ -84,7 +84,7 @@ export default function ModTree({ tree, plugin, surfaceId, slot }: ModTreeProps)
     const href = typeof props.href === 'string' ? props.href : '#'
     return (
       <a className="mod-tree-link" href={href} target="_blank" rel="noreferrer">
-        {text || kids.map((c, i) => <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} />) || href}
+        {text || kids.map((c, i) => <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} slot={slot} />) || href}
       </a>
     )
   }
@@ -97,15 +97,20 @@ export default function ModTree({ tree, plugin, surfaceId, slot }: ModTreeProps)
         className="mod-tree-button"
         disabled={props.disabled === true}
         onClick={() => {
-          void emitUiEvent('ui.press', plugin, {
-            component: 'Button',
-            id,
-            surfaceId,
-            value: text || id
-          })
+          void emitUiEvent(
+            'ui.press',
+            plugin,
+            {
+              component: 'Button',
+              id,
+              surfaceId,
+              value: text || id
+            },
+            slot
+          )
         }}
       >
-        {text || kids.map((c, i) => <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} />) || 'Button'}
+        {text || kids.map((c, i) => <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} slot={slot} />) || 'Button'}
       </Button>
     )
   }
@@ -122,6 +127,7 @@ export default function ModTree({ tree, plugin, surfaceId, slot }: ModTreeProps)
         id={id}
         plugin={plugin}
         surfaceId={surfaceId}
+        slot={slot}
         placeholder={typeof props.placeholder === 'string' ? props.placeholder : undefined}
         defaultValue={seeded}
       />
@@ -145,12 +151,17 @@ export default function ModTree({ tree, plugin, surfaceId, slot }: ModTreeProps)
         className="mod-tree-select"
         defaultValue={typeof props.value === 'string' ? props.value : options[0]?.value}
         onChange={(e) => {
-          void emitUiEvent('ui.select', plugin, {
-            component: 'Select',
-            id,
-            surfaceId,
-            value: e.target.value
-          })
+          void emitUiEvent(
+            'ui.select',
+            plugin,
+            {
+              component: 'Select',
+              id,
+              surfaceId,
+              value: e.target.value
+            },
+            slot
+          )
         }}
       >
         {options.map((o) => (
@@ -165,7 +176,7 @@ export default function ModTree({ tree, plugin, surfaceId, slot }: ModTreeProps)
     <div className={`mod-tree-box mod-tree-${type.toLowerCase()}`}>
       {text}
       {kids.map((c, i) => (
-        <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} />
+        <ModTree key={i} tree={c} plugin={plugin} surfaceId={surfaceId} slot={slot} />
       ))}
     </div>
   )
@@ -175,12 +186,14 @@ function ModTreeInput({
   id,
   plugin,
   surfaceId,
+  slot,
   placeholder,
   defaultValue
 }: {
   id: string
   plugin?: string
   surfaceId?: string
+  slot?: string
   placeholder?: string
   defaultValue: string
 }): React.JSX.Element {
@@ -191,13 +204,18 @@ function ModTreeInput({
   const commit = (submit: boolean): void => {
     if (!submit && value === sent.current) return
     sent.current = value
-    void emitUiEvent('ui.input', plugin, {
-      component: 'Input',
-      id,
-      surfaceId,
-      value,
-      ...(submit ? { submit: true } : {})
-    })
+    void emitUiEvent(
+      'ui.input',
+      plugin,
+      {
+        component: 'Input',
+        id,
+        surfaceId,
+        value,
+        ...(submit ? { submit: true } : {})
+      },
+      slot
+    )
   }
   return (
     <Input

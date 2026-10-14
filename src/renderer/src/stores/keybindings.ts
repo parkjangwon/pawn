@@ -158,36 +158,6 @@ export const useKeybindingsStore = create<KeybindingsState>((set, get) => ({
   }
 }))
 
-/** True when the event is the chord `combo` (`Meta+K`, `Ctrl+Shift+P`, …). */
-export function eventMatchesCombo(
-  combo: string,
-  e: {
-    key: string
-    code: string
-    metaKey: boolean
-    ctrlKey: boolean
-    altKey: boolean
-    shiftKey: boolean
-    isComposing?: boolean
-  }
-): boolean {
-  if (e.isComposing) return false
-  const parsed = parseCombo(combo)
-  if (!parsed) return false
-  const wantMetaCtrl = parsed.meta || parsed.ctrl
-  const haveMetaCtrl = e.metaKey || e.ctrlKey
-  const modsMatch =
-    parsed.meta === parsed.ctrl
-      ? e.metaKey === parsed.meta && e.ctrlKey === parsed.ctrl
-      : haveMetaCtrl === wantMetaCtrl
-  return (
-    modsMatch &&
-    e.altKey === parsed.alt &&
-    e.shiftKey === parsed.shift &&
-    (e.key.toLowerCase() === parsed.key.toLowerCase() || e.code === keyCodeFor(parsed.key))
-  )
-}
-
 /** Attach a window keydown handler for a binding; re-arms when it changes. */
 export function useKeybinding(id: KeyBindingId, handler: (e: KeyboardEvent) => void): void {
   const combo = useKeybindingsStore((s) => s.bindings[id])
@@ -195,9 +165,21 @@ export function useKeybinding(id: KeyBindingId, handler: (e: KeyboardEvent) => v
     const parsed = parseCombo(combo)
     if (!parsed) return
     const onKey = (e: KeyboardEvent): void => {
-      if (!eventMatchesCombo(combo, e)) return
-      e.preventDefault()
-      handler(e)
+      if (e.isComposing) return
+      const wantMetaCtrl = parsed.meta || parsed.ctrl
+      const haveMetaCtrl = e.metaKey || e.ctrlKey
+      const modsMatch = parsed.meta === parsed.ctrl
+        ? e.metaKey === parsed.meta && e.ctrlKey === parsed.ctrl
+        : haveMetaCtrl === wantMetaCtrl
+      if (
+        modsMatch &&
+        e.altKey === parsed.alt &&
+        e.shiftKey === parsed.shift &&
+        (e.key.toLowerCase() === parsed.key.toLowerCase() || e.code === keyCodeFor(parsed.key))
+      ) {
+        e.preventDefault()
+        handler(e)
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
