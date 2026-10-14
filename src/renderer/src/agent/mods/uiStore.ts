@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ModSlotKind, ModSlotView } from './types'
+import type { ModView } from './views'
 
 export interface ModPaneState {
   id: string
@@ -52,6 +53,13 @@ interface ModsUiState {
   slots: ModSlotView[]
   /** `${plugin}\0${id}` of the Settings page on screen, or null. */
   activeSettingsKey: string | null
+  /** Custom views from `$.view.open`. Cleared with the runtime. */
+  views: ModView[]
+  /** `${plugin}\0${id}` of the selected tab view, or null. */
+  activeViewTab: string | null
+  openView: (view: Omit<ModView, 'rev'>) => void
+  closeView: (plugin: string, id: string) => void
+  setActiveViewTab: (key: string | null) => void
   invalidate: () => void
   bumpRuntime: () => void
   setSpinnerSuffix: (suffix: string) => void
@@ -93,6 +101,25 @@ export const useModsUiStore = create<ModsUiState>((set, get) => ({
   panes: [],
   slots: [],
   activeSettingsKey: null,
+  views: [],
+  activeViewTab: null,
+  openView: (view) => {
+    const prev = get().views.find((v) => v.plugin === view.plugin && v.id === view.id)
+    const rest = get().views.filter((v) => !(v.plugin === view.plugin && v.id === view.id))
+    const next = { ...view, rev: (prev?.rev || 0) + 1 }
+    set({
+      views: [...rest, next],
+      activeViewTab: view.placement === 'tab' ? `${view.plugin}\0${view.id}` : get().activeViewTab
+    })
+  },
+  closeView: (plugin, id) => {
+    const key = `${plugin}\0${id}`
+    set({
+      views: get().views.filter((v) => !(v.plugin === plugin && v.id === id)),
+      activeViewTab: get().activeViewTab === key ? null : get().activeViewTab
+    })
+  },
+  setActiveViewTab: (key) => set({ activeViewTab: key }),
   invalidate: () => set({ renderGeneration: get().renderGeneration + 1 }),
   bumpRuntime: () => set({ runtimeGeneration: get().runtimeGeneration + 1 }),
   setSpinnerSuffix: (suffix) => set({ spinnerSuffix: suffix }),
@@ -182,6 +209,8 @@ export const useModsUiStore = create<ModsUiState>((set, get) => ({
       panes: [],
       slots: [],
       activeSettingsKey: null,
+      views: [],
+      activeViewTab: null,
       renderGeneration: get().renderGeneration + 1
     })
 }))

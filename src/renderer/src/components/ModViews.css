@@ -1,0 +1,64 @@
+.mod-view-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color-scheme: normal;
+}
+.mod-view-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.mod-view-title { font-weight: 600; color: var(--text-primary); }
+.mod-view-owner { color: var(--text-muted); font-size: 11px; }
+.mod-view-close {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+  padding: 2px 4px;
+  border-radius: var(--radius-sm);
+}
+.mod-view-close:hover { background: var(--bg-hover); color: var(--text-primary); }
+.mod-view-panels { display: flex; flex-direction: column; gap: 6px; padding: 4px 8px; }
+.mod-view-panel { border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; }
+.mod-view-tabs { margin: 0 auto 8px; width: 100%; max-width: 760px; }
+.mod-view-tablist { display: flex; gap: 4px; flex-wrap: wrap; }
+.mod-view-tab-wrap { display: inline-flex; align-items: center; border: 1px solid var(--border-color); border-radius: var(--radius-sm); }
+.mod-view-tab-wrap .mod-view-close { margin-left: 0; }
+.mod-view-tab {
+  border: 0;
+  background: none;
+  color: var(--text-secondary);
+  padding: 3px 8px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.mod-view-tab.active { color: var(--text-primary); background: var(--bg-hover); }
+.mod-view-tabpanel { margin-top: 6px; border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; }
+.mod-view-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(0, 0, 0, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mod-view-modal {
+  width: min(560px, 92vw);
+  max-height: 86vh;
+  overflow: auto;
+  background: var(--bg-elevated);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-elevated);
+}
+.mod-view-modal .mod-view-head { border-bottom: 1px dashed var(--border-color); }

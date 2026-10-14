@@ -1,3 +1,5 @@
+import { is } from '@electron-toolkit/utils'
+import { MOD_VIEW_NONCE } from '../csp'
 import { handleTrusted } from './trust'
 import {
   discoverMods,
@@ -70,6 +72,9 @@ export function registerModsIpc(): void {
       text: formatValidateReport(report)
     }
   })
+
+  // Nonce for mod view inline scripts. Empty in dev, where the dev CSP already allows inline.
+  handleTrusted('mods:viewNonce', async () => ({ nonce: is.dev ? '' : MOD_VIEW_NONCE }))
 
   handleTrusted('mods:envSnapshot', async () => {
     const values: Record<string, string> = {}

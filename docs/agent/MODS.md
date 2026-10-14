@@ -72,7 +72,7 @@ Mods are not sandboxed. They run with your account: files, shell, network, the c
 Before a mod loads, Settings shows a review dialog:
 
 - a capability list derived from the hooks it registers and the `$.…` calls in source: one row per capability, with a label and a one-line description (`settings.modsSection.cap.<id>` and `settings.modsSection.capDesc.<id>` in `strings.ts`; ids in `src/renderer/src/agent/mods/capabilities.ts`). A new capability needs an id, a rule, and both strings
-- a risk chip: **high** if it can run a process or use the network, **medium** if it can touch files or tools, or read message text (`message.render`), **low** otherwise
+- a risk chip: **high** if it can run a process or use the network, **medium** if it can touch files or tools, read message text (`message.render`), or show a custom view (`$.view.open`), **low** otherwise
 - the version you are allowing
 
 Allow writes that exact version into `consentedPlugins` and removes the name from `disabledPlugins`. Revoke deletes the consent entry and disables the name.
@@ -205,6 +205,32 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 - **Per chat:** `e.sessionId` is the chat the message belongs to, not the chat on screen, and `$.session` inside the hook is that chat. Keep per-chat state keyed by `e.sessionId`.
 - Like slots, the event name must be written literally (`on('message.render', …)`); otherwise `on` throws `message.render refused`.
 
+
+### Custom views
+
+`$.view.*` shows a mod's own HTML page in a sandboxed iframe. Use it when the `$.ui.resolve()` elements are not enough (charts, editors, custom layouts).
+
+| Call | What it does | Capability |
+| --- | --- | --- |
+| `$.view.open({ id, title, html, script, placement, height })` | Opens or replaces the view `id`. `placement` is `panel` (left sidebar, default), `tab` (a tab strip above the chat) or `modal` (a dialog labeled with the mod's name). `html` and `script` up to 256 KB each; `height` 60–2000 px. | `views` |
+| `$.view.post({ id, data })` | Sends JSON data into the view (`pawn.onMessage`). | none |
+| `$.view.close({ id })` / `$.view.list()` | Close one of this mod's views / list them. | none |
+
+Inside the view, a global `pawn` object:
+
+- `pawn.call(method, ...args)` → Promise. Reaches the mod's `$` for these methods only: `ui.toast`, `ui.notice`, `ui.status`, `store.get/set/delete/keys`, `fs.read`, `fs.list`, `fs.exists`, `http.fetch`, `model.complete`, `clock.now`. Each must also be written literally somewhere in the mod's source (`$.store.get`), so the review dialog already listed it. Anything else rejects.
+- `pawn.send(data)` → the mod gets `on('view.message', { plugin: '<mod>' }, ($, e, next) => …)` with `{ plugin, id, data }`.
+- `pawn.onMessage(fn)` receives `$.view.post` data. `pawn.resize(px)` sets the height (panel and modal).
+
+Sandbox and CSP:
+
+- `sandbox="allow-scripts"` only, no `allow-same-origin`: opaque origin, no access to Pawn's window, `window.api`, storage, cookies, popups, forms or top navigation.
+- The page starts with its own CSP: `default-src 'none'`, no `connect-src`, frames, workers or forms; images and fonts only as `data:`. The view itself cannot reach the network; anything remote goes through `pawn.call('http.fetch', …)`, which needs `$.http.fetch` (and its consent).
+- Scripts run only from `script` (and the bridge), which Pawn tags with a per-launch nonce. `<script>` tags and `onclick=` attributes inside `html` are blocked in the packaged app; use `script` with `addEventListener`.
+- A view can't navigate itself anywhere (the main process cancels it), so data can't leave through a URL.
+- Light/dark: the theme tokens (`--bg-primary`, `--text-primary`, `--accent`, `--border-color`, …) are copied into the page's `:root`, and the view reloads when the theme changes.
+- Risk is **medium**: the view runs code you didn't write and a modal can look like a dialog, so modals always show `mod: <name>`.
+- Sample: `examples/mods/views-demo/` (panel counter saved with `$.store`, plus a tab and a dialog). It is not installed by default; copy it to `~/.pawn/mods/views-demo` and allow it.
 
 ## 7. `$` API
 

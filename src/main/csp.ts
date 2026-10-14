@@ -1,3 +1,5 @@
+import { randomBytes } from 'crypto'
+
 /**
  * Renderer Content-Security-Policy strings, kept in one place so tests can
  * pin the invariants.
@@ -49,10 +51,11 @@ export const DEV_CSP = buildDevCsp([])
  * Ollama server) appended to connect-src only; invalid entries are dropped,
  * wildcards are never produced, and img-src is untouched.
  */
-export function buildProdCsp(extraConnectOrigins: string[]): string {
+export function buildProdCsp(extraConnectOrigins: string[], viewNonce?: string): string {
+  const nonce = viewNonce && /^[A-Za-z0-9+/=_-]{16,128}$/.test(viewNonce) ? ` 'nonce-${viewNonce}'` : ''
   return [
     "default-src 'self';",
-    "script-src 'self' blob:;",
+    `script-src 'self' blob:${nonce};`,
     "style-src 'self' 'unsafe-inline';",
     "img-src 'self' data: blob:;",
     "font-src 'self';",
@@ -61,3 +64,17 @@ export function buildProdCsp(extraConnectOrigins: string[]): string {
 }
 
 export const PROD_CSP = buildProdCsp([])
+
+/**
+ * Per-process nonce for mod custom views. A view is a sandboxed srcdoc iframe
+ * (no allow-same-origin), which inherits this policy; its bridge and the mod's
+ * script are the only inline scripts carrying the nonce. The view document adds
+ * its own stricter meta CSP (no network, no frames).
+ */
+export const MOD_VIEW_NONCE = randomBytes(18).toString('base64url')
+
+/** Sub-frame navigation guard: a mod view (about:srcdoc) may not navigate anywhere. */
+export function blocksModViewNavigation(frameUrl: string | undefined, targetUrl: string): boolean {
+  if (!frameUrl || !frameUrl.startsWith('about:srcdoc')) return false
+  return !/^about:(srcdoc|blank)$/.test(targetUrl)
+}

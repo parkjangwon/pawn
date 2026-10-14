@@ -19,6 +19,7 @@ import ShortcutsHelp from './components/ShortcutsHelp'
 import RightPanel from './components/RightPanel'
 import BottomTerminal from './components/BottomTerminal'
 import { ModShortcutListener } from './components/ModSlots'
+import { ModViewModals } from './components/ModViews'
 
 const AutomationView = lazy(() => import('./components/AutomationView'))
 const Settings = lazy(() => import('./components/Settings'))
@@ -355,6 +356,7 @@ export default function App(): React.JSX.Element {
         </div>
       )}
       <ModShortcutListener />
+      <ModViewModals />
       <a href="#main-content" className="skip-link">
         {'Skip to content'}
       </a>

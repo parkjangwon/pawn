@@ -1,4 +1,5 @@
 import { BrowserWindow, dialog, nativeTheme, screen, shell } from 'electron'
+import { blocksModViewNavigation } from './csp'
 import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { is } from '@electron-toolkit/utils'
@@ -133,6 +134,17 @@ function guardNavigation(win: BrowserWindow): void {
   })
   wc.on('will-redirect', (event, url) => {
     if (!isAppUrl(url)) event.preventDefault()
+  })
+  // Mod custom views are srcdoc iframes; they must never navigate to a URL (exfil by query string).
+  wc.on('will-frame-navigate', (event) => {
+    if (event.isMainFrame) return
+    let current: string | undefined
+    try {
+      current = event.frame?.url
+    } catch {
+      current = undefined
+    }
+    if (blocksModViewNavigation(current, event.url)) event.preventDefault()
   })
   wc.setWindowOpenHandler((details) => {
     const external = safeExternalUrl(details.url)

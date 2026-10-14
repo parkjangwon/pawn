@@ -335,6 +335,16 @@ export class ModRuntime {
     }
   }
 
+  /** `$` plus declared calls for a loaded, enabled mod, for its custom view's bridge. */
+  viewBridge(plugin: string): { api: ModsApi; declaredCalls: ReadonlySet<string> } | null {
+    const info = this.loaded.find((m) => m.name === plugin && m.enabled)
+    if (!info) return null
+    return {
+      api: this.apiFor(plugin, info.root, this.ctx.sessionId),
+      declaredCalls: this.declared.get(plugin)?.calls || new Set()
+    }
+  }
+
   getLoaded(): LoadedModInfo[] {
     return [...this.loaded]
   }
