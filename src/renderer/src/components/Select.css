@@ -64,8 +64,21 @@
 .pawn-select-lg select {
   height: 32px;
   padding-left: var(--space-md);
-  padding-right: 28px;
+  padding-right: calc(var(--select-arrow-space) + 2px);
   border-radius: var(--radius-md);
+}
+
+/* Area stylesheets (.settings-content select, .remote-field select, …) set
+   symmetric padding, which put text under the chevron and clipped it vertically.
+   Doubled class = higher specificity than those one-class rules. The native
+   select's intrinsic width already fits its longest option, so with the arrow
+   space reserved here no option overlaps the chevron. */
+.pawn-select.pawn-select select {
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-right: var(--select-arrow-space);
+  line-height: normal;
 }
 
 .pawn-select-chevron {
@@ -75,7 +88,20 @@
   pointer-events: none;
 }
 
-.pawn-select-lg .pawn-select-chevron {
+.pawn-select-lg /* Area stylesheets (.settings-content select, .remote-field select, …) set
+   symmetric padding, which put text under the chevron and clipped it vertically.
+   Doubled class = higher specificity than those one-class rules. The native
+   select's intrinsic width already fits its longest option, so with the arrow
+   space reserved here no option overlaps the chevron. */
+.pawn-select.pawn-select select {
+  box-sizing: border-box;
+  padding-top: 0;
+  padding-bottom: 0;
+  padding-right: var(--select-arrow-space);
+  line-height: normal;
+}
+
+.pawn-select-chevron {
   width: 16px;
   height: 16px;
 }

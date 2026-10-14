@@ -41,7 +41,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
         <div className="conn-toolbar">
           <button
             type="button"
-            className="test-btn"
+            className="settings-btn-secondary test-btn"
             disabled={!statusLoaded}
             onClick={() => void refreshConnections()}
           >
@@ -123,7 +123,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                 <div className="settings-row-actions">
                   {connected ? (
                     <button
-                      className="conn-action-btn conn-btn-disconnect"
+                      className="settings-btn-secondary conn-action-btn conn-btn-disconnect"
                       disabled={busy || !statusLoaded}
                       onClick={() => void handleDisconnect(provider)}
                     >
@@ -131,14 +131,14 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                     </button>
                   ) : busy && !isPat ? (
                     <button
-                      className="conn-action-btn conn-btn-cancel"
+                      className="settings-btn-secondary conn-action-btn conn-btn-cancel"
                       onClick={() => void handleCancelConnect(provider)}
                     >
                       {'Cancel'}
                     </button>
                   ) : isPat ? (
                     <button
-                      className={`conn-action-btn conn-btn-connect conn-connect-${provider}`}
+                      className={`settings-btn-primary conn-action-btn conn-btn-connect conn-connect-${provider}`}
                       disabled={busy || !statusLoaded}
                       onClick={() => {
                         if (patOpen) setPatFormOpen(null)
@@ -151,7 +151,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                     </button>
                   ) : (
                     <button
-                      className={`conn-action-btn conn-btn-connect conn-connect-${provider}`}
+                      className={`settings-btn-primary conn-action-btn conn-btn-connect conn-connect-${provider}`}
                       disabled={!ready || !statusLoaded}
                       onClick={() => void handleConnect(provider)}
                     >
@@ -240,7 +240,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
                     </div>
                   )}
                   <div className="conn-pat-actions">
-                    <Button
+                    <Button className="settings-btn-primary"
                       type="button"
                       disabled={
                         busy ||
@@ -271,7 +271,7 @@ export default function ConnectionsSettingsPanel({ state }: { state: SettingsSta
             </div>
             <div className="conn-device-code-row">
               <code className="conn-device-code">{deviceAuth.userCode}</code>
-              <button type="button" className="test-btn" onClick={() => void copyDeviceCode()}>
+              <button type="button" className="settings-btn-secondary test-btn" onClick={() => void copyDeviceCode()}>
                 {'Copy'}
               </button>
             </div>

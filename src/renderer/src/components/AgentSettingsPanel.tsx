@@ -220,7 +220,7 @@ export default function AgentSettingsPanel({ state }: { state: SettingsState }):
           </div>
           <button
             type="button"
-            className="test-btn"
+            className="settings-btn-secondary test-btn"
             disabled={computerBusy}
             onClick={() => {
               const status = window.api?.computer?.status

@@ -26,9 +26,8 @@ function OllamaEndpointEditor({ baseUrl, onSave }: { baseUrl: string; onSave: (b
       <span className="provider-field-label">{'Endpoint'}</span>
       <div className="provider-field-row">
       <Input aria-label="Endpoint" placeholder="http://192.168.0.10:11434" value={value} onChange={(e) => { setValue(e.target.value); setError('') }} />
-      <Button
+      <Button className="settings-btn-secondary"
         variant="secondary"
-        size="sm"
         onClick={() => {
           const v = validateOllamaUrl(value)
           if (v.ok) onSave(ollamaApiBase(v.url))
@@ -136,8 +135,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                   {noCatalog ? null : !isOpenRouter ? (
                     <Button
                       variant="secondary"
-                      size="sm"
-                      className="provider-action"
+                      className="settings-btn-secondary provider-action"
                       onClick={() => handleSyncModels(p.id)}
                       disabled={syncingId === p.id}
                       title={'Fetch the live model catalog from GET {baseUrl}/models and merge it into your list'}
@@ -147,8 +145,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                   ) : (
                     <Button
                       variant="secondary"
-                      size="sm"
-                      className="provider-action"
+                      className="settings-btn-secondary provider-action"
                       disabled
                       title={'OpenRouter offers hundreds of models; please register specific models manually to prevent clutter.'}
                     >
@@ -157,8 +154,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                   )}
                   <Button
                     variant="secondary"
-                    size="sm"
-                    className={`provider-action${test?.ok ? ' ok' : test ? ' fail' : ''}`}
+                    className={`settings-btn-secondary provider-action${test?.ok ? ' ok' : test ? ' fail' : ''}`}
                     onClick={() => handleTestProvider(p.id)}
                     disabled={testingId === p.id}
                   >
@@ -285,8 +281,8 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               </label>
             )}
             <div className="form-actions">
-              <Button variant="secondary" onClick={() => setPresetPicking(null)}>{'Cancel'}</Button>
-              <Button
+              <Button className="settings-btn-secondary" variant="secondary" onClick={() => setPresetPicking(null)}>{'Cancel'}</Button>
+              <Button className="settings-btn-primary"
                 onClick={() => handleAddFromPreset(presetPicking, presetKey)}
                 disabled={(presetPicking.id === 'ollama' && !ollamaUrlCheck.ok) || (!presetPicking.localNoKey && !presetPicking.signIn && !presetPicking.optionalKey && !presetKey.trim())}
               >
@@ -330,8 +326,8 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
           </label>
           {formError && <div className="settings-form-error" role="alert">{formError}</div>}
           <div className="form-actions">
-            <Button variant="secondary" type="button" onClick={() => setShowAddProvider(false)}>{'Cancel'}</Button>
-            <Button type="submit">{'Save'}</Button>
+            <Button className="settings-btn-secondary" variant="secondary" type="button" onClick={() => setShowAddProvider(false)}>{'Cancel'}</Button>
+            <Button className="settings-btn-primary" type="submit">{'Save'}</Button>
           </div>
         </form>
       ) : (

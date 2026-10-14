@@ -167,10 +167,10 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                 {test.state === 'fail' && <span className="remote-test-fail">{`Failed: ${test.detail || ''}`}</span>}
               </div>
               <div className="remote-actions">
-                <Button type="button" variant="secondary" disabled={test.state === 'testing'} onClick={() => void testHost(h.id)}>
+                <Button className="settings-btn-secondary" type="button" variant="secondary" disabled={test.state === 'testing'} onClick={() => void testHost(h.id)}>
                   {test.state === 'testing' ? 'Testing…' : 'Test'}
                 </Button>
-                <Button type="button" variant="secondary" onClick={() => setPendingRemove(h)}>
+                <Button className="settings-btn-secondary" type="button" variant="secondary" onClick={() => setPendingRemove(h)}>
                   {'Remove'}
                 </Button>
               </div>
@@ -209,7 +209,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
                 <span>{'Port'}</span>
                 <Input value={port} onChange={(e) => setPort(e.target.value)} inputMode="numeric" placeholder="22" />
               </label>
-              <label className="remote-field">
+              <label className="remote-field remote-field-wide">
                 <span>{'Authentication'}</span>
                 <Select value={auth} onChange={(e) => setAuth(e.target.value === 'password' ? 'password' : 'key')}>
                   <option value="key">{'SSH key (agent or default keys)'}</option>
@@ -236,7 +236,7 @@ export default function RemoteSettingsPanel(): React.JSX.Element {
               <p className="remote-note">{'Password auth needs the sshpass helper. Install it (macOS: brew install sshpass · Debian/Ubuntu: apt install sshpass) or use key auth.'}</p>
             )}
             {formError && <p className="remote-note remote-error">{formError}</p>}
-            <Button type="submit" disabled={busy || !host.trim()}>
+            <Button className="settings-btn-primary" type="submit" disabled={busy || !host.trim()}>
               {'Add host'}
             </Button>
           </form>

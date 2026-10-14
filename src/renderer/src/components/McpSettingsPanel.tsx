@@ -69,7 +69,7 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
             <button
               key={tpl.id}
               type="button"
-              className="test-btn"
+              className="settings-btn-secondary test-btn"
               title={tpl.description}
               disabled={mcpAdding || (tpl.scope === 'project' && !projectPath)}
               onClick={() => {
@@ -117,7 +117,7 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
             </div>
             <div className="settings-row-actions">
               {!server.disabled && (server.status === 'error' || server.status === 'connecting') && (
-                <Button
+                <Button className="settings-btn-secondary"
                   type="button"
                   variant="secondary"
                   disabled={retryingId === server.id}
@@ -166,10 +166,10 @@ export default function McpSettingsPanel({ state }: { state: SettingsState }): R
           />
           {mcpFormError && <div className="settings-row-desc mcp-form-error">{mcpFormError}</div>}
           <div className="form-actions">
-            <Button onClick={() => void handleAddMcpServer()} disabled={mcpAdding || !mcpForm.id.trim() || !mcpForm.command.trim() || (mcpScope === 'project' && !projectPath)}>
+            <Button className="settings-btn-primary" onClick={() => void handleAddMcpServer()} disabled={mcpAdding || !mcpForm.id.trim() || !mcpForm.command.trim() || (mcpScope === 'project' && !projectPath)}>
               {mcpAdding ? 'Loading…' : 'Save'}
             </Button>
-            <Button variant="secondary" onClick={() => { setShowAddMcpServer(false); setMcpFormError(null) }}>{'Cancel'}</Button>
+            <Button className="settings-btn-secondary" variant="secondary" onClick={() => { setShowAddMcpServer(false); setMcpFormError(null) }}>{'Cancel'}</Button>
           </div>
         </div>
       ) : (

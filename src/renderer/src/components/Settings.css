@@ -221,7 +221,7 @@ body.resizing-sidebar .settings-resizer::after {
 
 .settings-section {
   width: 100%;
-  max-width: 740px;
+  max-width: var(--settings-content-max);
   margin: 0 auto;
   box-sizing: border-box;
 }
@@ -1179,7 +1179,6 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .vision-select {
-  max-width: 140px;
   flex-shrink: 0;
 }
 
@@ -1292,12 +1291,10 @@ body.resizing-sidebar .settings-resizer::after {
 
 /* Test button */
 .test-btn {
-  padding: 4px var(--space-10);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: var(--text-ui-xs);
   font-weight: 500;
   cursor: pointer;
   transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
@@ -1622,17 +1619,8 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .conn-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 80px;
-  height: 30px;
-  padding: 0 14px;
-  border-radius: var(--radius-sm);
-  font-size: var(--text-ui-sm);
   font-weight: 500;
   cursor: pointer;
-  box-sizing: border-box;
   transition: background-color var(--dur-fast) var(--ease-out-soft), border-color var(--dur-fast) var(--ease-out-soft), box-shadow var(--dur-fast) var(--ease-out-soft), color var(--dur-fast) var(--ease-out-soft), opacity var(--dur-fast) var(--ease-out-soft);
 }
 
@@ -1797,12 +1785,10 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .btn-action {
-  padding: 5px 12px;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: var(--text-ui-sm);
   cursor: pointer;
   transition: background-color 0.15s, border-color 0.15s, box-shadow 0.15s, color 0.15s, opacity 0.15s;
 }
@@ -2421,3 +2407,83 @@ body.resizing-sidebar .settings-resizer::after {
 }
 
 .provider-test-line.provider-test-fail { color: var(--danger); font-size: var(--text-ui-sm); }
+
+
+/* —— Settings buttons: the two shared size rules ——
+   Every text button on a settings screen carries exactly one of these.
+   Same height / min-width / padding / font for both; they differ only in color.
+   Scoped under .settings-page so they win over Button size classes (pawn-btn-sm…)
+   and legacy per-panel classes, which now only carry color/state. */
+.settings-page .settings-btn-primary,
+.settings-page .settings-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-6, 6px);
+  box-sizing: border-box;
+  height: var(--settings-btn-height);
+  min-width: var(--settings-btn-min-width);
+  padding: 0 var(--settings-btn-pad-x);
+  border-radius: var(--radius-sm);
+  font-size: var(--settings-btn-font-size);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  text-decoration: none;
+}
+
+/* Connections: Connect and Disconnect swap in place, so give the pair one width. */
+.settings-page .conn-action-btn {
+  min-width: var(--settings-btn-pair-min-width);
+}
+
+/* Default colors (single-class specificity so state classes like .ok/.fail and
+   Button variants still win). */
+.settings-btn-primary {
+  border: 1px solid var(--accent);
+  background: var(--accent);
+  color: var(--on-accent);
+}
+
+.settings-btn-secondary {
+  border: 1px solid var(--border-color);
+  background: var(--bg-secondary);
+  color: var(--text-secondary);
+}
+
+/* Shortcut combos rendered as keycaps (Settings → Shortcuts). */
+.shortcut-combo {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  flex-wrap: wrap;
+}
+
+.shortcut-kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 var(--space-6, 6px);
+  border: 1px solid var(--border-color);
+  border-bottom-width: 2px;
+  border-radius: var(--radius-xs, 4px);
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: var(--text-ui-sm);
+  font-weight: 500;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.app.dark .shortcut-kbd {
+  background: var(--bg-input);
+  border-color: var(--control-border, var(--border-color));
+}
+
+.shortcut-unset {
+  color: var(--text-muted);
+}

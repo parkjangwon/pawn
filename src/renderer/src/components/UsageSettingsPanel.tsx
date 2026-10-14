@@ -99,7 +99,7 @@ export default function UsageSettingsPanel(): React.JSX.Element {
             </button>
           ))}
         </div>
-        <button type="button" className="test-btn" onClick={() => void refresh()}>
+        <button type="button" className="settings-btn-secondary test-btn" onClick={() => void refresh()}>
           {'Refresh'}
         </button>
       </div>

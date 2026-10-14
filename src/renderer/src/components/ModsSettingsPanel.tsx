@@ -282,7 +282,7 @@ Off by default. Turn it on only if you trust those plugins.`}</span>
           </span>
           <button
             type="button"
-            className="mods-quiet-btn"
+            className="settings-btn-secondary mods-quiet-btn"
             disabled={busy}
             onClick={() => void afterChange().then(() => setMsg('Reloaded'))}
           >
@@ -302,10 +302,10 @@ Off by default. Turn it on only if you trust those plugins.`}</span>
             <p>{'Install the sample, or pick a folder that already has a hooks module.'}</p>
           </div>
           <div className="mods-actions">
-            <Button type="button" disabled={busy} onClick={() => void installExample()}>
+            <Button className="settings-btn-primary" type="button" disabled={busy} onClick={() => void installExample()}>
               {'Install sample mod'}
             </Button>
-            <Button type="button" variant="secondary" className="mods-folder-btn" disabled={busy} onClick={() => void pickFolder()}>
+            <Button type="button" variant="secondary" className="settings-btn-secondary mods-folder-btn" disabled={busy} onClick={() => void pickFolder()}>
               <IconFolder size={14} />
               {'Choose folder'}
             </Button>
@@ -332,7 +332,7 @@ Off by default. Turn it on only if you trust those plugins.`}</span>
               </span>
               <span className="settings-row-desc">{'Loaded from your folder, extra folders, and this project.'}</span>
             </div>
-            <button type="button" className="mods-quiet-btn" disabled={busy} onClick={() => void pickFolder()}>
+            <button type="button" className="settings-btn-secondary mods-quiet-btn" disabled={busy} onClick={() => void pickFolder()}>
               <IconFolder size={13} />
               {'Choose folder'}
             </button>
@@ -360,7 +360,7 @@ Off by default. Turn it on only if you trust those plugins.`}</span>
                 {settings.pluginDirs.map((dir) => (
                   <li key={dir}>
                     <span className="plugin-source" title={dir}>{dir}</span>
-                    <button type="button" className="mods-quiet-btn danger" disabled={busy} onClick={() => void removePluginDir(dir)}>
+                    <button type="button" className="settings-btn-secondary mods-quiet-btn danger" disabled={busy} onClick={() => void removePluginDir(dir)}>
                       {'Delete'}
                     </button>
                   </li>
@@ -452,13 +452,13 @@ function ModRowView({
       </div>
       <div className="mods-tile-actions">
         {needsReview ? (
-          <button type="button" className="mods-quiet-btn accent" disabled={busy} onClick={onReview}>
+          <button type="button" className="settings-btn-secondary mods-quiet-btn accent" disabled={busy} onClick={onReview}>
             {tx(mod.consentStale ? 'settings.modsSection.reReview' : 'settings.modsSection.review')}
           </button>
         ) : (
           <>
             {showRevoke && (
-              <button type="button" className="mods-quiet-btn" disabled={busy} onClick={onRevoke}>
+              <button type="button" className="settings-btn-secondary mods-quiet-btn" disabled={busy} onClick={onRevoke}>
                 {'Revoke'}
               </button>
             )}
@@ -531,7 +531,7 @@ function ModRegistrations(): React.JSX.Element | null {
                 </span>
                 <button
                   type="button"
-                  className="mods-quiet-btn"
+                  className="settings-btn-secondary mods-quiet-btn"
                   disabled={has(o.baseUrl)}
                   onClick={() => {
                     const id = adoptProviderOffer(o, useProviderStore.getState())

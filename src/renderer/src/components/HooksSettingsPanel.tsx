@@ -233,7 +233,7 @@ export default function HooksSettingsPanel(): React.JSX.Element {
             onChange={(e) => setFilter(e.target.value)}
             placeholder={'Filter events or commands…'}
           />
-          <button type="button" className="test-btn" onClick={() => void refresh()} disabled={busy}>
+          <button type="button" className="settings-btn-secondary test-btn" onClick={() => void refresh()} disabled={busy}>
             {'Refresh'}
           </button>
         </div>

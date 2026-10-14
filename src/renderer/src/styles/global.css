@@ -62,8 +62,20 @@
   --dur-slow: 300ms;
   --dur-stream: 900ms;
   --press-scale: 0.97;
-  /* Shared chat column width: welcome, messages, composer stay aligned */
-  --chat-content-max: 860px;
+  /* Shared content column width: chat (welcome, messages, composer) and the
+     Settings page content use the same measure. Change it here only. */
+  --content-column-max: 860px;
+  --chat-content-max: var(--content-column-max);
+  --settings-content-max: var(--content-column-max);
+  /* Settings buttons: two shared size rules (primary + secondary), same box. */
+  --settings-btn-height: 28px;
+  --settings-btn-min-width: 72px;
+  /* Swap-in-place pairs (Connect ⇄ Disconnect) share this wider min-width. */
+  --settings-btn-pair-min-width: 96px;
+  --settings-btn-pad-x: var(--space-md);
+  --settings-btn-font-size: var(--text-ui-sm);
+  /* Native select chevron (Select.tsx): 14px icon at right: --space-sm, plus a gap */
+  --select-arrow-space: calc(var(--space-sm) + 14px + var(--space-xs));
   /* Message text size — Settings → Appearance overrides at runtime */
   --chat-font-size: var(--text-ui-base);
 }

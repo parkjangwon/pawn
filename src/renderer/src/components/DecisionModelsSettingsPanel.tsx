@@ -241,13 +241,13 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
               <div className="settings-row-actions">
                 <button
                   type="button"
-                  className={`test-btn ${test ? (test.ok ? 'ok' : 'fail') : ''}`}
+                  className={`settings-btn-secondary test-btn ${test ? (test.ok ? 'ok' : 'fail') : ''}`}
                   onClick={() => void runTest(p.id)}
                   disabled={testing === p.id}
                 >
                   {testing === p.id ? 'Testing…' : 'Test'}
                 </button>
-                <button type="button" className="test-btn" onClick={() => openEdit(p)}>
+                <button type="button" className="settings-btn-secondary test-btn" onClick={() => openEdit(p)}>
                   {'Edit'}
                 </button>
                 <label className="toggle-switch" title={'Use this provider. Only one decision model is active at a time.'}>
@@ -383,7 +383,7 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
               {form.id && (
                 <button
                   type="button"
-                  className="test-btn"
+                  className="settings-btn-secondary test-btn"
                   disabled={modelsState === 'loading'}
                   onClick={() => void loadModels(form.id!, preset.models)}
                 >
@@ -404,10 +404,10 @@ export default function DecisionModelsSettingsPanel(): React.JSX.Element {
           </div>
           {formError && <div className="decision-error" role="alert">{formError}</div>}
           <div className="form-actions">
-            <Button type="submit" disabled={saving}>
+            <Button className="settings-btn-primary" type="submit" disabled={saving}>
               {form.id ? 'Save' : 'Add and test'}
             </Button>
-            <Button type="button" variant="secondary" onClick={() => setForm(null)}>
+            <Button className="settings-btn-secondary" type="button" variant="secondary" onClick={() => setForm(null)}>
               {'Cancel'}
             </Button>
           </div>

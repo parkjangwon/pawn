@@ -88,7 +88,7 @@ export default function ModelsSettingsPanel({ state }: { state: SettingsState })
           <div className="settings-empty">
             {'No models configured'}
             <div>
-              <button type="button" className="test-btn" onClick={() => openSettingsSection('providers')}>
+              <button type="button" className="settings-btn-secondary test-btn" onClick={() => openSettingsSection('providers')}>
                 {'Add a provider in Settings → Providers, then sync models.'}
               </button>
             </div>
@@ -133,10 +133,10 @@ export default function ModelsSettingsPanel({ state }: { state: SettingsState })
             <div className="settings-row-desc">{'Choose a provider to enable saving.'}</div>
           )}
           <div className="form-actions">
-            <Button type="submit" disabled={!modelForm.providerId || !modelForm.modelId.trim()}>
+            <Button className="settings-btn-primary" type="submit" disabled={!modelForm.providerId || !modelForm.modelId.trim()}>
               {'Save'}
             </Button>
-            <Button variant="secondary" type="button" onClick={() => setShowAddModel(false)}>{'Cancel'}</Button>
+            <Button className="settings-btn-secondary" variant="secondary" type="button" onClick={() => setShowAddModel(false)}>{'Cancel'}</Button>
           </div>
         </form>
       ) : (

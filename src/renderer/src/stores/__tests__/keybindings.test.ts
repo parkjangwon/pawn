@@ -108,3 +108,15 @@ describe('useKeybinding', () => {
     expect(handler).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('formatComboKeys (keycaps)', () => {
+  it('splits a combo into per-key labels in modifier order', async () => {
+    const { formatComboKeys, formatCombo } = await import('../keybindings')
+    expect(formatComboKeys('Alt+Meta+B', 'darwin')).toEqual(['⌥', '⌘', 'B'])
+    expect(formatComboKeys('Alt+Meta+B', 'win32')).toEqual(['Alt', 'Ctrl', 'B'])
+    expect(formatComboKeys('', 'darwin')).toEqual([])
+    // The joined string format is unchanged.
+    expect(formatCombo('Alt+Meta+B', 'darwin')).toBe('⌥⌘B')
+    expect(formatCombo('Ctrl+Shift+K', 'linux')).toBe('Ctrl+Shift+K')
+  })
+})
