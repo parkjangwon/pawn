@@ -19,6 +19,7 @@ import ShortcutsHelp from './components/ShortcutsHelp'
 import RightPanel from './components/RightPanel'
 import BottomTerminal from './components/BottomTerminal'
 import { ModShortcutListener } from './components/ModSlots'
+import ModThemeStyles from './components/ModThemeStyles'
 import { ModViewModals } from './components/ModViews'
 
 const AutomationView = lazy(() => import('./components/AutomationView'))
@@ -350,6 +351,7 @@ export default function App(): React.JSX.Element {
 
   return (
     <div className={`app ${theme} ${sidebarOpen ? '' : 'sidebar-collapsed'} ${window.api?.platform === 'darwin' ? 'platform-mac' : ''}`}>
+      <ModThemeStyles />
       {appToast && (
         <div className="app-toast" role="status">
           {appToast}

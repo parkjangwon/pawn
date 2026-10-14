@@ -14,6 +14,7 @@ export type ModCapabilityId =
   | 'palette'
   | 'shortcuts'
   | 'messages'
+  | 'theme'
   | 'views'
   | 'prompt'
   | 'store'
@@ -39,6 +40,7 @@ const CALL_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
   { re: /^\$\.slot\.statusbar$/, id: 'statusbar' },
   { re: /^\$\.slot\.palette$/, id: 'palette' },
   { re: /^\$\.slot\.shortcut$/, id: 'shortcuts' },
+  { re: /^\$\.theme\.(vars|css)$/, id: 'theme' },
   { re: /^\$\.view\.open$/, id: 'views' },
   { re: /^\$\.prompt\./, id: 'prompt' },
   { re: /^\$\.store\./, id: 'store' }
@@ -69,6 +71,7 @@ const ORDER: ModCapabilityId[] = [
   'palette',
   'shortcuts',
   'messages',
+  'theme',
   'views',
   'prompt',
   'store'
@@ -99,6 +102,6 @@ export type ModRiskLevel = 'low' | 'medium' | 'high'
 export function deriveModRisk(hooks: string[], calls: string[]): ModRiskLevel {
   const caps = new Set(deriveModCapabilities(hooks, calls).map((c) => c.id))
   if (caps.has('process') || caps.has('network')) return 'high'
-  if (caps.has('files') || caps.has('tools') || caps.has('messages') || caps.has('views')) return 'medium'
+  if (caps.has('files') || caps.has('tools') || caps.has('messages') || caps.has('theme') || caps.has('views')) return 'medium'
   return 'low'
 }

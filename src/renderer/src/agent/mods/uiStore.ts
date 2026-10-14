@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { ModSlotKind, ModSlotView } from './types'
+import { loadThemeOff, saveThemeOff, type ModThemeEntry } from './theme'
 import type { ModView } from './views'
 
 export interface ModPaneState {
@@ -53,6 +54,13 @@ interface ModsUiState {
   slots: ModSlotView[]
   /** `${plugin}\0${id}` of the Settings page on screen, or null. */
   activeSettingsKey: string | null
+  /** Theme overrides and scoped sheets from `$.theme.*`. Cleared with the runtime. */
+  themes: ModThemeEntry[]
+  /** Mods whose theming the user switched off. Persisted in localStorage. */
+  themeOff: string[]
+  upsertTheme: (entry: ModThemeEntry) => void
+  removeTheme: (plugin: string, id: string) => void
+  setThemeEnabled: (plugin: string, on: boolean) => void
   /** Custom views from `$.view.open`. Cleared with the runtime. */
   views: ModView[]
   /** `${plugin}\0${id}` of the selected tab view, or null. */
@@ -101,6 +109,21 @@ export const useModsUiStore = create<ModsUiState>((set, get) => ({
   panes: [],
   slots: [],
   activeSettingsKey: null,
+  themes: [],
+  themeOff: loadThemeOff(),
+  upsertTheme: (entry) =>
+    set({
+      themes: [...get().themes.filter((t) => !(t.plugin === entry.plugin && t.id === entry.id)), entry]
+    }),
+  removeTheme: (plugin, id) =>
+    set({ themes: get().themes.filter((t) => !(t.plugin === plugin && t.id === id)) }),
+  setThemeEnabled: (plugin, on) => {
+    const lower = plugin.toLowerCase()
+    const rest = get().themeOff.filter((n) => n.toLowerCase() !== lower)
+    const themeOff = on ? rest : [...rest, plugin]
+    saveThemeOff(themeOff)
+    set({ themeOff })
+  },
   views: [],
   activeViewTab: null,
   openView: (view) => {
@@ -209,6 +232,7 @@ export const useModsUiStore = create<ModsUiState>((set, get) => ({
       panes: [],
       slots: [],
       activeSettingsKey: null,
+      themes: [],
       views: [],
       activeViewTab: null,
       renderGeneration: get().renderGeneration + 1

@@ -45,7 +45,7 @@ export default function ModsConsentDialog({
   )
 
   return createPortal(
-    <div className={`app ${theme}`}>
+    <div className={`app ${theme} mods-trusted`} data-mods-trusted="consent">
       <div
         className="confirm-overlay"
         role="presentation"

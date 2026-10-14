@@ -68,7 +68,7 @@ mods는 샌드박스가 없어요. 파일, 셸, 네트워크, 채팅을 내 계�
 불러오기 전에 설정이 검토 창을 보여요.
 
 - 등록한 훅과 소스의 `$.…` 호출로 만든 권한 목록: 권한마다 한 줄에 이름과 한 줄 설명이 있어요 (`strings.ts`의 `settings.modsSection.cap.<id>`와 `settings.modsSection.capDesc.<id>`, id는 `src/renderer/src/agent/mods/capabilities.ts`). 새 권한에는 id, 규칙, 두 문자열이 모두 필요해요
-- 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구, 메시지 본문을 읽거나(`message.render`) 사용자 정의 뷰를 띄우면(`$.view.open`) **보통**, 아니면 **낮음**
+- 위험 칩: 프로세스나 네트워크면 **높음**, 파일이나 도구, 메시지 본문을 읽거나(`message.render`) 테마를 바꾸거나(`$.theme.vars` / `$.theme.css`) 사용자 정의 뷰를 띄우면(`$.view.open`) **보통**, 아니면 **낮음**
 - 허용하는 버전
 
 허용하면 그 버전이 `consentedPlugins`에 들어가고, 이름은 `disabledPlugins`에서 빠져요. 동의를 철회하면 항목을 지우고 그 이름을 꺼요.
@@ -200,6 +200,23 @@ on('ui.press', { id: 'reset-tally' }, async ($, event) => {
 - **채팅별:** `e.sessionId`는 화면에 보이는 채팅이 아니라 메시지가 속한 채팅이고, 훅 안의 `$.session`도 그 채팅이에요. 채팅별 상태는 `e.sessionId`로 나눠 두세요.
 - 슬롯처럼 이벤트 이름은 그대로 써야 해요(`on('message.render', …)`). 아니면 `on`이 `message.render refused`를 던져요.
 
+
+### 테마 (Theming)
+
+`$.theme.*`는 Pawn의 색을 바꾸고 mod 자신의 화면 요소에 스타일을 입혀요. 모든 호출은 mod 안에서만 쓰는 `id`(`[A-Za-z0-9_-]{1,64}`)를 받고, 같은 `id`로 다시 부르면 바꿔요. `mode`는 `light`, `dark`, `all`(기본) 중 하나예요.
+
+| 호출 | 하는 일 | 권한 |
+| --- | --- | --- |
+| `$.theme.vars({ id, vars, mode })` | 앱 루트의 CSS 사용자 정의 속성을 덮어써요. 예: `{ '--accent': '#2f6b3a' }`. `--이름` 키만(빠지면 `--`를 붙여요), 호출당 128개, 값은 200자까지. | `theme` |
+| `$.theme.css({ id, css, mode })` | `@scope ([data-plugin="<mod>"])`로 감싼 스타일시트라서, 이 mod가 `$.slot.*`로 그린 요소에만 닿아요(`:scope`가 슬롯의 루트). 32KB까지. | `theme` |
+| `$.theme.remove({ id })` / `$.theme.list()` | 이 mod의 항목 하나 지우기 / 목록 보기. | 없음 |
+
+- 리소스를 불러오거나 블록 밖으로 나갈 수 있는 것은 오류로 거부해요: `url(`, `@import`, `image-set(`, `expression(`, `<`, `\`, 짝이 안 맞는 중괄호, 그리고 `@scope`, `@layer`, `@font-face`, `@namespace`, `@charset`. 변수 값은 `;`, `{`, `}`도 거부해요.
+- 먼저 써 볼 변수: `--bg-primary`, `--bg-secondary`, `--bg-sidebar`, `--text-primary`, `--text-secondary`, `--text-muted`, `--border-color`, `--primary`, `--accent`, `--danger`, `--success`(전체 목록은 `src/renderer/src/styles/global.css`).
+- 사용자는 mod를 끄지 않고 그 mod의 테마만 끌 수 있어요. mods 메뉴(컴포저 위 칩)에서 mod 옆의 **Theme** 토글이에요. 선택은 재시작 뒤에도 유지돼요. mod를 다시 불러오면 테마는 지워져요.
+- 슬롯처럼, 소스에 글자 그대로 없는 `$.theme.vars` / `$.theme.css` 호출은 런타임이 거부해요. 검토 대화상자에는 **Change colors and styles**로 나와요. 위험은 **보통**이에요. 테마는 아무것도 읽거나 네트워크에 닿을 수 없지만, Pawn의 일부를 다른 것처럼 보이게 할 수 있어요.
+- 위장 방지: 동의 대화상자, mods 메뉴(Theme 토글 포함), **설정 → Mods**는 `.mods-trusted` 루트예요. 기본 토큰을 다시 선언하고, mod 변수 규칙은 `:not(.mods-trusted)`를 쓰므로 `$.theme.vars`가 닿지 않아요. 범위가 정해진 시트도 닿지 않고, `position: fixed` / `sticky`는 거부돼서 가짜 대화상자를 위에 띄울 수 없어요.
+- 예제: `examples/mods/theming-demo/`는 두 팔레트(라이트와 다크)를 바꾸고 자기 사이드바 섹션을 꾸며요. 기본으로 설치되지 않아요. `~/.pawn/mods/theming-demo`에 복사한 뒤 허용하세요.
 
 ### 사용자 정의 뷰 (Custom views)
 
