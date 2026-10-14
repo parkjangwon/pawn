@@ -119,7 +119,7 @@ export function register(on) {
 | `ui.render` | 스피너, 그리고 입력창 위 띠(`AbovePrompt`) | 스피너는 한 체인이에요. 마지막 `props.suffix`가 남아요. `AbovePrompt`는 맞는 mod를 따로 불러요. 자기 띠의 `props.tree`와 `props.plugin`을 돌려주세요. 다른 mod의 트리는 안 보여요. |
 | `ui.press` / `ui.input` / `ui.select` | mod 트리의 Button, Input, Select를 썼을 때 | `id`와 `value`를 읽어요. |
 | `model.request` | 메인 채팅의 모델 호출 직전(재시도마다 포함) | `next({ ...e, systemAppend })`로 시스템 프롬프트에 최대 8 000자를 `<mod-instructions>`로 감싸 덧붙여요. 다른 필드는 바꿀 수 없어요. 페이로드 `{ sessionId, round, provider, model, messageCount, lastUserText }`. |
-| `model.response` | 모델 호출이 성공한 뒤 | 관찰만 해요. 페이로드 `{ sessionId, round, provider, model, text, toolCalls, usage }`. |
+| `model.response` | 모델 호출이 성공한 뒤 | 관찰만 해요. 페이로드 `{ sessionId, round, provider, model, text, toolCalls, usage }`. `usage`는 `{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }`예요. `inputTokens`는 캐시되지 않은 부분만이라 전체 프롬프트는 입력 필드 세 개의 합이에요. |
 | `notification` | Pawn이 보내는 모든 데스크톱 알림 | 관찰만 해요. 페이로드 `{ title, body, source }`. mod는 알림을 숨기거나 바꿀 수 없어요. |
 
 도구 순서: `tool.call` → 설정 `PreToolUse` → Plan 모드 확인 → `tool.check` / 권한 → 도구.

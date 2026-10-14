@@ -29,7 +29,11 @@ export interface ModelResponseInfo {
   model: string
   text: string
   toolCalls: string[]
-  usage: { inputTokens: number; outputTokens: number }
+  /**
+   * Token counts as the provider reported them. `inputTokens` is the uncached
+   * part of the prompt; the full prompt is inputTokens + cacheReadTokens + cacheWriteTokens.
+   */
+  usage: { inputTokens: number; outputTokens: number; cacheReadTokens?: number; cacheWriteTokens?: number }
 }
 
 /** Extra system layers from mods (empty when no hook or nothing added). Never throws. */
@@ -53,7 +57,14 @@ export async function modModelRequest(info: ModelRequestInfo): Promise<string[]>
 export function modModelResponse(info: ModelResponseInfo): void {
   const rt = getModRuntime()
   if (!rt.hasHooks('model.response')) return
-  const payload = { ...info, text: info.text.slice(0, MAX_TEXT), toolCalls: info.toolCalls.slice(0, 64) }
+  const n = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) && v > 0 ? Math.floor(v) : 0)
+  const usage = {
+    inputTokens: n(info.usage?.inputTokens),
+    outputTokens: n(info.usage?.outputTokens),
+    cacheReadTokens: n(info.usage?.cacheReadTokens),
+    cacheWriteTokens: n(info.usage?.cacheWriteTokens)
+  }
+  const payload = { ...info, text: info.text.slice(0, MAX_TEXT), toolCalls: info.toolCalls.slice(0, 64), usage }
   void rt.emit('model.response', payload, async (e) => e, undefined, info.sessionId).catch(() => {})
 }
 

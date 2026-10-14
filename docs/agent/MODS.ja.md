@@ -103,7 +103,7 @@ export function register(on) {
 | `ui.render` | スピナーと、入力欄の上の帯（`AbovePrompt`） | スピナーは一つのチェーンで、最後の `props.suffix` が残る。`AbovePrompt` は各 mod を別々に呼ぶ。自分の帯の `props.tree` と `props.plugin` を返す。他の mod の木は見えない。 |
 | `ui.press` / `ui.input` / `ui.select` | mod ツリーの Button、Input、Select を使ったとき | `id` と `value` を読む。 |
 | `model.request` | メインチャットのモデル呼び出しの直前（リトライごとにも） | `next({ ...e, systemAppend })` でシステムプロンプトに最大 8 000 文字を `<mod-instructions>` で包んで追加。ほかのフィールドは変更不可。ペイロード `{ sessionId, round, provider, model, messageCount, lastUserText }`。 |
-| `model.response` | モデル呼び出しが成功したあと | 観察のみ。ペイロード `{ sessionId, round, provider, model, text, toolCalls, usage }`。 |
+| `model.response` | モデル呼び出しが成功したあと | 観察のみ。ペイロード `{ sessionId, round, provider, model, text, toolCalls, usage }`。 `usage` は `{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }`。`inputTokens` はキャッシュされていない部分だけなので、プロンプト全体は入力の 3 フィールドの合計。 |
 | `notification` | Pawn が送るすべてのデスクトップ通知 | 観察のみ。ペイロード `{ title, body, source }`。mod は通知を隠したり書き換えたりできない。 |
 
 ツールの順: `tool.call` → 設定 `PreToolUse` → Plan モード確認 → `tool.check` / 権限 → ツール。
