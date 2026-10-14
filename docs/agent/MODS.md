@@ -191,6 +191,22 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 - Each kind is its own capability in the review dialog. The runtime refuses a `$.slot.<kind>` call whose literal text is not in the mod's source, so a mod cannot use a slot the dialog never showed. Write the calls out (`$.slot.header(...)`), not `$.slot[name](...)`.
 - Sample: `examples/mods/ui-slots-demo/` uses every slot. It is not installed by default; copy it to `~/.pawn/mods/ui-slots-demo` and allow it.
 
+### Theming
+
+`$.theme.*` recolors Pawn and styles a mod's own chrome. Each call takes a mod-local `id` (`[A-Za-z0-9_-]{1,64}`); calling again with the same `id` replaces it. `mode` is `light`, `dark` or `all` (default).
+
+| Call | What it does | Capability |
+| --- | --- | --- |
+| `$.theme.vars({ id, vars, mode })` | Overrides CSS custom properties on the app root, e.g. `{ '--accent': '#2f6b3a' }`. Only `--name` keys (the `--` is added if missing), up to 128 per call, values up to 200 characters. | `theme` |
+| `$.theme.css({ id, css, mode })` | A stylesheet wrapped in `@scope ([data-plugin="<mod>"])`, so it only reaches elements this mod drew with `$.slot.*` (`:scope` is the slot's root). Up to 32 KB. | `theme` |
+| `$.theme.remove({ id })` / `$.theme.list()` | Remove one of this mod's entries / list them. | none |
+
+- Anything that could load a resource or break out of the block is refused with an error: `url(`, `@import`, `image-set(`, `expression(`, `<`, `\`, unbalanced braces, and the at-rules `@scope`, `@layer`, `@font-face`, `@namespace`, `@charset`. Var values also refuse `;`, `{` and `}`.
+- Variables to start with: `--bg-primary`, `--bg-secondary`, `--bg-sidebar`, `--text-primary`, `--text-secondary`, `--text-muted`, `--border-color`, `--primary`, `--accent`, `--danger`, `--success` (full list in `src/renderer/src/styles/global.css`).
+- The user can switch one mod's theme off without turning the mod off: the **Theme** toggle next to it in the mods menu (the chip above the composer). The choice is kept across restarts. Themes are cleared when mods reload.
+- Like slots, the runtime refuses a `$.theme.vars` / `$.theme.css` call that isn't written literally in the source. The review dialog shows them as **Change colors and styles**. Risk stays low: a theme can't read anything or reach the network, but it can make the app look different, which is why the description says so.
+- Sample: `examples/mods/theming-demo/` swaps two palettes (light and dark) and styles its sidebar section. It is not installed by default; copy it to `~/.pawn/mods/theming-demo` and allow it.
+
 ## 7. `$` API
 
 | Namespace | Role |

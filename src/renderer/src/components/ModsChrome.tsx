@@ -96,6 +96,11 @@ export default function ModsChrome({
     [statusByPlugin]
   )
 
+  const themes = useModsUiStore((s) => s.themes)
+  const themeOff = useModsUiStore((s) => s.themeOff)
+  const setThemeEnabled = useModsUiStore((s) => s.setThemeEnabled)
+  const themedPlugins = useMemo(() => new Set(themes.map((t) => t.plugin.toLowerCase())), [themes])
+
   const openSettings = useCallback((): void => {
     setMenuOpen(false)
     openPluginsExtensions()
@@ -214,6 +219,17 @@ export default function ModsChrome({
                                   mod.source}
                               </span>
                             </div>
+                            {themedPlugins.has(mod.name.toLowerCase()) && (
+                              <label className="mods-chrome-mini-toggle mods-chrome-theme-toggle" title={'Theme from this mod'}>
+                                <span>{'Theme'}</span>
+                                <input
+                                  type="checkbox"
+                                  checked={!themeOff.some((n) => n.toLowerCase() === mod.name.toLowerCase())}
+                                  aria-label={`Use ${mod.name} theme`}
+                                  onChange={(e) => setThemeEnabled(mod.name, e.target.checked)}
+                                />
+                              </label>
+                            )}
                             <label className="mods-chrome-mini-toggle">
                               <input
                                 type="checkbox"

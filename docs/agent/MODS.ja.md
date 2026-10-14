@@ -137,6 +137,22 @@ export function register(on) {
 - 種類ごとにレビューダイアログで別の権限として表示されます。ソースに文字どおり書かれていない `$.slot.<種類>` の呼び出しはランタイムが拒否するので、ダイアログに出なかったスロットは使えません。`$.slot[name](...)` ではなく `$.slot.header(...)` のように書いてください。
 - サンプル: `examples/mods/ui-slots-demo/` がすべてのスロットを使います。既定ではインストールされません。`~/.pawn/mods/ui-slots-demo` にコピーして許可してください。
 
+### テーマ (Theming)
+
+`$.theme.*` は Pawn の色を変え、mod 自身の UI にスタイルを当てます。どの呼び出しも mod 内だけで使う `id`（`[A-Za-z0-9_-]{1,64}`）を受け取り、同じ `id` で呼ぶと置き換えます。`mode` は `light`、`dark`、`all`（既定）のいずれかです。
+
+| 呼び出し | 内容 | 権限 |
+| --- | --- | --- |
+| `$.theme.vars({ id, vars, mode })` | アプリのルートの CSS カスタムプロパティを上書きします。例: `{ '--accent': '#2f6b3a' }`。`--名前` のキーのみ（なければ `--` を付けます）、1 回 128 個まで、値は 200 文字まで。 | `theme` |
+| `$.theme.css({ id, css, mode })` | `@scope ([data-plugin="<mod>"])` で包んだスタイルシートで、この mod が `$.slot.*` で描いた要素にだけ効きます（`:scope` はスロットのルート）。32KB まで。 | `theme` |
+| `$.theme.remove({ id })` / `$.theme.list()` | この mod の項目を一つ消す / 一覧を返す。 | なし |
+
+- リソースを読み込んだりブロックの外に出たりできるものはエラーで拒否します: `url(`、`@import`、`image-set(`、`expression(`、`<`、`\`、対応しない波括弧、`@scope`・`@layer`・`@font-face`・`@namespace`・`@charset`。変数の値は `;`、`{`、`}` も拒否します。
+- まず使う変数: `--bg-primary`、`--bg-secondary`、`--bg-sidebar`、`--text-primary`、`--text-secondary`、`--text-muted`、`--border-color`、`--primary`、`--accent`、`--danger`、`--success`（全一覧は `src/renderer/src/styles/global.css`）。
+- ユーザーは mod を止めずにその mod のテーマだけを切れます。mods メニュー（コンポーザー上のチップ）で mod の横の **Theme** トグルです。選択は再起動後も残ります。mod を再読み込みするとテーマは消えます。
+- スロットと同じく、ソースに文字どおり書かれていない `$.theme.vars` / `$.theme.css` 呼び出しはランタイムが拒否します。レビューダイアログには **Change colors and styles** と表示されます。危険度は低です。テーマは何も読めずネットワークにも届きませんが、アプリの見た目を変えられるため、説明にそのことを書いています。
+- サンプル: `examples/mods/theming-demo/` は 2 つのパレット（ライトとダーク）を切り替え、自分のサイドバーセクションを装飾します。既定ではインストールされません。`~/.pawn/mods/theming-demo` にコピーして許可してください。
+
 ## 7. `$` API
 
 | 名前空間 | 役割 |

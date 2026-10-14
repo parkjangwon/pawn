@@ -178,6 +178,13 @@ export interface ModsApi {
     remove: (spec: { slot: ModSlotKind; id: string }) => void
     list: () => ModSlotView[]
   }
+  /** Colors and styles. `vars` override `--name` custom properties app-wide; `css` is scoped to this mod's own slots. */
+  theme: {
+    vars: (spec: { id: string; vars: Record<string, string>; mode?: 'light' | 'dark' | 'all' }) => void
+    css: (spec: { id: string; css: string; mode?: 'light' | 'dark' | 'all' }) => void
+    remove: (spec: { id: string }) => void
+    list: () => Array<{ id: string; kind: 'vars' | 'css'; mode: 'light' | 'dark' | 'all' }>
+  }
 }
 
 export type ModSlotKind =

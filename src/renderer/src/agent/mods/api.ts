@@ -1,5 +1,6 @@
 import { modKvStore } from './kvStore'
 import { useModsUiStore } from './uiStore'
+import { THEME_ID, sanitizeCss, sanitizeVars, type ModThemeMode } from './theme'
 import type { ModCommandReg, ModElementTable, ModSlotKind, ModSlotView, ModsApi, ModToolReg } from './types'
 
 export interface ModsApiHost {
@@ -261,7 +262,8 @@ export function buildModsApi(host: ModsApiHost): ModsApi {
     turn: {
       abort: () => host.abortTurn()
     },
-    slot: slotApi(host, plugin)
+    slot: slotApi(host, plugin),
+    theme: themeApi(host, plugin)
   }
 
   return api
@@ -353,5 +355,40 @@ function slotApi(host: ModsApiHost, plugin: string): ModsApi['slot'] {
       useModsUiStore.getState().removeSlot(plugin, spec.slot, idOf(spec.id))
     },
     list: () => useModsUiStore.getState().slots.filter((s) => s.plugin === plugin)
+  }
+}
+
+function themeApi(host: ModsApiHost, plugin: string): ModsApi['theme'] {
+  const gate = (kind: string): void => {
+    const needle = `$.theme.${kind}`
+    if (!host.declaredCalls.has(needle)) {
+      throw new Error(`${needle} refused: not declared in this mod's source, so it was not shown at consent`)
+    }
+  }
+  const idOf = (id: unknown): string => {
+    const s = String(id || '')
+    if (!THEME_ID.test(s)) throw new Error(`Invalid theme id: ${s}`)
+    return s
+  }
+  const modeOf = (m: unknown): ModThemeMode => {
+    if (m === undefined || m === null || m === 'all') return 'all'
+    if (m === 'light' || m === 'dark') return m
+    throw new Error(`Invalid theme mode: ${String(m)}`)
+  }
+  const store = (): ReturnType<typeof useModsUiStore.getState> => useModsUiStore.getState()
+  return {
+    vars: (spec) => {
+      gate('vars')
+      store().upsertTheme({ plugin, id: idOf(spec?.id), kind: 'vars', mode: modeOf(spec?.mode), vars: sanitizeVars(spec?.vars) })
+    },
+    css: (spec) => {
+      gate('css')
+      store().upsertTheme({ plugin, id: idOf(spec?.id), kind: 'css', mode: modeOf(spec?.mode), css: sanitizeCss(spec?.css) })
+    },
+    remove: (spec) => store().removeTheme(plugin, idOf(spec?.id)),
+    list: () =>
+      store()
+        .themes.filter((t) => t.plugin === plugin)
+        .map((t) => ({ id: t.id, kind: t.kind, mode: t.mode }))
   }
 }
