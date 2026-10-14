@@ -91,3 +91,31 @@ describe('SkillStorePanel', () => {
     expect(screen.getByText(/Installed pdf — available in new chats/)).toBeInTheDocument()
   })
 })
+
+describe('SkillStorePanel controls (settings standard)', () => {
+  it('pager uses secondary buttons with disabled ends; sort is a segmented control; Install/Remove share a size class', async () => {
+    render(<SkillStorePanel state={{ t } as never} />)
+    await flush()
+    await flush()
+    const prev = screen.getByRole('button', { name: 'Previous' })
+    const next = screen.getByRole('button', { name: 'Next' })
+    expect(prev.className).toContain('settings-btn-secondary')
+    expect(next.className).toContain('settings-btn-secondary')
+    expect(prev).toBeDisabled()
+    expect(next).not.toBeDisabled()
+    fireEvent.click(next)
+    expect(screen.getByRole('button', { name: 'Previous' })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+
+    const sort = screen.getByRole('radiogroup', { name: 'Sort' })
+    expect(sort.className).toContain('theme-segmented-control')
+    for (const r of within(sort).getAllByRole('radio')) expect(r.className).toContain('theme-segment-btn')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Previous' }))
+    const cards = document.querySelectorAll('.skill-store-card')
+    const remove = within(cards[1] as HTMLElement).getByRole('button', { name: 'Remove' })
+    const install = within(cards[0] as HTMLElement).getByRole('button', { name: 'Install' })
+    expect(remove.className).toMatch(/settings-btn-secondary.*settings-btn-danger/)
+    expect(install.className).toContain('settings-btn-primary')
+  })
+})

@@ -522,7 +522,7 @@ body.resizing-sidebar .settings-resizer::after {
 
 .wiki-stats {
   padding: var(--space-sm) var(--space-md);
-  font-size: var(--font-sm);
+  font-size: var(--text-ui-sm);
   color: var(--text-secondary);
   word-break: break-all;
 }
@@ -593,29 +593,8 @@ body.resizing-sidebar .settings-resizer::after {
   border-bottom: 1px solid var(--border-color);
 }
 
-.wiki-scope-switch,
-.wiki-tabs {
-  display: inline-flex;
-  border: 1px solid var(--control-border, var(--border-color));
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.wiki-scope-switch button,
-.wiki-tabs button {
-  border: none;
-  background: var(--control-bg, var(--bg-secondary));
-  color: var(--text-secondary);
-  padding: var(--space-6) var(--space-10);
-  font-size: var(--font-sm);
-  cursor: pointer;
-}
-
-.wiki-scope-switch button.is-active,
-.wiki-tabs button.is-active {
-  background: var(--accent-subtle, var(--bg-active));
-  color: var(--accent);
-  font-weight: 600;
+.wiki-refresh {
+  margin-left: auto;
 }
 
 .wiki-filter {
@@ -1073,8 +1052,13 @@ body.resizing-sidebar .settings-resizer::after {
 .theme-toggle button {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: var(--space-6);
-  padding: 5px 12px;
+  box-sizing: border-box;
+  /* One height for every segmented control (theme, text size, tabs, sort…). */
+  height: var(--settings-segment-height);
+  padding: 0 12px;
+  line-height: 1;
   border: none;
   border-radius: var(--radius-xs);
   background: transparent;
@@ -1975,8 +1959,9 @@ body.resizing-sidebar .settings-resizer::after {
   border-radius: 999px;
   background: var(--bg-secondary);
   color: var(--text-secondary);
-  font-size: var(--text-ui-xs);
-  padding: 4px var(--space-10);
+  font-size: var(--text-ui-sm);
+  height: var(--settings-segment-height);
+  padding: 0 var(--space-10);
   cursor: pointer;
 }
 
@@ -2197,10 +2182,6 @@ body.resizing-sidebar .settings-resizer::after {
   margin-top: auto;
   display: flex;
   justify-content: flex-end;
-}
-.skill-store-btn {
-  padding: 4px 12px;
-  font-size: var(--text-ui-sm);
 }
 .skill-store-pager {
   display: flex;
@@ -2430,6 +2411,8 @@ body.resizing-sidebar .settings-resizer::after {
   line-height: 1;
   white-space: nowrap;
   text-decoration: none;
+  /* Never squeezed by long row descriptions (e.g. Agent → Computer use). */
+  flex-shrink: 0;
 }
 
 /* Connections: Connect and Disconnect swap in place, so give the pair one width. */
@@ -2486,4 +2469,25 @@ body.resizing-sidebar .settings-resizer::after {
 
 .shortcut-unset {
   color: var(--text-muted);
+}
+
+/* Destructive secondary action (Remove, Delete): same box, danger color. */
+.settings-btn-secondary.settings-btn-danger {
+  color: var(--danger);
+  border-color: color-mix(in srgb, var(--danger) 35%, var(--border-color));
+}
+
+.settings-btn-secondary.settings-btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--danger) 8%, transparent);
+}
+
+.settings-btn-primary:disabled,
+.settings-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Selects in a settings row keep their natural (longest-option) width. */
+.settings-row > .pawn-select {
+  flex-shrink: 0;
 }

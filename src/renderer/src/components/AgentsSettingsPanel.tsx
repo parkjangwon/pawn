@@ -356,13 +356,13 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
       <div className="agents-card-actions">
         {isCustom ? (
           <>
-            <button type="button" className="agents-link-btn" onClick={() => openEdit(p)}>
+            <button type="button" className="settings-btn-secondary" onClick={() => openEdit(p)}>
               {'Edit'}
             </button>
             {p.sourcePath && isPawnAgentPath(p.sourcePath) && (
               <button
                 type="button"
-                className="agents-link-btn danger"
+                className="settings-btn-secondary settings-btn-danger"
                 onClick={() => requestDelete(p)}
               >
                 {'Delete'}
@@ -370,7 +370,7 @@ export default function AgentsSettingsPanel(): React.JSX.Element {
             )}
           </>
         ) : (
-          <button type="button" className="agents-link-btn" onClick={() => openEdit(p)}>
+          <button type="button" className="settings-btn-secondary" onClick={() => openEdit(p)}>
             {'Copy as custom'}
           </button>
         )}

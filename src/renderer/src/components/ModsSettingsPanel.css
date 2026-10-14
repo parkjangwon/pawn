@@ -273,36 +273,8 @@
 }
 
 .plugins-tabs {
-  display: inline-flex;
-  align-items: center;
-  gap: 2px;
+  /* Look comes from the shared segmented control (.theme-segmented-control). */
   margin-bottom: var(--space-md);
-  padding: 3px;
-  border: 1px solid var(--border-color);
-  border-radius: 999px;
-  background: var(--bg-secondary);
-}
-
-.plugins-tab {
-  border: none;
-  border-radius: 999px;
-  background: transparent;
-  color: var(--text-muted);
-  font-size: var(--font-sm);
-  font-weight: 500;
-  padding: 6px 12px;
-  cursor: pointer;
-  transition: background var(--dur-fast, 120ms) ease, color var(--dur-fast, 120ms) ease;
-}
-
-.plugins-tab:hover {
-  color: var(--text-primary);
-}
-
-.plugins-tab.active {
-  color: var(--text-primary);
-  background: var(--bg-primary);
-  box-shadow: 0 1px 2px color-mix(in srgb, var(--text-primary) 12%, transparent);
 }
 
 .plugins-tab-badge {
