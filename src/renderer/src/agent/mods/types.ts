@@ -175,6 +175,8 @@ export interface ModsApi {
     toolbar: (spec: { id: string; label: string; title?: string }) => void
     settings: (spec: { id: string; title: string; tree?: unknown }) => void
     statusbar: (spec: { id: string; text?: string; title?: string; tree?: unknown }) => void
+    palette: (spec: { id: string; title: string; hint?: string }) => void
+    shortcut: (spec: { id: string; keys: string; title: string }) => void
     remove: (spec: { slot: ModSlotKind; id: string }) => void
     list: () => ModSlotView[]
   }
@@ -187,6 +189,8 @@ export type ModSlotKind =
   | 'toolbar'
   | 'settings'
   | 'statusbar'
+  | 'palette'
+  | 'shortcut'
 
 export interface ModSlotView {
   slot: ModSlotKind
@@ -196,6 +200,10 @@ export interface ModSlotView {
   label?: string
   text?: string
   icon?: string
+  /** Palette entry subtitle. */
+  hint?: string
+  /** Normalized chord for a shortcut slot (`Mod+Shift+K`). */
+  keys?: string
   tree?: unknown
   collapsed?: boolean
 }
