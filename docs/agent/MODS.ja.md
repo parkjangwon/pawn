@@ -105,6 +105,12 @@ export function register(on) {
 | `model.request` | メインチャットのモデル呼び出しの直前（リトライごとにも） | `next({ ...e, systemAppend })` でシステムプロンプトに最大 8 000 文字を `<mod-instructions>` で包んで追加。ほかのフィールドは変更不可。ペイロード `{ sessionId, round, provider, model, messageCount, lastUserText }`。 |
 | `model.response` | モデル呼び出しが成功したあと | 観察のみ。ペイロード `{ sessionId, round, provider, model, text, toolCalls, usage }`。 `usage` は `{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }`。`inputTokens` はキャッシュされていない部分だけなので、プロンプト全体は入力の 3 フィールドの合計。 |
 | `notification` | Pawn が送るすべてのデスクトップ通知 | 観察のみ。ペイロード `{ title, body, source }`。mod は通知を隠したり書き換えたりできない。 |
+| `tool.result` | ツールが実際に動いて成功した後（Claude Code `PostToolUse`） | 観察のみ、待たない。ペイロード `{ tool, tool_name, tool_use_id, tool_input, tool_response: { content, isError } }`。拒否・代答・ブロック時は発火しない。 |
+| `tool.error` | ツールが動いて失敗または例外の後（`PostToolUseFailure`） | 観察のみ。同じ項目に `error`。 |
+| `subagent.start` | サブエージェントの最初のモデル呼び出しの前（`SubagentStart`） | 観察のみ。ペイロード `{ agent_id, agent_type, name, prompt, background }`。 |
+| `subagent.stop` | サブエージェントの完了・失敗・取消時（`SubagentStop`） | 観察のみ。ペイロード `{ agent_id, agent_type, name, status, ok, summary, error?, rounds, toolsUsed, filesChanged }`。 |
+
+この四つは観察専用です。遅い・失敗するハンドラーはツールやサブエージェントを変えたり遅らせたりできません。内容を読むので `on()` には名前をそのまま書きます。同意画面では **ツール**（`tool.*`）か **サブエージェント**（`subagent.*`）として出ます。
 
 ツールの順: `tool.call` → 設定 `PreToolUse` → Plan モード確認 → `tool.check` / 権限 → ツール。
 
@@ -227,7 +233,9 @@ Pawn は Claude Code プラグインのフォルダ構成（`.claude-plugin/plug
 | フック `Stop` | `turn.complete` |
 | フック `PreCompact` | `session.compact`（圧縮のあとに実行） |
 | フック `Notification` | `notification` |
-| フック `PostToolUse`、`SubagentStop` など | 検証は通るが発火しない（警告） |
+| フック `PostToolUse` / `PostToolUseFailure` | `tool.result` / `tool.error` |
+| フック `SubagentStart` / `SubagentStop` | `subagent.start` / `subagent.stop` |
+| その他の Claude Code フック（例 `TeammateIdle`） | 検証は警告付きで通る。Pawn に対応する時点がない |
 | エージェントファイル（`agents/*.md`） | `$.agent.register({ markdown })` で読み込むか、`~/.claude/agents` / `.claude/agents` に置く |
 | スキル（`skills/*/SKILL.md`） | 通常のスキルフォルダから読む。mod の呼び出しは不要 |
 | `ANTHROPIC_BASE_URL` のカスタムモデル | `$.provider.register` の提案をユーザーが追加 |

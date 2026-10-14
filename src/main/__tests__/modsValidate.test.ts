@@ -124,15 +124,24 @@ describe('mods validate / discover', () => {
     const root = tempMod(
       [
         'export function register(on) {',
-        "  on('classic.SubagentStop', async (api, e, next) => next(e))",
+        "  on('classic.TeammateIdle', async (api, e, next) => next(e))",
         '}'
       ].join('\n')
     )
     const report = validateModDirectory(root)
     expect(report.ok).toBe(true)
-    expect(report.findings.some((f) => f.severity === 'warning' && f.message.includes('classic.SubagentStop'))).toBe(
+    expect(report.findings.some((f) => f.severity === 'warning' && f.message.includes('classic.TeammateIdle'))).toBe(
       true
     )
+  })
+
+  it('does not warn for Claude Code hooks Pawn now emits', () => {
+    for (const ev of ['classic.SubagentStop', 'classic.SubagentStart', 'classic.PostToolUse', 'classic.PostToolUseFailure', 'PostToolUse', 'SubagentStop', 'tool.result', 'subagent.stop']) {
+      const root = tempMod(['export function register(on) {', `  on('${ev}', async (api, e, next) => next(e))`, '}'].join('\n'))
+      const report = validateModDirectory(root)
+      expect(report.ok).toBe(true)
+      expect(report.findings.some((f) => f.severity === 'warning' && f.message.includes('never emits'))).toBe(false)
+    }
   })
 
   it('discovers every hooks.json module and reports missing entries', () => {

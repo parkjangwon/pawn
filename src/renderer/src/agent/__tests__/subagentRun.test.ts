@@ -13,7 +13,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const harness = vi.hoisted(() => ({
   callLLM: vi.fn(),
-  route: vi.fn()
+  route: vi.fn(),
+  subStart: vi.fn(),
+  subStop: vi.fn()
+}))
+
+vi.mock('../mods/lifecycleEvents', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('../mods/lifecycleEvents')>()),
+  modSubagentStart: harness.subStart,
+  modSubagentStop: harness.subStop
 }))
 
 vi.mock('../llm', async (importOriginal) => ({
@@ -68,6 +76,8 @@ beforeEach(() => {
       getUsageSummary: vi.fn().mockResolvedValue([])
     }
   }
+  harness.subStart.mockReset()
+  harness.subStop.mockReset()
   harness.callLLM.mockReset().mockResolvedValue(finalAnswer('all done'))
   harness.route.mockReset().mockReturnValue(fakeDecision)
   ;(window as any).__subagentOpenedBrowserPanel = false
@@ -153,5 +163,33 @@ describe('runSubagent hermetic', () => {
     await run2
     vi.advanceTimersByTime(3100)
     expect(close).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('mod SubagentStart / SubagentStop', () => {
+  it('fires start before the first model call and stop with the result', async () => {
+    const order: string[] = []
+    harness.subStart.mockImplementation(() => order.push('start'))
+    harness.callLLM.mockImplementation(async () => { order.push('llm'); return finalAnswer('the summary') })
+    harness.subStop.mockImplementation(() => order.push('stop'))
+    const r = await runSubagent({ name: 'scan', prompt: 'look around', agent: 'explore' } as never, BASE_OPTS)
+    expect(order).toEqual(['start', 'llm', 'stop'])
+    const start = harness.subStart.mock.calls[0][0]
+    expect(start).toMatchObject({ sessionId: 's1', agent: 'explore', name: 'scan', prompt: 'look around', background: false })
+    expect(start.runId).toBe(r.runId)
+    expect(harness.subStop.mock.calls[0][0]).toMatchObject({ sessionId: 's1', runId: r.runId, agent: 'explore', status: 'ok' })
+    expect(harness.subStop.mock.calls[0][0].summary).toContain('the summary')
+  })
+
+  it('reports error status when the run fails, and nothing for an empty prompt', async () => {
+    harness.callLLM.mockRejectedValue(new Error('provider down'))
+    const r = await runSubagent({ name: 'x', prompt: 'go', agent: 'explore' } as never, BASE_OPTS).catch((e) => e)
+    expect(harness.subStop).toHaveBeenCalledTimes(1)
+    expect(harness.subStop.mock.calls[0][0].status).toBe('error')
+    expect(r).toBeDefined()
+    harness.subStart.mockReset(); harness.subStop.mockReset()
+    await runSubagent({ name: 'x', prompt: '  ', agent: 'explore' } as never, BASE_OPTS)
+    expect(harness.subStart).not.toHaveBeenCalled()
+    expect(harness.subStop).not.toHaveBeenCalled()
   })
 })

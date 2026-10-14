@@ -121,6 +121,12 @@ export function register(on) {
 | `model.request` | 메인 채팅의 모델 호출 직전(재시도마다 포함) | `next({ ...e, systemAppend })`로 시스템 프롬프트에 최대 8 000자를 `<mod-instructions>`로 감싸 덧붙여요. 다른 필드는 바꿀 수 없어요. 페이로드 `{ sessionId, round, provider, model, messageCount, lastUserText }`. |
 | `model.response` | 모델 호출이 성공한 뒤 | 관찰만 해요. 페이로드 `{ sessionId, round, provider, model, text, toolCalls, usage }`. `usage`는 `{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }`예요. `inputTokens`는 캐시되지 않은 부분만이라 전체 프롬프트는 입력 필드 세 개의 합이에요. |
 | `notification` | Pawn이 보내는 모든 데스크톱 알림 | 관찰만 해요. 페이로드 `{ title, body, source }`. mod는 알림을 숨기거나 바꿀 수 없어요. |
+| `tool.result` | 도구가 실제로 실행되어 성공한 뒤 (Claude Code `PostToolUse`) | 관찰만, 기다리지 않아요. 페이로드 `{ tool, tool_name, tool_use_id, tool_input, tool_response: { content, isError } }`. 막히거나 mod가 대신 답하면 발생하지 않아요. |
+| `tool.error` | 도구가 실행됐지만 실패하거나 예외가 난 뒤 (`PostToolUseFailure`) | 관찰만. 같은 필드에 `error`. |
+| `subagent.start` | 서브에이전트의 첫 모델 호출 전 (`SubagentStart`) | 관찰만. 페이로드 `{ agent_id, agent_type, name, prompt, background }`. |
+| `subagent.stop` | 서브에이전트가 끝나거나 실패하거나 취소될 때 (`SubagentStop`) | 관찰만. 페이로드 `{ agent_id, agent_type, name, status, ok, summary, error?, rounds, toolsUsed, filesChanged }`. |
+
+이 네 이벤트는 관찰 전용이에요. 느리거나 실패하는 핸들러가 도구나 서브에이전트를 바꾸거나 늦추지 못해요. 내용을 읽으므로 `on()`에 이름을 그대로 적어야 하고, 동의 화면에는 **도구**(`tool.*`) 또는 **서브에이전트**(`subagent.*`)로 보여요.
 
 도구 순서: `tool.call` → 설정 `PreToolUse` → Plan 모드 확인 → `tool.check` / 권한 → 도구.
 
@@ -276,7 +282,9 @@ Pawn은 Claude Code 플러그인 폴더 구조(`.claude-plugin/plugin.json`, `ho
 | 훅 `Stop` | `turn.complete` |
 | 훅 `PreCompact` | `session.compact` (압축 뒤에 실행) |
 | 훅 `Notification` | `notification` |
-| 훅 `PostToolUse`, `SubagentStop` 등 | 검사기는 받아들이지만 발생하지 않아요(경고) |
+| 훅 `PostToolUse` / `PostToolUseFailure` | `tool.result` / `tool.error` |
+| 훅 `SubagentStart` / `SubagentStop` | `subagent.start` / `subagent.stop` |
+| 그 밖의 Claude Code 훅 (예: `TeammateIdle`) | 검사기는 경고와 함께 받아들여요. Pawn에 대응하는 시점이 없어요 |
 | 에이전트 파일(`agents/*.md`) | `$.agent.register({ markdown })`로 불러오거나 `~/.claude/agents` / `.claude/agents`에 두세요 |
 | 스킬(`skills/*/SKILL.md`) | 평소 스킬 폴더에서 읽어요. mod 호출은 필요 없어요 |
 | `ANTHROPIC_BASE_URL`로 쓰는 사용자 모델 | `$.provider.register` 제안을 사용자가 추가 |
