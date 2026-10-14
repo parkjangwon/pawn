@@ -14,6 +14,28 @@ import Input from './Input'
 import Select from './Select'
 import Switch from './Switch'
 import { tx } from '../i18n'
+import { DEFAULT_OLLAMA_URL, isOllamaProvider, ollamaApiBase, validateOllamaUrl } from '../agent/ollamaEndpoint'
+
+function OllamaEndpointEditor({ baseUrl, onSave }: { baseUrl: string; onSave: (baseUrl: string) => void }): React.JSX.Element {
+  const [value, setValue] = useState(baseUrl.replace(/\/v1\/?$/i, ''))
+  const [error, setError] = useState('')
+  return (
+    <div className="ollama-endpoint">
+      <Input aria-label="Endpoint" placeholder="http://192.168.0.10:11434" value={value} onChange={(e) => { setValue(e.target.value); setError('') }} />
+      <Button
+        variant="secondary"
+        onClick={() => {
+          const v = validateOllamaUrl(value)
+          if (v.ok) onSave(ollamaApiBase(v.url))
+          else setError(v.error)
+        }}
+      >
+        {'Save'}
+      </Button>
+      {error && <div className="settings-form-error" role="alert">{error}</div>}
+    </div>
+  )
+}
 
 export default function ProvidersSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -33,6 +55,8 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
     presetKey,
     presetKeyError,
     setPresetKeyError,
+    ollamaUrl,
+    setOllamaUrl,
     formError,
     setFormError,
     handleAddFromPreset,
@@ -43,6 +67,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
     setShowAddProvider
   } = state
   const plaintext = usePlaintextSecretStorage()
+  const ollamaUrlCheck = validateOllamaUrl(ollamaUrl)
 
   return (
     <div className="settings-section">
@@ -73,6 +98,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
                 {isChatGptCodexBase(p.baseUrl) && <SubscriptionAuthPanel kind="chatgpt" />}
                 {isClaudeApiBase(p.baseUrl) && <SubscriptionAuthPanel kind="claude" onSignedIn={() => void handleSyncModels(p.id)} />}
                 {isAntigravityBase(p.baseUrl) && <SubscriptionAuthPanel kind="antigravity" />}
+                {isOllamaProvider(p) && <OllamaEndpointEditor baseUrl={p.baseUrl} onSave={(baseUrl) => updateProvider(p.id, { baseUrl })} />}
               </div>
               <div className="settings-row-actions">
                 {noCatalog ? null : !isOpenRouter ? (
@@ -136,7 +162,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
               <button
                 key={preset.id}
                 className={`preset-chip ${isAlreadyAdded ? 'disabled' : ''} ${isRecommended ? 'recommended' : ''}`}
-                onClick={() => { setPresetPicking(preset); setPresetKey(''); if (presetKeyError) setPresetKeyError('') }}
+                onClick={() => { setPresetPicking(preset); setPresetKey(''); setOllamaUrl(DEFAULT_OLLAMA_URL); if (presetKeyError) setPresetKeyError('') }}
                 disabled={isAlreadyAdded}
               >
                 <span>{preset.name}</span>
@@ -152,6 +178,19 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             <div className="settings-row-desc">
               {presetPicking.keyHintKey ? tx(presetPicking.keyHintKey) : presetPicking.keyHint}
             </div>
+            {presetPicking.id === 'ollama' && (
+              <>
+                <Input
+                  aria-label="Ollama base URL"
+                  placeholder="http://192.168.0.10:11434"
+                  value={ollamaUrl}
+                  onChange={(e) => setOllamaUrl(e.target.value)}
+                />
+                {!ollamaUrlCheck.ok && (
+                  <div className="settings-form-error" role="alert">{ollamaUrlCheck.error}</div>
+                )}
+              </>
+            )}
             {!presetPicking.localNoKey && !presetPicking.signIn && (
               <>
                 <Input
@@ -176,7 +215,7 @@ export default function ProvidersSettingsPanel({ state }: { state: SettingsState
             <div className="form-actions">
               <Button
                 onClick={() => handleAddFromPreset(presetPicking, presetKey)}
-                disabled={!presetPicking.localNoKey && !presetPicking.signIn && !presetPicking.optionalKey && !presetKey.trim()}
+                disabled={(presetPicking.id === 'ollama' && !ollamaUrlCheck.ok) || (!presetPicking.localNoKey && !presetPicking.signIn && !presetPicking.optionalKey && !presetKey.trim())}
               >
                 {`Add (includes ${presetPicking.models.length} models)`}
               </Button>
