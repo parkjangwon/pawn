@@ -124,13 +124,13 @@ describe('mods validate / discover', () => {
     const root = tempMod(
       [
         'export function register(on) {',
-        "  on('classic.PreToolUse', async (api, e, next) => next(e))",
+        "  on('classic.SubagentStop', async (api, e, next) => next(e))",
         '}'
       ].join('\n')
     )
     const report = validateModDirectory(root)
     expect(report.ok).toBe(true)
-    expect(report.findings.some((f) => f.severity === 'warning' && f.message.includes('classic.PreToolUse'))).toBe(
+    expect(report.findings.some((f) => f.severity === 'warning' && f.message.includes('classic.SubagentStop'))).toBe(
       true
     )
   })
@@ -192,5 +192,30 @@ describe('mods validate / discover', () => {
     expect(out).not.toContain('import type')
     expect(out).toContain('export function register(on)')
     expect(out).not.toContain(' as ToolCall')
+  })
+})
+
+describe('events-demo example (roadmap E)', () => {
+  const EXAMPLE = join(fileURLToPath(new URL('../../..', import.meta.url)), 'examples/mods/events-demo')
+  it('validates cleanly, including the Claude Code Notification alias', () => {
+    const report = validateModDirectory(EXAMPLE)
+    expect(report.ok).toBe(true)
+    const text = formatValidateReport(report)
+    expect(text).not.toMatch(/unknown event/i)
+  })
+  it('accepts bare Claude Code hook names', () => {
+    const root = tempMod(
+      withDollar(
+        [
+          'export function register(on) {',
+          "  on('PreToolUse', async (__API__, e, next) => next(e))",
+          "  on('model.request', async (__API__, e, next) => next(e))",
+          '}'
+        ].join('\n')
+      )
+    )
+    const report = validateModDirectory(root)
+    expect(report.ok).toBe(true)
+    expect(formatValidateReport(report)).not.toMatch(/unknown event/i)
   })
 })

@@ -3,6 +3,7 @@ import { useAppStore } from './app'
 import { useChatStore } from './chat'
 import { useArtifactsStore, openArtifactsPanel } from './artifacts'
 import { uid } from '../utils/uid'
+import { pawnNotify } from '../agent/notify'
 
 interface RoutineState {
   routines: Routine[]
@@ -158,7 +159,7 @@ export async function runRoutine(routine: Routine): Promise<void> {
   }
 
   useRoutineStore.setState((s) => ({ runningIds: new Set(s.runningIds).add(routine.id) }))
-  window.api.notification?.send?.('Automation started', routine.name)?.catch?.(() => {})
+  pawnNotify('Automation started', routine.name)?.catch?.(() => {})
 
   const prompts =
     policy.steps.length > 0 ? policy.steps : [routine.prompt]
@@ -212,13 +213,13 @@ export async function runRoutine(routine: Routine): Promise<void> {
     void window.api.routine?.recordResult?.(routine.id, result.slice(0, 2000))?.catch?.(() => {})
     const reportPath = await saveAutomationReport(routine, result)
     const note = reportPath ? `\nReport: ${reportPath}` : ''
-    window.api.notification?.send?.(`Automation finished: ${routine.name}`, (result + note).slice(0, 200))?.catch?.(() => {})
+    pawnNotify(`Automation finished: ${routine.name}`, (result + note).slice(0, 200))?.catch?.(() => {})
   } catch (err) {
     // The fire callback runs this with void — a throw must become a recorded
     // failure, not a silent unhandled rejection.
     const msg = `error: ${err instanceof Error ? err.message : String(err)}`
     void window.api.routine?.recordResult?.(routine.id, msg.slice(0, 2000))?.catch?.(() => {})
-    window.api.notification?.send?.(`Automation finished: ${routine.name}`, msg.slice(0, 200))?.catch?.(() => {})
+    pawnNotify(`Automation finished: ${routine.name}`, msg.slice(0, 200))?.catch?.(() => {})
   } finally {
     useRoutineStore.setState((s) => {
       const next = new Set(s.runningIds)

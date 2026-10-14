@@ -60,6 +60,7 @@ import {
 import { formatToolMessageContent } from '../agent/toolMessage'
 import { buildToolMeta } from '../agent/toolMeta'
 import { callLLM, type LlmResult } from '../agent/llm'
+import { modModelRequest, modModelResponse } from '../agent/mods/modelEvents'
 import { SYSTEM_PROMPT } from '../agent/prompts'
 import {
   effectiveDoneGate, harnessPreamble, harnessProfile
@@ -84,6 +85,7 @@ import { getConnectedProviders, hiddenToolNames, refreshConnectedProviders } fro
 import { classifyComplexity, refreshDecisionStatus } from '../agent/decision'
 import { TOOLS } from '../agent/toolDefinitions'
 import { tx } from '../i18n'
+import { pawnNotify } from '../agent/notify'
 
 // Round ceiling and compaction ratio come from the harness profile
 // (default 50 rounds / 0.6; eco 25 / 0.45; maxing 80 / 0.7).
@@ -696,8 +698,18 @@ export async function agentLoop(
         turnAssistantIds.push(assistantMsgId)
 
         try {
+         // Mods: `model.request` may add instructions for this call only.
+         const lastUser = [...entries].reverse().find((e) => e.role === 'user') as { content?: unknown } | undefined
+         const modLayers = await modModelRequest({
+           sessionId,
+           round,
+           provider: decision.provider.name || decision.provider.id,
+           model: decision.model.modelId,
+           messageCount: entries.length,
+           lastUserText: typeof lastUser?.content === 'string' ? lastUser.content : ''
+         })
          result = await callLLM({
-            decision, entries, systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal,
+            decision, entries, systemLayers: modLayers.length ? [...systemLayers, ...modLayers] : systemLayers, projectPreamble, sessionId, projectId, projectPath, assistantMsgId, signal,
             complexity,
             onProgress: (p) => {
               if (epoch !== getSessionEpoch(sessionId)) return
@@ -712,6 +724,15 @@ export async function agentLoop(
             })
          })
           noteProviderSuccess(decision.provider.id)
+          modModelResponse({
+            sessionId,
+            round,
+            provider: decision.provider.name || decision.provider.id,
+            model: decision.model.modelId,
+            text: result.text || '',
+            toolCalls: (result.toolCalls || []).map((c) => c.name),
+            usage: { inputTokens: result.usage?.inputTokens || 0, outputTokens: result.usage?.outputTokens || 0 }
+          })
           // Vision-only fallbacks must not steal sticky from the text model
           // (DeepSeek coding + Gemini image turn → next text turn stays DeepSeek).
           if (!decision.ephemeral) {
@@ -1436,7 +1457,7 @@ export async function agentLoop(
           (r) => r.sessionId === sessionId && useRoutineStore.getState().runningIds.has(r.id)
         )
         if (!runningRoutine && !document.hasFocus()) {
-          window.api?.notification?.send?.('Pawn', 'Task complete')?.catch(() => {})
+          pawnNotify('Pawn', 'Task complete')?.catch(() => {})
         }
       }
       // Ultra Work: evaluate the goal and auto-continue (or end the run).
@@ -1501,7 +1522,7 @@ async function continueUltraWork(
       lastReason: decision.reason
     })
     if (decision.status === 'achieved' && !document.hasFocus()) {
-      window.api?.notification?.send?.('Pawn · Ultra Work', 'Goal achieved')?.catch?.(() => {})
+      pawnNotify('Pawn · Ultra Work', 'Goal achieved')?.catch?.(() => {})
     }
     processQueue(set, get, sessionId)
     return

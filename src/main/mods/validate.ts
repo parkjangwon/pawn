@@ -39,6 +39,9 @@ const KNOWN_EVENTS = new Set([
   'agent.spawn',
   'ui.render',
   'message.render',
+  'model.request',
+  'model.response',
+  'notification',
   'ui.resolve',
   'ui.press',
   'ui.input',
@@ -80,6 +83,18 @@ const KNOWN_EVENTS = new Set([
   'store.set'
 ])
 
+/** Claude Code hook name → Pawn event. */
+const CLASSIC_EVENT_ALIASES: Record<string, string> = {
+  SessionStart: 'session.start',
+  SessionEnd: 'session.end',
+  UserPromptSubmit: 'prompt.submit',
+  PreToolUse: 'tool.call',
+  PermissionRequest: 'tool.check',
+  Stop: 'turn.complete',
+  PreCompact: 'session.compact',
+  Notification: 'notification'
+}
+
 /** The events Pawn actually emits today (MODS.md §5). Others get a warning. */
 const EMITTED_EVENTS = new Set([
   'session.start',
@@ -94,6 +109,9 @@ const EMITTED_EVENTS = new Set([
   'command.run',
   'ui.render',
   'message.render',
+  'model.request',
+  'model.response',
+  'notification',
   'ui.press',
   'ui.input',
   'ui.select'
@@ -236,14 +254,16 @@ export function validateModDirectory(dir: string): ModValidateReport {
     let m: RegExpExecArray | null
     while ((m = onRe.exec(source))) {
       const event = m[1]
-      if (!KNOWN_EVENTS.has(event) && !event.startsWith('classic.')) {
+      // Claude Code hook names run on their Pawn event (keep in sync with CLASSIC_EVENT_ALIASES in the renderer).
+      const runsOn = CLASSIC_EVENT_ALIASES[event.replace(/^classic\./, '')] || event
+      if (!KNOWN_EVENTS.has(event) && !event.startsWith('classic.') && !CLASSIC_EVENT_ALIASES[event]) {
         findings.push({
           severity: 'error',
           message: `"${event}" is not an event`,
           file: relative
         })
       }
-      if (!EMITTED_EVENTS.has(event)) {
+      if (!EMITTED_EVENTS.has(runsOn)) {
         findings.push({
           severity: 'warning',
           message: `"${event}" is accepted but Pawn never emits it today (see MODS.md §5)`,

@@ -73,6 +73,7 @@ Before a mod loads, Settings shows a review dialog:
 
 - a capability list derived from the hooks it registers and the `$.…` calls in source: one row per capability, with a label and a one-line description (`settings.modsSection.cap.<id>` and `settings.modsSection.capDesc.<id>` in `strings.ts`; ids in `src/renderer/src/agent/mods/capabilities.ts`). A new capability needs an id, a rule, and both strings
 - a risk chip: **high** if it can run a process or use the network, **medium** if it can touch files or tools, read message text (`message.render`), or change the theme (`$.theme.vars` / `$.theme.css`), **low** otherwise
+- new in roadmap E: changing model requests (`model.request`) or offering a provider (`$.provider.register`) is **high**; reading model replies (`model.response`) or adding subagents (`$.agent.register`) is **medium**; seeing notifications (`notification`) is **low**
 - the version you are allowing
 
 Allow writes that exact version into `consentedPlugins` and removes the name from `disabledPlugins`. Revoke deletes the consent entry and disables the name.
@@ -122,6 +123,9 @@ The validator allows a wider Claude Code set. Only these are emitted today.
 | `command.run` | The user typed `/name` for a registered command, or code called `$.command.run` | Return `{ text }` to post a reply as the mod. |
 | `ui.render` | Spinner, and the band above the composer (`AbovePrompt`) | Spinner is one chain: the last `props.suffix` wins. `AbovePrompt` calls each matching mod alone. Return `props.tree` and `props.plugin` for your own band. You do not see the other mods' trees. |
 | `ui.press` / `ui.input` / `ui.select` | The user used a Button, Input, or Select in a mod tree | Read `id` and `value`. |
+| `model.request` | Before each main-chat model call (also each retry) | `next({ ...e, systemAppend })` adds up to 8 000 characters to the system prompt, wrapped in `<mod-instructions>`. Nothing else is writable. Payload `{ sessionId, round, provider, model, messageCount, lastUserText }`. |
+| `model.response` | After each successful model call | Observe. Payload `{ sessionId, round, provider, model, text, toolCalls, usage }`. |
+| `notification` | Every desktop notification Pawn sends | Observe. Payload `{ title, body, source }`. A mod cannot hide or rewrite a notification. |
 
 Tool order: `tool.call` → settings `PreToolUse` → Plan-mode check → `tool.check` / permission → the tool.
 
@@ -222,6 +226,41 @@ The chip lists mods loaded for this chat. Its menu can turn one off (that writes
 - Like slots, the runtime refuses a `$.theme.vars` / `$.theme.css` call that isn't written literally in the source. The review dialog shows them as **Change colors and styles**. Risk is **medium**: a theme can't read anything or reach the network, but it can make parts of Pawn look like something they're not.
 - Anti-spoofing: the consent dialog, the mods menu (with its Theme toggles) and **Settings → Mods** are `.mods-trusted` roots. They re-declare the default tokens, and mod var rules use `:not(.mods-trusted)`, so `$.theme.vars` never reaches them. Scoped sheets can't reach them either, and `position: fixed` / `sticky` is refused so a mod can't float a fake dialog over them.
 - Sample: `examples/mods/theming-demo/` swaps two palettes (light and dark) and styles its sidebar section. It is not installed by default; copy it to `~/.pawn/mods/theming-demo` and allow it.
+
+### Model events, subagents and providers
+
+These are high-trust hooks, so the runtime refuses `on('model.request' | 'model.response' | 'notification', …)` and `message.*` unless the event name is written literally in the source. A computed name never reaches them.
+
+| Call | What it does | Capability |
+| --- | --- | --- |
+| `$.agent.register({ name, description, prompt, tools, disallowedTools, model, maxTurns })` | Adds a subagent the assistant can spawn. It is named `<mod>-<name>`, so it can't replace a built-in agent. An agent file on disk with the same name wins. Pass `markdown` instead of `prompt` to use a Claude Code agent file (frontmatter + body). Mod agents always run in a worktree with `apply: none`, and `maxTurns` is capped at 25. Returns the full name. | `subagents` (medium) |
+| `$.agent.remove({ name })` / `$.agent.list()` | Remove one of this mod's agents / list them. | none |
+| `$.provider.register({ id, name, apiFormat, baseUrl, models })` | Offers a provider (`openai` or `claude` format) and up to 32 models. `baseUrl` must be `https`, or `http` on `localhost`/`127.0.0.1`, with no credentials in it. Nothing changes on its own: the offer appears under **Settings → Mods → Providers offered by mods**, and **Add** creates the provider and its models turned off and without a key. | `providers` (high) |
+| `$.provider.remove({ id })` / `$.provider.list()` | Withdraw an offer / list this mod's offers. | none |
+
+Registrations last for the session and are cleared when mods reload. Like slots, a `$.agent.register` / `$.provider.register` call that isn't written literally in the source is refused.
+
+Sample: `examples/mods/events-demo/` uses all of these. It is not installed by default; copy it to `~/.pawn/mods/events-demo` and allow it.
+
+### Claude Code compatibility
+
+A Claude Code plugin folder (`.claude-plugin/plugin.json`, `hooks/`, `agents/`, `skills/`) is the layout Pawn reads. What carries over:
+
+| Claude Code | In Pawn |
+| --- | --- |
+| Hook `SessionStart` / `SessionEnd` | `session.start` / `session.end` |
+| Hook `UserPromptSubmit` | `prompt.submit` |
+| Hook `PreToolUse` | `tool.call` |
+| Hook `PermissionRequest` | `tool.check` |
+| Hook `Stop` | `turn.complete` |
+| Hook `PreCompact` | `session.compact` (runs after compaction) |
+| Hook `Notification` | `notification` |
+| Hook `PostToolUse`, `SubagentStop` and others | Accepted by the validator, not emitted (warning) |
+| Agent files (`agents/*.md`) | Load them with `$.agent.register({ markdown })`, or put them in `~/.claude/agents` / `.claude/agents` |
+| Skills (`skills/*/SKILL.md`) | Read from the usual skills folders; no mod call needed |
+| Custom models via `ANTHROPIC_BASE_URL` | `$.provider.register` offer, added by the user |
+
+`on()` takes the Claude Code names as written (`'PreToolUse'`) or with a `classic.` prefix, and the review dialog lists them under the Pawn event. Shell `command` hooks in a Claude Code `hooks.json` are not run by mods; they belong in Settings → Hooks. Mod hooks are JavaScript modules listed under `modules`.
 
 ## 7. `$` API
 

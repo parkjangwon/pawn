@@ -1,0 +1,4 @@
+{
+  "description": "The events-demo hooks module",
+  "modules": ["./register.js"]
+}

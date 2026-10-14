@@ -4,6 +4,7 @@ import { Check, ChevronDown, ChevronRight, GitBranch } from 'lucide-react'
 import { secretPreflight, validateCommitMessage } from '../agent/gitWrite'
 import { scanForSecrets, formatSecretScanBlock } from '../agent/secretScan'
 import Input from './Input'
+import { pawnNotify } from '../agent/notify'
 
 interface GitFile {
   path: string
@@ -283,11 +284,11 @@ export default function GitView({ projectPath }: GitViewProps): React.JSX.Elemen
           setError(res2?.error || res?.error || res?.text || 'Could not open PR')
         } else {
           setError(null)
-          void window.api.notification?.send?.('Pawn', 'Pull request created')?.catch(() => {})
+          void pawnNotify('Pawn', 'Pull request created')?.catch(() => {})
           if (res2.text) setError(res2.text.slice(0, 200))
         }
       } else {
-        void window.api.notification?.send?.('Pawn', 'Pull request created')?.catch(() => {})
+        void pawnNotify('Pawn', 'Pull request created')?.catch(() => {})
         if (res.text) setError(res.text.slice(0, 200))
       }
     } catch (e) {

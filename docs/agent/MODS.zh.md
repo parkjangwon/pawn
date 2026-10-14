@@ -55,6 +55,7 @@ my-mod/
 
 - 由注册的钩子和源码里的 `$.…` 调用得出的能力列表：每项能力一行，含名称和一行说明（`strings.ts` 中的 `settings.modsSection.cap.<id>` 与 `settings.modsSection.capDesc.<id>`，id 在 `src/renderer/src/agent/mods/capabilities.ts`）。新增能力需要 id、规则和这两条文字
 - 风险：进程或网络为高，文件、工具、读取消息正文（`message.render`）或更改主题（`$.theme.vars` / `$.theme.css`）为中，其余为低
+- 路线图 E 新增：更改模型请求（`model.request`）或提供 provider（`$.provider.register`）为高，读取模型回复（`model.response`）或添加子代理（`$.agent.register`）为中，查看通知（`notification`）为低
 - 你允许的版本
 
 允许后，该版本写入 `consentedPlugins`，名字会从 `disabledPlugins` 去掉。撤回同意会删掉条目并关闭该名字。
@@ -101,6 +102,9 @@ export function register(on) {
 | `command.run` | 用户输入已注册的 `/名字`，或代码调用了 `$.command.run` | 返回 `{ text }`，作为 mod 的回复出现在聊天里。 |
 | `ui.render` | 旋转指示，以及输入框上方的条（`AbovePrompt`） | 旋转指示是一条链，最后的 `props.suffix` 留下。`AbovePrompt` 会单独调用每个匹配的 mod。返回自己这一条的 `props.tree` 和 `props.plugin`。看不到其他 mod 的树。 |
 | `ui.press` / `ui.input` / `ui.select` | 用户操作 mod 树里的 Button、Input、Select | 读取 `id` 和 `value`。 |
+| `model.request` | 每次主聊天模型调用之前（每次重试也会） | `next({ ...e, systemAppend })` 向系统提示追加最多 8 000 个字符，包在 `<mod-instructions>` 中。其他字段不可写。负载 `{ sessionId, round, provider, model, messageCount, lastUserText }`。 |
+| `model.response` | 每次模型调用成功之后 | 仅观察。负载 `{ sessionId, round, provider, model, text, toolCalls, usage }`。 |
+| `notification` | Pawn 发出的每条桌面通知 | 仅观察。负载 `{ title, body, source }`。mod 不能隐藏或改写通知。 |
 
 工具顺序：`tool.call` → 设置 `PreToolUse` → Plan 模式检查 → `tool.check` / 权限 → 工具。
 
@@ -168,6 +172,41 @@ export function register(on) {
 - 与插槽一样，源码中没有逐字写出的 `$.theme.vars` / `$.theme.css` 调用会被运行时拒绝。审核对话框中显示为 **Change colors and styles**。风险为**中**：主题无法读取任何内容，也无法访问网络，但可以让 Pawn 的某些部分看起来像别的东西。
 - 防伪装：同意对话框、mods 菜单（含 Theme 开关）和 **设置 → Mods** 是 `.mods-trusted` 根。它们重新声明默认变量，mod 的变量规则使用 `:not(.mods-trusted)`，因此 `$.theme.vars` 无法影响它们。限定范围的样式表也无法影响它们，并且 `position: fixed` / `sticky` 会被拒绝，mod 无法在其上浮出伪造的对话框。
 - 示例：`examples/mods/theming-demo/` 切换两套配色（浅色和深色），并为自己的侧边栏分区加样式。默认不安装；复制到 `~/.pawn/mods/theming-demo` 后允许即可。
+
+### 模型事件、子代理和 provider
+
+这些钩子需要高度信任，因此除非事件名在源码中逐字写出，运行时会拒绝 `on('model.request' | 'model.response' | 'notification', …)` 和 `message.*`。计算出的名称无法触达它们。
+
+| 调用 | 作用 | 权限 |
+| --- | --- | --- |
+| `$.agent.register({ name, description, prompt, tools, disallowedTools, model, maxTurns })` | 添加助手可以启动的子代理。名称为 `<mod>-<name>`，因此不能替换内置代理。磁盘上同名的代理文件优先。传 `markdown` 而不是 `prompt` 可使用 Claude Code 代理文件（frontmatter + 正文）。mod 代理始终在 worktree 中以 `apply: none` 运行，`maxTurns` 上限为 25。返回完整名称。 | `subagents`（中） |
+| `$.agent.remove({ name })` / `$.agent.list()` | 删除本 mod 的一个代理 / 列出。 | 无 |
+| `$.provider.register({ id, name, apiFormat, baseUrl, models })` | 提供一个 provider（`openai` 或 `claude` 格式）和最多 32 个模型。`baseUrl` 必须是 `https`，或 `localhost`/`127.0.0.1` 上的 `http`，且不能包含凭据。不会自动改变任何东西：提议显示在 **设置 → Mods → Providers offered by mods**，点 **Add** 才会以关闭、无密钥的状态添加 provider 和模型。 | `providers`（高） |
+| `$.provider.remove({ id })` / `$.provider.list()` | 撤回提议 / 列出本 mod 的提议。 | 无 |
+
+注册只在本会话有效，mod 重新加载时清除。与插槽一样，源码中没有逐字写出的 `$.agent.register` / `$.provider.register` 调用会被拒绝。
+
+示例：`examples/mods/events-demo/` 用到了以上全部。默认不安装；复制到 `~/.pawn/mods/events-demo` 并允许即可。
+
+### Claude Code 兼容
+
+Pawn 读取 Claude Code 插件目录结构（`.claude-plugin/plugin.json`、`hooks/`、`agents/`、`skills/`）。可沿用的部分：
+
+| Claude Code | Pawn |
+| --- | --- |
+| 钩子 `SessionStart` / `SessionEnd` | `session.start` / `session.end` |
+| 钩子 `UserPromptSubmit` | `prompt.submit` |
+| 钩子 `PreToolUse` | `tool.call` |
+| 钩子 `PermissionRequest` | `tool.check` |
+| 钩子 `Stop` | `turn.complete` |
+| 钩子 `PreCompact` | `session.compact`（在压缩之后运行） |
+| 钩子 `Notification` | `notification` |
+| 钩子 `PostToolUse`、`SubagentStop` 等 | 校验器接受，但不会发出（警告） |
+| 代理文件（`agents/*.md`） | 用 `$.agent.register({ markdown })` 加载，或放进 `~/.claude/agents` / `.claude/agents` |
+| 技能（`skills/*/SKILL.md`） | 从常规技能目录读取，无需 mod 调用 |
+| 通过 `ANTHROPIC_BASE_URL` 的自定义模型 | `$.provider.register` 提议，由用户添加 |
+
+`on()` 接受原样的 Claude Code 名称（`'PreToolUse'`）或带 `classic.` 前缀的名称，审核对话框按 Pawn 事件显示。Claude Code `hooks.json` 中的 shell `command` 钩子不会由 mod 运行，应放到 设置 → Hooks。mod 钩子是在 `modules` 中列出的 JavaScript 模块。
 
 ## 7. `$` API
 

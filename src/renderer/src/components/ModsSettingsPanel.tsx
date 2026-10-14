@@ -7,6 +7,8 @@ import { IconFolder } from './icons'
 import Button from './Button'
 import ModsConsentDialog from './ModsConsentDialog'
 import Switch from './Switch'
+import { adoptProviderOffer, useModRegistry } from '../agent/mods/registry'
+import { useProviderStore } from '../stores/provider'
 import './ModsSettingsPanel.css'
 
 interface ModRow {
@@ -350,6 +352,7 @@ Off by default. Turn it on only if you trust those plugins.`}</span>
               />
             ))}
           </div>
+          <ModRegistrations />
           {settings.pluginDirs.length > 0 && (
             <div className="mods-dirs">
               <span className="mods-dirs-label">{'Extra folders'}</span>
@@ -489,5 +492,60 @@ function HeroMark(): React.JSX.Element {
       <rect x="3" y="13" width="8" height="8" rx="2" />
       <path d="M17 13v8M13 17h8" />
     </svg>
+  )
+}
+
+/** Agents and provider offers registered by running mods (session-scoped). */
+function ModRegistrations(): React.JSX.Element | null {
+  const agents = useModRegistry((s) => s.agents)
+  const offers = useModRegistry((s) => s.providers)
+  const providers = useProviderStore((s) => s.providers)
+  const [added, setAdded] = useState<string | null>(null)
+  if (agents.length === 0 && offers.length === 0) return null
+  const has = (url: string): boolean =>
+    providers.some((p) => p.baseUrl.replace(/\/+$/, '').toLowerCase() === url.toLowerCase())
+  return (
+    <>
+      {agents.length > 0 && (
+        <div className="mods-dirs" data-testid="mods-agents">
+          <span className="mods-dirs-label">{'Agents from mods'}</span>
+          <ul className="mods-dir-list">
+            {agents.map((a) => (
+              <li key={a.name}>
+                <span className="plugin-source" title={a.description}>
+                  <strong>{a.name}</strong> · {a.description}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {offers.length > 0 && (
+        <div className="mods-dirs" data-testid="mods-provider-offers">
+          <span className="mods-dirs-label">{'Providers offered by mods'}</span>
+          <ul className="mods-dir-list">
+            {offers.map((o) => (
+              <li key={`${o.plugin}:${o.id}`}>
+                <span className="plugin-source" title={o.baseUrl}>
+                  <strong>{o.name}</strong> · {o.baseUrl} · {o.models.length} {o.models.length === 1 ? 'model' : 'models'} · {o.plugin}
+                </span>
+                <button
+                  type="button"
+                  className="mods-quiet-btn"
+                  disabled={has(o.baseUrl)}
+                  onClick={() => {
+                    const id = adoptProviderOffer(o, useProviderStore.getState())
+                    setAdded(id ? `Added ${o.name}, turned off. Add your API key in Settings → Providers.` : null)
+                  }}
+                >
+                  {has(o.baseUrl) ? 'Added' : 'Add'}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {added && <p className="mods-feedback" role="status">{added}</p>}
+        </div>
+      )}
+    </>
   )
 }

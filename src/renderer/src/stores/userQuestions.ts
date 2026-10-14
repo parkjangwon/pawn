@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { pawnNotify } from '../agent/notify'
 
 /**
  * Questions the agent asks the user mid-turn (ask_user / request_plan_approval).
@@ -106,7 +107,7 @@ export const useQuestionStore = create<QuestionState>((set, get) => ({
 function notifyWaiting(q: Omit<UserQuestion, 'id' | 'createdAt'>): void {
   try {
     if (typeof document !== 'undefined' && document.hasFocus()) return
-    void window.api?.notification?.send?.('Pawn', q.question.slice(0, 140))?.catch?.(() => {})
+    void pawnNotify('Pawn', q.question.slice(0, 140))?.catch?.(() => {})
   } catch {
     /* optional */
   }
