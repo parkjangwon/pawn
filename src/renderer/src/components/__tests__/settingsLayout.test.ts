@@ -50,9 +50,9 @@ describe('settings buttons use two shared size rules', () => {
     }
   })
 
-  const panels = readdirSync(dir).filter((f) => /SettingsPanel\.tsx$/.test(f) || f === 'KiroAuthPanel.tsx')
+  const panels = readdirSync(dir).filter((f) => /SettingsPanel\.tsx$/.test(f) || ['KiroAuthPanel.tsx', 'WikiPanel.tsx', 'SkillStorePanel.tsx', 'SubscriptionAuthPanel.tsx', 'XaiAuthPanel.tsx'].includes(f))
   // Not text action buttons: segmented toggles, tabs, tiles, chips, icon/row buttons, text links.
-  const EXEMPT = /\b(theme-segment-btn|plugin-scope-btn|plugins-tab|provider-tile|agents-template-chip|agents-link-btn|decision-preset|telegram-step|hooks-group-head|hooks-cmd|hooks-icon-btn|delete-btn|add-btn-full)\b|routingMode|permissionMode|harnessMode|subagentCostMode|maxParallelSubagents|mcpScope|sleepPrevention|range ===/
+  const EXEMPT = /\b(theme-segment-btn|plugin-scope-btn|plugins-tab|provider-tile|agents-template-chip|wiki-lint-link|wiki-link-chip|wiki-sort|wiki-row-open|wiki-item-delete|decision-preset|telegram-step|hooks-group-head|hooks-cmd|hooks-icon-btn|delete-btn|add-btn-full)\b|routingMode|permissionMode|harnessMode|subagentCostMode|maxParallelSubagents|mcpScope|sleepPrevention|range ===/
 
   it.each(panels)('%s: every text button carries settings-btn-primary or settings-btn-secondary', (file) => {
     const src = readFileSync(join(dir, file), 'utf8')
@@ -72,5 +72,30 @@ describe('settings buttons use two shared size rules', () => {
     expect(src).toMatch(/settings-btn-secondary conn-action-btn conn-btn-cancel/)
     // conn-action-btn no longer sets its own box size.
     expect(rule(settingsCss, '.conn-action-btn')).not.toMatch(/height|min-width|padding|font-size/)
+  })
+})
+
+describe('ui polish 2: segmented controls and tabs', () => {
+  const read = (f: string): string => readFileSync(join(dir, f), 'utf8')
+  it('Wiki scope/view tabs, Plugins tabs and Skill store sort use the shared segmented control', () => {
+    expect(read('WikiPanel.tsx')).toMatch(/theme-segmented-control wiki-tabs/)
+    expect(read('WikiPanel.tsx')).toMatch(/theme-segmented-control wiki-scope-switch/)
+    expect(read('WikiPanel.tsx')).toMatch(/settings-btn-secondary wiki-refresh/)
+    expect(read('PluginsSettingsPanel.tsx')).toMatch(/theme-segmented-control plugins-tabs/)
+    expect(read('SkillStorePanel.tsx')).toMatch(/theme-segmented-control skill-store-sort/)
+    expect(rule(css('Settings.css'), '.wiki-refresh')).toMatch(/margin-left:\s*auto/)
+  })
+  it('every segment has one height token', () => {
+    expect(rule(css('Settings.css'), '.theme-segment-btn,\n.theme-toggle button')).toMatch(/height:\s*var\(--settings-segment-height\)/)
+    expect(globalCss).toMatch(/--settings-segment-height:\s*24px/)
+  })
+  it('settings buttons never shrink, and danger is a modifier of secondary', () => {
+    expect(rule(css('Settings.css'), '.settings-page .settings-btn-primary,\n.settings-page .settings-btn-secondary')).toMatch(/flex-shrink:\s*0/)
+    expect(css('Settings.css')).toMatch(/\.settings-btn-secondary\.settings-btn-danger\s*\{/)
+  })
+  it('Telegram inputs: no vertical padding, UI-font placeholder', () => {
+    const tg = css('TelegramSettingsPanel.css')
+    expect(rule(tg, '.telegram-form input')).toMatch(/padding-block:\s*0/)
+    expect(rule(tg, '.telegram-form input::placeholder')).toMatch(/font-family:\s*var\(--font-sans\)/)
   })
 })

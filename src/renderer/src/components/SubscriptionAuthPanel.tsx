@@ -135,7 +135,7 @@ export default function SubscriptionAuthPanel({
           )}{' '}
           <button
             type="button"
-            className="test-btn"
+            className="settings-btn-secondary test-btn"
             onClick={() => void api.cancelLogin().then(() => {
               setDevice(null)
               setPaste('')
@@ -152,7 +152,7 @@ export default function SubscriptionAuthPanel({
                 placeholder={tx(`${copy.ns}.pastePlaceholder`)}
                 onChange={(e) => setPaste(e.target.value)}
               />
-              <button type="button" className="test-btn" disabled={busy || !paste.trim()} onClick={() => void submit()}>
+              <button type="button" className="settings-btn-secondary test-btn" disabled={busy || !paste.trim()} onClick={() => void submit()}>
                 {tx(`${copy.ns}.submitCode`)}
               </button>
             </div>
@@ -165,14 +165,14 @@ export default function SubscriptionAuthPanel({
           {signedIn ? (
             <button
               type="button"
-              className="test-btn"
+              className="settings-btn-secondary test-btn"
               disabled={busy}
               onClick={() => void api.signOut().then(() => refresh())}
             >
               {tx(`${copy.ns}.signOut`)}
             </button>
           ) : (
-            <button type="button" className="test-btn" disabled={busy} onClick={() => void start()}>
+            <button type="button" className="settings-btn-secondary test-btn" disabled={busy} onClick={() => void start()}>
               {tx(`${copy.ns}.signIn`)}
             </button>
           )}

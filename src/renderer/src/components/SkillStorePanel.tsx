@@ -151,14 +151,14 @@ export default function SkillStorePanel({ state }: { state: SettingsState }): Re
           placeholder={'Search skills by name (e.g. pdf, excel, slides)'}
           aria-label={'Search skills by name (e.g. pdf, excel, slides)'}
         />
-        <div className="plugin-scope-toggle" role="radiogroup" aria-label={'Sort'}>
+        <div className="theme-segmented-control skill-store-sort" role="radiogroup" aria-label={'Sort'}>
           {(['popular', 'newest', 'name'] as SkillSort[]).map((k) => (
             <button
               key={k}
               type="button"
               role="radio"
               aria-checked={sort === k}
-              className={`plugin-scope-btn ${sort === k ? 'active' : ''}`}
+              className={`theme-segment-btn ${sort === k ? 'active' : ''}`}
               onClick={() => {
                 setSort(k)
                 setPage(1)
@@ -208,11 +208,11 @@ export default function SkillStorePanel({ state }: { state: SettingsState }): Re
               </div>
               <div className="skill-store-actions">
                 {isInstalled ? (
-                  <button type="button" className="delete-btn skill-store-btn" disabled={!!state} onClick={() => void remove(s)}>
+                  <button type="button" className="settings-btn-secondary settings-btn-danger skill-store-btn" disabled={!!state} onClick={() => void remove(s)}>
                     {state === 'remove' ? 'Removing…' : 'Remove'}
                   </button>
                 ) : (
-                  <Button type="button" className="skill-store-btn" disabled={!!state} onClick={() => void install(s)}>
+                  <Button type="button" className="settings-btn-primary skill-store-btn" disabled={!!state} onClick={() => void install(s)}>
                     {state === 'install' ? 'Installing…' : 'Install'}
                   </Button>
                 )}
@@ -224,11 +224,11 @@ export default function SkillStorePanel({ state }: { state: SettingsState }): Re
 
       {pages > 1 && (
         <nav className="skill-store-pager" aria-label={'Pages'}>
-          <button type="button" className="test-btn" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+          <button type="button" className="settings-btn-secondary" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
             {'Previous'}
           </button>
-          <span>{`Page ${page} of ${pages}`}</span>
-          <button type="button" className="test-btn" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
+          <span className="skill-store-page" aria-live="polite">{`Page ${page} of ${pages}`}</span>
+          <button type="button" className="settings-btn-secondary" disabled={page >= pages} onClick={() => setPage((p) => p + 1)}>
             {'Next'}
           </button>
         </nav>

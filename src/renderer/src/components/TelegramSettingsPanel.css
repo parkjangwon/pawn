@@ -81,15 +81,23 @@
 .telegram-form input {
   flex: 1 1 220px;
   min-width: 0;
-  padding: 8px 12px;
+  /* Height comes from the shared Input; vertical padding here clipped the text. */
+  padding-inline: 12px;
+  padding-block: 0;
+  line-height: normal;
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   background: var(--bg-secondary);
   color: var(--text-primary);
   font-family: var(--font-mono);
-  font-size: var(--font-md);
+  font-size: var(--text-ui-sm);
   outline: none;
   transition: border-color var(--dur-fast) var(--ease-out-soft);
+}
+
+.telegram-form input::placeholder {
+  font-family: var(--font-sans);
+  letter-spacing: normal;
 }
 
 .telegram-form input:focus {

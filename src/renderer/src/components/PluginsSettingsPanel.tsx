@@ -54,12 +54,12 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
       <h2>{'Plugins'}</h2>
       <p className="settings-desc">{'Skills, context sources, and mods that run while you chat.'}</p>
 
-      <div className="plugins-tabs" role="tablist" aria-label={'Plugin areas'}>
+      <div className="theme-segmented-control plugins-tabs" role="tablist" aria-label={'Plugin areas'}>
         <button
           type="button"
           role="tab"
           aria-selected={tab === 'skills'}
-          className={`plugins-tab ${tab === 'skills' ? 'active' : ''}`}
+          className={`theme-segment-btn plugins-tab ${tab === 'skills' ? 'active' : ''}`}
           onClick={() => setTab('skills')}
         >
           {'Skills & context'}
@@ -68,7 +68,7 @@ export default function PluginsSettingsPanel({ state }: { state: SettingsState }
           type="button"
           role="tab"
           aria-selected={tab === 'extensions'}
-          className={`plugins-tab ${tab === 'extensions' ? 'active' : ''}`}
+          className={`theme-segment-btn plugins-tab ${tab === 'extensions' ? 'active' : ''}`}
           onClick={() => setTab('extensions')}
         >
           {'Mods'}

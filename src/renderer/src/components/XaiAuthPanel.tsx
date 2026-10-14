@@ -63,7 +63,7 @@ export default function XaiAuthPanel({ onSignedIn }: { onSignedIn?: () => void }
           </a>{' '}
           <button
             type="button"
-            className="test-btn"
+            className="settings-btn-secondary test-btn"
             onClick={() => void api.cancelLogin().then(() => {
               setDevice(null)
               setBusy(false)
@@ -78,14 +78,14 @@ export default function XaiAuthPanel({ onSignedIn }: { onSignedIn?: () => void }
           {signedIn ? (
             <button
               type="button"
-              className="test-btn"
+              className="settings-btn-secondary test-btn"
               disabled={busy}
               onClick={() => void api.signOut().then(() => refresh())}
             >
               {'Sign out'}
             </button>
           ) : (
-            <button type="button" className="test-btn" disabled={busy} onClick={() => void start()}>
+            <button type="button" className="settings-btn-secondary test-btn" disabled={busy} onClick={() => void start()}>
               {'Sign in with xAI'}
             </button>
           )}

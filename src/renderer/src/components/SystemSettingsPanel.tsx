@@ -1,8 +1,27 @@
+import { useEffect, useState } from 'react'
 import type { SettingsState } from './settingsState'
 import { IconGitHub } from './icons'
 import Switch from './Switch'
 
 const REPO_URL = 'https://github.com/parkjangwon/pawn'
+
+/** "Current version v3.2.4 · " for a real semver build; nothing for web/headless stand-ins. */
+export function currentVersionPrefix(version: string | null | undefined): string {
+  const v = (version || '').trim().replace(/^v/i, '')
+  return /^\d+\.\d+\.\d+/.test(v) ? `Current version v${v} · ` : ''
+}
+
+function useAppVersion(): string {
+  const [version, setVersion] = useState('')
+  useEffect(() => {
+    let alive = true
+    void window.api?.appVersion?.()
+      .then((v) => { if (alive && v) setVersion(v) })
+      .catch(() => {})
+    return () => { alive = false }
+  }, [])
+  return version
+}
 
 export default function SystemSettingsPanel({ state }: { state: SettingsState }): React.JSX.Element {
   const {
@@ -21,6 +40,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
     updateChecking,
     setUpdateChecking
   } = state
+  const appVersion = useAppVersion()
 
   return (
     <div className="settings-section">
@@ -89,6 +109,7 @@ export default function SystemSettingsPanel({ state }: { state: SettingsState })
           <div className="settings-row-info">
             <span className="settings-row-label">{'Check for updates'}</span>
             <span className="settings-row-desc">
+              {currentVersionPrefix(appVersion)}
               {updateMsg || 'Compare this build with the latest GitHub release'}
             </span>
           </div>

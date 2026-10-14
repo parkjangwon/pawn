@@ -74,6 +74,8 @@
   --settings-btn-pair-min-width: 96px;
   --settings-btn-pad-x: var(--space-md);
   --settings-btn-font-size: var(--text-ui-sm);
+  /* Segment height inside segmented controls (control = this + 2×2px padding + border). */
+  --settings-segment-height: 24px;
   /* Native select chevron (Select.tsx): 14px icon at right: --space-sm, plus a gap */
   --select-arrow-space: calc(var(--space-sm) + 14px + var(--space-xs));
   /* Message text size — Settings → Appearance overrides at runtime */

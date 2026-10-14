@@ -393,16 +393,16 @@ export default function WikiPanel(): React.JSX.Element {
             {stats?.dir ? ' · ' + stats.dir : ''}
           </div>
           <div className="wiki-actions">
-            <button type="button" className="test-btn" onClick={() => void runAutoLink()} disabled={busy}>
+            <button type="button" className="settings-btn-secondary" onClick={() => void runAutoLink()} disabled={busy}>
               {'Auto-link pages'}
             </button>
-            <button type="button" className="test-btn" onClick={() => void runLint(true)} disabled={busy}>
+            <button type="button" className="settings-btn-secondary" onClick={() => void runLint(true)} disabled={busy}>
               {'Check wiki health'}
             </button>
             {stats?.dir && (
               <button
                 type="button"
-                className="test-btn"
+                className="settings-btn-secondary"
                 onClick={() => void window.api?.workspace?.openPath?.(stats.dir)}
               >
                 {'Open folder'}
@@ -438,31 +438,35 @@ export default function WikiPanel(): React.JSX.Element {
         <div className="settings-card wiki-browser">
           <div className="wiki-browser-head">
             {hasProject && (
-              <div className="wiki-scope-switch" role="tablist">
+              <div className="theme-segmented-control wiki-scope-switch" role="tablist" aria-label={'Wiki scope'}>
                 <button
                   type="button"
-                  className={effectiveScope === 'project' ? 'is-active' : ''}
+                  role="tab"
+                  aria-selected={effectiveScope === 'project'}
+                  className={`theme-segment-btn ${effectiveScope === 'project' ? 'active' : ''}`}
                   onClick={() => setScope('project')}
                 >
                   {projectName || 'Project'}
                 </button>
                 <button
                   type="button"
-                  className={effectiveScope === 'user' ? 'is-active' : ''}
+                  role="tab"
+                  aria-selected={effectiveScope === 'user'}
+                  className={`theme-segment-btn ${effectiveScope === 'user' ? 'active' : ''}`}
                   onClick={() => setScope('user')}
                 >
                   {'Global'}
                 </button>
               </div>
             )}
-            <div className="wiki-tabs" role="tablist">
+            <div className="theme-segmented-control wiki-tabs" role="tablist" aria-label={'Wiki view'}>
               {(['graph', 'pages', 'log'] as Tab[]).map((tb) => (
-                <button key={tb} type="button" className={tab === tb ? 'is-active' : ''} onClick={() => setTab(tb)}>
+                <button key={tb} type="button" role="tab" aria-selected={tab === tb} className={`theme-segment-btn ${tab === tb ? 'active' : ''}`} onClick={() => setTab(tb)}>
                   {tx('settings.wikiSection.tab' + tb.charAt(0).toUpperCase() + tb.slice(1))}
                 </button>
               ))}
             </div>
-            <button type="button" className="test-btn" onClick={() => void refresh()} disabled={busy}>
+            <button type="button" className="settings-btn-secondary wiki-refresh" onClick={() => void refresh()} disabled={busy}>
               {'Refresh'}
             </button>
           </div>
@@ -478,11 +482,11 @@ export default function WikiPanel(): React.JSX.Element {
                   placeholder={'Search pages…'}
                 />
                 {filter && (
-                  <button type="button" className="test-btn" onClick={() => setFilter('')}>
+                  <button type="button" className="settings-btn-secondary" onClick={() => setFilter('')}>
                     ×
                   </button>
                 )}
-                <button type="button" className="test-btn" onClick={newPage}>
+                <button type="button" className="settings-btn-secondary" onClick={newPage}>
                   {'New page'}
                 </button>
               </div>
@@ -517,12 +521,12 @@ export default function WikiPanel(): React.JSX.Element {
                     rows={12}
                   />
                   <div className="wiki-editor-actions">
-                    <button type="button" className="test-btn" onClick={() => void savePage()} disabled={busy || !draft.title.trim()}>
+                    <button type="button" className="settings-btn-primary" onClick={() => void savePage()} disabled={busy || !draft.title.trim()}>
                       {'Save'}
                     </button>
                     <button
                       type="button"
-                      className="test-btn"
+                      className="settings-btn-secondary"
                       onClick={() => {
                         if (isDirty) {
                           setConfirmDiscard(() => closeEditor)
@@ -535,7 +539,7 @@ export default function WikiPanel(): React.JSX.Element {
                     </button>
                     {selected.slug && (
                       <>
-                        <button type="button" className="test-btn" onClick={() => requestDelete([selected.slug])}>
+                        <button type="button" className="settings-btn-secondary settings-btn-danger" onClick={() => requestDelete([selected.slug])}>
                           {'Delete'}
                         </button>
                         <span className="wiki-editor-meta">
@@ -561,13 +565,13 @@ export default function WikiPanel(): React.JSX.Element {
                   <span className="wiki-bulkbar-count">{`${selectedSlugs.size} selected`}</span>
                   <button
                     type="button"
-                    className="test-btn wiki-bulkbar-delete"
+                    className="settings-btn-secondary settings-btn-danger wiki-bulkbar-delete"
                     onClick={() => requestDelete([...selectedSlugs])}
                     disabled={busy}
                   >
                     {'Delete selected'}
                   </button>
-                  <button type="button" className="test-btn" onClick={() => setSelectedSlugs(new Set())}>
+                  <button type="button" className="settings-btn-secondary" onClick={() => setSelectedSlugs(new Set())}>
                     {'Clear selection'}
                   </button>
                 </div>
@@ -658,7 +662,7 @@ export default function WikiPanel(): React.JSX.Element {
               {graph.nodes.length > 0 && graph.edges.length === 0 && (
                 <div className="wiki-graph-hint">
                   <span>{'No [[links]] between pages yet, so the graph has no edges. Run auto-link, or ask the agent to connect related pages.'}</span>
-                  <button type="button" className="test-btn" onClick={() => void runAutoLink()} disabled={busy}>
+                  <button type="button" className="settings-btn-secondary" onClick={() => void runAutoLink()} disabled={busy}>
                     {'Auto-link pages'}
                   </button>
                 </div>
