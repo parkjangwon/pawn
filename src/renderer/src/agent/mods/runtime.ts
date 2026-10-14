@@ -19,6 +19,17 @@ import type {
 const HOOK_BUDGET_MS = 10_000
 const TIER_ORDER: ModTier[] = ['prepend', 'user', 'append', 'builtin', 'core']
 
+function scanModSource(source: string): { calls: Set<string>; hooks: Set<string> } {
+  const calls = new Set<string>()
+  const hooks = new Set<string>()
+  const callRe = /\$\.([a-zA-Z_][\w]*)\.([a-zA-Z_][\w]*)/g
+  const onRe = /\bon\s*\(\s*['"]([^'"]+)['"]/g
+  let m: RegExpExecArray | null
+  while ((m = callRe.exec(source))) calls.add(`$.${m[1]}.${m[2]}`)
+  while ((m = onRe.exec(source))) hooks.add(m[1])
+  return { calls, hooks }
+}
+
 /** prompt.submit shows the model this many characters. An unchanged echo keeps the tail. */
 export const MOD_PROMPT_CAP = 200_000
 
@@ -168,6 +179,8 @@ export class ModRuntime {
   private listeners = new Set<() => void>()
   private processEnv: Record<string, string> = {}
   private envOverlay = new Map<string, Record<string, string>>()
+  /** Static calls/hooks from source, keyed by plugin name. Gates $.slot.*. */
+  private declared = new Map<string, { calls: Set<string>; hooks: Set<string> }>()
 
   setContext(ctx: Partial<ModRuntimeContext>): void {
     const prev = this.ctx.sessionId
@@ -333,6 +346,7 @@ export class ModRuntime {
     this.ready = false
     this.lastAnswerPlugin = null
     this.envOverlay.clear()
+    this.declared.clear()
     useModsUiStore.getState().clearSessionUi()
     this.notify()
   }
@@ -368,6 +382,14 @@ export class ModRuntime {
       hooks: [],
       calls: []
     }
+
+    const declared = { calls: new Set<string>(), hooks: new Set<string>() }
+    for (const source of src.sources) {
+      const scanned = scanModSource(source)
+      for (const call of scanned.calls) declared.calls.add(call)
+      for (const hook of scanned.hooks) declared.hooks.add(hook)
+    }
+    this.declared.set(src.name, declared)
 
     const on = this.makeOn(src.name, src.root, src.tier || 'user')
 
@@ -409,15 +431,7 @@ export class ModRuntime {
     const newHooks = this.hooks.slice(hooksBefore)
     info.hooks = [...new Set(newHooks.map((h) => h.event))]
     if (loaded === 0) this.hooks.length = hooksBefore
-    // Approximate calls from source text for UI
-    const callRe = /\$\.([a-zA-Z_][\w]*)\.([a-zA-Z_][\w]*)/g
-    const calls = new Set<string>()
-    let m: RegExpExecArray | null
-    for (const source of src.sources) {
-      callRe.lastIndex = 0
-      while ((m = callRe.exec(source))) calls.add(`$.${m[1]}.${m[2]}`)
-    }
-    info.calls = [...calls].sort()
+    info.calls = [...declared.calls].sort()
     if (loaded === 0) info.enabled = false
     if (errors.length > 0) {
       info.error = errors[0].slice(0, 300)
@@ -468,7 +482,8 @@ export class ModRuntime {
       },
       contextUsage: () =>
         this.ctx.contextUsage?.() || { tokens: 0, window: 200_000, percent: 0 },
-      reservedCommands: BUILTIN_COMMANDS
+      reservedCommands: BUILTIN_COMMANDS,
+      declaredCalls: this.declared.get(pluginName)?.calls || new Set()
     }
   }
 

@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import type { ModSlotKind, ModSlotView } from './types'
 
 export interface ModPaneState {
   id: string
@@ -47,6 +48,10 @@ interface ModsUiState {
   timeline: ModTimelineEntry[]
   logs: Array<{ plugin: string; text: string; at: number }>
   panes: ModPaneState[]
+  /** Project-scoped chrome. Survives a chat switch; cleared with the runtime. */
+  slots: ModSlotView[]
+  /** `${plugin}\0${id}` of the Settings page on screen, or null. */
+  activeSettingsKey: string | null
   invalidate: () => void
   bumpRuntime: () => void
   setSpinnerSuffix: (suffix: string) => void
@@ -62,6 +67,10 @@ interface ModsUiState {
   openPane: (pane: ModPaneState) => void
   updatePaneTree: (id: string, tree: unknown) => void
   closePane: (id: string) => void
+  upsertSlot: (slot: ModSlotView) => void
+  removeSlot: (plugin: string, slot: ModSlotKind, id: string) => void
+  toggleSidebar: (plugin: string, id: string) => void
+  setActiveSettingsKey: (key: string | null) => void
   clearSessionUi: () => void
   /** Chat switch: drop per-chat chrome but keep what mods set for the project (status, bands). */
   clearChatUi: () => void
@@ -82,6 +91,8 @@ export const useModsUiStore = create<ModsUiState>((set, get) => ({
   timeline: [],
   logs: [],
   panes: [],
+  slots: [],
+  activeSettingsKey: null,
   invalidate: () => set({ renderGeneration: get().renderGeneration + 1 }),
   bumpRuntime: () => set({ runtimeGeneration: get().runtimeGeneration + 1 }),
   setSpinnerSuffix: (suffix) => set({ spinnerSuffix: suffix }),
@@ -126,6 +137,30 @@ export const useModsUiStore = create<ModsUiState>((set, get) => ({
       panes: get().panes.map((p) => (p.id === id ? { ...p, tree } : p))
     }),
   closePane: (id) => set({ panes: get().panes.filter((p) => p.id !== id) }),
+  upsertSlot: (slot) => {
+    const prev = get().slots.find((s) => s.plugin === slot.plugin && s.slot === slot.slot && s.id === slot.id)
+    const next = { ...slot, collapsed: slot.collapsed ?? prev?.collapsed }
+    const rest = get().slots.filter((s) => !(s.plugin === slot.plugin && s.slot === slot.slot && s.id === slot.id))
+    const active =
+      slot.slot === 'settings' && get().activeSettingsKey === `${slot.plugin}\0${slot.id}`
+        ? get().activeSettingsKey
+        : get().activeSettingsKey
+    set({ slots: [...rest, next], activeSettingsKey: active })
+  },
+  removeSlot: (plugin, slot, id) => {
+    const key = `${plugin}\0${id}`
+    set({
+      slots: get().slots.filter((s) => !(s.plugin === plugin && s.slot === slot && s.id === id)),
+      activeSettingsKey: slot === 'settings' && get().activeSettingsKey === key ? null : get().activeSettingsKey
+    })
+  },
+  toggleSidebar: (plugin, id) =>
+    set({
+      slots: get().slots.map((s) =>
+        s.slot === 'sidebar' && s.plugin === plugin && s.id === id ? { ...s, collapsed: !s.collapsed } : s
+      )
+    }),
+  setActiveSettingsKey: (key) => set({ activeSettingsKey: key }),
   clearChatUi: () =>
     set({
       toasts: [],
@@ -145,6 +180,8 @@ export const useModsUiStore = create<ModsUiState>((set, get) => ({
       timeline: [],
       logs: [],
       panes: [],
+      slots: [],
+      activeSettingsKey: null,
       renderGeneration: get().renderGeneration + 1
     })
 }))

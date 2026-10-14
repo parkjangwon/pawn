@@ -88,6 +88,10 @@ describe('mod capability descriptions', () => {
     network: true,
     commands: true,
     ui: true,
+    sidebar: true,
+    toolbar: true,
+    settingsPage: true,
+    statusbar: true,
     prompt: true,
     store: true
   }
@@ -95,7 +99,7 @@ describe('mod capability descriptions', () => {
   it('gives every capability a descKey whose string exists', () => {
     const derived = deriveModCapabilities(
       ['tool.x', 'fs.x', 'process.x', 'http.x', 'command.x', 'ui.x', 'prompt.x'],
-      ['$.tool.call', '$.fs.read', '$.process.exec', '$.http.get', '$.command.add', '$.ui.toast', '$.prompt.set', '$.store.get']
+      ['$.tool.call', '$.fs.read', '$.process.exec', '$.http.get', '$.command.add', '$.ui.toast', '$.slot.sidebar', '$.slot.toolbar', '$.slot.settings', '$.slot.statusbar', '$.prompt.set', '$.store.get']
     )
     expect(derived.map((cap) => cap.id)).toEqual(Object.keys(caps))
     for (const cap of derived) {

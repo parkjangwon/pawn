@@ -118,6 +118,25 @@ export function register(on) {
 
 `AbovePrompt` 的写法与 [MODS.md](./MODS.md) §6 的例子相同。示例源码在 `examples/mods/first-mod/hooks/register.js`。
 
+### UI 插槽 (UI slots)
+
+`$.slot.*` 把 mod 的控件放在输入框上方横条以外的固定位置。每个调用都接收一个仅在本 mod 内使用的 `id`（`[A-Za-z0-9_-]{1,64}`）。用同一个 `id` 再次调用会替换该项，mod 就是这样重绘的。树与上文相同，是 `$.ui.resolve()` 的元素。
+
+| 调用 | 显示位置 | 权限 |
+|------|----------|------|
+| `$.slot.sidebar({ id, title, tree })` | 左侧边栏底部可折叠的分区。点击标题即可折叠。 | `sidebar` |
+| `$.slot.panel({ id, title, tree })` | 目前与 `sidebar` 位置相同。右侧面板还没有 mod 标签页。 | `sidebar` |
+| `$.slot.header({ id, label, title })` | 聊天标题栏右侧的按钮。 | `toolbar` |
+| `$.slot.toolbar({ id, label, title })` | 输入框一行中附件按钮旁的按钮。在空白主页上隐藏。 | `toolbar` |
+| `$.slot.settings({ id, title, tree })` | **设置 → Mods** 下的页面，每个页面一个导航项。 | `settingsPage` |
+| `$.slot.statusbar({ id, text, title, tree })` | 左侧边栏底部、设置按钮上方的小项目（Pawn 没有可见的状态栏）。文本项是按钮；`tree` 项绘制该树。 | `statusbar` |
+| `$.slot.remove({ slot, id })` / `$.slot.list()` | 删除本 mod 的一个项目 / 列出它们。 | 无 |
+
+- 点击以带 `{ plugin, id, slot }` 的 `ui.press` 到达。插槽树里的按钮、输入框和选择框也会带同样的 `slot` 字段发送 `ui.press`、`ui.input`、`ui.select`。请用 `{ plugin: '<你的 mod>' }` 过滤。
+- 项目属于该项目的 mod 运行时：切换聊天时保留，mod 卸载、被关闭或运行时重新加载时消失。
+- 每种插槽在审核对话框中都是单独的权限。源码中没有逐字写出的 `$.slot.<种类>` 调用会被运行时拒绝，因此 mod 无法使用对话框未显示的插槽。请写成 `$.slot.header(...)`，不要写 `$.slot[name](...)`。
+- 示例：`examples/mods/ui-slots-demo/` 使用了所有插槽。默认不安装；复制到 `~/.pawn/mods/ui-slots-demo` 后允许即可。
+
 ## 7. `$` API
 
 | 命名空间 | 作用 |

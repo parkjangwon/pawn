@@ -7,6 +7,10 @@ export type ModCapabilityId =
   | 'network'
   | 'process'
   | 'ui'
+  | 'sidebar'
+  | 'toolbar'
+  | 'settingsPage'
+  | 'statusbar'
   | 'prompt'
   | 'store'
 
@@ -25,6 +29,10 @@ const CALL_RULES: Array<{ re: RegExp; id: ModCapabilityId }> = [
   { re: /^\$\.command\./, id: 'commands' },
   { re: /^\$\.tool\./, id: 'tools' },
   { re: /^\$\.ui\./, id: 'ui' },
+  { re: /^\$\.slot\.(sidebar|panel)$/, id: 'sidebar' },
+  { re: /^\$\.slot\.(header|toolbar)$/, id: 'toolbar' },
+  { re: /^\$\.slot\.settings$/, id: 'settingsPage' },
+  { re: /^\$\.slot\.statusbar$/, id: 'statusbar' },
   { re: /^\$\.prompt\./, id: 'prompt' },
   { re: /^\$\.store\./, id: 'store' }
 ]
@@ -46,6 +54,10 @@ const ORDER: ModCapabilityId[] = [
   'network',
   'commands',
   'ui',
+  'sidebar',
+  'toolbar',
+  'settingsPage',
+  'statusbar',
   'prompt',
   'store'
 ]

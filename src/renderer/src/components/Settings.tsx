@@ -1,4 +1,6 @@
 import NavControls from './NavControls'
+import { ModSettingsNav, ModSettingsPage } from './ModSlots'
+import { useModsUiStore } from '../agent/mods/uiStore'
 import ConfirmDialog from './ConfirmDialog'
 import AppearanceSettingsPanel from './AppearanceSettingsPanel'
 import ProvidersSettingsPanel from './ProvidersSettingsPanel'
@@ -39,6 +41,8 @@ export default function Settings({
 }: SettingsProps): React.JSX.Element {
   const state = useSettingsState({ onSidebarWidthChange })
   const [searchQuery, setSearchQuery] = useState('')
+  const modSettingsKey = useModsUiStore((s) => s.activeSettingsKey)
+  const setModSettingsKey = useModsUiStore((s) => s.setActiveSettingsKey)
   const {
     navOpen,
     setNavOpen,
@@ -55,6 +59,8 @@ export default function Settings({
     handleConfirmDelete,
     keybindings
   } = state
+  // A mod page replaces the built-in section until a built-in entry is picked.
+  const shownSection = modSettingsKey ? null : activeSection
 
   const filteredSections = useMemo(() => {
     if (!searchQuery.trim()) return null
@@ -146,8 +152,11 @@ export default function Settings({
               {filteredSections.map((section) => (
                 <button
                   key={section.id}
-                  className={`settings-nav-item ${activeSection === section.id ? 'active' : ''}`}
-                  onClick={() => setActiveSection(section.id)}
+                  className={`settings-nav-item ${!modSettingsKey && activeSection === section.id ? 'active' : ''}`}
+                  onClick={() => {
+                    setModSettingsKey(null)
+                    setActiveSection(section.id)
+                  }}
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                     <path d={section.icon} />
@@ -166,8 +175,11 @@ export default function Settings({
                 {SECTIONS.filter((s) => s.groupKey === group).map((section) => (
                   <button
                     key={section.id}
-                    className={`settings-nav-item ${activeSection === section.id ? 'active' : ''}`}
-                    onClick={() => setActiveSection(section.id)}
+                    className={`settings-nav-item ${!modSettingsKey && activeSection === section.id ? 'active' : ''}`}
+                    onClick={() => {
+                    setModSettingsKey(null)
+                    setActiveSection(section.id)
+                  }}
                   >
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
                       <path d={section.icon} />
@@ -178,6 +190,7 @@ export default function Settings({
               </div>
             ))
           )}
+          {!filteredSections && <ModSettingsNav />}
           </div>
         </div>
       </div>
@@ -185,32 +198,33 @@ export default function Settings({
       <div className="settings-resizer" ref={attachResizer} role="separator" aria-orientation="vertical" />
 
       <div className="settings-content">
-        {activeSection === 'appearance' && <AppearanceSettingsPanel state={state} />}
-        {activeSection === 'providers' && <ProvidersSettingsPanel state={state} />}
-        {activeSection === 'models' && <ModelsSettingsPanel state={state} />}
-        {activeSection === 'decisionModels' && <DecisionModelsSettingsPanel />}
-        {activeSection === 'agent' && <AgentSettingsPanel state={state} />}
-        {activeSection === 'wiki' && (
+        {modSettingsKey && <ModSettingsPage />}
+        {shownSection === 'appearance' && <AppearanceSettingsPanel state={state} />}
+        {shownSection === 'providers' && <ProvidersSettingsPanel state={state} />}
+        {shownSection === 'models' && <ModelsSettingsPanel state={state} />}
+        {shownSection === 'decisionModels' && <DecisionModelsSettingsPanel />}
+        {shownSection === 'agent' && <AgentSettingsPanel state={state} />}
+        {shownSection === 'wiki' && (
           <div className="settings-section">
             <h2>{'Wiki (LLM knowledge base)'}</h2>
             <p className="settings-desc">{'An interlinked markdown wiki the agent writes and maintains itself — pages, index, log, and a link graph under ~/.pawn/wiki. Open the folder as an Obsidian vault if you like.'}</p>
             <WikiPanel />
           </div>
         )}
-        {activeSection === 'hooks' && (
+        {shownSection === 'hooks' && (
           <div className="settings-section">
             <h2>{'Hooks'}</h2>
             <p className="settings-desc">{'Run scripts at agent lifecycle points (Claude/Codex-compatible). Sources merge with dedupe so the same command is not run twice. PreToolUse deny wins even in YOLO.'}</p>
             <HooksSettingsPanel />
           </div>
         )}
-        {activeSection === 'subagents' && (
+        {shownSection === 'subagents' && (
           <div className="settings-section">
             <h2>{'Subagents'}</h2>
             <AgentsSettingsPanel />
           </div>
         )}
-        {activeSection === 'usage' && (
+        {shownSection === 'usage' && (
           <div className="settings-section">
             <h2>{'Usage history'}</h2>
             <UsageSettingsPanel />
@@ -256,15 +270,15 @@ export default function Settings({
             </div>
           </div>
         )}
-        {activeSection === 'plugins' && <PluginsSettingsPanel state={state} />}
-        {activeSection === 'skillStore' && <SkillStorePanel state={state} />}
-        {activeSection === 'mcp' && <McpSettingsPanel state={state} />}
-        {activeSection === 'connections' && <ConnectionsSettingsPanel state={state} />}
-        {activeSection === 'telegram' && <TelegramSettingsPanel />}
-        {activeSection === 'remote' && <RemoteSettingsPanel />}
-        {activeSection === 'system' && <SystemSettingsPanel state={state} />}
-        {activeSection === 'shortcuts' && <ShortcutsSettingsPanel state={state} />}
-        {activeSection === 'data' && <DataSettingsPanel state={state} />}
+        {shownSection === 'plugins' && <PluginsSettingsPanel state={state} />}
+        {shownSection === 'skillStore' && <SkillStorePanel state={state} />}
+        {shownSection === 'mcp' && <McpSettingsPanel state={state} />}
+        {shownSection === 'connections' && <ConnectionsSettingsPanel state={state} />}
+        {shownSection === 'telegram' && <TelegramSettingsPanel />}
+        {shownSection === 'remote' && <RemoteSettingsPanel />}
+        {shownSection === 'system' && <SystemSettingsPanel state={state} />}
+        {shownSection === 'shortcuts' && <ShortcutsSettingsPanel state={state} />}
+        {shownSection === 'data' && <DataSettingsPanel state={state} />}
       </div>
       {confirmDelete && (
         <ConfirmDialog

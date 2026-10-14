@@ -1,0 +1,5 @@
+{
+  "name": "ui-slots-demo",
+  "version": "0.1.0",
+  "description": "Shows every UI slot: sidebar section, header and toolbar buttons, a settings page and a status bar item."
+}

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { ModHeaderSlots } from './ModSlots'
 import { tx } from '../i18n'
 import { AppWindow, ChevronDown, PanelLeft, PanelRight, Terminal } from 'lucide-react'
 import { useKeybindingsStore, formatCombo } from '../stores/keybindings'
@@ -234,6 +235,7 @@ export default function ChatHeader({
       </div>
 
       <div className="chat-header-right">
+        <ModHeaderSlots />
         {canRunScript && (
         <div className="chat-header-action-group">
           <button className="chat-header-btn" disabled={!!runningScript} onClick={() => { setShowScriptMenu((v) => !v); setShowOpenMenu(false) }}>

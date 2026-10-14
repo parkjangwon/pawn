@@ -17,6 +17,7 @@ import ProjectEditDialog from './ProjectEditDialog'
 import ConfirmDialog from './ConfirmDialog'
 import Tooltip from './Tooltip'
 import './Sidebar.css'
+import { ModSidebarSlots, ModStatusbarSlots } from './ModSlots'
 
 interface SidebarProps {
   onOpenSettings: () => void
@@ -598,7 +599,9 @@ export default function Sidebar({ onOpenSettings, onOpenCommandPalette, onToggle
       </div>
 
       {/* Footer */}
+      <ModSidebarSlots />
       <div className="sidebar-footer">
+        <ModStatusbarSlots />
         <Tooltip label={'Settings'} shortcut={formatCombo(keybindings['open-settings'])} placement="top">
           <button type="button" className="footer-btn" onClick={onOpenSettings} aria-label={'Settings'}>
             <Settings size={14} />
