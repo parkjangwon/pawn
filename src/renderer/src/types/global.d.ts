@@ -1071,6 +1071,20 @@ declare global {
           opts?: { purpose?: 'tool' | 'shell_risk' | 'routing'; timeoutMs?: number; maxRetries?: number }
         ) => Promise<DecisionResultDto>
       }
+      providerHttp: {
+        start: (
+          id: string,
+          req: { url: string; method?: string; headers?: Record<string, string>; body?: string },
+          onEvent: (
+            evt:
+              | { type: 'head'; status: number; statusText: string; headers: Array<[string, string]> }
+              | { type: 'chunk'; data: Uint8Array }
+              | { type: 'end' }
+              | { type: 'error'; message: string }
+          ) => void
+        ) => Promise<{ ok: boolean; error?: string }>
+        abort: (id: string) => Promise<unknown>
+      }
       research: {
         fetch: (
           url: string,

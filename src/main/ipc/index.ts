@@ -29,6 +29,7 @@ import { registerRecorderIpc } from './recorder'
 import { registerTelegramIpc } from './telegram'
 import { registerSshIpc } from './ssh'
 import { registerNetIpc } from './net'
+import { registerProviderHttpIpc } from './providerHttp'
 
 /** Register every main-process IPC handler in one place. */
 export function registerAllIpc(): void {
@@ -63,4 +64,5 @@ export function registerAllIpc(): void {
   registerTelegramIpc()
   registerSshIpc()
   registerNetIpc()
+  registerProviderHttpIpc()
 }

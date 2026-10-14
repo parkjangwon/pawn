@@ -129,38 +129,17 @@ function hydrateModel(m: ModelEntry, kiroProviders?: Set<string>): ModelEntry {
   return next
 }
 
-/** True when `newBaseUrl` is an http origin CSP did not allow at page load. */
-export function needsCspReload(newBaseUrl: string, originsAtLoad: readonly string[]): boolean {
-  let origin: string
-  let host: string
-  try {
-    const u = new URL(newBaseUrl)
-    if (u.protocol !== 'http:') return false
-    origin = u.origin
-    host = u.hostname
-  } catch {
-    return false
-  }
-  if (host === 'localhost' || host === '127.0.0.1') return false
-  return !originsAtLoad.includes(origin)
-}
-
-function httpOrigins(providers: Array<{ baseUrl?: string }>): string[] {
-  const out: string[] = []
-  for (const p of providers) {
-    try {
-      const u = new URL(p.baseUrl || '')
-      if (u.protocol === 'http:' && !out.includes(u.origin)) out.push(u.origin)
-    } catch { /* skip */ }
-  }
-  return out
-}
-
-/** Http origins present when the provider store finished loading. CSP is fixed until reload. */
-let originsAtLoad: readonly string[] = []
 /** Resolves when every config save started so far has settled. */
 let savesSettled: Promise<void> = Promise.resolve()
-let cspReloadArmed = false
+
+/**
+ * Resolves once every provider/config save started so far has settled. Plain-http
+ * provider requests go through main, which checks the target against the saved
+ * config, so they wait for a just-saved provider to land first.
+ */
+export function whenProviderSavesSettled(): Promise<void> {
+  return savesSettled
+}
 
 function saveToBackend(state: ProviderState): Promise<{ ok?: boolean }> {
   const saved = Promise.resolve(window.api.config.save({
@@ -194,18 +173,6 @@ function saveToBackend(state: ProviderState): Promise<{ ok?: boolean }> {
   return saved
 }
 
-function armCspReload(baseUrl: string | undefined, saved: Promise<{ ok?: boolean }>): void {
-  if (cspReloadArmed || !needsCspReload(baseUrl || '', originsAtLoad)) return
-  cspReloadArmed = true
-  const mine = saved.then((r) => r?.ok !== false, () => false)
-  // Preset model saves run synchronously after add; wait for those too.
-  queueMicrotask(() => {
-    void savesSettled.then(() => mine).then((ok) => {
-      if (ok) window.location.reload()
-    })
-  })
-}
-
 export const useProviderStore = create<ProviderState>((set, get) => ({
   providers: [],
   models: [],
@@ -234,14 +201,12 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   init: async () => {
     if (get().initialized) return
-    cspReloadArmed = false
     savesSettled = Promise.resolve()
     try {
       const rawConfig = await window.api.config.load() as Record<string, any>
       const settings = rawConfig.settings || {}
       const kiroIds = new Set(((rawConfig.providers || []) as Provider[]).filter((p) => p.apiFormat === 'kiro').map((p) => p.id))
       const loadedProviders = migrateOllamaProviders((rawConfig.providers || []) as Provider[])
-      originsAtLoad = httpOrigins(loadedProviders)
       const models = ((rawConfig.models || []) as ModelEntry[]).map((m) => hydrateModel(m, kiroIds))
       let visionModelId = (settings.visionModelId as string) || null
       // Drop a stale vision pin if the model was removed.
@@ -298,7 +263,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
 
   addProvider: (provider) => {
     const p = { ...provider, id: provider.id || uid() }
-    set((s) => { const next = { ...s, providers: [...s.providers, p] }; armCspReload(p.baseUrl, saveToBackend(next)); return { providers: next.providers } })
+    set((s) => { const next = { ...s, providers: [...s.providers, p] }; saveToBackend(next); return { providers: next.providers } })
     return p
   },
 
@@ -317,7 +282,7 @@ export const useProviderStore = create<ProviderState>((set, get) => ({
   },
 
   updateProvider: (id, patch) => {
-    set((s) => { const next = { ...s, providers: s.providers.map((p) => (p.id === id ? { ...p, ...patch } : p)) }; armCspReload(patch.baseUrl, saveToBackend(next)); return { providers: next.providers } })
+    set((s) => { const next = { ...s, providers: s.providers.map((p) => (p.id === id ? { ...p, ...patch } : p)) }; saveToBackend(next); return { providers: next.providers } })
   },
 
   addModel: (model) => {

@@ -7,6 +7,7 @@
  */
 
 import { uid } from '../utils/uid'
+import { providerFetch } from './providerFetch'
 import { applyProviderAuth } from './subscriptionSession'
 import { isAntigravityBase, isChatGptCodexBase, withClaudeOauthHeaders } from './subscriptionWire'
 import { guessPricing, guessSupportsVision } from '../types/provider'
@@ -182,7 +183,7 @@ async function doFetch(
       signal: effectiveSignal
     })
   }
-  return fetch(url, { method: 'GET', headers, signal: effectiveSignal })
+  return providerFetch(url, { method: 'GET', headers, signal: effectiveSignal })
 }
 
 /**
