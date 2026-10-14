@@ -13,6 +13,7 @@ import {
 } from '../stores/keybindings'
 import { guessPricing, guessSupportsVision, type ApiFormat, type ModelPricing, type Provider } from '../types/provider'
 import { PROVIDER_PRESETS, type ProviderPreset } from '../agent/providerPresets'
+import { DEFAULT_OLLAMA_URL, ollamaApiBase, validateOllamaUrl } from '../agent/ollamaEndpoint'
 import {
   buildTestRequestBody,
   pickTestModelId,
@@ -140,6 +141,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
   const [presetPicking, setPresetPicking] = useState<ProviderPreset | null>(null)
   const [presetKey, setPresetKey] = useState('')
   const [presetKeyError, setPresetKeyError] = useState('')
+  const [ollamaUrl, setOllamaUrl] = useState(DEFAULT_OLLAMA_URL)
   const [formError, setFormError] = useState('')
   const [showAddModel, setShowAddModel] = useState(false)
   const [testingId, setTestingId] = useState<string | null>(null)
@@ -245,12 +247,18 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
       }
     }
     setPresetKeyError('')
+    let baseUrl = preset.baseUrl
+    if (preset.id === 'ollama') {
+      const v = validateOllamaUrl(ollamaUrl)
+      if (!v.ok) return
+      baseUrl = ollamaApiBase(v.url)
+    }
     const before = useProviderStore.getState().providers.length
     addProvider({
       id: '',
       name: preset.name,
       apiFormat: preset.apiFormat,
-      baseUrl: preset.baseUrl,
+      baseUrl,
       apiKey: trimmedKey || undefined,
       enabled: true
     })
@@ -856,7 +864,7 @@ export function useSettingsState({ onSidebarWidthChange }: { onSidebarWidthChang
     shellCwdJail, setShellCwdJail,
     setVisionModel,
     activeSection, setActiveSection, showAddProvider, setShowAddProvider, presetPicking, setPresetPicking,
-    presetKey, setPresetKey, presetKeyError, setPresetKeyError, formError, setFormError,
+    presetKey, setPresetKey, presetKeyError, setPresetKeyError, ollamaUrl, setOllamaUrl, formError, setFormError,
     syncFailed, showAddModel, setShowAddModel, testingId, setTestingId, testResult,
     syncingId, setSyncingId, syncResult, form, setForm, modelForm, setModelForm,
     homeDir, loadedSkills, skillsLoading, skillScope, setSkillScope, skillSearch, setSkillSearch, disabledSkills,

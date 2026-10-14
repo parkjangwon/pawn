@@ -7,6 +7,7 @@
 import { existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import type { HeadlessConfig } from './nodeApi'
+import { migrateOllamaProviders } from '../renderer/src/agent/ollamaEndpoint'
 
 const HOST_ENV: Array<[RegExp, string]> = [
   [/api\.openai\.com/i, 'OPENAI_API_KEY'],
@@ -65,6 +66,7 @@ export async function loadHeadlessConfig(path?: string): Promise<{ config: Headl
       }
     }
   }
+  if (raw.providers) raw.providers = migrateOllamaProviders(raw.providers as Array<{ name?: string; baseUrl?: string }>) as typeof raw.providers
   const out = applyEnvKeys(raw)
   if (out.config.decision) out.config.decision = applyDecisionEnvKeys(out.config.decision)
   return out

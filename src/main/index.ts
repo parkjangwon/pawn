@@ -22,7 +22,7 @@ import { forceAllowQuit, registerQuitConfirm } from './quit'
 import { installAppMenu } from './appMenu'
 import { setAppLanguage } from './appLanguage'
 import { loadConfig } from './config'
-import { DEV_CSP, PROD_CSP } from './csp'
+import { buildDevCsp, buildProdCsp, httpConnectOrigins } from './csp'
 import { setSecretCipher, warnIfPlaintextSecrets } from './providerSecrets'
 
 process.on('uncaughtException', (err) => {
@@ -65,24 +65,28 @@ app.whenReady().then(() => {
   }
 })
 
+/** http provider origins (e.g. LAN Ollama) allowed in connect-src; config re-read at most once per second. */
+let extraOrigins: { at: number; list: string[] } = { at: 0, list: [] }
+const remoteHttpOrigins = (): string[] => {
+  if (Date.now() - extraOrigins.at < 1000) return extraOrigins.list
+  let list: string[] = []
+  try {
+    const providers = (loadConfig().providers || []) as Array<{ baseUrl?: string }>
+    list = httpConnectOrigins(providers.map((p) => p.baseUrl || ''))
+  } catch { /* unreadable config: no extra origins */ }
+  extraOrigins = { at: Date.now(), list }
+  return list
+}
+
 const boot = (): void => {
   // CSP for security
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    // In dev mode, allow Vite dev server (localhost:5173)
-    if (is.dev) {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [DEV_CSP]
-        }
-      })
-      return
-    }
     callback({
       responseHeaders: {
         ...details.responseHeaders,
         // No remote img-src: a markdown image URL is a zero-click exfil channel.
-        'Content-Security-Policy': [PROD_CSP]
+        // Dev still allows the Vite server; both policies append saved http origins.
+        'Content-Security-Policy': [(is.dev ? buildDevCsp : buildProdCsp)(remoteHttpOrigins())]
       }
     })
   })
