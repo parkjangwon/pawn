@@ -124,7 +124,7 @@ The validator allows a wider Claude Code set. Only these are emitted today.
 | `ui.render` | Spinner, and the band above the composer (`AbovePrompt`) | Spinner is one chain: the last `props.suffix` wins. `AbovePrompt` calls each matching mod alone. Return `props.tree` and `props.plugin` for your own band. You do not see the other mods' trees. |
 | `ui.press` / `ui.input` / `ui.select` | The user used a Button, Input, or Select in a mod tree | Read `id` and `value`. |
 | `model.request` | Before each main-chat model call (also each retry) | `next({ ...e, systemAppend })` adds up to 8 000 characters to the system prompt, wrapped in `<mod-instructions>`. Nothing else is writable. Payload `{ sessionId, round, provider, model, messageCount, lastUserText }`. |
-| `model.response` | After each successful model call | Observe. Payload `{ sessionId, round, provider, model, text, toolCalls, usage }`. |
+| `model.response` | After each successful model call | Observe. Payload `{ sessionId, round, provider, model, text, toolCalls, usage }`. `usage` is `{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }`; `inputTokens` is only the uncached part, so the full prompt is the sum of the three input fields. |
 | `notification` | Every desktop notification Pawn sends | Observe. Payload `{ title, body, source }`. A mod cannot hide or rewrite a notification. |
 
 Tool order: `tool.call` → settings `PreToolUse` → Plan-mode check → `tool.check` / permission → the tool.

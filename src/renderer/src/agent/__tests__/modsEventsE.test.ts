@@ -171,4 +171,21 @@ describe('roadmap E: events, aliases, risk', () => {
     expect(models[0]).toMatchObject({ providerId: 'P1', modelId: 'a', enabled: false, contextWindow: 1000 })
     expect(adoptProviderOffer(offer, store)).toBeNull()
   })
+
+  it('model.response carries cache token counts so mods can see the full prompt size', async () => {
+    const seen: unknown[] = []
+    ;(globalThis as Record<string, unknown>).__seenE = seen
+    await loadMod('usage', [
+      'export function register(on) {',
+      "  on('model.response', async (__API__, e, next) => { globalThis.__seenE.push(e.usage); return next(e) })",
+      '}'
+    ])
+    modModelResponse({ sessionId: 's', round: 1, provider: 'OpenRouter', model: 'm', text: 'x', toolCalls: [], usage: { inputTokens: 1768, outputTokens: 312, cacheReadTokens: 7885 } })
+    modModelResponse({ sessionId: 's', round: 2, provider: 'OpenRouter', model: 'm', text: 'y', toolCalls: [], usage: { inputTokens: -1, outputTokens: Number.NaN } })
+    await flush()
+    expect(seen).toEqual([
+      { inputTokens: 1768, outputTokens: 312, cacheReadTokens: 7885, cacheWriteTokens: 0 },
+      { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 }
+    ])
+  })
 })

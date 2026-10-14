@@ -731,7 +731,12 @@ export async function agentLoop(
             model: decision.model.modelId,
             text: result.text || '',
             toolCalls: (result.toolCalls || []).map((c) => c.name),
-            usage: { inputTokens: result.usage?.inputTokens || 0, outputTokens: result.usage?.outputTokens || 0 }
+            usage: {
+              inputTokens: result.usage?.inputTokens || 0,
+              outputTokens: result.usage?.outputTokens || 0,
+              cacheReadTokens: result.usage?.cacheReadTokens || 0,
+              cacheWriteTokens: result.usage?.cacheWriteTokens || 0
+            }
           })
           // Vision-only fallbacks must not steal sticky from the text model
           // (DeepSeek coding + Gemini image turn → next text turn stays DeepSeek).

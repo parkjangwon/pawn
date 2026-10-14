@@ -103,7 +103,7 @@ export function register(on) {
 | `ui.render` | 旋转指示，以及输入框上方的条（`AbovePrompt`） | 旋转指示是一条链，最后的 `props.suffix` 留下。`AbovePrompt` 会单独调用每个匹配的 mod。返回自己这一条的 `props.tree` 和 `props.plugin`。看不到其他 mod 的树。 |
 | `ui.press` / `ui.input` / `ui.select` | 用户操作 mod 树里的 Button、Input、Select | 读取 `id` 和 `value`。 |
 | `model.request` | 每次主聊天模型调用之前（每次重试也会） | `next({ ...e, systemAppend })` 向系统提示追加最多 8 000 个字符，包在 `<mod-instructions>` 中。其他字段不可写。负载 `{ sessionId, round, provider, model, messageCount, lastUserText }`。 |
-| `model.response` | 每次模型调用成功之后 | 仅观察。负载 `{ sessionId, round, provider, model, text, toolCalls, usage }`。 |
+| `model.response` | 每次模型调用成功之后 | 仅观察。负载 `{ sessionId, round, provider, model, text, toolCalls, usage }`。 `usage` 为 `{ inputTokens, outputTokens, cacheReadTokens, cacheWriteTokens }`；`inputTokens` 只是未缓存部分，完整提示为三个输入字段之和。 |
 | `notification` | Pawn 发出的每条桌面通知 | 仅观察。负载 `{ title, body, source }`。mod 不能隐藏或改写通知。 |
 
 工具顺序：`tool.call` → 设置 `PreToolUse` → Plan 模式检查 → `tool.check` / 权限 → 工具。
